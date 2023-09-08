@@ -1,15 +1,24 @@
-# logysia
 
-To install dependencies:
+# Logysia
+A logging middleware for the [Elysia](https://elysiajs.com) web framework. Developed with [Bun](https://bun.sh).
 
-```bash
-bun install
+
+## Installation
+
+```sh
+bun add @grotto/logysia
+```
+## Usage/Examples
+
+```typescript
+import {logger} from '@grotto/logysia';
+import { Elysia } from "elysia";
+
+
+if (import.meta.main) {
+    const app = new Elysia()
+        .use(logger())
+        .get("/", ctx => "Hello, world!");
+}
 ```
 
-To run:
-
-```bash
-bun run src/index.ts
-```
-
-This project was created using `bun init` in bun v0.8.1. [Bun](https://bun.sh) is a fast all-in-one JavaScript runtime.

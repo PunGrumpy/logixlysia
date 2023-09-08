@@ -8,8 +8,8 @@
   "peerDependencies": {
     "typescript": "^5.0.0"
   },
-  "description": "To install dependencies:",
-  "version": "0.0.1",
+  "description": "Logging middleware for Bun's Elysia web framework",
+  "version": "0.0.2",
   "main": "src/index.ts",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
