@@ -1,0 +1,41 @@
+{
+  "name": "@grotto/logysia",
+  "module": "src/index.ts",
+  "type": "module",
+  "devDependencies": {
+    "bun-types": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "description": "To install dependencies:",
+  "version": "0.0.1",
+  "main": "src/index.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tristanisham/logysia.git"
+  },
+  "keywords": [
+    "logging",
+    "elysia",
+    "elysiajs",
+    "web",
+    "logger",
+    "middleware",
+    "elysia",
+    "middleware"
+  ],
+  "author": "Tristan Isham",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/tristanisham/logysia/issues"
+  },
+  "homepage": "https://github.com/tristanisham/logysia#readme",
+  "dependencies": {
+    "elysia": "^0.6.19",
+    "picocolors": "^1.0.0"
+  }
+}
