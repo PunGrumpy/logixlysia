@@ -25,7 +25,7 @@ export const logger = () => new Elysia({
 
         case 'PUT':
             // Handle PUT request
-            logStr.push(pc.blue("POST"))
+            logStr.push(pc.blue("PUT"))
 
             break;
 
