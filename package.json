@@ -35,7 +35,7 @@
   },
   "homepage": "https://github.com/tristanisham/logysia#readme",
   "dependencies": {
-    "elysia": "^0.6.19",
+    "elysia": "^0.7.0",
     "picocolors": "^1.0.0"
   }
 }

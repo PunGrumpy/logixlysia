@@ -1,4 +1,4 @@
-import Elysia from "Elysia"
+import Elysia from "elysia"
 import * as pc from "picocolors"
 import process from "process"
 
@@ -23,7 +23,7 @@ export const logger = () =>
 
 			console.log(logStr.join(" "))
 		})
-		.onError(({ error, request, headers, store }) => {
+		.onError(({request, error, store}) => {
 			const logStr: string[] = []
 
 			logStr.push(pc.red(methodString(request.method)))
