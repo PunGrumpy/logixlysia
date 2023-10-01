@@ -1,81 +1,98 @@
-import Elysia from "elysia";
+import Elysia from "Elysia"
 import * as pc from "picocolors"
-import process from "process";
+import process from "process"
 
-export const logger = () => new Elysia({
-    name: "@grotto/logysia"
-}).onBeforeHandle(ctx => {
-    ctx.store = { beforeTime: process.hrtime(), ...ctx.store }
-}).onAfterHandle(({ request, store }) => {
-    const logStr: string[] = [];
-    if (request.headers.get("X-Forwarded-For")) {
-        logStr.push(`[${pc.cyan(request.headers.get("X-Forwarded-For"))}]`)
-    }
+export const logger = () =>
+	new Elysia({
+		name: "@grotto/logysia"
+	})
+		.onBeforeHandle((ctx) => {
+			ctx.store = { beforeTime: process.hrtime(), ...ctx.store }
+		})
+		.onAfterHandle(({ request, store }) => {
+			const logStr: string[] = []
+			if (request.headers.get("X-Forwarded-For")) {
+				logStr.push(`[${pc.cyan(request.headers.get("X-Forwarded-For"))}]`)
+			}
 
-    switch (request.method) {
-        case 'GET':
-            // Handle GET request
-            logStr.push(pc.white("GET"));
-            break;
+			logStr.push(methodString(request.method))
 
-        case 'POST':
-            // Handle POST request
-            logStr.push(pc.yellow("POST"))
-            break;
+			logStr.push(new URL(request.url).pathname)
 
-        case 'PUT':
-            // Handle PUT request
-            logStr.push(pc.blue("PUT"))
+			logStr.push(durationString((store as any).hrtime))
 
-            break;
+			console.log(logStr.join(" "))
+		})
+		.onError(({ error, request, headers, store }) => {
+			const logStr: string[] = []
 
-        case 'DELETE':
-            // Handle DELETE request
-            logStr.push(pc.red("DELETE"))
-            break;
+			logStr.push(pc.red(methodString(request.method)))
 
-        case 'PATCH':
-            // Handle PATCH request
-            logStr.push(pc.green("PATCH"))
-            break;
+			logStr.push(new URL(request.url).pathname)
 
-        case 'OPTIONS':
-            // Handle OPTIONS request
-            logStr.push(pc.gray("OPTIONS"))
-            break;
+			logStr.push(pc.red("Error"))
 
-        case 'HEAD':
-            // Handle HEAD request
-            logStr.push(pc.magenta("HEAD"))
-            break;
+			if ("status" in error) {
+				logStr.push(pc.red(error.status))
+			}
 
-        default:
-            // Handle unknown request method
-            logStr.push(request.method);
-    }
+			logStr.push(pc.red(error.message))
 
+			logStr.push(durationString((store as any).beforeTime))
 
-    const url = new URL(request.url)
-    logStr.push(pc.white(url.pathname));
+			console.log(logStr.join(" "))
+		})
 
-    // Duration
-    const [seconds, nanoseconds] = process.hrtime((store as any).beforeTime);
-    const durationInMicroseconds = (seconds * 1e9 + nanoseconds) / 1e3; // Convert to microseconds
-    const durationInMilliseconds = (seconds * 1e9 + nanoseconds) / 1e6; // Convert to milliseconds
-    let timeMessage: string = "";
-    if (seconds > 0) {
-        timeMessage = `| ${seconds.toPrecision(2)}`
-    } else if (durationInMilliseconds > 1) {
-        timeMessage = `| ${durationInMilliseconds.toPrecision(2)}ms`
-    } else if (durationInMicroseconds > 1) {
-        timeMessage = `| ${durationInMicroseconds.toPrecision(4)}µs`
-    } else if (nanoseconds > 0) {
-        timeMessage = `| ${nanoseconds.toPrecision(4)}ns`
-    }
+function durationString(beforeTime: [number, number]): string {
+	const [seconds, nanoseconds] = process.hrtime(beforeTime)
+	const durationInMicroseconds = (seconds * 1e9 + nanoseconds) / 1e3 // Convert to microseconds
+	const durationInMilliseconds = (seconds * 1e9 + nanoseconds) / 1e6 // Convert to milliseconds
+	let timeMessage: string = ""
+	if (seconds > 0) {
+		timeMessage = `| ${seconds.toPrecision(2)}`
+	} else if (durationInMilliseconds > 1) {
+		timeMessage = `| ${durationInMilliseconds.toPrecision(2)}ms`
+	} else if (durationInMicroseconds > 1) {
+		timeMessage = `| ${durationInMicroseconds.toPrecision(4)}µs`
+	} else if (nanoseconds > 0) {
+		timeMessage = `| ${nanoseconds.toPrecision(4)}ns`
+	}
 
-    logStr.push(pc.gray(timeMessage))
+	return timeMessage
+}
 
-    console.log(logStr.join(" "))
-});
+function methodString(method: string): string {
+	switch (method) {
+		case "GET":
+			// Handle GET request
+			return pc.white("GET")
 
+		case "POST":
+			// Handle POST request
+			return pc.yellow("POST")
 
+		case "PUT":
+			// Handle PUT request
+			return pc.blue("PUT")
+
+		case "DELETE":
+			// Handle DELETE request
+			return pc.red("DELETE")
+
+		case "PATCH":
+			// Handle PATCH request
+			return pc.green("PATCH")
+
+		case "OPTIONS":
+			// Handle OPTIONS request
+			return pc.gray("OPTIONS")
+
+		case "HEAD":
+			// Handle HEAD request
+			return pc.magenta("HEAD")
+
+		default:
+			// Handle unknown request method
+			return method
+	}
+}
