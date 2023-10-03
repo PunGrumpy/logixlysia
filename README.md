@@ -22,3 +22,13 @@ if (import.meta.main) {
 }
 ```
 
+## Result
+```sh
+POST / Error 404 NOT_FOUND | 1μs
+PUT / Error 404 NOT_FOUND | 1μs
+PATCH / Error 404 NOT_FOUND | 1μs
+DELETE / Error 404 NOT_FOUND | 1μs
+OPTIONS / Error 404 NOT_FOUND | 1μs
+HEAD / Error 404 NOT_FOUND | 1μs
+```
+![Alt text](https://i.ibb.co/TH0WpXv/image.png)
