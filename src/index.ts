@@ -18,8 +18,9 @@ export const logger = () =>
             logStr.push(methodString(request.method))
 
             logStr.push(new URL(request.url).pathname)
+            const beforeTime: [number, number] = (store as any).beforeTime;
 
-            logStr.push(durationString((store as any).hrtime))
+            logStr.push(durationString(beforeTime))
 
             console.log(logStr.join(" "))
         })
@@ -40,8 +41,8 @@ export const logger = () =>
             const beforeTime: [number, number] = (store as any).beforeTime;
             logStr.push(durationString(beforeTime))
 
-			console.log(logStr.join(" "))
-		})
+            console.log(logStr.join(" "))
+        })
 
 function durationString(beforeTime: [number, number]): string {
     const [seconds, nanoseconds] = process.hrtime(beforeTime)
