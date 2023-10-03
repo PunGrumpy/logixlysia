@@ -23,12 +23,6 @@ if (import.meta.main) {
 ```
 
 ## Result
-```sh
-POST / Error 404 NOT_FOUND | 17
-PUT / Error 404 NOT_FOUND | 17
-PATCH / Error 404 NOT_FOUND | 17
-DELETE / Error 404 NOT_FOUND | 17
-OPTIONS / Error 404 NOT_FOUND | 17
-HEAD / Error 404 NOT_FOUND | 17
-```
-![Alt text](https://i.ibb.co/TH0WpXv/image.png)
+![Alt text](https://i.ibb.co/5YknHt6/image.png)
+
+Logysia also supports printing when there are errors in your application.
