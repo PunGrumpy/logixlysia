@@ -33,10 +33,10 @@ export const logger = () =>
 			logStr.push(pc.red("Error"))
 
 			if ("status" in error) {
-				logStr.push(pc.red(error.status))
+				logStr.push(String(error.status))
 			}
 
-			logStr.push(pc.red(error.message))
+			logStr.push(error.message)
 
 			logStr.push(durationString((store as any).beforeTime))
 
