@@ -24,11 +24,11 @@ if (import.meta.main) {
 
 ## Result
 ```sh
-POST / Error 404 NOT_FOUND | 1μs
-PUT / Error 404 NOT_FOUND | 1μs
-PATCH / Error 404 NOT_FOUND | 1μs
-DELETE / Error 404 NOT_FOUND | 1μs
-OPTIONS / Error 404 NOT_FOUND | 1μs
-HEAD / Error 404 NOT_FOUND | 1μs
+POST / Error 404 NOT_FOUND | 17
+PUT / Error 404 NOT_FOUND | 17
+PATCH / Error 404 NOT_FOUND | 17
+DELETE / Error 404 NOT_FOUND | 17
+OPTIONS / Error 404 NOT_FOUND | 17
+HEAD / Error 404 NOT_FOUND | 17
 ```
 ![Alt text](https://i.ibb.co/TH0WpXv/image.png)
