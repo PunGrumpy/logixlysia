@@ -52,7 +52,7 @@ function durationString(beforeTime: [number, number]): string {
     if (seconds > 0) {
         timeMessage = `| ${seconds.toPrecision(2)}s`
     } else if (durationInMilliseconds > 1) {
-        timeMessage = `| ${durationInMilliseconds.toPrecision(2)}ms`
+        timeMessage = `| ${durationInMilliseconds.toPrecision(3)}ms`
     } else if (durationInMicroseconds > 1) {
         timeMessage = `| ${durationInMicroseconds.toPrecision(4)}µs`
     } else if (nanoseconds > 0) {
