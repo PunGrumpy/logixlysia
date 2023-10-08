@@ -6,8 +6,11 @@ export const logger = () =>
     new Elysia({
         name: "@grotto/logysia"
     })
+        .onRequest((ctx) => {
+            ctx.store = {...ctx.store, beforeTime: process.hrtime.bigint()}
+        })
         .onBeforeHandle((ctx) => {
-            ctx.store = { beforeTime: process.hrtime(), ...ctx.store }
+            ctx.store = { ...ctx.store, beforeTime: process.hrtime.bigint() }
         })
         .onAfterHandle(({ request, store }) => {
             const logStr: string[] = []
@@ -18,7 +21,11 @@ export const logger = () =>
             logStr.push(methodString(request.method))
 
             logStr.push(new URL(request.url).pathname)
-            const beforeTime: [number, number] = (store as any).beforeTime;
+            const beforeTime: bigint = (store as any).beforeTime;
+
+
+            console.log(`Before Time from After Handle - ${beforeTime}`)
+
 
             logStr.push(durationString(beforeTime))
 
@@ -38,29 +45,37 @@ export const logger = () =>
             }
 
             logStr.push(error.message)
-            const beforeTime: [number, number] = (store as any).beforeTime;
+            const beforeTime: bigint = (store as any).beforeTime;
+
             logStr.push(durationString(beforeTime))
 
             console.log(logStr.join(" "))
         })
 
-function durationString(beforeTime: [number, number]): string {
-    const [seconds, nanoseconds] = process.hrtime(beforeTime)
-    const durationInMicroseconds = (seconds * 1e9 + nanoseconds) / 1e3 // Convert to microseconds
-    const durationInMilliseconds = (seconds * 1e9 + nanoseconds) / 1e6 // Convert to milliseconds
-    let timeMessage: string = ""
-    if (seconds > 0) {
-        timeMessage = `| ${seconds.toPrecision(2)}s`
-    } else if (durationInMilliseconds > 1) {
-        timeMessage = `| ${durationInMilliseconds.toPrecision(3)}ms`
-    } else if (durationInMicroseconds > 1) {
-        timeMessage = `| ${durationInMicroseconds.toPrecision(4)}µs`
-    } else if (nanoseconds > 0) {
-        timeMessage = `| ${nanoseconds.toPrecision(4)}ns`
+
+function durationString(beforeTime: bigint): string {
+    const now = process.hrtime.bigint();
+    const timeDifference = now - beforeTime;
+    const nanoseconds = Number(timeDifference);
+
+    const durationInMicroseconds = (nanoseconds / 1e3).toFixed(0); // Convert to microseconds
+    const durationInMilliseconds = (nanoseconds / 1e6).toFixed(0); // Convert to milliseconds
+    let timeMessage: string = "";
+
+    if (nanoseconds >= 1e9) {
+        const seconds = (nanoseconds / 1e9).toFixed(2);
+        timeMessage = `| ${seconds}s`;
+    } else if (nanoseconds >= 1e6) {
+        timeMessage = `| ${durationInMilliseconds}ms`;
+    } else if (nanoseconds >= 1e3) {
+        timeMessage = `| ${durationInMicroseconds}µs`;
+    } else {
+        timeMessage = `| ${nanoseconds}ns`;
     }
 
-    return timeMessage
+    return timeMessage;
 }
+
 
 function methodString(method: string): string {
     switch (method) {
