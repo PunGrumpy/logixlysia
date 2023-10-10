@@ -23,10 +23,6 @@ export const logger = () =>
             logStr.push(new URL(request.url).pathname)
             const beforeTime: bigint = (store as any).beforeTime;
 
-
-            console.log(`Before Time from After Handle - ${beforeTime}`)
-
-
             logStr.push(durationString(beforeTime))
 
             console.log(logStr.join(" "))
