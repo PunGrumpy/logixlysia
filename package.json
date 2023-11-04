@@ -1,5 +1,5 @@
 {
-  "name": "@pungrumpy/logixlysia",
+  "name": "logixlysia",
   "version": "0.0.2",
   "description": "🪵 Logixlysia is a logger for Elysia",
   "type": "module",
