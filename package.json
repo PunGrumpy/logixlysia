@@ -1,10 +1,15 @@
 {
-  "name": "@pungrumpy/logulysia",
-  "version": "0.0.1",
-  "description": "🪵 Logulysia is a logger for Elysia",
+  "name": "@pungrumpy/logixlysia",
+  "version": "0.0.2",
+  "description": "🪵 Logixlysia is a logger for Elysia",
   "type": "module",
   "module": "src/index.ts",
   "main": "src/index.ts",
+  "publisher": "PunGrumpy",
+  "publishConfig": {
+    "access": "public"
+  },
+  "license": "MIT",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "prepare": "husky install",
@@ -15,19 +20,19 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/PunGrumpy/logulysia.git"
+    "url": "git+https://github.com/PunGrumpy/logixlysia.git"
   },
   "bugs": {
-    "url": "https://github.com/PunGrumpy/logulysia/issues"
+    "url": "https://github.com/PunGrumpy/logixlysia/issues"
   },
-  "homepage": "https://github.com/PunGrumpy/logulysia#readme",
+  "homepage": "https://github.com/PunGrumpy/logixlysia#readme",
   "keywords": [
     "web",
     "logging",
     "logger",
     "elysia",
     "elysiajs",
-    "logulysia",
+    "logixlysia",
     "middleware",
     "middleware"
   ],
