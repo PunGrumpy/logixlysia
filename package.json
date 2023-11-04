@@ -1,41 +1,39 @@
 {
-  "name": "@grotto/logysia",
-  "module": "src/index.ts",
+  "name": "@pungrumpy/logulysia",
+  "version": "0.0.1",
+  "description": "🪵 Logulysia is a logger for Elysia",
   "type": "module",
-  "devDependencies": {
-    "bun-types": "latest"
-  },
-  "peerDependencies": {
-    "typescript": "^5.0.0"
-  },
-  "description": "Logging middleware for Bun's Elysia web framework",
-  "version": "0.0.5",
+  "module": "src/index.ts",
   "main": "src/index.ts",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/tristanisham/logysia.git"
+    "url": "git+https://github.com/PunGrumpy/logulysia.git"
   },
+  "bugs": {
+    "url": "https://github.com/PunGrumpy/logulysia/issues"
+  },
+  "homepage": "https://github.com/PunGrumpy/logulysia#readme",
   "keywords": [
+    "web",
     "logging",
+    "logger",
     "elysia",
     "elysiajs",
-    "web",
-    "logger",
+    "logulysia",
     "middleware",
-    "elysia",
     "middleware"
   ],
-  "author": "Tristan Isham",
-  "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/tristanisham/logysia/issues"
-  },
-  "homepage": "https://github.com/tristanisham/logysia#readme",
   "dependencies": {
-    "elysia": "^0.7.0",
+    "elysia": "^0.7.21",
     "picocolors": "^1.0.0"
+  },
+  "devDependencies": {
+    "bun-types": "^1.0.8"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
   }
 }
