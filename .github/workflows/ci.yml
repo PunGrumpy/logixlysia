@@ -20,6 +20,8 @@ jobs:
           scope: '@pungrumpy'
       - name: 🚀 Setup Bun
         uses: oven-sh/setup-bun@v1
+      - name: 🔽 Install Dependencies
+        run: bun install
       - name: ⚖️ Lint
         run: bun lint
       - name: 🛰️ Publish
