@@ -1,5 +1,6 @@
-import { existsSync } from 'fs'
-import { join } from 'path'
+/* eslint-disable @typescript-eslint/no-var-requires */
+const { existsSync } = require('fs')
+const { join } = require('path')
 
 const isBun = existsSync(join(process.cwd(), 'bun.lockb'))
 const isYarn = existsSync(join(process.cwd(), 'yarn.lock'))
@@ -17,4 +18,4 @@ const options = {
     `${packageManager} prettier --write ${filenames.join(' ')}`
 }
 
-export default options
+module.exports = options
