@@ -1,0 +1,33 @@
+name: 🤹‍♂️ Continuous Integration
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+jobs:
+  build:
+    name: 🍞 Deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🛫 Checkout Code
+        uses: actions/checkout@v4
+      - name: 📦 Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 21
+          registry-url: https://registry.npmjs.org/
+          scope: '@pungrumpy'
+      - name: 🚀 Setup Bun
+        uses: oven-sh/setup-bun@v1
+      - name: ⚖️ Lint
+        run: bun lint
+      - name: 🛰️ Publish
+        run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: 💂 Error
+        if: failure()
+        run: |
+          echo "${{ github.event_name }} failed on branch ${{ github.ref }} at commit ${{ github.sha }}"
+          echo "See ${{ github.run_number }} for more details"
