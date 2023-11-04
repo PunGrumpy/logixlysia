@@ -1,6 +1,8 @@
 import Elysia from 'elysia'
 import * as pc from 'picocolors'
 import process from 'process'
+import { durationString } from './utils/duration'
+import { methodString } from './utils/method'
 
 export const logger = () =>
   new Elysia({
@@ -47,89 +49,3 @@ export const logger = () =>
 
       console.log(logStr.join(' '))
     })
-
-/**
- * @param {bigint} beforeTime
- * @returns {string}
- * @description
- * Convert the time difference between the start of the request and the end of the request to a string.
- * @example
- * durationString(123456789n) // => '| 123456789ns'
- * durationString(123456789000n) // => '| 123456789µs'
- * durationString(123456789000000n) // => '| 123456789ms'
- * durationString(123456789000000000n) // => '| 123.46s'
- */
-function durationString(beforeTime: bigint): string {
-  const now = process.hrtime.bigint()
-  const timeDifference = now - beforeTime
-  const nanoseconds = Number(timeDifference)
-
-  const durationInMicroseconds = (nanoseconds / 1e3).toFixed(0) // Convert to microseconds
-  const durationInMilliseconds = (nanoseconds / 1e6).toFixed(0) // Convert to milliseconds
-  let timeMessage: string = ''
-
-  if (nanoseconds >= 1e9) {
-    const seconds = (nanoseconds / 1e9).toFixed(2)
-    timeMessage = `| ${seconds}s`
-  } else if (nanoseconds >= 1e6) {
-    timeMessage = `| ${durationInMilliseconds}ms`
-  } else if (nanoseconds >= 1e3) {
-    timeMessage = `| ${durationInMicroseconds}µs`
-  } else {
-    timeMessage = `| ${nanoseconds}ns`
-  }
-
-  return timeMessage
-}
-
-/**
- * @param {string} method
- * @returns {string}
- * @description
- * Convert the request method to a string.
- * @example
- * methodString('GET') // => 'GET'
- * methodString('POST') // => 'POST'
- * methodString('PUT') // => 'PUT'
- * methodString('DELETE') // => 'DELETE'
- * methodString('PATCH') // => 'PATCH'
- * methodString('OPTIONS') // => 'OPTIONS'
- * methodString('HEAD') // => 'HEAD'
- * methodString('UNKNOWN') // => 'UNKNOWN'
- * methodString('') // => ''
- */
-function methodString(method: string): string {
-  switch (method) {
-    case 'GET':
-      // Handle GET request
-      return pc.white('GET')
-
-    case 'POST':
-      // Handle POST request
-      return pc.yellow('POST')
-
-    case 'PUT':
-      // Handle PUT request
-      return pc.blue('PUT')
-
-    case 'DELETE':
-      // Handle DELETE request
-      return pc.red('DELETE')
-
-    case 'PATCH':
-      // Handle PATCH request
-      return pc.green('PATCH')
-
-    case 'OPTIONS':
-      // Handle OPTIONS request
-      return pc.gray('OPTIONS')
-
-    case 'HEAD':
-      // Handle HEAD request
-      return pc.magenta('HEAD')
-
-    default:
-      // Handle unknown request method
-      return method
-  }
-}
