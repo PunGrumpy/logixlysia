@@ -6,7 +6,7 @@ import { methodString } from './utils/method'
 
 export const logger = () =>
   new Elysia({
-    name: '@grotto/logysia'
+    name: '@pungrumpy/logysia'
   })
     .onRequest(ctx => {
       ctx.store = { ...ctx.store, beforeTime: process.hrtime.bigint() }
