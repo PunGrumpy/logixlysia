@@ -48,6 +48,17 @@ export const logger = () =>
       console.log(logStr.join(' '))
     })
 
+/**
+ * @param {bigint} beforeTime
+ * @returns {string}
+ * @description
+ * Convert the time difference between the start of the request and the end of the request to a string.
+ * @example
+ * durationString(123456789n) // => '| 123456789ns'
+ * durationString(123456789000n) // => '| 123456789µs'
+ * durationString(123456789000000n) // => '| 123456789ms'
+ * durationString(123456789000000000n) // => '| 123.46s'
+ */
 function durationString(beforeTime: bigint): string {
   const now = process.hrtime.bigint()
   const timeDifference = now - beforeTime
@@ -71,6 +82,22 @@ function durationString(beforeTime: bigint): string {
   return timeMessage
 }
 
+/**
+ * @param {string} method
+ * @returns {string}
+ * @description
+ * Convert the request method to a string.
+ * @example
+ * methodString('GET') // => 'GET'
+ * methodString('POST') // => 'POST'
+ * methodString('PUT') // => 'PUT'
+ * methodString('DELETE') // => 'DELETE'
+ * methodString('PATCH') // => 'PATCH'
+ * methodString('OPTIONS') // => 'OPTIONS'
+ * methodString('HEAD') // => 'HEAD'
+ * methodString('UNKNOWN') // => 'UNKNOWN'
+ * methodString('') // => ''
+ */
 function methodString(method: string): string {
   switch (method) {
     case 'GET':
