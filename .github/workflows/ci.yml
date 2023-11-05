@@ -24,6 +24,14 @@ jobs:
         run: bun install
       - name: ⚖️ Lint
         run: bun lint
+      - name: 🧑‍🍳 Check version exists
+        run: |
+          VERSION_EXISTS=$(npm show logixlysia version 2>/dev/null || echo "false")
+          if [[ "$VERSION_EXISTS" == "false" ]]; then
+            echo "Version already exists on npm: $VERSION_EXISTS"
+            exit 1
+          fi
+        shell: bash
       - name: 🛰️ Publish
         run: npm publish
         env:
