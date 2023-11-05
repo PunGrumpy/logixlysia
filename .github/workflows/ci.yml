@@ -32,12 +32,26 @@ jobs:
             exit 1
           fi
         shell: bash
+      - name: 🧑‍🍳 Check version is valid
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          if [ "$VERSION" == "" ]; then
+            echo "Version is empty"
+            exit 1
+          fi
+        shell: bash
+        continue-on-error: true
       - name: 🛰️ Publish
         run: npm publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - name: 💂 Error
-        if: failure()
+        if: failure() || cancelled()
         run: |
           echo "${{ github.event_name }} failed on branch ${{ github.ref }} at commit ${{ github.sha }}"
+          echo "See ${{ github.run_number }} for more details"
+      - name: 🎉 Success
+        if: success()
+        run: |
+          echo "${{ github.event_name }} succeeded on branch ${{ github.ref }} at commit ${{ github.sha }}"
           echo "See ${{ github.run_number }} for more details"
