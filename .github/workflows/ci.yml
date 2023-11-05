@@ -26,20 +26,16 @@ jobs:
         run: bun lint
       - name: 🧑‍🍳 Check version exists
         run: |
-          VERSION_EXISTS=$(npm show logixlysia version 2>/dev/null || echo "false")
-          if [ "$VERSION_EXISTS" != "false" ]; then
-            touch .version-exists
-            echo "Logixlysia version $VERSION_EXISTS already exists" >> .version-exists
-            exit 1
-          fi
-        shell: bash
-      - name: 🧑‍🍳 Check version is valid
-        run: |
           VERSION=$(node -p "require('./package.json').version")
-          if [ "$VERSION" == "" ]; then
-            touch .version-empty
-            echo "Version is empty" >> .version-empty
-            exit 1
+          VERSION_ON_NPM=$(npm show logixlysia version 2>/dev/null || echo "false")
+          if [ "$VERSION" = "$VERSION_ON_NPM" ]; then
+          touch .version
+          echo "✅ Version $VERSION exists on npm" 
+          echo "✅ Version $VERSION exists on npm" > .version
+          else
+          touch .version
+            echo "❌ Version $VERSION does not exist on npm"
+            echo "❌ Version $VERSION does not exist on npm" > .version
           fi
         shell: bash
       - name: 😶‍🌫️ Upload artifacts
@@ -48,8 +44,7 @@ jobs:
         with:
           name: logs
           path: |
-            .version-exists
-            .version-empty
+            .version
   build:
     name: 🍞 Deploy
     runs-on: ubuntu-latest
