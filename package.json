@@ -1,6 +1,6 @@
 {
   "name": "logixlysia",
-  "version": "0.0.2-alpha.2.2",
+  "version": "0.0.2-alpha.2.3",
   "description": "🪵 Logixlysia is a logger for Elysia",
   "type": "module",
   "module": "src/index.ts",
@@ -19,6 +19,31 @@
     "lint:staged": "lint-staged",
     "prettier": "prettier --write ."
   },
+  "os": [
+    "darwin",
+    "linux",
+    "win32"
+  ],
+  "badges": [
+    {
+      "name": "npm",
+      "url": "https://img.shields.io/npm/v/logixlysia.svg",
+      "description": "npm version",
+      "href": "https://www.npmjs.com/package/logixlysia"
+    },
+    {
+      "name": "npm",
+      "url": "https://img.shields.io/npm/dt/logixlysia.svg",
+      "description": "npm downloads",
+      "href": "https://www.npmjs.com/package/logixlysia"
+    },
+    {
+      "name": "GitHub issues",
+      "url": "https://img.shields.io/github/issues/PunGrumpy/logixlysia.svg",
+      "description": "GitHub issues",
+      "href": "https://github.com/PunGrumpy/logixlysia/issues"
+    }
+  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/PunGrumpy/logixlysia.git"
