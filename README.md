@@ -1,26 +1,30 @@
-# Logysia
+<div align="center">
+  <h1><code>🦊</code> Logixlysia</h1>
+  <strong>Logixlysia is a logging library for ElysiaJS</strong>
+  <img src="./.github/images/screenshot.png" alt="Screenshot of Logixlysia" width="100%" height="auto" />
+</div>
 
-A logging middleware for the [Elysia](https://elysiajs.com) web framework. Developed with [Bun](https://bun.sh).
+## `📩` Installation
 
-## Installation
-
-```sh
-bun add @grotto/logysia
+```bash
+bun add logixlysia
 ```
 
-## Usage/Examples
+## `📝` Usage
 
-```typescript
-import { logger } from '@grotto/logysia'
+```ts
 import { Elysia } from 'elysia'
+import { logger } from '~/index'
 
-if (import.meta.main) {
-  const app = new Elysia().use(logger()).get('/', ctx => 'Hello, world!')
-}
+const app = new Elysia({
+  name: 'Basic Example'
+}).use(logger())
+
+console.log(
+  `🧪 Listening on http://${app.server!.hostname}:${app.server!.port}`
+)
 ```
 
-## Result
+## `📄` License
 
-![Alt text](https://i.ibb.co/5YknHt6/image.png)
-
-Logysia also supports printing when there are errors in your application.
+Licensed under the [MIT License](LICENSE).

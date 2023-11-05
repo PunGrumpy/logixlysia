@@ -10,6 +10,26 @@ const app = new Elysia({
       message: 'Basic Example'
     }
   })
+  .post('/', () => {
+    return {
+      message: 'Basic Example'
+    }
+  })
+  .put('/', () => {
+    return {
+      message: 'Basic Example'
+    }
+  })
+  .delete('/', () => {
+    return {
+      message: 'Basic Example'
+    }
+  })
+  .patch('/', () => {
+    return {
+      message: 'Basic Example'
+    }
+  })
   .listen(3000)
 
 console.log(
