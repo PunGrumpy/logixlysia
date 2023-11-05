@@ -58,6 +58,10 @@ jobs:
           node-version: 21
           registry-url: https://registry.npmjs.org/
           scope: '@pungrumpy'
+      - name: 🚀 Setup Bun
+        uses: oven-sh/setup-bun@v1
+      - name: 🔽 Install Dependencies
+        run: bun install
       - name: 🛰️ Publish
         run: npm publish
         env:
