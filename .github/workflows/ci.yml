@@ -26,9 +26,9 @@ jobs:
         run: bun lint
       - name: 🧑‍🍳 Check version exists
         run: |
-          VERSION_EXISTS=$(npm show logixlysia version 2>/dev/null && echo "true" || echo "false")
-          if [ "$VERSION_EXISTS" = "true" ]; then
-            echo "Version already exists"
+          VERSION_EXISTS=$(npm show logixlysia version 2>/dev/null || echo "false")
+          if [ "$VERSION_EXISTS" != "false" ]; then
+            echo "Logixlysia version $VERSION_EXISTS already exists"
             exit 1
           fi
         shell: bash
