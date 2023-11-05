@@ -40,7 +40,6 @@ jobs:
             exit 1
           fi
         shell: bash
-        continue-on-error: true
       - name: 🛰️ Publish
         run: npm publish
         env:
