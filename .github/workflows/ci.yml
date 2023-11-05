@@ -6,8 +6,8 @@ on:
     branches: [main]
   workflow_dispatch:
 jobs:
-  build:
-    name: 🍞 Deploy
+  test:
+    name: 🧪 Test
     runs-on: ubuntu-latest
     steps:
       - name: 🛫 Checkout Code
@@ -28,7 +28,8 @@ jobs:
         run: |
           VERSION_EXISTS=$(npm show logixlysia version 2>/dev/null || echo "false")
           if [ "$VERSION_EXISTS" != "false" ]; then
-            echo "Logixlysia version $VERSION_EXISTS already exists"
+            touch .version-exists
+            echo "Logixlysia version $VERSION_EXISTS already exists" >> .version-exists
             exit 1
           fi
         shell: bash
@@ -36,21 +37,49 @@ jobs:
         run: |
           VERSION=$(node -p "require('./package.json').version")
           if [ "$VERSION" == "" ]; then
-            echo "Version is empty"
+            touch .version-empty
+            echo "Version is empty" >> .version-empty
             exit 1
           fi
         shell: bash
+      - name: 😶‍🌫️ Upload artifacts
+        uses: actions/upload-artifact@v3
+        if: failure()
+        with:
+          name: logs
+          path: |
+            .version-exists
+            .version-empty
+  build:
+    name: 🍞 Deploy
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - name: 🛫 Checkout Code
+        uses: actions/checkout@v4
+      - name: 📦 Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 21
+          registry-url: https://registry.npmjs.org/
+          scope: '@pungrumpy'
       - name: 🛰️ Publish
         run: npm publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-      - name: 💂 Error
-        if: failure() || cancelled()
+  report:
+    name: 📊 Report
+    needs: [test, build]
+    runs-on: ubuntu-latest
+    if: failure()
+    steps:
+      - name: 👧 Information output
         run: |
-          echo "${{ github.event_name }} failed on branch ${{ github.ref }} at commit ${{ github.sha }}"
-          echo "See ${{ github.run_number }} for more details"
-      - name: 🎉 Success
-        if: success()
-        run: |
-          echo "${{ github.event_name }} succeeded on branch ${{ github.ref }} at commit ${{ github.sha }}"
-          echo "See ${{ github.run_number }} for more details"
+          echo "⚠️ Something went wrong"
+          echo "📦 Package: ${{ github.repository }}"
+          echo "📝 Commit: ${{ github.sha }}"
+          echo "🌐 Workflow: ${{ github.workflow }}"
+          echo "📅 Date: $(date)"
+          echo "🧑‍💻 Author: ${{ github.actor }}"
+          echo "📄 Ref: ${{ github.ref }}"
+        shell: bash
