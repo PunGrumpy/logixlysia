@@ -14,10 +14,10 @@ bun add logixlysia
 
 ```ts
 import { Elysia } from 'elysia'
-import { logger } from '~/index'
+import { logger } from 'logixlysia'
 
 const app = new Elysia({
-  name: 'Basic Example'
+  name: 'Logixlysia Example'
 }).use(logger())
 
 console.log(
