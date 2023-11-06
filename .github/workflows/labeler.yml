@@ -1,0 +1,15 @@
+name: 🤖 Automatic Labeler
+on:
+  issues:
+    types: [opened, labeled, unlabeled]
+  pull_request:
+    types: [opened, labeled, unlabeled]
+jobs:
+  label:
+    name: 🔖 Label issues and pull requests
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🔖 Add labels
+        uses: actions/labeler@v3
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
