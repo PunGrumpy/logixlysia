@@ -60,9 +60,7 @@ interface Logger {
  * @param {object} request - The request object.
  * @param {object} data - The data object.
  * @param {object} store - The store object.
- * @returns {void}
- * @example
- * log(LogLevel.INFO, request, data, store)
+ * @returns {object} - The log object.
  */
 function log(
   level: LogLevel,
@@ -73,7 +71,7 @@ function log(
   },
   data: { status?: number; message?: string },
   store: { beforeTime: bigint }
-) {
+): { [key: string]: any } | void {
   const logStr = []
   const now = new Date()
 
@@ -104,10 +102,6 @@ function log(
  * Formats the logger.
  *
  * @returns {Logger} - The formatted logger.
- * @example
- * const log = formatLogger()
- *
- * log.info(request, {}, store as { beforeTime: bigint })
  */
 export const formatLogger = (): Logger => ({
   info: (

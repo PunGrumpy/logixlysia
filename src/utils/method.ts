@@ -5,16 +5,6 @@ import * as pc from 'picocolors'
  *
  * @param {string} method - The HTTP request method (e.g., 'GET', 'POST').
  * @returns {string} - A colored string representing the method.
- * @example
- * methodString('GET') // => 'GET'
- * methodString('POST') // => 'POST'
- * methodString('PUT') // => 'PUT'
- * methodString('DELETE') // => 'DELETE'
- * methodString('PATCH') // => 'PATCH'
- * methodString('OPTIONS') // => 'OPTIONS'
- * methodString('HEAD') // => 'HEAD'
- * methodString('UNKNOWN') // => 'UNKNOWN'
- * methodString('') // => ''
  */
 function methodString(method: string): string {
   switch (method) {
