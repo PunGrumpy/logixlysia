@@ -21,13 +21,13 @@ function durationString(beforeTime: bigint): string {
 
   if (nanoseconds >= 1e9) {
     const seconds = (nanoseconds / 1e9).toFixed(2)
-    timeMessage = `| ${seconds}s`
+    timeMessage = `⌚ ${seconds}s`
   } else if (nanoseconds >= 1e6) {
-    timeMessage = `| ${durationInMilliseconds}ms`
+    timeMessage = `⌚ ${durationInMilliseconds}ms`
   } else if (nanoseconds >= 1e3) {
-    timeMessage = `| ${durationInMicroseconds}µs`
+    timeMessage = `⌚ ${durationInMicroseconds}µs`
   } else {
-    timeMessage = `| ${nanoseconds}ns`
+    timeMessage = `⌚ ${nanoseconds}ns`
   }
 
   return timeMessage
