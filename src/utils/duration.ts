@@ -1,8 +1,8 @@
 /**
- * @param {bigint} beforeTime
- * @returns {string}
- * @description
- * Convert the time difference between the start of the request and the end of the request to a string.
+ * Converts the time difference between the start of the request and the end of the request to a formatted string.
+ *
+ * @param {bigint} beforeTime - The timestamp taken before the request.
+ * @returns {string} - A formatted duration string with a time unit.
  * @example
  * durationString(123456789n) // => '| 123456789ns'
  * durationString(123456789000n) // => '| 123456789µs'
@@ -14,8 +14,9 @@ function durationString(beforeTime: bigint): string {
   const timeDifference = now - beforeTime
   const nanoseconds = Number(timeDifference)
 
-  const durationInMicroseconds = (nanoseconds / 1e3).toFixed(0) // Convert to microseconds
-  const durationInMilliseconds = (nanoseconds / 1e6).toFixed(0) // Convert to milliseconds
+  const durationInMicroseconds = (nanoseconds / 1e3).toFixed(0)
+  const durationInMilliseconds = (nanoseconds / 1e6).toFixed(0)
+
   let timeMessage: string = ''
 
   if (nanoseconds >= 1e9) {

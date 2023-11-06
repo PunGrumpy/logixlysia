@@ -1,10 +1,10 @@
 import * as pc from 'picocolors'
 
 /**
- * @param {string} method
- * @returns {string}
- * @description
- * Convert the request method to a string.
+ * Converts an HTTP request method to a colored string representation.
+ *
+ * @param {string} method - The HTTP request method (e.g., 'GET', 'POST').
+ * @returns {string} - A colored string representing the method.
  * @example
  * methodString('GET') // => 'GET'
  * methodString('POST') // => 'POST'
@@ -19,35 +19,20 @@ import * as pc from 'picocolors'
 function methodString(method: string): string {
   switch (method) {
     case 'GET':
-      // Handle GET request
       return pc.white('GET')
-
     case 'POST':
-      // Handle POST request
       return pc.yellow('POST')
-
     case 'PUT':
-      // Handle PUT request
       return pc.blue('PUT')
-
     case 'DELETE':
-      // Handle DELETE request
       return pc.red('DELETE')
-
     case 'PATCH':
-      // Handle PATCH request
       return pc.green('PATCH')
-
     case 'OPTIONS':
-      // Handle OPTIONS request
       return pc.gray('OPTIONS')
-
     case 'HEAD':
-      // Handle HEAD request
       return pc.magenta('HEAD')
-
     default:
-      // Handle unknown request method
       return method
   }
 }
