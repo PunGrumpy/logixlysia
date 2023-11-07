@@ -1,5 +1,12 @@
 import pc from 'picocolors'
 
+/**
+ * Returns the status string.
+ *
+ * @param {number} status The status code.
+ *
+ * @returns {string} The status string.
+ */
 function statusString(status: number): string {
   if (status >= 500) {
     return pc.red(status.toString())

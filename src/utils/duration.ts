@@ -3,8 +3,9 @@ import * as pc from 'picocolors'
 /**
  * Converts the time difference between the start of the request and the end of the request to a formatted string.
  *
- * @param {bigint} beforeTime - The timestamp taken before the request.
- * @returns {string} - A formatted duration string with a time unit.
+ * @param {bigint} beforeTime The timestamp taken before the request.
+ *
+ * @returns {string} A formatted duration string with a time unit.
  */
 function durationString(beforeTime: bigint): string {
   const now = process.hrtime.bigint()

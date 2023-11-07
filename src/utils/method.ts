@@ -1,5 +1,10 @@
 import * as pc from 'picocolors'
 
+/**
+ * @interface ColorMap
+ *
+ * @property {string} key The color function.
+ */
 interface ColorMap {
   [key: string]: (str: string) => string
 }
@@ -7,8 +12,9 @@ interface ColorMap {
 /**
  * Converts an HTTP request method to a colored string representation.
  *
- * @param method - The HTTP request method (e.g., 'GET', 'POST').
- * @returns A colored string representing the method.
+ * @param {string} method The HTTP request method (e.g., 'GET', 'POST').
+ *
+ * @returns {string} A colored string representing the method.
  */
 function methodString(method: string): string {
   const colorMap: ColorMap = {

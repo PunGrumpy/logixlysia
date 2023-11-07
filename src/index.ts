@@ -3,7 +3,22 @@ import { formatLogger } from './logger'
 import { startString } from './utils/start'
 import { Server } from 'bun'
 
-export const logger = () => {
+/**
+ * Creates a logger.
+ *
+ * @export {Function} The logger.
+ * @module logger
+ * @category Logger
+ * @subcategory Functions
+ *
+ * @name Logixlysia
+ * @description Logixlysia is a logger plugin for ElysiaJS.
+ * @author PunGrumpy
+ * @license MIT
+ *
+ * @returns {Elysia} The logger.
+ */
+export const logger = (): Elysia => {
   const log = formatLogger()
 
   const elysia = new Elysia({

@@ -1,14 +1,36 @@
+/**
+ * @interface Server
+ *
+ * @property {string} hostname The server hostname.
+ * @property {number} port The server port.
+ * @property {string} protocol The server protocol.
+ */
 interface Server {
   hostname?: string
   port?: number
   protocol?: string
 }
 
+/**
+ * Creates a box text.
+ *
+ * @param {string} text The text.
+ * @param {number} width The box width.
+ *
+ * @returns {string} The box text.
+ */
 function createBoxText(text: string, width: number): string {
   const padding = ' '.repeat((width - text.length) / 2)
   return `${padding}${text}${padding}`
 }
 
+/**
+ * Starts the server string.
+ *
+ * @param {Server} config The server configuration.
+ *
+ * @returns {void} The server string.
+ */
 function startString(config: Server): void {
   const { hostname, port, protocol } = config
   const ELYSIA_VERSION = import.meta.require('elysia/package.json').version

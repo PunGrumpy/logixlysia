@@ -5,10 +5,26 @@ import { LogData, LogLevel, logString } from './utils/log'
 import { RequestInfo, pathString } from './utils/path'
 import { statusString } from './utils/status'
 
+/**
+ * The store data interface.
+ *
+ * @interface StoreData
+ *
+ * @property {bigint} beforeTime The time before the request.
+ */
 interface StoreData {
   beforeTime: bigint
 }
 
+/**
+ * The logger interface.
+ *
+ * @interface Logger
+ *
+ * @property {Function} info Logs an info message.
+ * @property {Function} warning Logs a warning message.
+ * @property {Function} error Logs an error message.
+ */
 interface Logger {
   info(request: RequestInfo, data: LogData, store: StoreData): void
   warning(request: RequestInfo, data: LogData, store: StoreData): void
@@ -18,10 +34,12 @@ interface Logger {
 /**
  * Logs a message to the console.
  *
- * @param level - The log level.
- * @param request - The request information.
- * @param data - The log data.
- * @param store - The store data.
+ * @param {LogLevel} level The log level.
+ * @param {RequestInfo} request The request information.
+ * @param {LogData} data The log data.
+ * @param {StoreData} store The store data.
+ *
+ * @returns {void} The log message.
  */
 function log(
   level: LogLevel,
@@ -52,7 +70,7 @@ function log(
 /**
  * Formats the logger.
  *
- * @returns The formatted logger.
+ * @returns {Logger} The formatted logger.
  */
 export const formatLogger = (): Logger => ({
   info: (request, data, store) => log(LogLevel.INFO, request, data, store),
