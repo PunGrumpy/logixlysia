@@ -1,5 +1,7 @@
 import Elysia from 'elysia'
 import { formatLogger } from './logger'
+import { startString } from './utils/start'
+import { Server } from 'bun'
 
 export const logger = () => {
   const log = formatLogger()
@@ -7,6 +9,9 @@ export const logger = () => {
   const elysia = new Elysia({
     name: 'Logixlysia'
   })
+    .onStart(ctx => {
+      startString(ctx.app.server as Server)
+    })
     .onRequest(ctx => {
       ctx.store = { beforeTime: process.hrtime.bigint() } as {
         beforeTime: bigint

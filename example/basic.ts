@@ -30,8 +30,5 @@ const app = new Elysia({
       message: 'Basic Example'
     }
   })
-  .listen(3000)
 
-console.log(
-  `🧪 Listening on http://${app.server!.hostname}:${app.server!.port}`
-)
+app.listen(3000)

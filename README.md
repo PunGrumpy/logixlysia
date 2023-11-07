@@ -20,9 +20,7 @@ const app = new Elysia({
   name: 'Logixlysia Example'
 }).use(logger())
 
-console.log(
-  `🧪 Listening on http://${app.server!.hostname}:${app.server!.port}`
-)
+app.listen(3000)
 ```
 
 ## `📄` License
