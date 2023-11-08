@@ -1,15 +1,4 @@
-/**
- * @interface Server
- *
- * @property {string} hostname The server hostname.
- * @property {number} port The server port.
- * @property {string} protocol The server protocol.
- */
-interface Server {
-  hostname?: string
-  port?: number
-  protocol?: string
-}
+import { Server } from '~/types/Server'
 
 /**
  * Creates a box text.
@@ -53,4 +42,4 @@ function startString(config: Server): void {
     `)
 }
 
-export { Server, startString }
+export default startString

@@ -24,4 +24,4 @@ function statusString(status: number): string {
   return status.toString()
 }
 
-export { statusString }
+export default statusString

@@ -1,6 +1,6 @@
 import Elysia from 'elysia'
-import { formatLogger } from './logger'
-import { startString } from './utils/start'
+import { createLogger } from './logger'
+import startString from './utils/start'
 import { Server } from 'bun'
 
 /**
@@ -19,7 +19,7 @@ import { Server } from 'bun'
  * @returns {Elysia} The logger.
  */
 export const logger = (): Elysia => {
-  const log = formatLogger()
+  const log = createLogger()
 
   const elysia = new Elysia({
     name: 'Logixlysia'

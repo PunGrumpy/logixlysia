@@ -35,4 +35,4 @@ function durationString(beforeTime: bigint): string {
   return timeMessage
 }
 
-export { durationString }
+export default durationString

@@ -1,5 +1,5 @@
 import chalk from 'chalk'
-import { ColorMap } from './colorMap'
+import { ColorMap } from '~/types/ColorMap'
 
 /**
  * Converts an HTTP request method to a colored string representation.
@@ -28,4 +28,4 @@ function methodString(method: string): string {
   return method
 }
 
-export { methodString }
+export default methodString

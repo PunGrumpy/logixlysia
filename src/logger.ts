@@ -1,35 +1,12 @@
 import chalk from 'chalk'
-import { durationString } from './utils/duration'
-import { methodString } from './utils/method'
-import { LogData, LogLevel, logString } from './utils/log'
-import { RequestInfo, pathString } from './utils/path'
-import { statusString } from './utils/status'
-
-/**
- * The store data interface.
- *
- * @interface StoreData
- *
- * @property {bigint} beforeTime The time before the request.
- */
-interface StoreData {
-  beforeTime: bigint
-}
-
-/**
- * The logger interface.
- *
- * @interface Logger
- *
- * @property {Function} info Logs an info message.
- * @property {Function} warning Logs a warning message.
- * @property {Function} error Logs an error message.
- */
-interface Logger {
-  info(request: RequestInfo, data: LogData, store: StoreData): void
-  warning(request: RequestInfo, data: LogData, store: StoreData): void
-  error(request: RequestInfo, data: LogData, store: StoreData): void
-}
+import durationString from './utils/duration'
+import methodString from './utils/method'
+import logString from './utils/log'
+import pathString from './utils/path'
+import statusString from './utils/status'
+import { RequestInfo } from './types/RequestInfo'
+import { LogData, LogLevel, Logger } from './types/Logger'
+import { StoreData } from './types/StoreData'
 
 /**
  * Logs a message to the console.
@@ -68,11 +45,11 @@ function log(
 }
 
 /**
- * Formats the logger.
+ * Creates a formatted logger.
  *
  * @returns {Logger} The formatted logger.
  */
-export const formatLogger = (): Logger => ({
+export const createLogger = (): Logger => ({
   info: (request, data, store) => log(LogLevel.INFO, request, data, store),
   warning: (request, data, store) =>
     log(LogLevel.WARNING, request, data, store),
