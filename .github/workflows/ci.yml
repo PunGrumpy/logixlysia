@@ -28,35 +28,6 @@ jobs:
         run: bun install
       - name: ⚖️ Lint
         run: bun lint
-  review_lint:
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, macos-latest]
-    name: 🐶 Review Lint
-    runs-on: ${{ matrix.os }}
-    needs: [lint]
-    if: github.event_name == 'pull_request'
-    steps:
-      - name: 🛫 Checkout Code
-        uses: actions/checkout@v4
-      - name: 📦 Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 21
-          registry-url: https://registry.npmjs.org/
-          scope: '@pungrumpy'
-      - name: 🚀 Setup Bun
-        uses: oven-sh/setup-bun@v1
-      - name: 🔽 Install Dependencies
-        run: bun install
-      - name: reviewdog/action-eslint
-        uses: reviewdog/action-eslint@v1
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          eslint_flags: . --ext .js,.jsx,.ts,.tsx
-          level: warning
-          reporter: github-pr-review
   version:
     strategy:
       fail-fast: false
@@ -96,7 +67,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-latest]
     name: 🍞 Deploy
     runs-on: ${{ matrix.os }}
     needs: [version]
@@ -121,9 +92,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-latest]
     name: 📊 Report
-    needs: [lint, review_lint, version, build]
+    needs: [lint, version, build]
     runs-on: ${{ matrix.os }}
     if: failure()
     steps:
