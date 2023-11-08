@@ -83,7 +83,7 @@ jobs:
   build:
     name: 🍞 Deploy
     runs-on: ubuntu-latest
-    needs: [version]
+    needs: [version, review_lint]
     steps:
       - name: 🛫 Checkout Code
         uses: actions/checkout@v4
