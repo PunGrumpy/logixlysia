@@ -10,10 +10,11 @@ jobs:
     name: 🧪 Test
     runs-on: ubuntu-latest
     steps:
-      - name: ☂️ Code Coverage
-        uses: codecov/codecov-action@v3
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
+      - name: ☁️ SonarCloud
+        uses: sonarsource/sonarcloud-github-action@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
   lint:
     name: ⚖️ Lint
     runs-on: ubuntu-latest
