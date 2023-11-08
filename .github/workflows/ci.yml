@@ -10,6 +10,14 @@ jobs:
     name: 🧪 Test
     runs-on: ubuntu-latest
     steps:
+      - name: ☂️ Code Coverage
+        uses: codecov/codecov-action@v3
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+  lint:
+    name: ⚖️ Lint
+    runs-on: ubuntu-latest
+    steps:
       - name: 🛫 Checkout Code
         uses: actions/checkout@v4
       - name: 📦 Setup Node
@@ -24,6 +32,23 @@ jobs:
         run: bun install
       - name: ⚖️ Lint
         run: bun lint
+  version:
+    name: 📝 Validate Version
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - name: 🛫 Checkout Code
+        uses: actions/checkout@v4
+      - name: 📦 Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 21
+          registry-url: https://registry.npmjs.org/
+          scope: '@pungrumpy'
+      - name: 🚀 Setup Bun
+        uses: oven-sh/setup-bun@v1
+      - name: 🔽 Install Dependencies
+        run: bun install
       - name: 🧑‍🍳 Check version exists
         run: |
           VERSION=$(node -p "require('./package.json').version")
@@ -48,7 +73,7 @@ jobs:
   build:
     name: 🍞 Deploy
     runs-on: ubuntu-latest
-    needs: test
+    needs: [test, lint, version]
     steps:
       - name: 🛫 Checkout Code
         uses: actions/checkout@v4
@@ -68,7 +93,7 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
   report:
     name: 📊 Report
-    needs: [test, build]
+    needs: [test, lint, version, build]
     runs-on: ubuntu-latest
     if: failure()
     steps:
