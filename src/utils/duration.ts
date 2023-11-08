@@ -1,4 +1,4 @@
-import * as pc from 'picocolors'
+import chalk from 'chalk'
 
 /**
  * Converts the time difference between the start of the request and the end of the request to a formatted string.
@@ -29,7 +29,7 @@ function durationString(beforeTime: bigint): string {
   }
 
   if (timeMessage) {
-    timeMessage = pc.gray(timeMessage).padStart(8).padEnd(16)
+    timeMessage = chalk.gray(timeMessage).padStart(8).padEnd(16)
   }
 
   return timeMessage

@@ -1,4 +1,4 @@
-import * as pc from 'picocolors'
+import chalk from 'chalk'
 import { durationString } from './utils/duration'
 import { methodString } from './utils/method'
 import { LogData, LogLevel, logString } from './utils/log'
@@ -48,8 +48,8 @@ function log(
   store: StoreData
 ): void {
   const logStr: string[] = []
-  const nowStr = pc.bgYellow(
-    pc.black(
+  const nowStr = chalk.bgYellow(
+    chalk.black(
       new Date().toISOString().replace('T', ' ').replace('Z', '').slice(0, -4)
     )
   )

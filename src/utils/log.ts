@@ -1,4 +1,5 @@
-import * as pc from 'picocolors'
+import chalk from 'chalk'
+import { ColorMap } from './colorMap'
 
 /**
  * @enum {string}
@@ -25,15 +26,6 @@ interface LogData {
 }
 
 /**
- * @interface StoreData
- *
- * @property {number} beforeTime The time before the request.
- */
-interface ColorMap {
-  [key: string]: (str: string) => string
-}
-
-/**
  * Converts a log level to a colored string representation.
  *
  * @param {string} log The log level (e.g., 'INFO', 'WARNING').
@@ -42,15 +34,15 @@ interface ColorMap {
  */
 function logString(log: string): string {
   const colorMap: ColorMap = {
-    INFO: pc.bgGreen,
-    WARNING: pc.bgYellow,
-    ERROR: pc.bgRed
+    INFO: chalk.bgGreen,
+    WARNING: chalk.bgYellow,
+    ERROR: chalk.bgRed
   }
 
   const colorFunction = colorMap[log]
 
   if (colorFunction) {
-    return colorFunction(pc.black(log.padEnd(7)))
+    return colorFunction(chalk.black(log.padEnd(7)))
   }
 
   return log

@@ -1,13 +1,5 @@
-import * as pc from 'picocolors'
-
-/**
- * @interface ColorMap
- *
- * @property {string} key The color function.
- */
-interface ColorMap {
-  [key: string]: (str: string) => string
-}
+import chalk from 'chalk'
+import { ColorMap } from './colorMap'
 
 /**
  * Converts an HTTP request method to a colored string representation.
@@ -18,13 +10,13 @@ interface ColorMap {
  */
 function methodString(method: string): string {
   const colorMap: ColorMap = {
-    GET: pc.white,
-    POST: pc.yellow,
-    PUT: pc.blue,
-    DELETE: pc.red,
-    PATCH: pc.green,
-    OPTIONS: pc.cyan,
-    HEAD: pc.magenta
+    GET: chalk.white,
+    POST: chalk.yellow,
+    PUT: chalk.blue,
+    DELETE: chalk.red,
+    PATCH: chalk.green,
+    OPTIONS: chalk.cyan,
+    HEAD: chalk.magenta
   }
 
   const colorFunction = colorMap[method]
