@@ -1,0 +1,39 @@
+name: 📦 Node Package Manager
+on:
+  workflow_run:
+    workflows: ['ci']
+    types: [completed]
+jobs:
+  test:
+    name: 🧪 Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🛬 Checkout
+        uses: actions/checkout@v4
+      - name: 🟢 Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 21
+          registry-url: https://registry.npmjs.org/
+      - name: 🔽 Install Dependencies
+        run: npm install
+      - name: 🦊 Install Logixlysia
+        run: npm install logixlysia
+      - name: 🔖 Check version
+        run: |
+          touch .version
+          ACTUAL_VERSION=$(npm view logixlysia version)
+          EXPECTED_VERSION=$(node -p "require('./package.json').version")
+          echo "Actual version: $ACTUAL_VERSION" >> .version
+          echo "Expected version: $EXPECTED_VERSION" >> .version
+          if [ "$ACTUAL_VERSION" != "$EXPECTED_VERSION" ]; then
+            echo "Version mismatch: expected $EXPECTED_VERSION, got $ACTUAL_VERSION"
+            exit 1
+          fi
+      - name: 😶‍🌫️ Upload artifacts
+        uses: actions/upload-artifact@v3
+        if: failure()
+        with:
+          name: logs
+          path: |
+            .version
