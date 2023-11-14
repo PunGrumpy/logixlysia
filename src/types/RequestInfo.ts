@@ -1,4 +1,6 @@
 /**
+ * The request info.
+ *
  * @interface RequestInfo
  *
  * @property {Object} headers The request headers.

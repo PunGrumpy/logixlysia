@@ -1,4 +1,6 @@
 /**
+ * The server information.
+ *
  * @interface Server
  *
  * @property {string} hostname The server hostname.

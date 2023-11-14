@@ -2,6 +2,8 @@ import { RequestInfo } from './RequestInfo'
 import { StoreData } from './StoreData'
 
 /**
+ * The log level.
+ *
  * @enum {string}
  *
  * @property {string} INFO - The info log level.
@@ -15,6 +17,8 @@ enum LogLevel {
 }
 
 /**
+ * The log data interface.
+ *
  * @interface LogData
  *
  * @property {number} status The status code.
