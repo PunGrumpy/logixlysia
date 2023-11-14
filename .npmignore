@@ -1,0 +1,8 @@
+.eslintrc.cjs
+.github/
+.husky/
+bun.lockb
+example/
+node_modules/
+src/
+tsconfig.tsbuildinfo
