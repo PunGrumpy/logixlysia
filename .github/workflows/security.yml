@@ -1,0 +1,43 @@
+name: 🔒 Security
+on:
+  workflow_call:
+env:
+  SCOPRE_OWNER: '@pungrumpy'
+concurrency:
+  group: security/${{ github.event.repository.name }}
+jobs:
+  tufflehog:
+    concurrency:
+      group: security/${{ github.event.repository.name }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+    name: 💂 Security
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: 🍄 TruffleHog OSS
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: ${{ github.event.repository.default_branch }}
+          head: HEAD
+          extra_args: --debug --only-verified
+  gitguardian:
+    concurrency:
+      group: security/${{ github.event.repository.name }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+    name: 🛡️ GitGuardian
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: 🦉 GitGuardian
+        uses: GitGuardian/ggshield-action@v1.20.0
+        env:
+          GITHUB_PUSH_BEFORE_SHA: ${{ github.event.before }}
+          GITHUB_PUSH_BASE_SHA: ${{ github.event.base }}
+          GITHUB_PULL_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          GITHUB_DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          GITGUARDIAN_API_KEY: ${{ secrets.GITGUARDIAN_API_KEY }}

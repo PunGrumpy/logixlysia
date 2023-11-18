@@ -2,11 +2,21 @@ name: 🤹‍♂️ Continuous Integration
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 env:
   SCOPRE_OWNER: '@pungrumpy'
 jobs:
+  security:
+    name: 🔒 Security
+    uses: ./.github/workflows/security.yml
+  code_review:
+    needs: [security]
+    name: 🫸 Code Review
+    uses: ./.github/workflows/code_review.yml
   lint:
+    needs: [code_review]
     strategy:
       fail-fast: false
       matrix:
@@ -48,6 +58,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
+    if: ${{ github.event_name == 'push' }}
     name: 🚀 Release
     permissions:
       contents: write

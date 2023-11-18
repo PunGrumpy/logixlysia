@@ -1,0 +1,34 @@
+name: 🫸 Code Review
+on:
+  schedule:
+    - cron: '0 0 * * *'
+  workflow_call:
+jobs:
+  codeql:
+    strategy:
+      fail-fast: false
+      matrix:
+        language:
+          - javascript-typescript
+        os:
+          - ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    name: 🧑‍⚕️ Code Quality Lab
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 360
+    steps:
+      - name: 🛫 Checkout Code
+        uses: actions/checkout@v4
+      - name: 🔬 Setting up CodeQL
+        uses: github/codeql-action/init@v2
+        with:
+          languages: ${{ matrix.language }}
+      - name: 🩻 Auto Build
+        uses: github/codeql-action/autobuild@v2
+      - name: 🧪 Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v2
+        with:
+          category: '/languages/${{ matrix.language }}'
