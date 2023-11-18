@@ -4,8 +4,8 @@ on:
     workflows: ['🤹‍♂️ Continuous Integration']
     types: [completed]
 jobs:
-  test:
-    name: 🧪 Test
+  test_version:
+    name: 🧪 Test Version
     runs-on: ubuntu-latest
     steps:
       - name: 🛬 Checkout

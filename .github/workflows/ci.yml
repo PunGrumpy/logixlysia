@@ -5,8 +5,18 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
+env:
+  SCOPRE_OWNER: '@pungrumpy'
 jobs:
+  security:
+    name: 🔒 Security
+    uses: ./.github/workflows/security.yml
+  code_review:
+    needs: [security]
+    name: 🫸 Code Review
+    uses: ./.github/workflows/code_review.yml
   lint:
+    needs: [code_review]
     strategy:
       fail-fast: false
       matrix:
@@ -22,18 +32,33 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
           registry-url: https://registry.npmjs.org/
-          scope: '@pungrumpy'
+          scope: ${{ env.SCOPRE_OWNER }}
       - name: 🚀 Setup Bun
         uses: oven-sh/setup-bun@v1
+      - name: 🌵 Cache bun
+        uses: actions/cache@v3
+        id: cache-bun
+        with:
+          path: ~/.bun
+          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lockb') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
       - name: 🔽 Install Dependencies
         run: bun install
       - name: ⚖️ Lint
         run: bun lint
+      - name: 🎅 Upload Artifacts
+        uses: actions/upload-artifact@v3
+        if: ${{ steps.cache-bun.outputs.cache-hit != 'true' }}
+        with:
+          name: bun-cache
+          path: ~/.bun
   release:
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
+    if: ${{ github.event_name == 'push' }}
     name: 🚀 Release
     permissions:
       contents: write
@@ -60,48 +85,30 @@ jobs:
           git push origin :stable || true
           git tag -a stable -m "chore: release stable version ${{ steps.release.outputs.tag_name }}"
           git push origin stable
-  deploy:
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest]
-    name: 🍞 Deploy
-    runs-on: ${{ matrix.os }}
-    needs: [release]
-    steps:
-      - name: 🛫 Checkout Code
-        uses: actions/checkout@v4
-      - name: 📦 Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 21
-          registry-url: https://registry.npmjs.org/
-          scope: '@pungrumpy'
-      - name: 🚀 Setup Bun
-        uses: oven-sh/setup-bun@v1
-      - name: 🔽 Install Dependencies
-        run: bun install
-      - name: 🛰️ Publish
-        run: npm publish
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
   report:
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
     name: 📊 Report
-    needs: [lint, release, deploy]
+    needs: [lint, release]
     runs-on: ${{ matrix.os }}
     if: failure()
     steps:
-      - name: 👧 Information output
-        run: |
-          echo "⚠️ Something went wrong"
-          echo "📦 Package: ${{ github.repository }}"
-          echo "📝 Commit: ${{ github.sha }}"
-          echo "🌐 Workflow: ${{ github.workflow }}"
-          echo "📅 Date: $(date)"
-          echo "🧑‍💻 Author: ${{ github.actor }}"
-          echo "📄 Ref: ${{ github.ref }}"
-        shell: bash
+      - name: 🎁 Download Artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: bun-cache
+          path: ~/.bun
+      - name: 🕋 Send Issue
+        uses: JasonEtco/create-an-issue@v2
+        id: send-issue
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FAILED_LOG: ${{ github.event.workflow }}
+          EVENT: ${{ github.event }}
+        with:
+          assignees: ${{ github.actor }}
+          update_existing: true
+          search_existing: true
+          filename: .github/ISSUE_TEMPLATE/failure_report.md
