@@ -5,6 +5,8 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
+env:
+  SCOPRE_OWNER: '@pungrumpy'
 jobs:
   lint:
     strategy:
@@ -22,13 +24,27 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
           registry-url: https://registry.npmjs.org/
-          scope: '@pungrumpy'
+          scope: ${{ env.SCOPRE_OWNER }}
       - name: 🚀 Setup Bun
         uses: oven-sh/setup-bun@v1
+      - name: 🌵 Cache bun
+        uses: actions/cache@v3
+        id: cache-bun
+        with:
+          path: ~/.bun
+          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lockb') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
       - name: 🔽 Install Dependencies
         run: bun install
       - name: ⚖️ Lint
         run: bun lint
+      - name: 🎅 Upload Artifacts
+        uses: actions/upload-artifact@v3
+        if: ${{ steps.cache-bun.outputs.cache-hit != 'true' }}
+        with:
+          name: bun-cache
+          path: ~/.bun
   release:
     strategy:
       fail-fast: false
@@ -76,7 +92,7 @@ jobs:
         with:
           node-version: 21
           registry-url: https://registry.npmjs.org/
-          scope: '@pungrumpy'
+          scope: ${{ env.SCOPRE_OWNER }}
       - name: 🚀 Setup Bun
         uses: oven-sh/setup-bun@v1
       - name: 🔽 Install Dependencies
@@ -95,13 +111,20 @@ jobs:
     runs-on: ${{ matrix.os }}
     if: failure()
     steps:
-      - name: 👧 Information output
-        run: |
-          echo "⚠️ Something went wrong"
-          echo "📦 Package: ${{ github.repository }}"
-          echo "📝 Commit: ${{ github.sha }}"
-          echo "🌐 Workflow: ${{ github.workflow }}"
-          echo "📅 Date: $(date)"
-          echo "🧑‍💻 Author: ${{ github.actor }}"
-          echo "📄 Ref: ${{ github.ref }}"
-        shell: bash
+      - name: 🎁 Download Artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: bun-cache
+          path: ~/.bun
+      - name: 🕋 Send Issue
+        uses: JasonEtco/create-an-issue@v2
+        id: send-issue
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FAILED_LOG: ${{ github.event.workflow }}
+          CACHE_LOG: ${{ github.event.action }}
+        with:
+          assignees: ${{ github.actor }}
+          update_existing: true
+          search_existing: true
+          filename: .github/ISSUE_TEMPLATE/failure_report.md

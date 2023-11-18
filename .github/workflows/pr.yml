@@ -3,6 +3,8 @@ on:
   pull_request:
     branches:
       - main
+env:
+  SCOPRE_OWNER: '@pungrumpy'
 jobs:
   security:
     strategy:
@@ -25,6 +27,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest]
+        node-version: [20, 21]
     name: 🐶 Review Lint
     runs-on: ${{ matrix.os }}
     steps:
@@ -33,9 +36,9 @@ jobs:
       - name: 📦 Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 21
+          node-version: ${{ matrix.node-version }}
           registry-url: https://registry.npmjs.org/
-          scope: '@pungrumpy'
+          scope: '@${{ env.SCOPRE_OWNER }}'
       - name: 🚀 Setup Bun
         uses: oven-sh/setup-bun@v1
       - name: 🔽 Install Dependencies
