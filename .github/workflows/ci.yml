@@ -74,38 +74,13 @@ jobs:
           git push origin :stable || true
           git tag -a stable -m "chore: release stable version ${{ steps.release.outputs.tag_name }}"
           git push origin stable
-  deploy:
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest]
-    name: 🍞 Deploy
-    runs-on: ${{ matrix.os }}
-    needs: [release]
-    steps:
-      - name: 🛫 Checkout Code
-        uses: actions/checkout@v4
-      - name: 📦 Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 21
-          registry-url: https://registry.npmjs.org/
-          scope: ${{ env.SCOPRE_OWNER }}
-      - name: 🚀 Setup Bun
-        uses: oven-sh/setup-bun@v1
-      - name: 🔽 Install Dependencies
-        run: bun install
-      - name: 🛰️ Publish
-        run: npm publish
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
   report:
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
     name: 📊 Report
-    needs: [lint, release, deploy]
+    needs: [lint, release]
     runs-on: ${{ matrix.os }}
     if: failure()
     steps:
