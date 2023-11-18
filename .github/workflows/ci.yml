@@ -120,7 +120,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           FAILED_LOG: ${{ github.event.workflow }}
-          CACHE_LOG: ${{ github.event.action }}
+          EVENT: ${{ github.event }}
         with:
           assignees: ${{ github.actor }}
           update_existing: true

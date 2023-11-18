@@ -10,6 +10,6 @@ labels: failure, bug
 
 {{ env.FAILED_LOG }}
 
-## `🌵` Cache
+## `🥳` Event
 
-{{ env.CACHE_LOG }}
+{{ env.EVENT }}
