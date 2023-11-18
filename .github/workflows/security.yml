@@ -13,15 +13,33 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-    name: 💂 Security
+    name: 🍄 TruffleHog OSS
     runs-on: ${{ matrix.os }}
     steps:
       - name: 🛫 Checkout Code
         uses: actions/checkout@v4
-      - name: 🍄 TruffleHog OSS
+      - name: 🐷 TruffleHog OSS
         uses: trufflesecurity/trufflehog@main
         with:
           path: ./
           base: ${{ github.event.repository.default_branch }}
           head: HEAD
           extra_args: --debug --only-verified
+  trivy:
+    concurrency:
+      group: security/${{ github.event.repository.name }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+    name: 🐳 Trivy
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: 🛫 Checkout Code
+        uses: actions/checkout@v4
+      - name: 🐳 Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          trivy-config: .github/trivy.yaml

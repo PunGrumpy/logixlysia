@@ -47,12 +47,6 @@ jobs:
         run: bun install
       - name: ⚖️ Lint
         run: bun lint
-      - name: 🎅 Upload Artifacts
-        uses: actions/upload-artifact@v3
-        if: ${{ steps.cache-bun.outputs.cache-hit != 'true' }}
-        with:
-          name: bun-cache
-          path: ~/.bun
   release:
     strategy:
       fail-fast: false
@@ -95,11 +89,6 @@ jobs:
     runs-on: ${{ matrix.os }}
     if: failure()
     steps:
-      - name: 🎁 Download Artifacts
-        uses: actions/download-artifact@v3
-        with:
-          name: bun-cache
-          path: ~/.bun
       - name: 🕋 Send Issue
         uses: JasonEtco/create-an-issue@v2
         id: send-issue
