@@ -50,3 +50,19 @@ jobs:
           eslint_flags: . --ext .js,.jsx,.ts,.tsx
           level: warning
           reporter: github-pr-review
+  send_message:
+    if: failure() || cancelled()
+    needs: [security, review_lint]
+    name: 📬 Send Message
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🛫 Checkout Code
+        uses: actions/checkout@v4
+      - name: 💤 Send failed message
+        shell: bash
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email github-actions[bot]@users.noreply.github.com
+          gh auth login --with-token < ${{ secrets.GITHUB_TOKEN }}
+          gh pr review ${{ github.event.number }} --approve --body "## 🚨 Failed to review pull request\n\nPlease check the following items and fix them.\n\n- ❓ Security\n- ❓ Lint"
+          gh pr edit ${{ github.event.number }} --add-label "actions: failed"
