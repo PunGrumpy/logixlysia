@@ -1,0 +1,71 @@
+name: 🪲 Bug Report
+description: Report a bug or issue with the project.
+title: 'bug: '
+labels: ['bug']
+body:
+  - type: checkboxes
+    attributes:
+      label: Did you use latest version?
+      description: Please check the latest version before reporting a bug.
+      options:
+        - label: Yes
+          required: true
+  - type: dropdown
+    attributes:
+      label: Platform
+      description: What platform(s) does this affect?
+      options:
+        - 🐧 Linux
+        - 🍎 macOS
+        - 🪟 Windows
+  - type: dropdown
+    attributes:
+      label: Priority
+      description: How important is this issue?
+      options:
+        - 🔥 Critical
+        - 🚨 High
+        - 🚧 Medium
+        - 💤 Low
+  - type: textarea
+    attributes:
+      label: Description
+      description: Describe the bug or issue.
+      placeholder: |
+        Describe the bug or issue.
+      render: Markdown
+  - type: textarea
+    attributes:
+      label: Steps to Reproduce
+      description: Describe the steps to reproduce the bug or issue.
+      placeholder: |
+        Describe the steps to reproduce the bug or issue.
+      render: Markdown
+  - type: textarea
+    attributes:
+      label: Expected Behavior
+      description: Describe what you expected to happen.
+      placeholder: |
+        Describe what you expected to happen.
+      render: Markdown
+  - type: textarea
+    attributes:
+      label: Actual Behavior
+      description: Describe what actually happened.
+      placeholder: |
+        Describe what actually happened.
+      render: Markdown
+  - type: textarea
+    attributes:
+      label: Additional Information
+      description: Provide any additional information, such as screenshots or logs.
+      placeholder: |
+        Provide any additional information, such as screenshots or logs.
+      render: Markdown
+  - type: textarea
+    attributes:
+      label: Reproduction Repository
+      description: Provide a link to a reproduction repository.
+      placeholder: |
+        Provide a link to a reproduction repository.
+      render: Markdown
