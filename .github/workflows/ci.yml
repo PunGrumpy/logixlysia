@@ -52,6 +52,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
+        node-version: [21]
     if: ${{ github.ref == 'refs/heads/main' }} && !contains(github.event.head_commit.message, '[skip ci]')
     name: 🚀 Release
     permissions:
@@ -69,6 +70,24 @@ jobs:
           bump-minor-pre-major: true
       - name: 🔔 Checkout
         uses: actions/checkout@v4
+      - name: 📦 Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          registry-url: https://registry.npmjs.org/
+          scope: ${{ env.SCOPRE_OWNER }}
+      - name: 🚀 Setup Bun
+        uses: oven-sh/setup-bun@v1
+      - name: 🌵 Cache bun
+        uses: actions/cache@v3
+        id: cache-bun
+        with:
+          path: ~/.bun
+          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lockb') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+      - name: 🔽 Install Dependencies
+        run: bun install
       - name: 🏷️ Tag stable versions
         if: ${{ steps.release.outputs.release_created }}
         run: |
@@ -79,6 +98,9 @@ jobs:
           git push origin :stable || true
           git tag -a stable -m "chore: release stable version ${{ steps.release.outputs.tag_name }}"
           git push origin stable
+      - name: 📦 Publish
+        if: ${{ steps.release.outputs.release_created }}
+        run: npm publish
   report:
     strategy:
       fail-fast: false
