@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.0](https://github.com/PunGrumpy/logixlysia/compare/v1.0.0...v1.1.0) (2023-11-19)
+
+
+### Features
+
+* **ci/cd:** separate deploy workflows from ci workflows ([e0344ae](https://github.com/PunGrumpy/logixlysia/commit/e0344ae32f711d140b1c914164e8eb7a57181558))
+
 ## 1.0.0 (2023-11-18)
 
 
