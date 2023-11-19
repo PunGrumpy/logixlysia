@@ -3,6 +3,16 @@ description: Suggest a new feature or enhancement.
 title: 'feature: '
 labels: ['enhancement']
 body:
+  - type: dropdown
+    attributes:
+      label: Priority
+      description: How important is this feature request?
+      options:
+        - 🔥 Critical
+        - 🚨 High
+        - 🚧 Medium
+        - 💤 Low
+  - type: input
     attributes:
       label: Title
       description: A clear and concise description of what the problem is.
