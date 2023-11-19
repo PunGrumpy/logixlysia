@@ -8,7 +8,7 @@ body:
       label: Did you use latest version?
       description: Please check the latest version before reporting a bug.
       options:
-        - label: Yes
+        - label: I have checked the latest version.
           required: true
   - type: dropdown
     attributes:
