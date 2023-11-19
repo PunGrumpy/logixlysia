@@ -30,9 +30,9 @@ jobs:
           echo "Expected version: $EXPECTED_VERSION" >> .version
           if [ "$ACTUAL_VERSION" != "$EXPECTED_VERSION" ]; then
             echo "Version mismatch: expected $EXPECTED_VERSION, got $ACTUAL_VERSION"
-            echo "status=mismatch" >> $GITHUB_ENV
+            echo "status=mismatch" >> $GITHUB_OUTPUT
             exit 1
           fi
-          echo "status=match" >> $GITHUB_ENV
+          echo "status=match" >> $GITHUB_OUTPUT
     outputs:
       status: ${{ steps.check_version.outputs.status }}
