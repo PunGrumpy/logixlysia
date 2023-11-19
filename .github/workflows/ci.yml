@@ -66,6 +66,7 @@ jobs:
         with:
           release-type: node
           token: ${{ secrets.GITHUB_TOKEN }}
+          bump-minor-pre-major: true
       - name: 🔔 Checkout
         uses: actions/checkout@v4
       - name: 🏷️ Tag stable versions

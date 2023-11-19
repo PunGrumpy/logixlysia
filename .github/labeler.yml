@@ -1,0 +1,26 @@
+'source':
+  - 'src/**/*.{js,jsx,ts,tsx}'
+
+'test':
+  - 'src/**/__tests__/*.{js,jsx,ts,tsx}'
+  - 'src/**/*.{spec,test}.{js,jsx,ts,tsx}'
+
+'lint':
+  - '.eslintrc.js'
+  - '.prettierrc.js'
+
+'ci/cd':
+  - '.github/workflows/**/*.{yml,yaml}'
+
+'changelog':
+  - 'CHANGELOG.md'
+
+'config':
+  - 'package.json'
+  - 'bun.lockb'
+
+'ignore':
+  - '**/node_modules/**'
+  - '**/dist/**'
+  - '**/build/**'
+  - '**/coverage/**'

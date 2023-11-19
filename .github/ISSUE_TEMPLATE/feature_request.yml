@@ -1,0 +1,48 @@
+name: 🧧 Feature Request
+description: Suggest a new feature or enhancement.
+title: 'feature: '
+labels: ['enhancement']
+body:
+  - type: dropdown
+    attributes:
+      label: Priority
+      description: How important is this feature request?
+      options:
+        - 🔥 Critical
+        - 🚨 High
+        - 🚧 Medium
+        - 💤 Low
+  - type: input
+    attributes:
+      label: Title
+      description: A clear and concise description of what the problem is.
+      placeholder: |
+        A clear and concise description of what the problem is.
+  - type: textarea
+    attributes:
+      label: Description
+      description: Describe the feature or enhancement.
+      placeholder: |
+        Describe the feature or enhancement.
+      render: Markdown
+  - type: textarea
+    attributes:
+      label: Additional Information
+      description: Provide any additional information or context.
+      placeholder: |
+        Provide any additional information or context.
+      render: Markdown
+  - type: textarea
+    attributes:
+      label: Alternatives
+      description: Describe any alternatives you've considered.
+      placeholder: |
+        Describe any alternatives you've considered.
+      render: Markdown
+  - type: textarea
+    attributes:
+      label: Additional Context
+      description: Add any other context or screenshots about the feature request here.
+      placeholder: |
+        Add any other context or screenshots about the feature request here.
+      render: Markdown
