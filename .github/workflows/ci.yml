@@ -11,12 +11,12 @@ jobs:
   security:
     name: 🔒 Security
     uses: ./.github/workflows/security.yml
-  code_review:
+  codeql:
     needs: [security]
-    name: 🫸 Code Review
-    uses: ./.github/workflows/code_review.yml
+    name: 🫸 CodeQL
+    uses: ./.github/workflows/codeql.yml
   lint:
-    needs: [code_review]
+    needs: [codeql]
     strategy:
       fail-fast: false
       matrix:
