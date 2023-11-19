@@ -1,8 +1,9 @@
 name: 📦 Node Package Manager
 on:
   workflow_run:
-    workflows: ['🤹‍♂️ Continuous Integration']
+    workflows: ['🧝 Continuous Delivery']
     types: [completed]
+    branches: [main]
 jobs:
   test_version:
     name: 🧪 Test Version
@@ -20,6 +21,7 @@ jobs:
       - name: 🦊 Install Logixlysia
         run: npm install logixlysia
       - name: 🔖 Check version
+        id: check_version
         run: |
           touch .version
           ACTUAL_VERSION=$(npm view logixlysia version)
@@ -28,12 +30,9 @@ jobs:
           echo "Expected version: $EXPECTED_VERSION" >> .version
           if [ "$ACTUAL_VERSION" != "$EXPECTED_VERSION" ]; then
             echo "Version mismatch: expected $EXPECTED_VERSION, got $ACTUAL_VERSION"
+            echo "status=mismatch" >> $GITHUB_OUTPUT
             exit 1
           fi
-      - name: 😶‍🌫️ Upload artifacts
-        uses: actions/upload-artifact@v3
-        if: failure()
-        with:
-          name: logs
-          path: |
-            .version
+          echo "status=match" >> $GITHUB_OUTPUT
+    outputs:
+      status: ${{ steps.check_version.outputs.status }}
