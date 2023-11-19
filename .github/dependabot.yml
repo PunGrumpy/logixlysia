@@ -1,0 +1,17 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: '/'
+    schedule:
+      interval: weekly
+    reviewers:
+      - PunGrumpy
+    commit-message:
+      include: scope
+      prefix: 'chore(deps): '
+      prefix-development: 'chore(deps-dev): '
+    labels:
+      - dependencies
+    assignees:
+      - PunGrumpy
+    versioning-strategy: auto
