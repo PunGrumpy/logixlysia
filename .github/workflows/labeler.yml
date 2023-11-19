@@ -8,11 +8,18 @@ permissions:
   contents: read
   pull-requests: write
 jobs:
-  label:
-    name: 🔖 Label issues and pull requests
+  labeler:
+    name: 🔖 Label Issues and Pull Requests
     runs-on: ubuntu-latest
     steps:
-      - name: 🔖 Add labels
+      - name: 🔖 Add Labels
         uses: actions/labeler@v4
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: 😵 Check Conflicts
+        uses: mschilde/auto-label-merge-conflicts@master
+        with:
+          CONFLICT_LABEL_NAME: 'conflict'
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MAX_RETRIES: 5
+          WAIT_MS: 5000
