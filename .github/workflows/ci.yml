@@ -52,7 +52,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-    if: ${{ github.event_name == 'push' }}
+    if: ${{ github.ref == 'refs/heads/main' }} && !contains(github.event.head_commit.message, '[skip ci]')
     name: 🚀 Release
     permissions:
       contents: write
