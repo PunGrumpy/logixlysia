@@ -47,18 +47,12 @@ jobs:
         run: bun install
       - name: ⚖️ Lint
         run: bun lint
-      - name: 🎅 Upload Artifacts
-        uses: actions/upload-artifact@v3
-        if: ${{ steps.cache-bun.outputs.cache-hit != 'true' }}
-        with:
-          name: bun-cache
-          path: ~/.bun
   release:
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-    if: ${{ github.event_name == 'push' }}
+    if: ${{ github.ref == 'refs/heads/main' }} && !contains(github.event.head_commit.message, '[skip ci]')
     name: 🚀 Release
     permissions:
       contents: write
@@ -72,7 +66,6 @@ jobs:
         with:
           release-type: node
           token: ${{ secrets.GITHUB_TOKEN }}
-          package-name: logixlysia
       - name: 🔔 Checkout
         uses: actions/checkout@v4
       - name: 🏷️ Tag stable versions
@@ -95,11 +88,6 @@ jobs:
     runs-on: ${{ matrix.os }}
     if: failure()
     steps:
-      - name: 🎁 Download Artifacts
-        uses: actions/download-artifact@v3
-        with:
-          name: bun-cache
-          path: ~/.bun
       - name: 🕋 Send Issue
         uses: JasonEtco/create-an-issue@v2
         id: send-issue

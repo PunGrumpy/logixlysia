@@ -3,6 +3,7 @@ on:
   push:
     tags:
       - 'v*.*.*'
+  workflow_dispatch:
 env:
   SCOPRE_OWNER: '@pungrumpy'
 jobs:
