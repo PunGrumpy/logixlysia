@@ -63,7 +63,6 @@
     "elysia",
     "elysiajs",
     "logixlysia",
-    "middleware",
     "middleware"
   ],
   "dependencies": {
