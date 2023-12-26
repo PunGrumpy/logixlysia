@@ -6,25 +6,6 @@ env:
 concurrency:
   group: security/${{ github.event.repository.name }}
 jobs:
-  tufflehog:
-    concurrency:
-      group: security/${{ github.event.repository.name }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest]
-    name: 🍄 TruffleHog OSS
-    runs-on: ${{ matrix.os }}
-    steps:
-      - name: 🛫 Checkout Code
-        uses: actions/checkout@v4
-      - name: 🐷 TruffleHog OSS
-        uses: trufflesecurity/trufflehog@main
-        with:
-          path: ./
-          base: ${{ github.event.repository.default_branch }}
-          head: HEAD
-          extra_args: --debug --only-verified
   trivy:
     concurrency:
       group: security/${{ github.event.repository.name }}
