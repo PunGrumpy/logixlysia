@@ -6,10 +6,6 @@ updates:
       interval: weekly
     reviewers:
       - PunGrumpy
-    commit-message:
-      include: scope
-      prefix: 'chore(deps): '
-      prefix-development: 'chore(deps-dev): '
     labels:
       - dependencies
     assignees:
