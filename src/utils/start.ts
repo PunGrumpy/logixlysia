@@ -34,7 +34,7 @@ function startString(config: Server): void {
   console.log(`
       ┌${border}┐
       │${createBoxText('', boxWidth)} │
-      │${createBoxText(title, boxWidth)} │
+      │${createBoxText(title, boxWidth)}│
       │${createBoxText('', boxWidth)} │
       │${createBoxText(message, boxWidth)}│
       │${createBoxText('', boxWidth)} │
