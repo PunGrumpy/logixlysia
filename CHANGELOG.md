@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.0.1](https://github.com/PunGrumpy/logixlysia/compare/v2.0.0...v2.0.1) (2024-01-03)
+
+
+### Bug Fixes
+
+* **index:** elysia `0.8.8` doesn't contain `app` variable ([72f2314](https://github.com/PunGrumpy/logixlysia/commit/72f2314adf392b2e5387bb731f1417bf689e2dd9))
+
 ## [2.0.0](https://github.com/PunGrumpy/logixlysia/compare/v1.0.0...v2.0.0) (2023-11-19)
 
 
