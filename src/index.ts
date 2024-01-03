@@ -25,7 +25,7 @@ export const logger = (): Elysia => {
     name: 'Logixlysia'
   })
     .onStart(ctx => {
-      startString(ctx.app.server as Server)
+      startString(ctx.server as Server)
     })
     .onRequest(ctx => {
       ctx.store = { beforeTime: process.hrtime.bigint() } as {
