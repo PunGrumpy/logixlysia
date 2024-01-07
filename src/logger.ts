@@ -25,11 +25,7 @@ function log(
   store: StoreData
 ): void {
   const logStr: string[] = []
-  const nowStr = chalk.bgYellow(
-    chalk.black(
-      new Date().toISOString().replace('T', ' ').replace('Z', '').slice(0, -4)
-    )
-  )
+  const nowStr = chalk.bgYellow(chalk.black(new Date().toLocaleString()))
   const levelStr = logString(level)
   const durationStr = durationString(store.beforeTime)
   const methodStr = methodString(request.method)
