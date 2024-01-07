@@ -29,8 +29,6 @@ function startString(config: Server): void {
   const boxWidth = Math.max(title.length, messageWidth) + 4
   const border = '─'.repeat(boxWidth)
 
-  process.stdout.write('\x1Bc')
-
   console.log(`
       ┌${border}┐
       │${createBoxText('', boxWidth)} │
