@@ -134,25 +134,3 @@ jobs:
       - name: 📦 Publish
         if: ${{ steps.release.outputs.release_created }}
         run: npm publish
-  report:
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest]
-    name: 📊 Report
-    needs: [lint, release]
-    runs-on: ${{ matrix.os }}
-    if: failure()
-    steps:
-      - name: 🕋 Send Issue
-        uses: JasonEtco/create-an-issue@v2
-        id: send-issue
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          FAILED_LOG: ${{ github.event.workflow }}
-          EVENT: ${{ github.event }}
-        with:
-          assignees: ${{ github.actor }}
-          update_existing: true
-          search_existing: true
-          filename: .github/ISSUE_TEMPLATE/failure_report.md
