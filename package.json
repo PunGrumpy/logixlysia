@@ -15,7 +15,7 @@
   },
   "license": "MIT",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "bun test --timeout 5000 --coverage --update-snapshots",
     "dev": "bun run --watch example/basic.ts",
     "prepare": "husky install",
     "lint": "eslint . --ext .ts",
