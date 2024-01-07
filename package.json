@@ -15,11 +15,15 @@
   },
   "license": "MIT",
   "scripts": {
-    "test": "bun test --timeout 5000 --coverage --update-snapshots",
-    "dev": "bun run --watch example/basic.ts",
-    "prepare": "husky install",
+    "pretest": "bun run lint && bun run lint:fix && bun run prettier",
     "lint": "eslint . --ext .ts",
     "lint:fix": "eslint . --ext .ts --fix",
+    "prepublish": "bun run pretest && bun run test",
+    "test": "bun test --timeout 5000 --coverage --update-snapshots",
+    "test:ci": "bun test --timeout 5000 --coverage --update-snapshots",
+    "publish": "bun run prepublish && npm publish",
+    "dev": "bun run --watch example/basic.ts",
+    "prepare": "husky install",
     "lint:staged": "lint-staged",
     "prettier": "prettier --write ."
   },

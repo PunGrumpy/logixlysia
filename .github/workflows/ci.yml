@@ -80,7 +80,7 @@ jobs:
         run: bun install
       - name: 🧪 Test
         # run: bun test --timeout 5000 --coverage --update-snapshots
-        run: bun run test
+        run: bun run test:ci
   release:
     strategy:
       fail-fast: false
@@ -134,4 +134,4 @@ jobs:
           git push origin stable
       - name: 📦 Publish
         if: ${{ steps.release.outputs.release_created }}
-        run: npm publish
+        run: bun run publish
