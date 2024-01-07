@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.0.2](https://github.com/PunGrumpy/logixlysia/compare/v2.0.1...v2.0.2) (2024-01-07)
+
+
+### Bug Fixes
+
+* **logger:** change time from `iso` to `local` ([33ff28a](https://github.com/PunGrumpy/logixlysia/commit/33ff28a4a41db1dda7ca224e4807bd2451b95985))
+
 ## [2.0.1](https://github.com/PunGrumpy/logixlysia/compare/v2.0.0...v2.0.1) (2024-01-03)
 
 
