@@ -21,7 +21,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest]
-        node-version: [20, 21]
+        node-version: [21]
     name: ⚖️ Lint
     runs-on: ${{ matrix.os }}
     steps:
@@ -47,6 +47,39 @@ jobs:
         run: bun install
       - name: ⚖️ Lint
         run: bun lint
+  test:
+    needs: [lint]
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        node-version: [21]
+    name: 🧪 Test
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: 🛫 Checkout Code
+        uses: actions/checkout@v4
+      - name: 📦 Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          registry-url: https://registry.npmjs.org/
+          scope: ${{ env.SCOPRE_OWNER }}
+      - name: 🍞 Setup Bun
+        uses: oven-sh/setup-bun@v1
+      - name: 🌵 Cache bun
+        uses: actions/cache@v3
+        id: cache-bun
+        with:
+          path: ~/.bun
+          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lockb') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+      - name: 🔽 Install Dependencies
+        run: bun install
+      - name: 🧪 Test
+        # run: bun test --timeout 5000 --coverage --update-snapshots
+        run: bun run test
   release:
     strategy:
       fail-fast: false
@@ -59,7 +92,7 @@ jobs:
       contents: write
       pull-requests: write
     runs-on: ${{ matrix.os }}
-    needs: [lint]
+    needs: [test]
     steps:
       - name: 💤 Automated Release
         uses: google-github-actions/release-please-action@v3
