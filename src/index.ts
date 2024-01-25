@@ -31,10 +31,10 @@ export const logger = (): Elysia => {
       ctx.store = { beforeTime: process.hrtime.bigint() }
     })
     .onAfterHandle(({ request, store }) => {
-      log.info(request, {}, store as { beforeTime: bigint })
+      log.log('INFO', request, {}, store as { beforeTime: bigint })
     })
     .onError(({ request, error, store }) => {
-      log.error(request, error, store as { beforeTime: bigint })
+      log.log('ERROR', request, error, store as { beforeTime: bigint })
     })
 
   return elysia

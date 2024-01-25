@@ -2,27 +2,19 @@ import { RequestInfo } from './RequestInfo'
 import { StoreData } from './StoreData'
 
 /**
- * The log level.
+ * The log level, including standard and custom levels.
  *
- * @enum {string}
- *
- * @property {string} INFO - The info log level.
- * @property {string} WARNING - The warning log level.
- * @property {string} ERROR - The error log level.
+ * @type {string}
  */
-enum LogLevel {
-  INFO = 'INFO',
-  WARNING = 'WARNING',
-  ERROR = 'ERROR'
-}
+type LogLevel = 'INFO' | 'WARNING' | 'ERROR' | string
 
 /**
  * The log data interface.
  *
  * @interface LogData
  *
- * @property {number} status The status code.
- * @property {string} message The message.
+ * @property {number} status - The status code.
+ * @property {string} message - The message.
  */
 interface LogData {
   status?: number
@@ -34,14 +26,15 @@ interface LogData {
  *
  * @interface Logger
  *
- * @property {Function} info Logs an info message.
- * @property {Function} warning Logs a warning message.
- * @property {Function} error Logs an error message.
+ * @property {Function} log - Logs a message with a given log level.
  */
 interface Logger {
-  info(request: RequestInfo, data: LogData, store: StoreData): void
-  warning(request: RequestInfo, data: LogData, store: StoreData): void
-  error(request: RequestInfo, data: LogData, store: StoreData): void
+  log(
+    level: LogLevel,
+    request: RequestInfo,
+    data: LogData,
+    store: StoreData
+  ): void
 }
 
 export { LogLevel, LogData, Logger }

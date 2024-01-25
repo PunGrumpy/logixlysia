@@ -43,8 +43,5 @@ function log(
  * @returns {Logger} The formatted logger.
  */
 export const createLogger = (): Logger => ({
-  info: (request, data, store) => log(LogLevel.INFO, request, data, store),
-  warning: (request, data, store) =>
-    log(LogLevel.WARNING, request, data, store),
-  error: (request, data, store) => log(LogLevel.ERROR, request, data, store)
+  log: (level, request, data, store) => log(level, request, data, store)
 })
