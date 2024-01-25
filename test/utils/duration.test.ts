@@ -2,7 +2,7 @@ import { describe, expect, it } from 'bun:test'
 import durationString from '~/utils/duration'
 
 describe('Duration String', () => {
-  it('Generates a string representing the duration in appropriate units.', () => {
+  it('Generates a string representing the duration in appropriate units', () => {
     const testCases = [
       [1e9, 's'],
       [1e6, 'ms'],
