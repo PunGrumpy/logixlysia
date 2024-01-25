@@ -16,7 +16,7 @@ import { StoreData } from './types/StoreData'
  * @param {LogData} data The log data.
  * @param {StoreData} store The store data.
  *
- * @returns {void} The log message.
+ * @returns {void}
  */
 function log(
   level: LogLevel,
@@ -24,7 +24,6 @@ function log(
   data: LogData,
   store: StoreData
 ): void {
-  const logStr: string[] = []
   const nowStr = chalk.bgYellow(chalk.black(new Date().toLocaleString()))
   const levelStr = logString(level)
   const durationStr = durationString(store.beforeTime)
@@ -33,11 +32,9 @@ function log(
   const statusStr = statusString(data.status || 200)
   const messageStr = data.message || ''
 
-  logStr.push(
+  console.log(
     `🦊 ${nowStr} ${levelStr} ${durationStr} ${methodStr} ${pathnameStr} ${statusStr} ${messageStr}`
   )
-
-  console.log(logStr.join(' '))
 }
 
 /**

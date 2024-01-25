@@ -6,7 +6,7 @@ import { Server } from 'bun'
 /**
  * Creates a logger.
  *
- * @export {Function} The logger.
+ * @export
  * @module logger
  * @category Logger
  * @subcategory Functions
@@ -28,14 +28,7 @@ export const logger = (): Elysia => {
       startString(ctx.server as Server)
     })
     .onRequest(ctx => {
-      ctx.store = { beforeTime: process.hrtime.bigint() } as {
-        beforeTime: bigint
-      }
-    })
-    .onBeforeHandle(ctx => {
-      ctx.store = { beforeTime: process.hrtime.bigint() } as {
-        beforeTime: bigint
-      }
+      ctx.store = { beforeTime: process.hrtime.bigint() }
     })
     .onAfterHandle(({ request, store }) => {
       log.info(request, {}, store as { beforeTime: bigint })
