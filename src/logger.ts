@@ -9,21 +9,46 @@ import { LogData, LogLevel, Logger } from './types/Logger'
 import { StoreData } from './types/StoreData'
 
 /**
- * Logs a message to the console.
+ * Asynchronously logs a message constructed from various log components.
  *
- * @param {LogLevel} level The log level.
- * @param {RequestInfo} request The request information.
- * @param {LogData} data The log data.
- * @param {StoreData} store The store data.
+ * @async
+ * @param {LogLevel} level - The log level.
+ * @param {RequestInfo} request - The request information.
+ * @param {LogData} data - The log data.
+ * @param {StoreData} store - The store data.
  *
- * @returns {void}
+ * @returns {Promise<void>}
  */
-function log(
+async function log(
   level: LogLevel,
   request: RequestInfo,
   data: LogData,
   store: StoreData
-): void {
+): Promise<void> {
+  const logMessage = buildLogMessage(level, request, data, store)
+  try {
+    await writeToLogAsync(logMessage)
+  } catch (error) {
+    console.error('Error logging message:', error)
+  }
+}
+
+/**
+ * Builds the log message string from given parameters.
+ *
+ * @param {LogLevel} level - The log level.
+ * @param {RequestInfo} request - The request information.
+ * @param {LogData} data - The log data.
+ * @param {StoreData} store - The store data.
+ *
+ * @returns {string} - The constructed log message.
+ */
+function buildLogMessage(
+  level: LogLevel,
+  request: RequestInfo,
+  data: LogData,
+  store: StoreData
+): string {
   const nowStr = chalk.bgYellow(chalk.black(new Date().toLocaleString()))
   const levelStr = logString(level)
   const durationStr = durationString(store.beforeTime)
@@ -32,15 +57,33 @@ function log(
   const statusStr = statusString(data.status || 200)
   const messageStr = data.message || ''
 
-  console.log(
-    `🦊 ${nowStr} ${levelStr} ${durationStr} ${methodStr} ${pathnameStr} ${statusStr} ${messageStr}`
-  )
+  return `🦊 ${nowStr} ${levelStr} ${durationStr} ${methodStr} ${pathnameStr} ${statusStr} ${messageStr}`
 }
 
 /**
- * Creates a formatted logger.
+ * Writes a log message to the console asynchronously.
  *
- * @returns {Logger} The formatted logger.
+ * @async
+ * @param {string} message - The message to log.
+ *
+ * @returns {Promise<void>}
+ * @throws {Error} - If the timeout is reached.
+ */
+function writeToLogAsync(message: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    console.log(message)
+    resolve()
+
+    setTimeout(() => {
+      reject(new Error('Timed out while writing to log.'))
+    })
+  })
+}
+
+/**
+ * Creates a logger instance with an asynchronous log method.
+ *
+ * @returns {Logger} - The logger instance.
  */
 export const createLogger = (): Logger => ({
   log: (level, request, data, store) => log(level, request, data, store)
