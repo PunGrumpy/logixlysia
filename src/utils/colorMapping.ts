@@ -10,9 +10,9 @@ import { ColorMap } from '~/types/ColorMap'
  * @property {chalk.Chalk} ERROR The color for the ERROR log level.
  */
 const LogLevelColorMap: ColorMap = {
-  INFO: chalk.bgGreen,
-  WARNING: chalk.bgYellow,
-  ERROR: chalk.bgRed
+  INFO: chalk.bgGreen.black,
+  WARNING: chalk.bgYellow.black,
+  ERROR: chalk.bgRed.black
 }
 
 /**
