@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.1.0](https://github.com/PunGrumpy/logixlysia/compare/v2.0.2...v2.1.0) (2024-01-25)
+
+
+### Features
+
+* **logger:** implement asynchronous logging functionality ([1017af0](https://github.com/PunGrumpy/logixlysia/commit/1017af0a28bd6121a85ec814a9177fd303c2572c))
+
 ## [2.0.2](https://github.com/PunGrumpy/logixlysia/compare/v2.0.1...v2.0.2) (2024-01-07)
 
 
