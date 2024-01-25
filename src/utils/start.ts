@@ -32,11 +32,11 @@ function startString(config: Server): void {
 
   console.log(`
       ┌${border}┐
-      │${createBoxText('', boxWidth)} │
+      │${createBoxText('', boxWidth)}│
       │${createBoxText(title, boxWidth)}│
-      │${createBoxText('', boxWidth)} │
+      │${createBoxText('', boxWidth)}│
       │${createBoxText(message, boxWidth)}│
-      │${createBoxText('', boxWidth)} │
+      │${createBoxText('', boxWidth)}│
       └${border}┘
     `)
 }
