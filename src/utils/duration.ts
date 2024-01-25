@@ -9,30 +9,21 @@ import chalk from 'chalk'
  */
 function durationString(beforeTime: bigint): string {
   const now = process.hrtime.bigint()
-  const timeDifference = now - beforeTime
-  const nanoseconds = Number(timeDifference)
-
-  const durationInMicroseconds = (nanoseconds / 1e3).toFixed(0)
-  const durationInMilliseconds = (nanoseconds / 1e6).toFixed(0)
+  const nanoseconds = Number(now - beforeTime)
 
   let timeMessage: string = ''
 
   if (nanoseconds >= 1e9) {
-    const seconds = (nanoseconds / 1e9).toFixed(2)
-    timeMessage = `${seconds}s`
+    timeMessage = `${(nanoseconds / 1e9).toFixed(2)}s`
   } else if (nanoseconds >= 1e6) {
-    timeMessage = `${durationInMilliseconds}ms`
+    timeMessage = `${(nanoseconds / 1e6).toFixed(0)}ms`
   } else if (nanoseconds >= 1e3) {
-    timeMessage = `${durationInMicroseconds}µs`
+    timeMessage = `${(nanoseconds / 1e3).toFixed(0)}µs`
   } else {
     timeMessage = `${nanoseconds}ns`
   }
 
-  if (timeMessage) {
-    timeMessage = chalk.gray(timeMessage).padStart(8).padEnd(16)
-  }
-
-  return timeMessage
+  return timeMessage ? chalk.gray(timeMessage).padStart(8).padEnd(16) : ''
 }
 
 export default durationString

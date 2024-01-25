@@ -9,8 +9,9 @@ import { Server } from '~/types/Server'
  * @returns {string} The box text.
  */
 function createBoxText(text: string, width: number): string {
-  const padding = ' '.repeat((width - text.length) / 2)
-  return `${padding}${text}${padding}`
+  const paddingLength = Math.max(0, (width - text.length + 1) / 2)
+  const padding = ' '.repeat(paddingLength)
+  return `${padding}${text}${padding}`.slice(0, width)
 }
 
 /**

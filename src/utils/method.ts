@@ -1,5 +1,4 @@
-import chalk from 'chalk'
-import { ColorMap } from '~/types/ColorMap'
+import { HttpMethodColorMap } from './colorMapping'
 
 /**
  * Converts an HTTP request method to a colored string representation.
@@ -9,17 +8,7 @@ import { ColorMap } from '~/types/ColorMap'
  * @returns {string} A colored string representing the method.
  */
 function methodString(method: string): string {
-  const colorMap: ColorMap = {
-    GET: chalk.white,
-    POST: chalk.yellow,
-    PUT: chalk.blue,
-    DELETE: chalk.red,
-    PATCH: chalk.green,
-    OPTIONS: chalk.cyan,
-    HEAD: chalk.magenta
-  }
-
-  const colorFunction = colorMap[method]
+  const colorFunction = HttpMethodColorMap[method]
 
   if (colorFunction) {
     return colorFunction(method.padEnd(7))

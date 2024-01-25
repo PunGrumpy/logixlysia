@@ -3,13 +3,17 @@ import { RequestInfo } from '~/types/RequestInfo'
 /**
  * Returns the path string.
  *
- * @param {RequestInfo} path The request information.
+ * @param {RequestInfo} requestInfo The request info.
  *
- * @returns {string} The path string.
+ * @returns {string | undefined} The path string.
  */
-function pathString(path: RequestInfo): string {
-  const url = new URL(path?.url).pathname
-  return url
+
+function pathString(requestInfo: RequestInfo): string | undefined {
+  try {
+    return new URL(requestInfo.url).pathname
+  } catch (error) {
+    return undefined
+  }
 }
 
 export default pathString

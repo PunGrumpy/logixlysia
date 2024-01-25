@@ -1,5 +1,4 @@
-import chalk from 'chalk'
-import { ColorMap } from '~/types/ColorMap'
+import { LogLevelColorMap } from './colorMapping'
 
 /**
  * Converts a log level to a colored string representation.
@@ -9,16 +8,10 @@ import { ColorMap } from '~/types/ColorMap'
  * @returns {string} A colored string representing the log level.
  */
 function logString(log: string): string {
-  const colorMap: ColorMap = {
-    INFO: chalk.bgGreen,
-    WARNING: chalk.bgYellow,
-    ERROR: chalk.bgRed
-  }
-
-  const colorFunction = colorMap[log]
+  const colorFunction = LogLevelColorMap[log]
 
   if (colorFunction) {
-    return colorFunction(chalk.black(log.padEnd(7)))
+    return colorFunction(log.padEnd(7))
   }
 
   return log
