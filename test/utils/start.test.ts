@@ -16,7 +16,7 @@ describe('Start String', () => {
     console.log = originalConsoleLog
   })
 
-  it('Logs the expected server start message', () => {
+  it('Correctly logs the expected message upon server start', () => {
     const config: Server = {
       hostname: 'localhost',
       port: 3000,
