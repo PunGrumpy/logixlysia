@@ -1,29 +1,42 @@
 import chalk from 'chalk'
 
 /**
- * Converts the time difference between the start of the request and the end of the request to a formatted string.
+ * Converts a time difference into a formatted string with the most appropriate time unit.
+ * Units used are seconds (s), milliseconds (ms), microseconds (µs), and nanoseconds (ns).
  *
- * @param {bigint} beforeTime The timestamp taken before the request.
+ * @param {bigint} beforeTime - The timestamp taken before the request.
  *
- * @returns {string} A formatted duration string with a time unit.
+ * @returns {string} A formatted duration string including the time unit.
  */
 function durationString(beforeTime: bigint): string {
-  const now = process.hrtime.bigint()
-  const nanoseconds = Number(now - beforeTime)
+  const nanoseconds = Number(process.hrtime.bigint() - beforeTime)
 
-  let timeMessage: string = ''
+  const timeUnits = [
+    { unit: 's', threshold: 1e9 },
+    { unit: 'ms', threshold: 1e6 },
+    { unit: 'µs', threshold: 1e3 }
+  ]
 
-  if (nanoseconds >= 1e9) {
-    timeMessage = `${(nanoseconds / 1e9).toFixed(2)}s`
-  } else if (nanoseconds >= 1e6) {
-    timeMessage = `${(nanoseconds / 1e6).toFixed(0)}ms`
-  } else if (nanoseconds >= 1e3) {
-    timeMessage = `${(nanoseconds / 1e3).toFixed(0)}µs`
-  } else {
-    timeMessage = `${nanoseconds}ns`
+  for (const { unit, threshold } of timeUnits) {
+    if (nanoseconds >= threshold) {
+      const value = (nanoseconds / threshold).toFixed(threshold === 1e9 ? 2 : 0)
+      return formatTime(value, unit)
+    }
   }
 
-  return timeMessage ? chalk.gray(timeMessage).padStart(8).padEnd(16) : ''
+  return formatTime(nanoseconds.toString(), 'ns')
+}
+
+/**
+ * Formats the time value with the given unit and applies chalk styling.
+ *
+ * @param {string} value - The time value.
+ * @param {string} unit - The time unit.
+ *
+ * @returns {string} Styled time string.
+ */
+function formatTime(value: string, unit: string): string {
+  return chalk.gray(`${value}${unit}`).padStart(8).padEnd(16)
 }
 
 export default durationString
