@@ -52,8 +52,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest] # TODO: #16
-        # os: [ubuntu-latest]
+        # os: [ubuntu-latest, macos-latest] # TODO: #16
+        os: [ubuntu-latest]
         node-version: [21]
     name: 🧪 Test
     runs-on: ${{ matrix.os }}

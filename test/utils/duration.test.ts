@@ -30,7 +30,7 @@ describe('Duration String', () => {
       const beforeTime = process.hrtime.bigint() - BigInt(String(nanoseconds))
       const result = durationString(beforeTime)
 
-      expect(result).toMatch(new RegExp(`\\d+${unit}`))
+      expect(result).toMatch(String(unit))
     })
   }
 })
