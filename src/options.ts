@@ -1,8 +1,10 @@
 /**
- * Options for the `server` function.
- * @param {boolean} ip - Whether to log the IP address of the client.
+ * Options for the logger.
  */
 interface Options {
+  /**
+   * Whether to log the IP address of the client.
+   */
   ip?: boolean
 }
 

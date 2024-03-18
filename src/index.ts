@@ -35,18 +35,23 @@ export const logger = (options?: Options): Elysia => {
       log.log('INFO', request, {}, store as { beforeTime: bigint })
     })
     .onAfterHandle({ as: 'global' }, ({ request, store }) => {
-      if (options?.ip !== undefined && options.ip) {
-        if (request.headers.get('x-forwarded-for')) {
-          log.log(
-            'INFO',
-            request,
-            {
-              message: `IP: ${request.headers.get('x-forwarded-for')}`
-            },
-            store as { beforeTime: bigint }
-          )
+      const logStr: string[] = []
+
+      if (options?.ip) {
+        const forwardedFor = request.headers.get('x-forwarded-for')
+        if (forwardedFor) {
+          logStr.push(`IP: ${forwardedFor}`)
         }
       }
+
+      log.log(
+        'INFO',
+        request,
+        {
+          message: logStr.join(' ')
+        },
+        store as { beforeTime: bigint }
+      )
     })
     .onError(({ request, error, store }) => {
       log.log('ERROR', request, error, store as { beforeTime: bigint })
