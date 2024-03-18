@@ -4,7 +4,11 @@ import { logger } from '~/index'
 const app = new Elysia({
   name: 'Basic Example'
 })
-  .use(logger())
+  .use(
+    logger({
+      ip: true
+    })
+  )
   .get('/', () => {
     return {
       message: 'Basic Example'

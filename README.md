@@ -23,6 +23,14 @@ const app = new Elysia({
 app.listen(3000)
 ```
 
+## `📚` Documentation
+
+### Options
+
+| Option | Type      | Description                                                           | Default |
+| ------ | --------- | --------------------------------------------------------------------- | ------- |
+| `ip`   | `boolean` | Display the incoming IP address based on the `X-Forwarded-For` header | `false` |
+
 ## `📄` License
 
 Licensed under the [MIT License](LICENSE).

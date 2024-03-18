@@ -2,6 +2,7 @@ import Elysia from 'elysia'
 import { createLogger } from './logger'
 import startString from './utils/start'
 import { Server } from 'bun'
+import { Options } from './options'
 
 /**
  * Creates a logger.
@@ -18,7 +19,7 @@ import { Server } from 'bun'
  *
  * @returns {Elysia} The logger.
  */
-export const logger = (): Elysia => {
+export const logger = (options?: Options): Elysia => {
   const log = createLogger()
 
   const elysia = new Elysia({
@@ -30,8 +31,22 @@ export const logger = (): Elysia => {
     .onRequest(ctx => {
       ctx.store = { beforeTime: process.hrtime.bigint() }
     })
-    .onAfterHandle(({ request, store }) => {
+    .onBeforeHandle({ as: 'global' }, ({ request, store }) => {
       log.log('INFO', request, {}, store as { beforeTime: bigint })
+    })
+    .onAfterHandle({ as: 'global' }, ({ request, store }) => {
+      if (options?.ip !== undefined && options.ip) {
+        if (request.headers.get('x-forwarded-for')) {
+          log.log(
+            'INFO',
+            request,
+            {
+              message: `IP: ${request.headers.get('x-forwarded-for')}`
+            },
+            store as { beforeTime: bigint }
+          )
+        }
+      }
     })
     .onError(({ request, error, store }) => {
       log.log('ERROR', request, error, store as { beforeTime: bigint })
