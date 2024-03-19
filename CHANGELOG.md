@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.2.0](https://github.com/PunGrumpy/logixlysia/compare/v2.1.0...v2.2.0) (2024-03-19)
+
+
+### Features
+
+* **options:** add show ip ([4e997c5](https://github.com/PunGrumpy/logixlysia/commit/4e997c557e9aef6046a93e0cab9fe11a87df3430))
+
+
+### Bug Fixes
+
+* **logger:** change to use array and push them ([3feefb7](https://github.com/PunGrumpy/logixlysia/commit/3feefb7a8dddc42c4eec54de40ab9dd8d5c70e70))
+
 ## [2.1.0](https://github.com/PunGrumpy/logixlysia/compare/v2.0.2...v2.1.0) (2024-01-25)
 
 
