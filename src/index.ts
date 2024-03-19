@@ -31,9 +31,6 @@ export const logger = (options?: Options): Elysia => {
     .onRequest(ctx => {
       ctx.store = { beforeTime: process.hrtime.bigint() }
     })
-    .onBeforeHandle({ as: 'global' }, ({ request, store }) => {
-      log.log('INFO', request, {}, store as { beforeTime: bigint })
-    })
     .onAfterHandle({ as: 'global' }, ({ request, store }) => {
       const logStr: string[] = []
 
