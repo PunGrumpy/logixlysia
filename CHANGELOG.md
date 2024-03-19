@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.2.1](https://github.com/PunGrumpy/logixlysia/compare/v2.2.0...v2.2.1) (2024-03-19)
+
+
+### Bug Fixes
+
+* **index:** remove `onBeforeHandle` for avoid repeat logging ([4c6f0b9](https://github.com/PunGrumpy/logixlysia/commit/4c6f0b9912a4319ada15ad2a5110a9ed34f08a11))
+
+
+### Reverts
+
+* **deps:** new come back to old version ([361ac6b](https://github.com/PunGrumpy/logixlysia/commit/361ac6b2821ac897c1a4658cbfa1b5eb1a190804))
+
 ## [2.2.0](https://github.com/PunGrumpy/logixlysia/compare/v2.1.0...v2.2.0) (2024-03-19)
 
 
