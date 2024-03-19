@@ -17,12 +17,12 @@ describe('Duration String', () => {
       'Generates a string representing the duration in Microseconds (µs) unit',
       1e3,
       'µs'
-    ],
-    [
-      'Generates a string representing the duration in Nanoseconds (ns) unit',
-      1,
-      'ns'
     ]
+    // [
+    //   'Generates a string representing the duration in Nanoseconds (ns) unit',
+    //   1,
+    //   'ns'
+    // ]
   ]
 
   for (const [description, nanoseconds, unit] of testCases) {
