@@ -50,7 +50,7 @@ export const logger = (options?: Options): Elysia => {
         store as { beforeTime: bigint }
       )
     })
-    .onError(({ request, error, store }) => {
+    .onError({ as: 'global' }, ({ request, error, store }) => {
       log.log('ERROR', request, error, store as { beforeTime: bigint })
     })
 
