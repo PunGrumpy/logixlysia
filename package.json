@@ -15,8 +15,8 @@
   },
   "license": "MIT",
   "scripts": {
-    "lint": "eslint . --ext .ts",
-    "lint:fix": "eslint . --ext .ts --fix",
+    "lint": "eslint **/*.ts --no-warn-ignored",
+    "lint:fix": "eslint **/*.ts --fix --no-warn-ignored",
     "test": "bun test --timeout 5000 --coverage",
     "test:ci": "bun test --timeout 5000 --coverage",
     "publish": "npm publish",
