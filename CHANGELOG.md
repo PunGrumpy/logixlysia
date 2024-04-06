@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.2.3](https://github.com/PunGrumpy/logixlysia/compare/v2.2.2...v2.2.3) (2024-04-06)
+
+
+### Bug Fixes
+
+* **error-log:** add global to `onError` ([e217baa](https://github.com/PunGrumpy/logixlysia/commit/e217baad9f72fa3e866f959f371768ed2ed22e33))
+* **ts2488:** that method return an iterator ([35da93f](https://github.com/PunGrumpy/logixlysia/commit/35da93f75e34ff212ddd31ff951425551f31c764))
+
 ## [2.2.2](https://github.com/PunGrumpy/logixlysia/compare/v2.2.1...v2.2.2) (2024-04-06)
 
 
