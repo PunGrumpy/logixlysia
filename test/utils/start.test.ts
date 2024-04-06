@@ -28,7 +28,9 @@ describe('Start String', () => {
     const expectedMessage = `🦊 Elysia is running at http://localhost:3000`
 
     // Extract the arguments passed to console.log during the function call
-    const [[logMessage]] = mockConsoleLog.mock.calls
+    const logMessage = mockConsoleLog.mock.calls
+      .map((args: any[]) => args.join(' '))
+      .join(' ')
 
     expect(logMessage).toMatch(expectedMessage)
   })
