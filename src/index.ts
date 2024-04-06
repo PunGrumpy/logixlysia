@@ -51,7 +51,6 @@ export const logger = (options?: Options): Elysia => {
       )
     })
     .onError({ as: 'global' }, ({ request, error, store }) => {
-      // log.log('ERROR', request, error, store as { beforeTime: bigint })
       handleHttpError(request, error, store as { beforeTime: bigint })
     })
 
