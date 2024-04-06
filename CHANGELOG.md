@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.3.0](https://github.com/PunGrumpy/logixlysia/compare/v2.2.3...v2.3.0) (2024-04-06)
+
+
+### Features
+
+* **logger:** handle HTTP errors and log with appropriate status code ([276b3c4](https://github.com/PunGrumpy/logixlysia/commit/276b3c41334bcf1cefd032ae11f71fb8cda2bc9a)), closes [#24](https://github.com/PunGrumpy/logixlysia/issues/24)
+
 ## [2.2.3](https://github.com/PunGrumpy/logixlysia/compare/v2.2.2...v2.2.3) (2024-04-06)
 
 
