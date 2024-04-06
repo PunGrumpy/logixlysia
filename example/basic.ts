@@ -14,6 +14,9 @@ const app = new Elysia({
       message: 'Basic Example'
     }
   })
+  .get('/error', () => {
+    throw new Error('This is an error message.')
+  })
   .post('/', () => {
     return {
       message: 'Basic Example'

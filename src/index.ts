@@ -1,5 +1,5 @@
 import Elysia from 'elysia'
-import { createLogger } from './logger'
+import { createLogger, handleHttpError } from './logger'
 import startString from './utils/start'
 import { Server } from 'bun'
 import { Options } from './options'
@@ -51,7 +51,8 @@ export const logger = (options?: Options): Elysia => {
       )
     })
     .onError({ as: 'global' }, ({ request, error, store }) => {
-      log.log('ERROR', request, error, store as { beforeTime: bigint })
+      // log.log('ERROR', request, error, store as { beforeTime: bigint })
+      handleHttpError(request, error, store as { beforeTime: bigint })
     })
 
   return elysia

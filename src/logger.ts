@@ -7,6 +7,7 @@ import statusString from './utils/status'
 import { RequestInfo } from './types/RequestInfo'
 import { LogData, LogLevel, Logger } from './types/Logger'
 import { StoreData } from './types/StoreData'
+import { HttpError } from './types/HttpError'
 
 /**
  * Asynchronously logs a message constructed from various log components.
@@ -88,3 +89,25 @@ function writeToLogAsync(message: string): Promise<void> {
 export const createLogger = (): Logger => ({
   log: (level, request, data, store) => log(level, request, data, store)
 })
+
+/**
+ * Handle HTTP errors and log them with the appropriate status code.
+ *
+ * @param {RequestInfo} request - The request information.
+ * @param {Error} error - The error object.
+ * @param {StoreData} store - The store data.
+ */
+export const handleHttpError = (
+  request: RequestInfo,
+  error: Error,
+  store: StoreData
+): void => {
+  const statusCode = error instanceof HttpError ? error.status : 500
+  const logMessage = buildLogMessage(
+    'ERROR',
+    request,
+    { status: statusCode },
+    store
+  )
+  console.error(logMessage)
+}
