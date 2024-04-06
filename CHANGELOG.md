@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.2.2](https://github.com/PunGrumpy/logixlysia/compare/v2.2.1...v2.2.2) (2024-04-06)
+
+
+### Bug Fixes
+
+* **eslint:** change to use `eslint.config.cjs` instead `.eslintrc.cjs` ([506a33b](https://github.com/PunGrumpy/logixlysia/commit/506a33bc6540614a0b912ddedec109b2215affa3))
+* package.json to reduce vulnerabilities ([f768e88](https://github.com/PunGrumpy/logixlysia/commit/f768e88acd7d7c1faf32dab06a467c2cd6ba8f9c))
+
 ## [2.2.1](https://github.com/PunGrumpy/logixlysia/compare/v2.2.0...v2.2.1) (2024-03-19)
 
 
