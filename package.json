@@ -21,7 +21,7 @@
     "test:ci": "bun test --timeout 5000 --coverage",
     "publish": "npm publish",
     "dev": "bun run --watch example/basic.ts",
-    "prepare": "husky install",
+    "prepare": "husky",
     "lint:staged": "lint-staged",
     "prettier": "prettier --write ."
   },
