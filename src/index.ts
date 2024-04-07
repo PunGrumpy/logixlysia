@@ -32,23 +32,7 @@ export const logger = (options?: Options): Elysia => {
       ctx.store = { beforeTime: process.hrtime.bigint() }
     })
     .onAfterHandle({ as: 'global' }, ({ request, store }) => {
-      const logStr: string[] = []
-
-      if (options?.ip) {
-        const forwardedFor = request.headers.get('x-forwarded-for')
-        if (forwardedFor) {
-          logStr.push(`IP: ${forwardedFor}`)
-        }
-      }
-
-      log.log(
-        'INFO',
-        request,
-        {
-          message: logStr.join(' ')
-        },
-        store as { beforeTime: bigint }
-      )
+      log.log('INFO', request, { status: 200 }, store as { beforeTime: bigint })
     })
     .onError({ as: 'global' }, ({ request, error, store }) => {
       handleHttpError(request, error, store as { beforeTime: bigint })
