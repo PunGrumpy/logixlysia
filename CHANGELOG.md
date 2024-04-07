@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.3.1](https://github.com/PunGrumpy/logixlysia/compare/v2.3.0...v2.3.1) (2024-04-07)
+
+
+### Bug Fixes
+
+* **index:** remove duplicate logging when options IP enabled ([2e99bd6](https://github.com/PunGrumpy/logixlysia/commit/2e99bd628b7160fb43161ca08e49f711b74e8666))
+
 ## [2.3.0](https://github.com/PunGrumpy/logixlysia/compare/v2.2.3...v2.3.0) (2024-04-06)
 
 
