@@ -1,5 +1,5 @@
 import chalk from 'chalk'
-import { ColorMap } from '~/types/ColorMap'
+import { ColorMap } from '~/types'
 
 /**
  * The color map for the log levels.

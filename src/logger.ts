@@ -4,51 +4,26 @@ import methodString from './utils/method'
 import logString from './utils/log'
 import pathString from './utils/path'
 import statusString from './utils/status'
-import { RequestInfo } from './types/RequestInfo'
-import { LogData, LogLevel, Logger } from './types/Logger'
-import { StoreData } from './types/StoreData'
-import { HttpError } from './types/HttpError'
+import { HttpError, RequestInfo } from './types'
+import { LogLevel, LogData, Logger, StoreData, Options } from './types'
 
-/**
- * Asynchronously logs a message constructed from various log components.
- *
- * @async
- * @param {LogLevel} level - The log level.
- * @param {RequestInfo} request - The request information.
- * @param {LogData} data - The log data.
- * @param {StoreData} store - The store data.
- *
- * @returns {Promise<void>}
- */
 async function log(
   level: LogLevel,
   request: RequestInfo,
   data: LogData,
-  store: StoreData
+  store: StoreData,
+  options?: Options
 ): Promise<void> {
-  const logMessage = buildLogMessage(level, request, data, store)
-  try {
-    await writeToLogAsync(logMessage)
-  } catch (error) {
-    console.error('Error logging message:', error)
-  }
+  const logMessage = buildLogMessage(level, request, data, store, options)
+  console.log(logMessage)
 }
 
-/**
- * Builds the log message string from given parameters.
- *
- * @param {LogLevel} level - The log level.
- * @param {RequestInfo} request - The request information.
- * @param {LogData} data - The log data.
- * @param {StoreData} store - The store data.
- *
- * @returns {string} - The constructed log message.
- */
 function buildLogMessage(
   level: LogLevel,
   request: RequestInfo,
   data: LogData,
-  store: StoreData
+  store: StoreData,
+  options?: Options
 ): string {
   const nowStr = chalk.bgYellow(chalk.black(new Date().toLocaleString()))
   const levelStr = logString(level)
@@ -58,56 +33,36 @@ function buildLogMessage(
   const statusStr = statusString(data.status || 200)
   const messageStr = data.message || ''
 
-  return `🦊 ${nowStr} ${levelStr} ${durationStr} ${methodStr} ${pathnameStr} ${statusStr} ${messageStr}`
+  let logMessage = `🦊 ${nowStr} ${levelStr} ${durationStr} ${methodStr} ${pathnameStr} ${statusStr} ${messageStr}`
+
+  if (options?.ip) {
+    const forwardedFor = request.headers.get('x-forwarded-for')
+    if (forwardedFor) {
+      logMessage += ` IP: ${forwardedFor}`
+    }
+  }
+
+  return logMessage
 }
 
-/**
- * Writes a log message to the console asynchronously.
- *
- * @async
- * @param {string} message - The message to log.
- *
- * @returns {Promise<void>}
- * @throws {Error} - If the timeout is reached.
- */
-function writeToLogAsync(message: string): Promise<void> {
-  return new Promise((resolve, reject) => {
-    console.log(message)
-    resolve()
-
-    setTimeout(() => {
-      reject(new Error('Timed out while writing to log.'))
-    })
-  })
-}
-
-/**
- * Creates a logger instance with an asynchronous log method.
- *
- * @returns {Logger} - The logger instance.
- */
-export const createLogger = (): Logger => ({
-  log: (level, request, data, store) => log(level, request, data, store)
+export const createLogger = (options?: Options): Logger => ({
+  log: (level, request, data, store) =>
+    log(level, request, data, store, options)
 })
 
-/**
- * Handle HTTP errors and log them with the appropriate status code.
- *
- * @param {RequestInfo} request - The request information.
- * @param {Error} error - The error object.
- * @param {StoreData} store - The store data.
- */
 export const handleHttpError = (
   request: RequestInfo,
   error: Error,
-  store: StoreData
+  store: StoreData,
+  options?: Options
 ): void => {
   const statusCode = error instanceof HttpError ? error.status : 500
   const logMessage = buildLogMessage(
     'ERROR',
     request,
     { status: statusCode },
-    store
+    store,
+    options
   )
   console.error(logMessage)
 }

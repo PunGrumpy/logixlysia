@@ -1,4 +1,4 @@
-import { RequestInfo } from '~/types/RequestInfo'
+import { RequestInfo } from '~/types'
 
 /**
  * Returns the path string.

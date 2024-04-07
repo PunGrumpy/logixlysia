@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test'
-import { ColorMap } from '~/types/ColorMap'
+import { ColorMap } from '~/types'
 
 describe('Color Mapping Interface', () => {
   it('Defines an object with string keys mapping to functions', () => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test'
-import { Server } from '~/types/Server'
+import { Server } from '~/types'
 
 describe('Server interface', () => {
   it('Defines the Server interface correctly', () => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test'
-import { HttpError } from '~/types/HttpError'
+import { HttpError } from '~/types'
 
 describe('HttpError', () => {
   it('Should create an instance with correct status and message', () => {

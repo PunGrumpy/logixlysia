@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, jest } from 'bun:test'
-import { Server } from '~/types/Server'
+import { Server } from '~/types'
 import startString from '~/utils/start'
 
 describe('Start String', () => {

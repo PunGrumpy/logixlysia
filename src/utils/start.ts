@@ -1,4 +1,4 @@
-import { Server } from '~/types/Server'
+import { Server } from '~/types'
 
 /**
  * Creates a box text.

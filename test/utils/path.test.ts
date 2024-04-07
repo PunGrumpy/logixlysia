@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test'
-import { RequestInfo } from '~/types/RequestInfo'
+import { RequestInfo } from '~/types'
 import pathString from '~/utils/path'
 
 describe('Path String', () => {

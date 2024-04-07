@@ -2,7 +2,7 @@ import Elysia from 'elysia'
 import { createLogger, handleHttpError } from './logger'
 import startString from './utils/start'
 import { Server } from 'bun'
-import { Options } from './options'
+import { Options } from './types'
 
 /**
  * Creates a logger.
@@ -20,7 +20,7 @@ import { Options } from './options'
  * @returns {Elysia} The logger.
  */
 export const logger = (options?: Options): Elysia => {
-  const log = createLogger()
+  const log = createLogger(options)
 
   const elysia = new Elysia({
     name: 'Logixlysia'
