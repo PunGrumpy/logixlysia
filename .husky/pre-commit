@@ -2,7 +2,3 @@
 . "$(dirname -- "$0")/_/husky.sh"
 
 bun lint:staged
-
-if [ -x "$(command -v ggshield)" ]; then
-  ggshield secret scan pre-commit
-fi

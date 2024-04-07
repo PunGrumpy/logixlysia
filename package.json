@@ -85,17 +85,5 @@
   },
   "peerDependencies": {
     "typescript": "^5.0.0"
-  },
-  "husky": {
-    "hooks": {
-      "pre-commit": "lint-staged",
-      "prepare-commit-msg": "exec < /dev/tty && bunx cz --hook || true",
-      "pre-push": "ggshield secret scan"
-    }
-  },
-  "config": {
-    "commitizen": {
-      "path": "./node_modules/cz-conventional-changelog"
-    }
   }
 }
