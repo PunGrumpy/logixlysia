@@ -1,19 +1,19 @@
-name: 🪲 Bug Report
+name: 🐞 Bug Report
 description: Report a bug or issue with the project.
-title: 'bug: '
+title: 'Bug: '
 labels: ['bug']
 body:
   - type: checkboxes
     attributes:
-      label: Did you use latest version?
-      description: Please check the latest version before reporting a bug.
+      label: Latest Version Checked
+      description: Confirm if you have checked the latest version before reporting a bug.
       options:
         - label: I have checked the latest version.
           required: true
   - type: dropdown
     attributes:
       label: Platform
-      description: What platform(s) does this affect?
+      description: Select the platform(s) affected by this issue.
       options:
         - 🐧 Linux
         - 🍎 macOS
@@ -21,7 +21,7 @@ body:
   - type: dropdown
     attributes:
       label: Priority
-      description: How important is this issue?
+      description: Choose the priority level for this issue.
       options:
         - 🔥 Critical
         - 🚨 High
@@ -30,42 +30,42 @@ body:
   - type: textarea
     attributes:
       label: Description
-      description: Describe the bug or issue.
+      description: Provide a detailed description of the bug or issue.
       placeholder: |
         Describe the bug or issue.
       render: Markdown
   - type: textarea
     attributes:
       label: Steps to Reproduce
-      description: Describe the steps to reproduce the bug or issue.
+      description: Outline the steps to reproduce the bug or issue.
       placeholder: |
         Describe the steps to reproduce the bug or issue.
       render: Markdown
   - type: textarea
     attributes:
       label: Expected Behavior
-      description: Describe what you expected to happen.
+      description: Describe the behavior you expected to see.
       placeholder: |
         Describe what you expected to happen.
       render: Markdown
   - type: textarea
     attributes:
       label: Actual Behavior
-      description: Describe what actually happened.
+      description: Describe the actual behavior observed.
       placeholder: |
         Describe what actually happened.
       render: Markdown
   - type: textarea
     attributes:
       label: Additional Information
-      description: Provide any additional information, such as screenshots or logs.
+      description: Share any additional details, such as screenshots or logs.
       placeholder: |
         Provide any additional information, such as screenshots or logs.
       render: Markdown
   - type: textarea
     attributes:
       label: Reproduction Repository
-      description: Provide a link to a reproduction repository.
+      description: Include a link to a repository for reproducing the issue.
       placeholder: |
         Provide a link to a reproduction repository.
       render: Markdown
