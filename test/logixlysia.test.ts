@@ -10,7 +10,13 @@ describe('Logixlysia with IP logging enabled', () => {
 
   beforeAll(() => {
     server = new Elysia()
-      .use(logger({ ip: true }))
+      .use(
+        logger({
+          ip: true,
+          customLogFormat:
+            '🦊 {now} {duration} {level} {method} {pathname} {status} {message} {ip}'
+        })
+      )
       .get('/', ctx => {
         const ipAddress = ctx.request.headers.get('x-forwarded-for') || 'null'
         return '🦊 Logixlysia Getting'
@@ -35,7 +41,9 @@ describe('Logixlysia with IP logging enabled', () => {
     }
 
     logs.forEach(log => {
-      expect(log).toMatch(/^IP: \d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/)
+      expect(log).toMatch(
+        /^🦊 .+ INFO .+ .+ GET \/ .+ IP: \d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/
+      )
     })
   })
 
@@ -47,7 +55,7 @@ describe('Logixlysia with IP logging enabled', () => {
     }
 
     logs.forEach(log => {
-      expect(log).toBe('IP: null')
+      expect(log).toMatch(/^🦊 .+ INFO .+ .+ GET \/ .+ IP: null$/)
     })
   })
 })
@@ -59,7 +67,13 @@ describe('Logixlysia with IP logging disabled', () => {
 
   beforeAll(() => {
     server = new Elysia()
-      .use(logger({ ip: false }))
+      .use(
+        logger({
+          ip: false,
+          customLogFormat:
+            '🦊 {now} {duration} {level} {method} {pathname} {status} {message} {ip}'
+        })
+      )
       .get('/', () => '🦊 Logixlysia Getting')
       .post('logixlysia', () => '🦊 Logixlysia Posting')
       .listen(3000)
