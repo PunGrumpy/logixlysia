@@ -1,5 +1,16 @@
 # Changelog
 
+## [3.0.0](https://github.com/PunGrumpy/logixlysia/compare/v2.3.1...v3.0.0) (2024-04-08)
+
+
+### ⚠ BREAKING CHANGES
+
+* **options:** 
+
+### Features
+
+* **options:** add support for custom log format ([acc9380](https://github.com/PunGrumpy/logixlysia/commit/acc9380ea25691e7d7fec175094cb6a9878b6c69))
+
 ## [2.3.1](https://github.com/PunGrumpy/logixlysia/compare/v2.3.0...v2.3.1) (2024-04-07)
 
 
