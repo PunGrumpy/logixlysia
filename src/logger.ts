@@ -4,8 +4,15 @@ import methodString from './utils/method'
 import logString from './utils/log'
 import pathString from './utils/path'
 import statusString from './utils/status'
-import { HttpError, RequestInfo } from './types'
-import { LogLevel, LogData, Logger, StoreData, Options } from './types'
+import {
+  LogLevel,
+  LogData,
+  Logger,
+  StoreData,
+  Options,
+  RequestInfo,
+  HttpError
+} from './types'
 
 /**
  * Logs a message.
@@ -52,12 +59,12 @@ function buildLogMessage(
   const statusStr = statusString(data.status || 200)
   const messageStr = data.message || ''
   const ipStr =
-    options?.ip && request.headers.get('x-forwarded-for')
+    options?.config?.ip && request.headers.get('x-forwarded-for')
       ? `IP: ${request.headers.get('x-forwarded-for')}`
       : ''
 
   const logFormat =
-    options?.customLogFormat ||
+    options?.config?.customLogFormat ||
     '🦊 {now} {level} {duration} {method} {pathname} {status} {message} {ip}'
   const logMessage = logFormat
     .replace('{now}', nowStr)
@@ -81,7 +88,7 @@ function buildLogMessage(
 export const createLogger = (options?: Options): Logger => ({
   log: (level, request, data, store) =>
     log(level, request, data, store, options),
-  customLogFormat: options?.customLogFormat
+  customLogFormat: options?.config?.customLogFormat
 })
 
 /**

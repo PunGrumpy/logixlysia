@@ -45,8 +45,10 @@ class HttpError extends Error {
 }
 
 interface Options {
-  ip?: boolean
-  customLogFormat?: string
+  config?: {
+    ip?: boolean
+    customLogFormat?: string
+  }
 }
 
 export {

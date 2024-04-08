@@ -12,9 +12,11 @@ describe('Logixlysia with IP logging enabled', () => {
     server = new Elysia()
       .use(
         logger({
-          ip: true,
-          customLogFormat:
-            '🦊 {now} {duration} {level} {method} {pathname} {status} {message} {ip}'
+          config: {
+            ip: true,
+            customLogFormat:
+              '🦊 {now} {duration} {level} {method} {pathname} {status} {message} {ip}'
+          }
         })
       )
       .get('/', ctx => {
@@ -69,9 +71,11 @@ describe('Logixlysia with IP logging disabled', () => {
     server = new Elysia()
       .use(
         logger({
-          ip: false,
-          customLogFormat:
-            '🦊 {now} {duration} {level} {method} {pathname} {status} {message} {ip}'
+          config: {
+            ip: false,
+            customLogFormat:
+              '🦊 {now} {duration} {level} {method} {pathname} {status} {message} {ip}'
+          }
         })
       )
       .get('/', () => '🦊 Logixlysia Getting')
