@@ -1,27 +1,21 @@
-source:
+'source':
   - 'src/**/*.{js,jsx,ts,tsx}'
-
-test:
+'test':
   - 'src/**/__tests__/*.{js,jsx,ts,tsx}'
   - 'src/**/*.{spec,test}.{js,jsx,ts,tsx}'
-
-lint:
+'lint':
   - 'lint-staged.config.js'
   - 'eslint.config.js'
   - 'prettier.config.js'
-
-ci/cd:
+'ci/cd':
   - '.github/workflows/**/*.{yml,yaml}'
   - '.github/labeler.yml'
-
-changelog:
+'changelog':
   - 'CHANGELOG.md'
-
-config:
+'config':
   - 'package.json'
   - 'bun.lockb'
-
-ignore:
+'ignore':
   - '**/node_modules/**'
   - '**/dist/**'
   - '**/build/**'
