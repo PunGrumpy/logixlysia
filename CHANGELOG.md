@@ -5,7 +5,8 @@
 
 ### ⚠ BREAKING CHANGES
 
-* **options:** 
+* Added support for custom log format in the logger
+* Enhanced flexibility for define thier preferred log message structure
 
 ### Features
 
