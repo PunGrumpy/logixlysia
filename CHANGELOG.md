@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.0.1](https://github.com/PunGrumpy/logixlysia/compare/v3.0.0...v3.0.1) (2024-04-08)
+
+
+### Bug Fixes
+
+* **logger:** use correct status code in error log message ([a3ec49c](https://github.com/PunGrumpy/logixlysia/commit/a3ec49cd3fc1dc7f01a29b21e4de9cf543329c43)), closes [#33](https://github.com/PunGrumpy/logixlysia/issues/33)
+
 ## [3.0.0](https://github.com/PunGrumpy/logixlysia/compare/v2.3.1...v3.0.0) (2024-04-08)
 
 
