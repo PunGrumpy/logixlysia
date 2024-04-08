@@ -18,7 +18,13 @@ import { logger } from 'logixlysia'
 
 const app = new Elysia({
   name: 'Logixlysia Example'
-}).use(logger())
+}).use(
+  logger({
+    ip: false,
+    customLogMessage:
+      '🦊 {now} {level} {duration} {method} {pathname} {status} {message} {ip}'
+  })
+)
 
 app.listen(3000)
 ```
@@ -27,9 +33,10 @@ app.listen(3000)
 
 ### Options
 
-| Option | Type      | Description                                                           | Default |
-| ------ | --------- | --------------------------------------------------------------------- | ------- |
-| `ip`   | `boolean` | Display the incoming IP address based on the `X-Forwarded-For` header | `false` |
+| Option             | Type      | Description                                                           | Default                                                                   |
+| ------------------ | --------- | --------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| `ip`               | `boolean` | Display the incoming IP address based on the `X-Forwarded-For` header | `false`                                                                   |
+| `customLogMessage` | `string`  | Custom log message to display                                         | `🦊 {now} {level} {duration} {method} {pathname} {status} {message} {ip}` |
 
 ## `📄` License
 

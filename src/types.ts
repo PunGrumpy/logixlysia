@@ -28,6 +28,7 @@ interface Logger {
     data: LogData,
     store: StoreData
   ): void
+  customLogFormat?: string
 }
 
 interface StoreData {
@@ -45,6 +46,7 @@ class HttpError extends Error {
 
 interface Options {
   ip?: boolean
+  customLogFormat?: string
 }
 
 export {

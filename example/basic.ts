@@ -6,7 +6,9 @@ const app = new Elysia({
 })
   .use(
     logger({
-      ip: true
+      ip: true,
+      customLogFormat:
+        '🦊 {now} {level} {duration} {method} {pathname} {status} {message} {ip}' // default format
     })
   )
   .get('/', () => {
