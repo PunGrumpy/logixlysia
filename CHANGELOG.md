@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.0.2](https://github.com/PunGrumpy/logixlysia/compare/v3.0.1...v3.0.2) (2024-04-08)
+
+
+### Bug Fixes
+
+* **logger:** add `config` property for logging configuration ([27d80eb](https://github.com/PunGrumpy/logixlysia/commit/27d80eb6b0c3a4a40a96738b235d9bc6b117c804))
+
 ## [3.0.1](https://github.com/PunGrumpy/logixlysia/compare/v3.0.0...v3.0.1) (2024-04-08)
 
 
