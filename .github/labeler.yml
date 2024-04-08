@@ -1,22 +1,36 @@
-'source':
-  - 'src/**/*.{js,jsx,ts,tsx}'
-'test':
-  - 'src/**/__tests__/*.{js,jsx,ts,tsx}'
-  - 'src/**/*.{spec,test}.{js,jsx,ts,tsx}'
-'lint':
-  - 'lint-staged.config.js'
-  - 'eslint.config.js'
-  - 'prettier.config.js'
-'ci/cd':
-  - '.github/workflows/**/*.{yml,yaml}'
-  - '.github/labeler.yml'
-'changelog':
-  - 'CHANGELOG.md'
-'config':
-  - 'package.json'
-  - 'bun.lockb'
-'ignore':
-  - '**/node_modules/**'
-  - '**/dist/**'
-  - '**/build/**'
-  - '**/coverage/**'
+enhancements:
+  - head-branch: ['^feature', 'feature']
+
+source:
+  - changed-files:
+      - any-glob-to-any-file: '**/*.{js,jsx,ts,tsx}'
+test:
+  - changed-files:
+      - any-glob-to-any-file: '**/__tests__/*.{js,jsx,ts,tsx}'
+  - changed-files:
+      - any-glob-to-any-file: '**/*.{spec,test}.{js,jsx,ts,tsx}'
+lint:
+  - changed-files:
+      - any-glob-to-any-file: 'lint-staged.config.js'
+  - changed-files:
+      - any-glob-to-any-file: 'eslint.config.js'
+  - changed-files:
+      - any-glob-to-any-file: 'prettier.config.js'
+ci/cd:
+  - changed-files:
+      - any-glob-to-any-file: '.github/workflows/**/*.{yml,yaml}'
+changelog:
+  - changed-files:
+      - any-glob-to-any-file: 'CHANGELOG.md'
+config:
+  - changed-files:
+      - any-glob-to-any-file: 'package.json'
+ignore:
+  - changed-files:
+      - any-glob-to-any-file: '**/node_modules/**'
+  - changed-files:
+      - any-glob-to-any-file: '**/dist/**'
+  - changed-files:
+      - any-glob-to-any-file: '**/build/**'
+  - changed-files:
+      - any-glob-to-any-file: '**/coverage/**'

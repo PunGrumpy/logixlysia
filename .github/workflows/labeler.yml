@@ -14,12 +14,6 @@ jobs:
     steps:
       - name: 🔖 Add Labels
         uses: actions/labeler@v5
-        with:
-          dot: true
-          sync-labels: true
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-          pr-number: ${{ github.event.pull_request.number }}
-          configuration-path: .github/labeler.yml
       - name: 😵 Check Conflicts
         uses: mschilde/auto-label-merge-conflicts@master
         with:
