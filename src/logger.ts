@@ -88,17 +88,17 @@ export const createLogger = (options?: Options): Logger => ({
  * Handles an HTTP error.
  *
  * @param {RequestInfo} request The request.
- * @param {Error} error The error.
+ * @param {HttpError} error The HTTP error.
  * @param {StoreData} store The store data.
  * @param {Options} options The options.
  */
 export const handleHttpError = (
   request: RequestInfo,
-  error: Error,
+  error: HttpError,
   store: StoreData,
   options?: Options
 ): void => {
-  const statusCode = error instanceof HttpError ? error.status : 500
+  const statusCode = error.status || 500
   const logMessage = buildLogMessage(
     'ERROR',
     request,
