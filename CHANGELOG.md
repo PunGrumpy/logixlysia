@@ -1,5 +1,17 @@
 # Changelog
 
+## [3.1.0](https://github.com/PunGrumpy/logixlysia/compare/v3.0.2...v3.1.0) (2024-04-09)
+
+
+### Features
+
+* **logger:** add log filtering functional ([af7d9ec](https://github.com/PunGrumpy/logixlysia/commit/af7d9ec5b2bb5ff5942d1a586be23a9d23a2c1cf)), closes [#38](https://github.com/PunGrumpy/logixlysia/issues/38)
+
+
+### Bug Fixes
+
+* CI/CD GitHub Actions ([3c40092](https://github.com/PunGrumpy/logixlysia/commit/3c40092bd0ac7bf8bd601a299453cf5080224234))
+
 ## [3.0.2](https://github.com/PunGrumpy/logixlysia/compare/v3.0.1...v3.0.2) (2024-04-08)
 
 
