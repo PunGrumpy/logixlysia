@@ -1,5 +1,6 @@
 enhancements:
-  - head-branch: ['^feature', 'feature']
+  - head-branch:
+      ['^feature', 'feature', '^feat', 'feat', '^enhancement', 'enhancement']
 
 source:
   - changed-files:
