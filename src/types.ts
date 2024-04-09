@@ -48,6 +48,11 @@ interface Options {
   config?: {
     ip?: boolean
     customLogFormat?: string
+    logFilter?: {
+      level?: LogLevel | LogLevel[]
+      method?: string | string[]
+      status?: number | number[]
+    } | null
   }
 }
 

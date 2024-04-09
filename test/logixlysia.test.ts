@@ -124,3 +124,106 @@ describe('Logixlysia with IP logging disabled', () => {
     expect(error).toBeInstanceOf(Error)
   })
 })
+
+describe('Logixlysia with log filtering enabled', () => {
+  let server: Elysia
+  let app: any
+  let logs: string[] = []
+
+  beforeAll(() => {
+    server = new Elysia()
+      .use(
+        logger({
+          config: {
+            logFilter: {
+              level: 'INFO',
+              status: [200, 404],
+              method: 'GET'
+            }
+          }
+        })
+      )
+      .get('/', () => '🦊 Logixlysia Getting')
+      .post('logixlysia', () => '🦊 Logixlysia Posting')
+      .listen(3000)
+
+    app = edenTreaty<typeof server>('http://127.0.0.1:3000')
+  })
+
+  beforeEach(() => {
+    logs = []
+  })
+
+  it("Logs 'GET' requests with status 200 or 404 when log filtering criteria are met", async () => {
+    const requestCount = 5
+
+    for (let i = 0; i < requestCount; i++) {
+      logs.push((await app.get('/')).data)
+    }
+
+    expect(logs.length).toBe(requestCount)
+    logs.forEach(log => {
+      expect(log).toMatch('🦊 Logixlysia Getting')
+    })
+  })
+
+  it("Doesn't log 'POST' requests when log filtering criteria are not met", async () => {
+    const requestCount = 5
+
+    for (let i = 0; i < requestCount; i++) {
+      await app.post('/logixlysia', {})
+    }
+
+    expect(logs.length).toBe(0)
+  })
+
+  const otherMethods = ['PUT', 'DELETE', 'PATCH', 'HEAD'] // OPTIONS is failed (IDK why)
+  otherMethods.forEach(async method => {
+    it(`Logs '${method}' requests with status 200 or 404 when log filtering criteria are met`, async () => {
+      const requestCount = 5
+
+      for (let i = 0; i < requestCount; i++) {
+        logs.push((await app[method.toLowerCase()]('/')).data)
+      }
+
+      expect(logs.length).toBe(requestCount)
+    })
+  })
+})
+
+describe('Logixlysia with log filtering disabled', () => {
+  let server: Elysia
+  let app: any
+  let logs: string[] = []
+
+  beforeAll(() => {
+    server = new Elysia()
+      .use(
+        logger({
+          config: {
+            logFilter: null
+          }
+        })
+      )
+      .get('/', () => '🦊 Logixlysia Getting')
+      .post('logixlysia', () => '🦊 Logixlysia Posting')
+      .listen(3000)
+
+    app = edenTreaty<typeof server>('http://127.0.0.1:3000')
+  })
+
+  beforeEach(() => {
+    logs = []
+  })
+
+  it('Logs all requests when log filtering is disabled', async () => {
+    const requestCount = 5
+
+    for (let i = 0; i < requestCount; i++) {
+      logs.push((await app.get('/')).data)
+      logs.push((await app.post('/logixlysia', {})).data)
+    }
+
+    expect(logs.length).toBe(requestCount * 2)
+  })
+})

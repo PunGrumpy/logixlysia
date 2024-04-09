@@ -9,7 +9,12 @@ const app = new Elysia({
       config: {
         ip: true,
         customLogFormat:
-          '🦊 {now} {level} {duration} {method} {pathname} {status} {message} {ip}'
+          '🦊 {now} {level} {duration} {method} {pathname} {status} {message} {ip}',
+        logFilter: {
+          level: ['ERROR', 'WARNING'],
+          status: [500, 404],
+          method: 'GET'
+        }
       }
     })
   )
