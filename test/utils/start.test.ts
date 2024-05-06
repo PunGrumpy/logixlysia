@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, jest } from 'bun:test'
 import { Server } from '~/types'
-import startString from '~/utils/start'
+import startServer from '~/utils/start'
 
 describe('Start String', () => {
   let originalConsoleLog: any
@@ -23,7 +23,7 @@ describe('Start String', () => {
       protocol: 'http'
     }
 
-    startString(config)
+    startServer(config)
 
     const expectedMessage = `🦊 Elysia is running at http://localhost:3000`
 

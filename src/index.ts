@@ -1,6 +1,6 @@
 import Elysia from 'elysia'
 import { createLogger, handleHttpError } from './logger'
-import startString from './utils/start'
+import startServer from './utils/start'
 import { Server } from 'bun'
 import { HttpError, Options } from './types'
 
@@ -26,7 +26,7 @@ export const logger = (options?: Options): Elysia => {
     name: 'Logixlysia'
   })
     .onStart(ctx => {
-      startString(ctx.server as Server)
+      startServer(ctx.server as Server)
     })
     .onRequest(ctx => {
       ctx.store = { beforeTime: process.hrtime.bigint() }
