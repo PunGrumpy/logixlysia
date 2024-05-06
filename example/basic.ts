@@ -1,11 +1,11 @@
 import { Elysia } from 'elysia'
-import { logger } from '~/index'
+import logixlysia from '~/index'
 
 const app = new Elysia({
   name: 'Basic Example'
 })
   .use(
-    logger({
+    logixlysia({
       config: {
         ip: true,
         customLogFormat:

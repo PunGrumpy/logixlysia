@@ -20,7 +20,7 @@ import { handleHttpError } from './logger/handle'
  *
  * @returns {Elysia} The logger.
  */
-export function logger(options?: Options): Elysia {
+export default function logixlysia(options?: Options): Elysia {
   const log = createLogger(options)
 
   const elysia = new Elysia({
