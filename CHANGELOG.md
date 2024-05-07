@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.2.0](https://github.com/PunGrumpy/logixlysia/compare/v3.1.0...v3.2.0) (2024-05-07)
+
+
+### Features
+
+* update logger function name for clarity ([9badffc](https://github.com/PunGrumpy/logixlysia/commit/9badffc286fc13feda9eeffd28881990ae437c9f))
+
 ## [3.1.0](https://github.com/PunGrumpy/logixlysia/compare/v3.0.2...v3.1.0) (2024-04-09)
 
 
