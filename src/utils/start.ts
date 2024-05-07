@@ -21,7 +21,7 @@ function createBoxText(text: string, width: number): string {
  *
  * @returns {void} The server string.
  */
-function startString(config: Server): void {
+function startServer(config: Server): void {
   const { hostname, port, protocol } = config
   const ELYSIA_VERSION = import.meta.require('elysia/package.json').version
   const title = `Elysia v${ELYSIA_VERSION}`
@@ -41,4 +41,4 @@ function startString(config: Server): void {
     `)
 }
 
-export default startString
+export default startServer

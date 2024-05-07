@@ -1,7 +1,7 @@
 import { Elysia } from 'elysia'
 import { edenTreaty } from '@elysiajs/eden'
 import { describe, it, expect, beforeAll, beforeEach } from 'bun:test'
-import { logger } from '../src'
+import logixlysia from '../src'
 
 describe('Logixlysia with IP logging enabled', () => {
   let server: Elysia
@@ -11,7 +11,7 @@ describe('Logixlysia with IP logging enabled', () => {
   beforeAll(() => {
     server = new Elysia()
       .use(
-        logger({
+        logixlysia({
           config: {
             ip: true,
             customLogFormat:
@@ -70,7 +70,7 @@ describe('Logixlysia with IP logging disabled', () => {
   beforeAll(() => {
     server = new Elysia()
       .use(
-        logger({
+        logixlysia({
           config: {
             ip: false,
             customLogFormat:
@@ -133,7 +133,7 @@ describe('Logixlysia with log filtering enabled', () => {
   beforeAll(() => {
     server = new Elysia()
       .use(
-        logger({
+        logixlysia({
           config: {
             logFilter: {
               level: 'INFO',
@@ -199,7 +199,7 @@ describe('Logixlysia with log filtering disabled', () => {
   beforeAll(() => {
     server = new Elysia()
       .use(
-        logger({
+        logixlysia({
           config: {
             logFilter: null
           }
