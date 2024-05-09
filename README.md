@@ -14,12 +14,12 @@ bun add logixlysia
 
 ```ts
 import { Elysia } from 'elysia'
-import { logger } from 'logixlysia'
+import { logixlysia } from 'logixlysia'
 
 const app = new Elysia({
   name: 'Logixlysia Example'
 }).use(
-  logger({
+  logixlysia({
     ip: false,
     customLogMessage:
       '🦊 {now} {level} {duration} {method} {pathname} {status} {message} {ip}'
