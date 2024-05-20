@@ -19,31 +19,28 @@ function filterLog(
 
   if (!filter) return true
 
-  // Level
   if (filter.level) {
     if (Array.isArray(filter.level)) {
       if (!filter.level.includes(logLevel)) return false
+    } else {
+      if (filter.level !== logLevel) return false
     }
-  } else {
-    if (filter.level !== logLevel) return false
   }
 
-  // Status
   if (filter.status) {
     if (Array.isArray(filter.status)) {
       if (!filter.status.includes(status)) return false
+    } else {
+      if (filter.status !== status) return false
     }
-  } else {
-    if (filter.status !== status) return false
   }
 
-  // Method
   if (filter.method) {
     if (Array.isArray(filter.method)) {
       if (!filter.method.includes(method)) return false
+    } else {
+      if (filter.method !== method) return false
     }
-  } else {
-    if (filter.method !== method) return false
   }
 
   return true
