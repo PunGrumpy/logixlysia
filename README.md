@@ -20,9 +20,16 @@ const app = new Elysia({
   name: 'Logixlysia Example'
 }).use(
   logixlysia({
-    ip: false,
-    customLogMessage:
-      '🦊 {now} {level} {duration} {method} {pathname} {status} {message} {ip}'
+    config: {
+      ip: true,
+      customLogFormat:
+        '🦊 {now} {level} {duration} {method} {pathname} {status} {message} {ip}',
+      logFilter: {
+        level: ['ERROR', 'WARNING'],
+        status: [500, 404],
+        method: 'GET'
+      }
+    }
   })
 )
 
