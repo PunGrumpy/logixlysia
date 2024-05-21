@@ -6,7 +6,7 @@ on:
     branches: [main]
   workflow_dispatch:
 env:
-  SCOPRE_OWNER: '@pungrumpy'
+  SCOPE_OWNER: '@pungrumpy'
 jobs:
   security:
     name: 🔒 Security
@@ -32,7 +32,7 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
           registry-url: https://registry.npmjs.org/
-          scope: ${{ env.SCOPRE_OWNER }}
+          scope: ${{ env.SCOPE_OWNER }}
       - name: 🍞 Setup Bun
         uses: oven-sh/setup-bun@v1
       - name: 🌵 Cache bun
@@ -64,7 +64,7 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
           registry-url: https://registry.npmjs.org/
-          scope: ${{ env.SCOPRE_OWNER }}
+          scope: ${{ env.SCOPE_OWNER }}
       - name: 🍞 Setup Bun
         uses: oven-sh/setup-bun@v1
       - name: 🌵 Cache bun
@@ -106,7 +106,7 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
           registry-url: https://registry.npmjs.org/
-          scope: ${{ env.SCOPRE_OWNER }}
+          scope: ${{ env.SCOPE_OWNER }}
       - name: 🍞 Setup Bun
         uses: oven-sh/setup-bun@v1
       - name: 🌵 Cache bun
