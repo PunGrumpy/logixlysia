@@ -23,19 +23,19 @@ const LogLevelColorMap: ColorMap = {
  * @property {chalk.Chalk} GET The color for the GET HTTP method.
  * @property {chalk.Chalk} POST The color for the POST HTTP method.
  * @property {chalk.Chalk} PUT The color for the PUT HTTP method.
- * @property {chalk.Chalk} DELETE The color for the DELETE HTTP method.
  * @property {chalk.Chalk} PATCH The color for the PATCH HTTP method.
- * @property {chalk.Chalk} OPTIONS The color for the OPTIONS HTTP method.
+ * @property {chalk.Chalk} DELETE The color for the DELETE HTTP method.
  * @property {chalk.Chalk} HEAD The color for the HEAD HTTP method.
+ * @property {chalk.Chalk} OPTIONS The color for the OPTIONS HTTP method.
  */
 const HttpMethodColorMap: ColorMap = {
-  GET: chalk.white,
+  GET: chalk.green,
   POST: chalk.yellow,
   PUT: chalk.blue,
+  PATCH: chalk.magentaBright,
   DELETE: chalk.red,
-  PATCH: chalk.green,
-  OPTIONS: chalk.cyan,
-  HEAD: chalk.magenta
+  HEAD: chalk.cyan,
+  OPTIONS: chalk.magenta
 }
 
 export { HttpMethodColorMap, LogLevelColorMap }
