@@ -21,7 +21,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        node-version: [20, 21]
+        node-version: [22]
     name: ⚖️ Lint
     runs-on: ${{ matrix.os }}
     steps:
@@ -52,8 +52,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
-        node-version: [21]
+        os: [ubuntu-latest]
+        node-version: [22]
     name: 🧪 Test
     runs-on: ${{ matrix.os }}
     steps:
@@ -85,7 +85,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        node-version: [21]
+        node-version: [22]
     if: ${{ github.ref == 'refs/heads/main' }} && !contains(github.event.head_commit.message, '[skip ci]')
     name: 🚀 Release
     permissions:
