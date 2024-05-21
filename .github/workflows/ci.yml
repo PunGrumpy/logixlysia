@@ -40,9 +40,9 @@ jobs:
         id: cache-bun
         with:
           path: ~/.bun
-          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lockb') }}
+          key: ${{ runner.os }}-bun-${{ matrix.node-version }}-${{ hashFiles('**/bun.lockb') }}
           restore-keys: |
-            ${{ runner.os }}-bun-
+            ${{ runner.os }}-bun-${{ matrix.node-version }}-
       - name: 🔽 Install Dependencies
         run: bun install
       - name: ⚖️ Lint
@@ -72,13 +72,12 @@ jobs:
         id: cache-bun
         with:
           path: ~/.bun
-          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lockb') }}
+          key: ${{ runner.os }}-bun-${{ matrix.node-version }}-${{ hashFiles('**/bun.lockb') }}
           restore-keys: |
-            ${{ runner.os }}-bun-
+            ${{ runner.os }}-bun-${{ matrix.node-version }}-
       - name: 🔽 Install Dependencies
         run: bun install
       - name: 🧪 Test
-        # run: bun test --timeout 5000 --coverage --update-snapshots
         run: bun run test:ci
   release:
     strategy:
@@ -115,9 +114,9 @@ jobs:
         id: cache-bun
         with:
           path: ~/.bun
-          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lockb') }}
+          key: ${{ runner.os }}-bun-${{ matrix.node-version }}-${{ hashFiles('**/bun.lockb') }}
           restore-keys: |
-            ${{ runner.os }}-bun-
+            ${{ runner.os }}-bun-${{ matrix.node-version }}-
       - name: 🔽 Install Dependencies
         run: bun install
       - name: 🏷️ Tag stable versions
