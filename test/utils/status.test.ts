@@ -26,6 +26,6 @@ describe('Status String', () => {
 
   it('Presents the status string in green for a 100 status code', () => {
     const result = statusString(100)
-    expect(result).toBe('100')
+    expect(result).toBe(chalk.white('100'))
   })
 })
