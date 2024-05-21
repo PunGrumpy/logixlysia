@@ -1,20 +1,16 @@
+import { LogLevel } from '~/types'
+
 import { LogLevelColorMap } from './colorMapping'
 
 /**
- * Converts a log level to a colored string representation.
+ * Converts the log level to a string.
  *
- * @param {string} log The log level (e.g., 'INFO', 'WARNING').
- *
- * @returns {string} A colored string representing the log level.
+ * @param {LogLevel} level The log level.
+ * @returns {string} The log level as a string.
  */
-function logString(log: string): string {
-  const colorFunction = LogLevelColorMap[log]
-
-  if (colorFunction) {
-    return colorFunction(log.padEnd(7))
-  }
-
-  return log
+function logString(level: LogLevel): string {
+  const levelStr = level.toUpperCase()
+  return LogLevelColorMap[levelStr]?.(levelStr.padEnd(7)) || levelStr
 }
 
 export default logString
