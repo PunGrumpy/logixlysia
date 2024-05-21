@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'bun:test'
+
 import { ColorMap } from '~/types'
 
 describe('Color Mapping Interface', () => {

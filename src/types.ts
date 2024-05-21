@@ -1,5 +1,5 @@
 interface RequestInfo {
-  headers: { get: (key: string) => any }
+  headers: { get: (key: string) => string | null }
   method: string
   url: string
 }
@@ -57,13 +57,13 @@ interface Options {
 }
 
 export {
-  RequestInfo,
-  Server,
   ColorMap,
-  LogLevel,
+  HttpError,
   LogData,
   Logger,
-  StoreData,
-  HttpError,
-  Options
+  LogLevel,
+  Options,
+  RequestInfo,
+  Server,
+  StoreData
 }

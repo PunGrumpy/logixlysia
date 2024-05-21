@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'bun:test'
 import chalk from 'chalk'
+
 import methodString from '~/utils/method'
 
 describe('Method String', () => {

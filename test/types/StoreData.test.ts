@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'bun:test'
+
 import { StoreData } from '~/types'
 
 describe('Store Data interface', () => {

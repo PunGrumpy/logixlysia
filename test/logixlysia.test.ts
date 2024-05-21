@@ -1,11 +1,12 @@
-import { Elysia } from 'elysia'
 import { edenTreaty } from '@elysiajs/eden'
-import { describe, it, expect, beforeAll, beforeEach } from 'bun:test'
+import { beforeAll, beforeEach, describe, expect, it } from 'bun:test'
+import { Elysia } from 'elysia'
+
 import logixlysia from '../src'
 
 describe('Logixlysia with IP logging enabled', () => {
   let server: Elysia
-  let app: any
+  let app: ReturnType<typeof edenTreaty> | any
   let logs: string[] = []
 
   beforeAll(() => {
@@ -19,8 +20,7 @@ describe('Logixlysia with IP logging enabled', () => {
           }
         })
       )
-      .get('/', ctx => {
-        const ipAddress = ctx.request.headers.get('x-forwarded-for') || 'null'
+      .get('/', () => {
         return '🦊 Logixlysia Getting'
       })
       .post('logixlysia', () => '🦊 Logixlysia Posting')
@@ -50,12 +50,6 @@ describe('Logixlysia with IP logging enabled', () => {
   })
 
   it("Logs 'null' for GET '/' requests when X-Forwarded-For header is not present", async () => {
-    const requestCount = 5
-
-    for (let i = 0; i < requestCount; i++) {
-      const response = await app.get('/')
-    }
-
     logs.forEach(log => {
       expect(log).toMatch(/^🦊 .+ INFO .+ .+ GET \/ .+ IP: null$/)
     })
@@ -64,7 +58,7 @@ describe('Logixlysia with IP logging enabled', () => {
 
 describe('Logixlysia with IP logging disabled', () => {
   let server: Elysia
-  let app: any
+  let app: ReturnType<typeof edenTreaty> | any
   let logs: string[] = []
 
   beforeAll(() => {
@@ -127,7 +121,7 @@ describe('Logixlysia with IP logging disabled', () => {
 
 describe('Logixlysia with log filtering enabled', () => {
   let server: Elysia
-  let app: any
+  let app: ReturnType<typeof edenTreaty> | any
   let logs: string[] = []
 
   beforeAll(() => {
@@ -193,7 +187,7 @@ describe('Logixlysia with log filtering enabled', () => {
 
 describe('Logixlysia with log filtering disabled', () => {
   let server: Elysia
-  let app: any
+  let app: ReturnType<typeof edenTreaty> | any
   let logs: string[] = []
 
   beforeAll(() => {

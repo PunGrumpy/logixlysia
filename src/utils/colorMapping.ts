@@ -1,4 +1,5 @@
 import chalk from 'chalk'
+
 import { ColorMap } from '~/types'
 
 /**
@@ -37,4 +38,4 @@ const HttpMethodColorMap: ColorMap = {
   HEAD: chalk.magenta
 }
 
-export { LogLevelColorMap, HttpMethodColorMap }
+export { HttpMethodColorMap, LogLevelColorMap }

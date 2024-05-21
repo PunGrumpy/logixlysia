@@ -1,9 +1,10 @@
-import Elysia from 'elysia'
-import startServer from './utils/start'
 import { Server } from 'bun'
-import { HttpError, Options } from './types'
+import Elysia from 'elysia'
+
 import { createLogger } from './logger'
 import { handleHttpError } from './logger/handle'
+import { HttpError, Options } from './types'
+import startServer from './utils/start'
 
 /**
  * Creates a logger.

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'bun:test'
 import chalk from 'chalk'
+
 import logString from '~/utils/log'
 
 describe('Log String', () => {

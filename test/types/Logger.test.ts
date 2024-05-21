@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, jest } from 'bun:test'
-import { RequestInfo, LogData, StoreData } from '~/types'
+
+import { LogData, RequestInfo, StoreData } from '~/types'
 
 interface Logger {
   info(request: RequestInfo, data: LogData, store: StoreData): void

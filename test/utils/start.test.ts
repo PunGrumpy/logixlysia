@@ -1,9 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, jest } from 'bun:test'
+
 import { Server } from '~/types'
 import startServer from '~/utils/start'
 
 describe('Start String', () => {
-  let originalConsoleLog: any
+  let originalConsoleLog: typeof console.log
   let mockConsoleLog: jest.Mock
 
   beforeEach(() => {
@@ -29,7 +30,7 @@ describe('Start String', () => {
 
     // Extract the arguments passed to console.log during the function call
     const logMessage = mockConsoleLog.mock.calls
-      .map((args: any[]) => args.join(' '))
+      .map(args => args.join(' '))
       .join(' ')
 
     expect(logMessage).toMatch(expectedMessage)

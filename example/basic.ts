@@ -1,4 +1,5 @@
 import { Elysia } from 'elysia'
+
 import logixlysia from '~/index'
 
 const app = new Elysia({

@@ -1,3 +1,5 @@
+import chalk from 'chalk'
+
 import {
   LogData,
   Logger,
@@ -6,13 +8,13 @@ import {
   RequestInfo,
   StoreData
 } from '~/types'
-import { filterLog } from './filter'
-import chalk from 'chalk'
-import logString from '~/utils/log'
 import durationString from '~/utils/duration'
+import logString from '~/utils/log'
 import methodString from '~/utils/method'
 import pathString from '~/utils/path'
 import statusString from '~/utils/status'
+
+import { filterLog } from './filter'
 
 /**
  * Logs a message.
@@ -97,4 +99,4 @@ function createLogger(options?: Options): Logger {
   }
 }
 
-export { log, buildLogMessage, createLogger }
+export { buildLogMessage, createLogger, log }

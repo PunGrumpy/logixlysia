@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'bun:test'
+
 import { RequestInfo } from '~/types'
 
 describe('Request Infomation interface', () => {

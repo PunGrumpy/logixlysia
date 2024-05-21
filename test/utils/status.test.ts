@@ -1,5 +1,6 @@
-import chalk from 'chalk'
 import { describe, expect, it } from 'bun:test'
+import chalk from 'chalk'
+
 import statusString from '~/utils/status'
 
 describe('Status String', () => {
