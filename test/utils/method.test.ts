@@ -6,7 +6,7 @@ import methodString from '~/utils/method'
 describe('Method String', () => {
   it('Displays a colored string for the GET method', () => {
     const result = methodString('GET')
-    expect(result).toBe(chalk.white('GET    '))
+    expect(result).toBe(chalk.green('GET    '))
   })
 
   it('Displays a colored string for the POST method', () => {
