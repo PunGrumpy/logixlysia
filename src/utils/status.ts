@@ -1,25 +1,22 @@
 import chalk from 'chalk'
 
 /**
- * Returns the status string.
+ * Converts the status code to a string.
  *
  * @param {number} status The status code.
- *
- * @returns {string} The status string.
+ * @returns {string} The status code as a string.
  */
 function statusString(status: number): string {
-  switch (true) {
-    case status >= 500:
-      return chalk.red(status.toString())
-    case status >= 400:
-      return chalk.yellow(status.toString())
-    case status >= 300:
-      return chalk.cyan(status.toString())
-    case status >= 200:
-      return chalk.green(status.toString())
-    default:
-      return status.toString()
-  }
+  const color =
+    status < 300
+      ? 'green'
+      : status < 400
+        ? 'blue'
+        : status < 500
+          ? 'yellow'
+          : 'red'
+
+  return chalk[color](status.toString())
 }
 
 export default statusString
