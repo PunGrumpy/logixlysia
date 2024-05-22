@@ -1,20 +1,25 @@
 name: 🤹‍♂️ Continuous Integration
+
 on:
   push:
     branches: [main]
   pull_request:
     branches: [main]
   workflow_dispatch:
+
 env:
   SCOPE_OWNER: '@pungrumpy'
+
 jobs:
   security:
     name: 🔒 Security
     uses: ./.github/workflows/security.yml
+
   codeql:
     needs: [security]
     name: 🫸 CodeQL
     uses: ./.github/workflows/codeql.yml
+
   lint:
     needs: [codeql]
     strategy:
@@ -43,10 +48,13 @@ jobs:
           key: ${{ runner.os }}-bun-${{ matrix.node-version }}-${{ hashFiles('**/bun.lockb') }}
           restore-keys: |
             ${{ runner.os }}-bun-${{ matrix.node-version }}-
+            ${{ runner.os }}-bun-
+            ${{ runner.os }}-
       - name: 🔽 Install Dependencies
         run: bun install
       - name: ⚖️ Lint
         run: bun lint
+
   test:
     needs: [lint]
     strategy:
@@ -75,10 +83,13 @@ jobs:
           key: ${{ runner.os }}-bun-${{ matrix.node-version }}-${{ hashFiles('**/bun.lockb') }}
           restore-keys: |
             ${{ runner.os }}-bun-${{ matrix.node-version }}-
+            ${{ runner.os }}-bun-
+            ${{ runner.os }}-
       - name: 🔽 Install Dependencies
         run: bun install
       - name: 🧪 Test
         run: bun run test:ci
+
   release:
     strategy:
       fail-fast: false
@@ -117,6 +128,8 @@ jobs:
           key: ${{ runner.os }}-bun-${{ matrix.node-version }}-${{ hashFiles('**/bun.lockb') }}
           restore-keys: |
             ${{ runner.os }}-bun-${{ matrix.node-version }}-
+            ${{ runner.os }}-bun-
+            ${{ runner.os }}-
       - name: 🔽 Install Dependencies
         run: bun install
       - name: 🏷️ Tag stable versions
