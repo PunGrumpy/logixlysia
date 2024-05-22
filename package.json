@@ -1,6 +1,6 @@
 {
   "name": "logixlysia",
-  "version": "3.2.0",
+  "version": "3.3.0",
   "description": "🦊 Logixlysia is a logger for Elysia",
   "type": "module",
   "module": "src/index.ts",
