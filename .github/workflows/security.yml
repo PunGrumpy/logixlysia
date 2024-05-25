@@ -33,28 +33,3 @@ jobs:
           scan-type: 'fs'
           scan-ref: '.'
           trivy-config: .github/trivy.yaml
-
-  snyk:
-    concurrency:
-      group: security/${{ github.event.repository.name }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest]
-        node-version: [22]
-    name: 🐶 Snyk
-    runs-on: ${{ matrix.os }}
-    steps:
-      - name: 🛫 Checkout Code
-        uses: actions/checkout@v4
-      - name: 🐶 Snyk Vulnerabilities
-        uses: snyk/actions/node@master
-        continue-on-error: true
-        env:
-          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-        with:
-          args: --sarif-file-output=snyk.sarif
-      - name: 🆙 Upload Result to GitHub Code Scanning
-        uses: github/codeql-action/upload-sarif@v3
-        with:
-          sarif_file: snyk.sarif
