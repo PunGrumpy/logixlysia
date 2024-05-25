@@ -12,6 +12,8 @@ runtimes:
     - node@22.2.0
 lint:
   enabled:
+    - oxipng@9.1.1
+    - shfmt@3.6.0
     - eslint@9.3.0
     - actionlint@1.7.0
     - git-diff-check
