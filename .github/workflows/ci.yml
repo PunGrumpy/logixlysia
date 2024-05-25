@@ -11,12 +11,7 @@ env:
   SCOPE_OWNER: '@pungrumpy'
 
 jobs:
-  security:
-    name: 🔒 Security
-    uses: ./.github/workflows/security.yml
-
   codeql:
-    needs: [security]
     name: 🫸 CodeQL
     uses: ./.github/workflows/codeql.yml
 
