@@ -23,7 +23,7 @@
     "dev": "bun run --watch example/basic.ts",
     "prepare": "husky",
     "lint:staged": "lint-staged",
-    "prettier": "prettier --write ."
+    "prettier": "prettier --write --config .trunk/configs/.prettierrc.yaml ."
   },
   "os": [
     "darwin",
