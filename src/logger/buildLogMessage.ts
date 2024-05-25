@@ -9,6 +9,7 @@ import statusString from '~/utils/status'
 
 /**
  * Builds a log message.
+ *
  * @param {LogLevel} level The log level.
  * @param {RequestInfo} request The request information.
  * @param {LogData} data The log data.

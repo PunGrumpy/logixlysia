@@ -4,6 +4,7 @@ import { buildLogMessage } from './buildLogMessage'
 
 /**
  * Handles an HTTP error and logs it.
+ *
  * @param {RequestInfo} request The request information.
  * @param {HttpError} error The HTTP error.
  * @param {StoreData} store The store data.

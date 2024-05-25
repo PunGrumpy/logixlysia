@@ -11,7 +11,8 @@ import { buildLogMessage } from './buildLogMessage'
 import { filterLog } from './filter'
 
 /**
- * Logs a message.
+ * Logs a message to the console.
+ *
  * @param {LogLevel} level The log level.
  * @param {RequestInfo} request The request information.
  * @param {LogData} data The log data.
@@ -35,7 +36,8 @@ async function log(
 
 /**
  * Creates a logger instance.
- * @param {Options} options - The logger options.
+ *
+ * @param {Options} options The logger options.
  * @returns {Logger} The logger instance.
  */
 export function createLogger(options?: Options): Logger {
