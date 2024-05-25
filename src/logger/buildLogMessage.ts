@@ -1,56 +1,22 @@
 import chalk from 'chalk'
 
-import {
-  LogData,
-  Logger,
-  LogLevel,
-  Options,
-  RequestInfo,
-  StoreData
-} from '~/types'
+import { LogData, LogLevel, Options, RequestInfo, StoreData } from '~/types'
 import durationString from '~/utils/duration'
 import logString from '~/utils/log'
 import methodString from '~/utils/method'
 import pathString from '~/utils/path'
 import statusString from '~/utils/status'
 
-import { filterLog } from './filter'
-
-/**
- * Logs a message.
- *
- * @param {LogLevel} level The log level.
- * @param {RequestInfo} request The request.
- * @param {LogData} data The log data.
- * @param {StoreData} store The store data.
- * @param {Options} options The options.
- */
-function log(
-  level: LogLevel,
-  request: RequestInfo,
-  data: LogData,
-  store: StoreData,
-  options?: Options
-): void {
-  if (!filterLog(level, data.status || 200, request.method, options)) {
-    return
-  }
-
-  const logMessage = buildLogMessage(level, request, data, store, options)
-  console.log(logMessage)
-}
-
 /**
  * Builds a log message.
- *
  * @param {LogLevel} level The log level.
- * @param {RequestInfo} request The request.
+ * @param {RequestInfo} request The request information.
  * @param {LogData} data The log data.
  * @param {StoreData} store The store data.
- * @param {Options} options The options.
- * @returns {string} The log message.
+ * @param {Options} options The logger options.
+ * @returns {string} The formatted log message.
  */
-function buildLogMessage(
+export function buildLogMessage(
   level: LogLevel,
   request: RequestInfo,
   data: LogData,
@@ -84,19 +50,3 @@ function buildLogMessage(
 
   return logMessage
 }
-
-/**
- * Creates a logger.
- *
- * @param {Options} options The options.
- * @returns {Logger} The logger.
- */
-function createLogger(options?: Options): Logger {
-  return {
-    log: (level, request, data, store) =>
-      log(level, request, data, store, options),
-    customLogFormat: options?.config?.customLogFormat
-  }
-}
-
-export { buildLogMessage, createLogger, log }
