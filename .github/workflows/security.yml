@@ -4,10 +4,15 @@ on:
   workflow_call:
 
 env:
-  SCOPRE_OWNER: '@pungrumpy'
+  SCOPE_OWNER: '@pungrumpy'
 
 concurrency:
   group: security/${{ github.event.repository.name }}
+
+permissions:
+  contents: read
+  security-events: write
+  actions: read
 
 jobs:
   trivy:
@@ -28,3 +33,35 @@ jobs:
           scan-type: 'fs'
           scan-ref: '.'
           trivy-config: .github/trivy.yaml
+
+  snyk:
+    concurrency:
+      group: security/${{ github.event.repository.name }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        node-version: [22]
+    name: 🐶 Snyk
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: 🛫 Checkout Code
+        uses: actions/checkout@v4
+      - name: 📦 Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          registry-url: https://registry.npmjs.org/
+          scope: ${{ env.SCOPE_OWNER }}
+      - name: 🐶 Snyk
+        uses: snyk/actions/setup@master
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+      - name: 🐶 Snyk Code Test
+        run: snyk code test --sarif > snyk-code.sarif
+      - name: 🐶 Snyk Open Source Monitor
+        run: snyk monitor --all-projects
+      - name: 🆙 Upload Result to GitHub Code Scanning
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: snyk-code.sarif
