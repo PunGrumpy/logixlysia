@@ -1,16 +1,6 @@
 # Required, otherwise ggshield considers the file to use the deprecated v1 format
 version: 2
 
-# Set to true if the desired exit code for the CLI is always 0, otherwise the
-# exit code will be 1 if incidents are found.
-exit-zero: false
-
 verbose: false
 
 instance: https://dashboard.gitguardian.com
-
-# Maximum commits to scan in a hook.
-max-commits-for-hook: 50
-
-# Accept self-signed certificates for the API.
-allow-self-signed: false
