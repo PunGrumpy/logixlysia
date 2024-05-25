@@ -1,10 +1,14 @@
 name: 🔒 Security
+
 on:
   workflow_call:
+
 env:
   SCOPRE_OWNER: '@pungrumpy'
+
 concurrency:
   group: security/${{ github.event.repository.name }}
+
 jobs:
   trivy:
     concurrency:

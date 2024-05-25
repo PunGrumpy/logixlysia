@@ -1,9 +1,11 @@
 name: 📦 Node Package Manager
+
 on:
   workflow_run:
     workflows: ['🧝 Continuous Delivery']
     types: [completed]
     branches: [main]
+
 jobs:
   test_version:
     name: 🧪 Test Version
