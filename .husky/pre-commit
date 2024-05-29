@@ -2,3 +2,5 @@
 . "$(dirname -- "$0")/_/husky.sh"
 
 bun lint:staged
+bun trunk:check || exit 1
+bun trunk:fmt || exit 1
