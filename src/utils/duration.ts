@@ -9,17 +9,18 @@ import chalk from 'chalk'
  * @returns {string} A formatted duration string including the time unit.
  */
 function durationString(beforeTime: bigint): string {
-  const nanoseconds = Number(process.hrtime.bigint() - beforeTime)
+  const currentTime = process.hrtime.bigint()
+  const nanoseconds = Number(currentTime - beforeTime)
 
   const timeUnits = [
-    { unit: 's', threshold: 1e9 },
-    { unit: 'ms', threshold: 1e6 },
-    { unit: 'µs', threshold: 1e3 }
+    { unit: 's', threshold: 1e9, decimalPlaces: 2 },
+    { unit: 'ms', threshold: 1e6, decimalPlaces: 0 },
+    { unit: 'µs', threshold: 1e3, decimalPlaces: 0 }
   ]
 
-  for (const { unit, threshold } of timeUnits) {
+  for (const { unit, threshold, decimalPlaces } of timeUnits) {
     if (nanoseconds >= threshold) {
-      const value = (nanoseconds / threshold).toFixed(threshold === 1e9 ? 2 : 0)
+      const value = (nanoseconds / threshold).toFixed(decimalPlaces)
       return formatTime(value, unit)
     }
   }
