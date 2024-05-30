@@ -20,9 +20,7 @@ describe('Logixlysia with IP logging enabled', () => {
           }
         })
       )
-      .get('/', () => {
-        return '🦊 Logixlysia Getting'
-      })
+      .get('/', () => '🦊 Logixlysia Getting')
       .post('logixlysia', () => '🦊 Logixlysia Posting')
       .listen(3000)
 
@@ -50,6 +48,12 @@ describe('Logixlysia with IP logging enabled', () => {
   })
 
   it("Logs 'null' for GET '/' requests when X-Forwarded-For header is not present", async () => {
+    const requestCount = 5
+
+    for (let i = 0; i < requestCount; i++) {
+      await app.get('/')
+    }
+
     logs.forEach(log => {
       expect(log).toMatch(/^🦊 .+ INFO .+ .+ GET \/ .+ IP: null$/)
     })
@@ -111,7 +115,7 @@ describe('Logixlysia with IP logging disabled', () => {
   })
 
   it('Throws an error when attempting to post to an undefined route', async () => {
-    const response = await app.undefinedRoute.post({})
+    const response = await app.post('/undefinedRoute', {})
     const error = response.error
 
     expect(response.status).toBe(404)
@@ -172,7 +176,7 @@ describe('Logixlysia with log filtering enabled', () => {
   })
 
   const otherMethods = ['PUT', 'DELETE', 'PATCH', 'HEAD'] // OPTIONS is failed (IDK why)
-  otherMethods.forEach(async method => {
+  otherMethods.forEach(method => {
     it(`Logs '${method}' requests with status 200 or 404 when log filtering criteria are met`, async () => {
       const requestCount = 5
 
