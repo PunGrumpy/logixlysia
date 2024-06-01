@@ -7,7 +7,7 @@ import { HttpError, Options } from './types'
 import startServer from './utils/start'
 
 /**
- * Creates a logger.
+ * Creates a logger plugin for ElysiaJS.
  *
  * @export
  * @module logger
@@ -19,7 +19,9 @@ import startServer from './utils/start'
  * @author PunGrumpy
  * @license MIT
  *
- * @returns {Elysia} The logger.
+ * @param {Options} [options] Configuration options for the logger.
+ *
+ * @returns {Elysia} The logger plugin for ElysiaJS.
  */
 export default function logixlysia(options?: Options): Elysia {
   const log = createLogger(options)
