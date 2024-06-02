@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.3.1](https://github.com/PunGrumpy/logixlysia/compare/v3.3.0...v3.3.1) (2024-06-01)
+
+
+### Bug Fixes
+
+* **deps:** move `ESLint` and related packages to dev dependencies ([98de50c](https://github.com/PunGrumpy/logixlysia/commit/98de50c6c3bffc5939963ebd04563204c7c70793)), closes [#46](https://github.com/PunGrumpy/logixlysia/issues/46)
+
 ## [3.3.0](https://github.com/PunGrumpy/logixlysia/compare/v3.2.0...v3.3.0) (2024-05-22)
 
 
