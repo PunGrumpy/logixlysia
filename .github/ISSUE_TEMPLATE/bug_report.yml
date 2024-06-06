@@ -18,6 +18,8 @@ body:
         - Linux 🐧
         - macOS 🍎
         - Windows 🪟
+    validations:
+      required: true
   - type: dropdown
     attributes:
       label: Priority
@@ -28,12 +30,22 @@ body:
         - Medium 🚧
         - Low 💤
   - type: textarea
+    id: screenshot
+    attributes:
+      label: Screenshots
+      description: If applicable, add screenshots to help explain the issue.
+      value: |
+        ![Screenshot](https://via.placeholder.com/800x400)
+      render: bash
+  - type: textarea
     attributes:
       label: Description
       description: Provide a detailed description of the bug or issue.
       placeholder: |
         Describe the bug or issue in detail. Include any relevant information, error messages, or symptoms.
       render: Markdown
+    validations:
+      required: true
   - type: textarea
     attributes:
       label: Steps to Reproduce
@@ -55,6 +67,8 @@ body:
       placeholder: |
         Detail what actually happened, including any error messages or other symptoms.
       render: Markdown
+    validations:
+      required: true
   - type: textarea
     attributes:
       label: Additional Information
