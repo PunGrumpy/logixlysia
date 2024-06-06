@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.3.2](https://github.com/PunGrumpy/logixlysia/compare/v3.3.1...v3.3.2) (2024-06-06)
+
+
+### Bug Fixes
+
+* **npm-ignore:** accidentally ignore `tsconfig.json` ([85997f7](https://github.com/PunGrumpy/logixlysia/commit/85997f7dd8bb22b4811a7555e0a56e0cfb3ee269))
+
 ## [3.3.1](https://github.com/PunGrumpy/logixlysia/compare/v3.3.0...v3.3.1) (2024-06-01)
 
 
