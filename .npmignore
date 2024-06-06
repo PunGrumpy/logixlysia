@@ -11,5 +11,4 @@ node_modules/
 bun.lockb
 eslint.config.js
 lint-staged.config.js
-tsconfig.json
 tsconfig.tsbuildinfo
