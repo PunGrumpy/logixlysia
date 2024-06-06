@@ -15,57 +15,57 @@ body:
       label: Platform
       description: Select the platform(s) affected by this issue.
       options:
-        - 🐧 Linux
-        - 🍎 macOS
-        - 🪟 Windows
+        - Linux 🐧
+        - macOS 🍎
+        - Windows 🪟
   - type: dropdown
     attributes:
       label: Priority
       description: Choose the priority level for this issue.
       options:
-        - 🔥 Critical
-        - 🚨 High
-        - 🚧 Medium
-        - 💤 Low
+        - Critical 🔥
+        - High 🚨
+        - Medium 🚧
+        - Low 💤
   - type: textarea
     attributes:
       label: Description
       description: Provide a detailed description of the bug or issue.
       placeholder: |
-        Describe the bug or issue.
+        Describe the bug or issue in detail. Include any relevant information, error messages, or symptoms.
       render: Markdown
   - type: textarea
     attributes:
       label: Steps to Reproduce
       description: Outline the steps to reproduce the bug or issue.
       placeholder: |
-        Describe the steps to reproduce the bug or issue.
+        List the steps to reproduce the bug or issue, preferably in a numbered format.
       render: Markdown
   - type: textarea
     attributes:
       label: Expected Behavior
       description: Describe the behavior you expected to see.
       placeholder: |
-        Describe what you expected to happen.
+        Explain what you expected to happen when you followed the steps above.
       render: Markdown
   - type: textarea
     attributes:
       label: Actual Behavior
       description: Describe the actual behavior observed.
       placeholder: |
-        Describe what actually happened.
+        Detail what actually happened, including any error messages or other symptoms.
       render: Markdown
   - type: textarea
     attributes:
       label: Additional Information
       description: Share any additional details, such as screenshots or logs.
       placeholder: |
-        Provide any additional information, such as screenshots or logs.
+        Provide any additional information, such as screenshots, logs, or system configurations.
       render: Markdown
   - type: textarea
     attributes:
       label: Reproduction Repository
       description: Include a link to a repository for reproducing the issue.
       placeholder: |
-        Provide a link to a reproduction repository.
+        Provide a link to a reproduction repository, if available.
       render: Markdown
