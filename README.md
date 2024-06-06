@@ -14,7 +14,7 @@ bun add logixlysia
 
 ```ts
 import { Elysia } from 'elysia'
-import { logixlysia } from 'logixlysia'
+import logixlysia from 'logixlysia'
 
 const app = new Elysia({
   name: 'Logixlysia Example'
