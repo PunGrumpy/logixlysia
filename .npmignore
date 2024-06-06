@@ -1,14 +1,16 @@
 .github/
 .husky/
+.trunk/
 example/
 src/
 test/
 node_modules/
 .gitguardian.yml
+.gitsubmodules
 .gitignore
 .prettierignore
 .prettierrc
 bun.lockb
 eslint.config.js
-lint-staged.config.js
+lint-staged.config.cjs
 tsconfig.tsbuildinfo
