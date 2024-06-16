@@ -48,6 +48,7 @@ interface Options {
   config?: {
     ip?: boolean
     customLogFormat?: string
+    logFilePath?: string
     logFilter?: {
       level?: LogLevel | LogLevel[]
       method?: string | string[]

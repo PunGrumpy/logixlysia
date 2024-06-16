@@ -9,9 +9,10 @@ import {
 
 import { buildLogMessage } from './buildLogMessage'
 import { filterLog } from './filter'
+import { logToFile } from './logToFile'
 
 /**
- * Logs a message to the console.
+ * Logs a message to the console and optionally to a file.
  *
  * @param {LogLevel} level The log level.
  * @param {RequestInfo} request The request information.
@@ -30,6 +31,17 @@ async function log(
 
   const logMessage = buildLogMessage(level, request, data, store, options)
   console.log(logMessage)
+
+  if (options?.config?.logFilePath) {
+    await logToFile(
+      options.config.logFilePath,
+      level,
+      request,
+      data,
+      store,
+      options
+    )
+  }
 }
 
 /**

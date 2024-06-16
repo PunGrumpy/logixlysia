@@ -9,7 +9,7 @@ import { LogLevel, Options } from '~/types'
  * @param {Options} options The options.
  * @returns {boolean} `true` if the log message should be logged, otherwise `false`.
  */
-function filterLog(
+export function filterLog(
   logLevel: LogLevel,
   status: number,
   method: string,
@@ -29,5 +29,3 @@ function filterLog(
     (!filter.method || checkFilter(filter.method, method))
   )
 }
-
-export { filterLog }
