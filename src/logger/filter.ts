@@ -16,34 +16,18 @@ function filterLog(
   options?: Options
 ): boolean {
   const filter = options?.config?.logFilter
-
   if (!filter) return true
 
-  if (filter.level) {
-    if (Array.isArray(filter.level)) {
-      if (!filter.level.includes(logLevel)) return false
-    } else {
-      if (filter.level !== logLevel) return false
-    }
-  }
+  const checkFilter = (filterValue: any, value: any) =>
+    Array.isArray(filterValue)
+      ? filterValue.includes(value)
+      : filterValue === value
 
-  if (filter.status) {
-    if (Array.isArray(filter.status)) {
-      if (!filter.status.includes(status)) return false
-    } else {
-      if (filter.status !== status) return false
-    }
-  }
-
-  if (filter.method) {
-    if (Array.isArray(filter.method)) {
-      if (!filter.method.includes(method)) return false
-    } else {
-      if (filter.method !== method) return false
-    }
-  }
-
-  return true
+  return (
+    (!filter.level || checkFilter(filter.level, logLevel)) &&
+    (!filter.status || checkFilter(filter.status, status)) &&
+    (!filter.method || checkFilter(filter.method, method))
+  )
 }
 
 export { filterLog }

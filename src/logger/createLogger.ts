@@ -6,7 +6,6 @@ import {
   RequestInfo,
   StoreData
 } from '~/types'
-
 import { buildLogMessage } from './buildLogMessage'
 import { filterLog } from './filter'
 
@@ -26,9 +25,7 @@ async function log(
   store: StoreData,
   options?: Options
 ): Promise<void> {
-  if (!filterLog(level, data.status || 200, request.method, options)) {
-    return
-  }
+  if (!filterLog(level, data.status || 200, request.method, options)) return
 
   const logMessage = buildLogMessage(level, request, data, store, options)
   console.log(logMessage)

@@ -39,7 +39,7 @@ export function buildLogMessage(
   const logFormat =
     options?.config?.customLogFormat ||
     '🦊 {now} {level} {duration} {method} {pathname} {status} {message} {ip}'
-  const logMessage = logFormat
+  return logFormat
     .replace('{now}', nowStr)
     .replace('{level}', levelStr)
     .replace('{duration}', durationStr)
@@ -48,6 +48,4 @@ export function buildLogMessage(
     .replace('{status}', statusStr)
     .replace('{message}', messageStr)
     .replace('{ip}', ipStr || '')
-
-  return logMessage
 }

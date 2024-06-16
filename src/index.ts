@@ -1,8 +1,7 @@
 import { Server } from 'bun'
 import Elysia from 'elysia'
 
-import { createLogger } from './logger/createLogger'
-import { handleHttpError } from './logger/handleHttpError'
+import { createLogger, handleHttpError } from './logger'
 import { HttpError, Options } from './types'
 import startServer from './utils/start'
 
@@ -16,9 +15,6 @@ import startServer from './utils/start'
  *
  * @name Logixlysia
  * @description Logixlysia is a logger plugin for ElysiaJS.
- * @author PunGrumpy
- * @license MIT
- *
  * @param {Options} [options] Configuration options for the logger.
  *
  * @returns {Elysia} The logger plugin for ElysiaJS.
@@ -26,12 +22,10 @@ import startServer from './utils/start'
 export default function logixlysia(options?: Options): Elysia {
   const log = createLogger(options)
 
-  const elysia = new Elysia({
+  return new Elysia({
     name: 'Logixlysia'
   })
-    .onStart(ctx => {
-      startServer(ctx.server as Server)
-    })
+    .onStart(ctx => startServer(ctx.server as Server))
     .onRequest(ctx => {
       ctx.store = { beforeTime: process.hrtime.bigint() }
     })
@@ -46,6 +40,4 @@ export default function logixlysia(options?: Options): Elysia {
         options
       )
     })
-
-  return elysia
 }

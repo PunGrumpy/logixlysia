@@ -1,5 +1,4 @@
 import { HttpError, Options, RequestInfo, StoreData } from '~/types'
-
 import { buildLogMessage } from './buildLogMessage'
 
 /**

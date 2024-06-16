@@ -5,7 +5,6 @@ import { Server } from '~/types'
  *
  * @param {string} text The text.
  * @param {number} width The box width.
- *
  * @returns {string} The box text.
  */
 function createBoxText(text: string, width: number): string {
@@ -18,7 +17,6 @@ function createBoxText(text: string, width: number): string {
  * Starts the server string.
  *
  * @param {Server} config The server configuration.
- *
  * @returns {void} The server string.
  */
 function startServer(config: Server): void {

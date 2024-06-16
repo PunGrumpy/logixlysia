@@ -2,10 +2,8 @@ import chalk from 'chalk'
 
 /**
  * Converts a time difference into a formatted string with the most appropriate time unit.
- * Units used are seconds (s), milliseconds (ms), microseconds (µs), and nanoseconds (ns).
  *
  * @param {bigint} beforeTime - The timestamp taken before the request.
- *
  * @returns {string} A formatted duration string including the time unit.
  */
 function durationString(beforeTime: bigint): string {
@@ -33,7 +31,6 @@ function durationString(beforeTime: bigint): string {
  *
  * @param {string} value - The time value.
  * @param {string} unit - The time unit.
- *
  * @returns {string} Styled time string.
  */
 function formatTime(value: string, unit: string): string {
