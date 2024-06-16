@@ -1,4 +1,5 @@
 import { LogLevel } from '~/types'
+
 import { LogLevelColorMap } from './colorMapping'
 
 /**

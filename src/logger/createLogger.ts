@@ -6,6 +6,7 @@ import {
   RequestInfo,
   StoreData
 } from '~/types'
+
 import { buildLogMessage } from './buildLogMessage'
 import { filterLog } from './filter'
 
