@@ -29,7 +29,7 @@ describe('Duration String', () => {
   for (const [description, nanoseconds, unit] of testCases) {
     it(`${description}`, () => {
       const beforeTime = process.hrtime.bigint() - BigInt(String(nanoseconds))
-      const result = durationString(beforeTime)
+      const result = durationString(beforeTime, true)
 
       expect(result).toMatch(String(unit))
     })

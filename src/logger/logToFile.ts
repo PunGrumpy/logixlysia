@@ -1,7 +1,8 @@
 import { promises as fs } from 'fs'
 import { dirname } from 'path'
 
-import { LogData, LogLevel, Options, RequestInfo, StoreData } from '../types'
+import { LogData, LogLevel, Options, RequestInfo, StoreData } from '~/types'
+
 import { buildLogMessage } from './buildLogMessage'
 
 /**
@@ -34,6 +35,6 @@ export async function logToFile(
 ): Promise<void> {
   await ensureDirectoryExists(filePath)
   const logMessage =
-    buildLogMessage(level, request, data, store, options) + '\n'
+    buildLogMessage(level, request, data, store, options, false) + '\n'
   await fs.appendFile(filePath, logMessage)
 }

@@ -29,7 +29,7 @@ async function log(
 ): Promise<void> {
   if (!filterLog(level, data.status || 200, request.method, options)) return
 
-  const logMessage = buildLogMessage(level, request, data, store, options)
+  const logMessage = buildLogMessage(level, request, data, store, options, true)
   console.log(logMessage)
 
   if (options?.config?.logFilePath) {

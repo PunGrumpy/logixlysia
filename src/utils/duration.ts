@@ -4,9 +4,10 @@ import chalk from 'chalk'
  * Converts a time difference into a formatted string with the most appropriate time unit.
  *
  * @param {bigint} beforeTime - The timestamp taken before the request.
+ * @param {boolean} useColors - Whether to apply colors to the output.
  * @returns {string} A formatted duration string including the time unit.
  */
-function durationString(beforeTime: bigint): string {
+function durationString(beforeTime: bigint, useColors: boolean): string {
   const currentTime = process.hrtime.bigint()
   const nanoseconds = Number(currentTime - beforeTime)
 
@@ -19,11 +20,11 @@ function durationString(beforeTime: bigint): string {
   for (const { unit, threshold, decimalPlaces } of timeUnits) {
     if (nanoseconds >= threshold) {
       const value = (nanoseconds / threshold).toFixed(decimalPlaces)
-      return formatTime(value, unit)
+      return formatTime(value, unit, useColors)
     }
   }
 
-  return formatTime(nanoseconds.toString(), 'ns')
+  return formatTime(nanoseconds.toString(), 'ns', useColors)
 }
 
 /**
@@ -31,10 +32,14 @@ function durationString(beforeTime: bigint): string {
  *
  * @param {string} value - The time value.
  * @param {string} unit - The time unit.
+ * @param {boolean} useColors - Whether to apply colors to the output.
  * @returns {string} Styled time string.
  */
-function formatTime(value: string, unit: string): string {
-  return chalk.gray(`${value}${unit}`).padStart(8).padEnd(16)
+function formatTime(value: string, unit: string, useColors: boolean): string {
+  const timeStr = `${value}${unit}`
+  return useColors
+    ? chalk.gray(timeStr).padStart(8).padEnd(16)
+    : timeStr.padStart(8).padEnd(16)
 }
 
 export default durationString

@@ -6,11 +6,14 @@ import { LogLevelColorMap } from './colorMapping'
  * Converts the log level to a string.
  *
  * @param {LogLevel} level The log level.
+ * @param {boolean} useColors - Whether to apply colors to the output.
  * @returns {string} The log level as a string.
  */
-function logString(level: LogLevel): string {
+function logString(level: LogLevel, useColors: boolean): string {
   const levelStr = level.toUpperCase()
-  return LogLevelColorMap[levelStr]?.(levelStr.padEnd(7)) || levelStr
+  return useColors
+    ? LogLevelColorMap[levelStr]?.(levelStr.padEnd(7)) || levelStr
+    : levelStr.padEnd(7)
 }
 
 export default logString

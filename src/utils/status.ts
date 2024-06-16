@@ -4,9 +4,10 @@ import chalk from 'chalk'
  * Converts the status code to a string.
  *
  * @param {number} status The status code.
+ * @param {boolean} useColors - Whether to apply colors to the output.
  * @returns {string} The status code as a string.
  */
-function statusString(status: number): string {
+function statusString(status: number, useColors: boolean): string {
   const color =
     status >= 500
       ? 'red'
@@ -17,7 +18,7 @@ function statusString(status: number): string {
           : status >= 200
             ? 'green'
             : 'white'
-  return chalk[color](status.toString())
+  return useColors ? chalk[color](status.toString()) : status.toString()
 }
 
 export default statusString

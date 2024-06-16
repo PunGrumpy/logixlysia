@@ -15,6 +15,7 @@ import statusString from '~/utils/status'
  * @param {LogData} data The log data.
  * @param {StoreData} store The store data.
  * @param {Options} options The logger options.
+ * @param {boolean} useColors Whether to apply colors to the log message.
  * @returns {string} The formatted log message.
  */
 export function buildLogMessage(
@@ -22,14 +23,17 @@ export function buildLogMessage(
   request: RequestInfo,
   data: LogData,
   store: StoreData,
-  options?: Options
+  options?: Options,
+  useColors = true
 ): string {
-  const nowStr = chalk.bgYellow(chalk.black(new Date().toLocaleString()))
-  const levelStr = logString(level)
-  const durationStr = durationString(store.beforeTime)
-  const methodStr = methodString(request.method)
+  const nowStr = useColors
+    ? chalk.bgYellow(chalk.black(new Date().toLocaleString()))
+    : new Date().toLocaleString()
+  const levelStr = logString(level, useColors)
+  const durationStr = durationString(store.beforeTime, useColors)
+  const methodStr = methodString(request.method, useColors)
   const pathnameStr = pathString(request)
-  const statusStr = statusString(data.status || 200)
+  const statusStr = statusString(data.status || 200, useColors)
   const messageStr = data.message || ''
   const ipStr =
     options?.config?.ip && request.headers.get('x-forwarded-for')
