@@ -24,7 +24,7 @@ export function buildLogMessage(
   data: LogData,
   store: StoreData,
   options?: Options,
-  useColors = true
+  useColors: boolean = true
 ): string {
   const nowStr = useColors
     ? chalk.bgYellow(chalk.black(new Date().toLocaleString()))
@@ -43,6 +43,7 @@ export function buildLogMessage(
   const logFormat =
     options?.config?.customLogFormat ||
     '🦊 {now} {level} {duration} {method} {pathname} {status} {message} {ip}'
+
   return logFormat
     .replace('{now}', nowStr)
     .replace('{level}', levelStr)
