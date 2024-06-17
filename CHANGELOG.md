@@ -1,5 +1,17 @@
 # Changelog
 
+## [3.4.0](https://github.com/PunGrumpy/logixlysia/compare/v3.3.2...v3.4.0) (2024-06-17)
+
+
+### Features
+
+* **logger:** add file logging capability ([6d913a3](https://github.com/PunGrumpy/logixlysia/commit/6d913a3dcc6cbba40bcaa4b6c4c4a4b474a90969))
+
+
+### Bug Fixes
+
+* **logger:** remove ANSI color codes from log files ([df42315](https://github.com/PunGrumpy/logixlysia/commit/df423151399f9436121b0d5d4a9b0424befdc835))
+
 ## [3.3.2](https://github.com/PunGrumpy/logixlysia/compare/v3.3.1...v3.3.2) (2024-06-06)
 
 
