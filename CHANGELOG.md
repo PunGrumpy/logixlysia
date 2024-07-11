@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.5.0](https://github.com/PunGrumpy/logixlysia/compare/v3.4.0...v3.5.0) (2024-07-11)
+
+
+### Features
+
+* **config:** add option to toggle server start banner display ([c975cd6](https://github.com/PunGrumpy/logixlysia/commit/c975cd6da94e39d055cdf7bc43cc1ed1eec4971e)), closes [#52](https://github.com/PunGrumpy/logixlysia/issues/52)
+
 ## [3.4.0](https://github.com/PunGrumpy/logixlysia/compare/v3.3.2...v3.4.0) (2024-06-17)
 
 
