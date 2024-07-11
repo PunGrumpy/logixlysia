@@ -1,56 +1,78 @@
-import { afterEach, describe, expect, it, jest, mock } from 'bun:test'
+import { afterEach, beforeEach, describe, expect, it } from "bun:test";
+import fs from "fs/promises";
+import path from "path";
 
-import { logToFile } from '~/logger/logToFile'
-import { LogData, LogLevel, Options, RequestInfo, StoreData } from '~/types'
+import { logToFile } from "~/logger/logToFile";
+import { LogData, LogLevel, Options, RequestInfo, StoreData } from "~/types";
 
-const mockAppendFile = jest.fn()
-const mockMkdir = jest.fn()
+describe("logToFile", () => {
+  const testDir = path.join(process.cwd(), "test-logs");
+  const testFile = path.join(testDir, "test.log");
 
-mock.module('fs', () => ({
-  promises: {
-    appendFile: mockAppendFile,
-    mkdir: mockMkdir
-  }
-}))
+  beforeEach(async () => {
+    await fs.mkdir(testDir, { recursive: true });
+  });
 
-describe('Log to file', () => {
-  const filePath = 'logs/test.log'
-  const level: LogLevel = 'INFO'
-  const request: RequestInfo = {
-    headers: { get: () => 'test-header-value' },
-    method: 'GET',
-    url: 'https://pungrumpy.com/logixlysia/test'
-  }
-  const data: LogData = { status: 200, message: 'OK' }
-  const store: StoreData = { beforeTime: BigInt(1234567890) }
-  const options: Options = {
-    config: {
-      customLogFormat: '{method} {status} {message}'
-    }
-  }
+  afterEach(async () => {
+    await fs.rm(testDir, { recursive: true, force: true });
+  });
 
-  afterEach(() => {
-    jest.clearAllMocks()
-  })
+  it("should create a log file and write to it", async () => {
+    const level: LogLevel = "INFO";
+    const request: RequestInfo = {
+      url: "/test",
+      method: "GET",
+      headers: { get: () => null },
+    };
+    const data: LogData = { status: 200 };
+    const store: StoreData = { beforeTime: BigInt(0) };
+    const options: Options = {};
 
-  it('Should log a message to a file without options', async () => {
-    await logToFile(filePath, level, request, data, store)
+    await logToFile(testFile, level, request, data, store, options);
 
-    expect(mockMkdir).toHaveBeenCalled()
-    expect(mockAppendFile).toHaveBeenCalled()
-  })
+    const fileContent = await fs.readFile(testFile, "utf-8");
+    expect(fileContent).toContain("INFO");
+    expect(fileContent).toContain("GET");
+    expect(fileContent).toContain("200");
+  });
 
-  it('Should log a message to a file with options', async () => {
-    await logToFile(filePath, level, request, data, store, options)
+  it("should append to an existing log file", async () => {
+    const level: LogLevel = "INFO";
+    const request: RequestInfo = {
+      url: "/test",
+      method: "GET",
+      headers: { get: () => null },
+    };
+    const data: LogData = { status: 200 };
+    const store: StoreData = { beforeTime: BigInt(0) };
+    const options: Options = {};
 
-    expect(mockMkdir).toHaveBeenCalled()
-    expect(mockAppendFile).toHaveBeenCalled()
-  })
+    await logToFile(testFile, level, request, data, store, options);
+    await logToFile(testFile, level, request, data, store, options);
 
-  it('Should log a message to a file with custom log format', async () => {
-    await logToFile(filePath, level, request, data, store, options)
+    const fileContent = await fs.readFile(testFile, "utf-8");
+    const logEntries = fileContent.trim().split("\n");
+    expect(logEntries).toHaveLength(2);
+  });
 
-    expect(mockMkdir).toHaveBeenCalled()
-    expect(mockAppendFile).toHaveBeenCalled()
-  })
-})
+  it("should use custom log format if provided", async () => {
+    const level: LogLevel = "INFO";
+    const request: RequestInfo = {
+      url: "/test",
+      method: "GET",
+      headers: { get: () => null },
+    };
+    const data: LogData = { status: 200 };
+    const store: StoreData = { beforeTime: BigInt(0) };
+    const options: Options = {
+      config: {
+        customLogFormat: "{level} - {method} {pathname}",
+      },
+    };
+
+    await logToFile(testFile, level, request, data, store, options);
+
+    const fileContent = await fs.readFile(testFile, "utf-8");
+    expect(fileContent.trim()).toMatch("INFO    - GET");
+  });
+});
