@@ -1,4 +1,4 @@
-import { Server } from '~/types'
+import { Options, Server } from '~/types'
 
 /**
  * Creates a box text.
@@ -19,15 +19,18 @@ function createBoxText(text: string, width: number): string {
  * @param {Server} config The server configuration.
  * @returns {void} The server string.
  */
-function startServer(config: Server): void {
+function startServer(config: Server, options?: Options): void {
   const { hostname, port, protocol } = config
-  const ELYSIA_VERSION = import.meta.require('elysia/package.json').version
-  const title = `Elysia v${ELYSIA_VERSION}`
-  const message = `🦊 Elysia is running at ${protocol}://${hostname}:${port}`
-  const boxWidth = Math.max(title.length, message.length) + 4
-  const border = '─'.repeat(boxWidth)
+  const showBanner = options?.config?.showBanner ?? true
 
-  console.log(`
+  if (showBanner) {
+    const ELYSIA_VERSION = import.meta.require('elysia/package.json').version
+    const title = `Elysia v${ELYSIA_VERSION}`
+    const message = `🦊 Elysia is running at ${protocol}://${hostname}:${port}`
+    const boxWidth = Math.max(title.length, message.length) + 4
+    const border = '─'.repeat(boxWidth)
+
+    console.log(`
       ┌${border}┐
       │${createBoxText('', boxWidth)}│
       │${createBoxText(title, boxWidth)}│
@@ -36,6 +39,9 @@ function startServer(config: Server): void {
       │${createBoxText('', boxWidth)}│
       └${border}┘
     `)
+  } else {
+    console.log(`🦊 Elysia is running at ${protocol}://${hostname}:${port}`)
+  }
 }
 
 export default startServer

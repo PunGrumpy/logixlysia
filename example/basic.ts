@@ -8,6 +8,7 @@ const app = new Elysia({
   .use(
     logixlysia({
       config: {
+        showBanner: false,
         logFilePath: './logs/example.log',
         ip: true,
         customLogFormat:

@@ -25,7 +25,7 @@ export default function logixlysia(options?: Options): Elysia {
   return new Elysia({
     name: 'Logixlysia'
   })
-    .onStart(ctx => startServer(ctx.server as Server))
+    .onStart(ctx => startServer(ctx.server as Server, options))
     .onRequest(ctx => {
       ctx.store = { beforeTime: process.hrtime.bigint() }
     })
