@@ -21,6 +21,7 @@ const app = new Elysia({
 }).use(
   logixlysia({
     config: {
+      showBanner: true,
       ip: true,
       logFilePath: './logs/example.log',
       customLogFormat:
@@ -43,6 +44,7 @@ app.listen(3000)
 
 | Option             | Type      | Description                                                           | Default                                                                   |
 | ------------------ | --------- | --------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| `showBanner`       | `boolean` | Display the banner on the console                                     | `true`                                                                    |
 | `ip`               | `boolean` | Display the incoming IP address based on the `X-Forwarded-For` header | `false`                                                                   |
 | `customLogMessage` | `string`  | Custom log message to display                                         | `🦊 {now} {level} {duration} {method} {pathname} {status} {message} {ip}` |
 | `logFilter`        | `object`  | Filter the logs based on the level, method, and status                | `null`                                                                    |

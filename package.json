@@ -23,7 +23,7 @@
     "dev": "bun run --watch example/basic.ts",
     "prepare": "husky",
     "lint:staged": "lint-staged",
-    "prettier": "prettier --write --config .trunk/configs/.prettierrc.yaml .",
+    "format": "prettier --write --config .trunk/configs/.prettierrc.yaml .",
     "trunk:check": "trunk check",
     "trunk:fmt": "trunk fmt"
   },

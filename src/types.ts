@@ -54,6 +54,7 @@ interface Options {
       method?: string | string[]
       status?: number | number[]
     } | null
+    showBanner?: boolean
   }
 }
 
