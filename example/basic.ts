@@ -12,7 +12,7 @@ const app = new Elysia({
         logFilePath: './logs/example.log',
         ip: true,
         customLogFormat:
-          '🦊 {now} {level} {duration} {method} {pathname} {status} {message} {ip}'
+          '🦊 {now} {level} {duration} {method} {pathname} {status} {message} {ip} {epoch}'
         // logFilter: {
         //   level: ['ERROR', 'WARNING'],
         //   status: [500, 404],

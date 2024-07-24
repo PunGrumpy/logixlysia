@@ -25,7 +25,7 @@ const app = new Elysia({
       ip: true,
       logFilePath: './logs/example.log',
       customLogFormat:
-        '🦊 {now} {level} {duration} {method} {pathname} {status} {message} {ip}',
+        '🦊 {now} {level} {duration} {method} {pathname} {status} {message} {ip} {epoch}',
       logFilter: {
         level: ['ERROR', 'WARNING'],
         status: [500, 404],
@@ -49,6 +49,20 @@ app.listen(3000)
 | `customLogMessage` | `string`  | Custom log message to display                                         | `🦊 {now} {level} {duration} {method} {pathname} {status} {message} {ip}` |
 | `logFilter`        | `object`  | Filter the logs based on the level, method, and status                | `null`                                                                    |
 | `logFilePath`      | `string`  | Path to the log file                                                  | `./logs/elysia.log`                                                       |
+
+### Custom Log Message
+
+| Placeholder  | Description                                                                 |
+| ------------ | --------------------------------------------------------------------------- |
+| `{now}`      | Current date and time in `YYYY-MM-DD HH:mm:ss` format                       |
+| `{level}`    | Log level (`INFO`, `WARNING`, `ERROR`)                                      |
+| `{duration}` | Request duration in milliseconds                                            |
+| `{method}`   | Request method (`GET`, `POST`, `PUT`, `DELETE`, `PATCH`, `HEAD`, `OPTIONS`) |
+| `{pathname}` | Request pathname                                                            |
+| `{status}`   | Response status code                                                        |
+| `{message}`  | Custom message                                                              |
+| `{ip}`       | Incoming IP address                                                         |
+| `{epoch}`    | Current date and time in Unix epoch format (seconds since January 1, 1970   |
 
 ## `📄` License
 

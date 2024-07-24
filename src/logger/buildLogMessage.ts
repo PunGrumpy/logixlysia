@@ -26,9 +26,11 @@ export function buildLogMessage(
   options?: Options,
   useColors: boolean = true
 ): string {
+  const now = new Date()
   const nowStr = useColors
-    ? chalk.bgYellow(chalk.black(new Date().toLocaleString()))
-    : new Date().toLocaleString()
+    ? chalk.bgYellow(chalk.black(now.toLocaleString()))
+    : now.toLocaleString()
+  const epochStr = Math.floor(now.getTime() / 1000).toString()
   const levelStr = logString(level, useColors)
   const durationStr = durationString(store.beforeTime, useColors)
   const methodStr = methodString(request.method, useColors)
@@ -46,6 +48,7 @@ export function buildLogMessage(
 
   return logFormat
     .replace('{now}', nowStr)
+    .replace('{epoch}', epochStr)
     .replace('{level}', levelStr)
     .replace('{duration}', durationStr)
     .replace('{method}', methodStr)
