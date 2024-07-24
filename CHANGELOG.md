@@ -1,5 +1,13 @@
 # Changelog
 
+## [3.6.0](https://github.com/PunGrumpy/logixlysia/compare/v3.5.0...v3.6.0) (2024-07-24)
+
+
+### Features
+
+* **custom-log:** add unix epoch timestamp option on `customLogFormat` configuration ([58d3e5b](https://github.com/PunGrumpy/logixlysia/commit/58d3e5b89bfef86aed1f5daa70d9a39982750073)), closes [#56](https://github.com/PunGrumpy/logixlysia/issues/56)
+* **transports:** add custom tranporter support for flexible logging ([69e1b89](https://github.com/PunGrumpy/logixlysia/commit/69e1b8991d323d8463fb81cf5bf1b441f678318b)), closes [#51](https://github.com/PunGrumpy/logixlysia/issues/51)
+
 ## [3.5.0](https://github.com/PunGrumpy/logixlysia/compare/v3.4.0...v3.5.0) (2024-07-11)
 
 
