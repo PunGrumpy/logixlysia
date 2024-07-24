@@ -38,6 +38,9 @@ const app = new Elysia({
 app.listen(3000)
 ```
 
+> [!NOTE]
+> You can discover more about example in the [example](example) directory.
+
 ## `📚` Documentation
 
 ### Options

@@ -1,3 +1,4 @@
+import { logToTransports } from '~/transports'
 import {
   LogData,
   Logger,
@@ -42,6 +43,8 @@ async function log(
       options
     )
   }
+
+  await logToTransports(level, request, data, store, options)
 }
 
 /**

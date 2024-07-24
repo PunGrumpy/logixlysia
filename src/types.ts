@@ -44,9 +44,24 @@ class HttpError extends Error {
   }
 }
 
+interface TransportFunction {
+  (
+    level: LogLevel,
+    message: string,
+    meta: {
+      request: RequestInfo
+      data: LogData
+      store: StoreData
+    }
+  ): Promise<void> | void
+}
+
+interface Transport {
+  log: TransportFunction
+}
+
 interface Options {
   config?: {
-    ip?: boolean
     customLogFormat?: string
     logFilePath?: string
     logFilter?: {
@@ -54,7 +69,9 @@ interface Options {
       method?: string | string[]
       status?: number | number[]
     } | null
+    ip?: boolean
     showBanner?: boolean
+    transports?: Transport[]
   }
 }
 
@@ -67,5 +84,7 @@ export {
   Options,
   RequestInfo,
   Server,
-  StoreData
+  StoreData,
+  Transport,
+  TransportFunction
 }

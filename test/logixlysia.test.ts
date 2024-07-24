@@ -2,7 +2,7 @@ import { edenTreaty } from '@elysiajs/eden'
 import { beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { Elysia } from 'elysia'
 
-import logixlysia from '../src'
+import logixlysia from '~/index'
 
 describe('Logixlysia', () => {
   let server: Elysia
