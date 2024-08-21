@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.6.1](https://github.com/PunGrumpy/logixlysia/compare/v3.6.0...v3.6.1) (2024-08-21)
+
+
+### Performance Improvements
+
+* **logger:** improve performance and fix TypeScript errors ([d3ed751](https://github.com/PunGrumpy/logixlysia/commit/d3ed751041443b9bd2ce53350994e1443df40971))
+
 ## [3.6.0](https://github.com/PunGrumpy/logixlysia/compare/v3.5.0...v3.6.0) (2024-07-24)
 
 
