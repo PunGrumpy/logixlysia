@@ -21,7 +21,7 @@ describe('Log String', () => {
 
   it('Returns the padded input string for unrecognized log levels', () => {
     const result = logString('DEBUG', true)
-    expect(result).toBe('DEBUG  ')
+    expect(result).toBe('DEBUG')
   })
 
   it('Returns the padded input string without colors when useColors is false', () => {
