@@ -1,4 +1,9 @@
-import { LogLevel, Options } from '~/types'
+import { LogLevel, Options } from "~/types";
+
+const checkFilter = (filterValue: any, value: any) =>
+  Array.isArray(filterValue)
+    ? filterValue.includes(value)
+    : filterValue === value;
 
 /**
  * Filters log messages.
@@ -13,19 +18,14 @@ export function filterLog(
   logLevel: LogLevel,
   status: number,
   method: string,
-  options?: Options
+  options?: Options,
 ): boolean {
-  const filter = options?.config?.logFilter
-  if (!filter) return true
-
-  const checkFilter = (filterValue: any, value: any) =>
-    Array.isArray(filterValue)
-      ? filterValue.includes(value)
-      : filterValue === value
+  const filter = options?.config?.logFilter;
+  if (!filter) return true;
 
   return (
     (!filter.level || checkFilter(filter.level, logLevel)) &&
     (!filter.status || checkFilter(filter.status, status)) &&
     (!filter.method || checkFilter(filter.method, method))
-  )
+  );
 }

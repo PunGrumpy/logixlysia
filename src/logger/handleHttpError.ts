@@ -1,6 +1,5 @@
-import { HttpError, Options, RequestInfo, StoreData } from '~/types'
-
-import { buildLogMessage } from './buildLogMessage'
+import { buildLogMessage } from "~/logger/buildLogMessage";
+import { HttpError, Options, RequestInfo, StoreData } from "~/types";
 
 /**
  * Handles an HTTP error and logs it.
@@ -10,19 +9,14 @@ import { buildLogMessage } from './buildLogMessage'
  * @param {StoreData} store The store data.
  * @param {Options} options The logger options.
  */
-export async function handleHttpError(
+export function handleHttpError(
   request: RequestInfo,
   error: HttpError,
   store: StoreData,
-  options?: Options
-): Promise<void> {
-  const statusCode = error.status || 500
-  const logMessage = buildLogMessage(
-    'ERROR',
-    request,
-    { status: statusCode },
-    store,
-    options
-  )
-  console.error(logMessage)
+  options?: Options,
+): void {
+  const statusCode = error.status || 500;
+  console.error(
+    buildLogMessage("ERROR", request, { status: statusCode }, store, options),
+  );
 }

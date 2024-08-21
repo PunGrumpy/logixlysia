@@ -1,16 +1,15 @@
-import { logToTransports } from '~/transports'
+import { buildLogMessage } from "~/logger/buildLogMessage";
+import { filterLog } from "~/logger/filter";
+import { logToFile } from "~/logger/logToFile";
+import { logToTransports } from "~/transports";
 import {
   LogData,
   Logger,
   LogLevel,
   Options,
   RequestInfo,
-  StoreData
-} from '~/types'
-
-import { buildLogMessage } from './buildLogMessage'
-import { filterLog } from './filter'
-import { logToFile } from './logToFile'
+  StoreData,
+} from "~/types";
 
 /**
  * Logs a message to the console and optionally to a file.
@@ -26,25 +25,40 @@ async function log(
   request: RequestInfo,
   data: LogData,
   store: StoreData,
-  options?: Options
+  options?: Options,
 ): Promise<void> {
-  if (!filterLog(level, data.status || 200, request.method, options)) return
+  if (!filterLog(level, data.status || 200, request.method, options)) return;
 
-  const logMessage = buildLogMessage(level, request, data, store, options, true)
-  console.log(logMessage)
+  const logMessage = buildLogMessage(
+    level,
+    request,
+    data,
+    store,
+    options,
+    true,
+  );
+  console.log(logMessage);
+
+  const promises = [];
 
   if (options?.config?.logFilePath) {
-    await logToFile(
-      options.config.logFilePath,
-      level,
-      request,
-      data,
-      store,
-      options
-    )
+    promises.push(
+      logToFile(
+        options.config.logFilePath,
+        level,
+        request,
+        data,
+        store,
+        options,
+      ),
+    );
   }
 
-  await logToTransports(level, request, data, store, options)
+  if (options?.config?.transports?.length) {
+    promises.push(logToTransports(level, request, data, store, options));
+  }
+
+  await Promise.all(promises);
 }
 
 /**
@@ -55,8 +69,8 @@ async function log(
  */
 export function createLogger(options?: Options): Logger {
   return {
-    log: async (level, request, data, store) =>
+    log: (level, request, data, store) =>
       log(level, request, data, store, options),
-    customLogFormat: options?.config?.customLogFormat
-  }
+    customLogFormat: options?.config?.customLogFormat,
+  };
 }

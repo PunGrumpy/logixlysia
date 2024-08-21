@@ -1,9 +1,10 @@
-import { promises as fs } from 'fs'
-import { dirname } from 'path'
+import { promises as fs } from "fs";
+import { dirname } from "path";
 
-import { LogData, LogLevel, Options, RequestInfo, StoreData } from '~/types'
+import { buildLogMessage } from "~/logger/buildLogMessage";
+import { LogData, LogLevel, Options, RequestInfo, StoreData } from "~/types";
 
-import { buildLogMessage } from './buildLogMessage'
+const dirCache = new Set<string>();
 
 /**
  * Ensures that the directory exists. If not, it creates the directory.
@@ -11,8 +12,11 @@ import { buildLogMessage } from './buildLogMessage'
  * @param {string} filePath The path to the log file.
  */
 async function ensureDirectoryExists(filePath: string): Promise<void> {
-  const dir = dirname(filePath)
-  await fs.mkdir(dir, { recursive: true })
+  const dir = dirname(filePath);
+  if (!dirCache.has(dir)) {
+    await fs.mkdir(dir, { recursive: true });
+    dirCache.add(dir);
+  }
 }
 
 /**
@@ -31,10 +35,10 @@ export async function logToFile(
   request: RequestInfo,
   data: LogData,
   store: StoreData,
-  options?: Options
+  options?: Options,
 ): Promise<void> {
-  await ensureDirectoryExists(filePath)
+  await ensureDirectoryExists(filePath);
   const logMessage =
-    buildLogMessage(level, request, data, store, options, false) + '\n'
-  await fs.appendFile(filePath, logMessage)
+    buildLogMessage(level, request, data, store, options, false) + "\n";
+  await fs.appendFile(filePath, logMessage, { flag: "a" });
 }
