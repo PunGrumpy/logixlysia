@@ -1,8 +1,9 @@
 module.exports = {
-  '**/*.(ts)': () => `bun tsc --noEmit`,
+  '**/*.(ts)': () => `tsc --noEmit`,
   '**/*.(ts|js|cjs)': filenames => [
-    `bun eslint --fix ${filenames.join(' ')}`,
-    `bun format --write ${filenames.join(' ')}`
+    `eslint --fix ${filenames.join(' ')}`,
+    `prettier --write ${filenames.join(' ')} --config .trunk/configs/.prettierrc.yaml`
   ],
-  '**/*.(md|json)': filenames => `bun format --write ${filenames.join(' ')}`
+  '**/*.(md|json)': filenames =>
+    `prettier --write ${filenames.join(' ')} --config .trunk/configs/.prettierrc.yaml`
 }
