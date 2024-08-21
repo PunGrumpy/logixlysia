@@ -1,4 +1,4 @@
-import { HttpMethodColorMap } from "~/utils/colorMapping";
+import { HttpMethodColorMap } from '~/utils/colorMapping'
 
 /**
  * Converts an HTTP request method to a colored string representation.
@@ -8,10 +8,10 @@ import { HttpMethodColorMap } from "~/utils/colorMapping";
  * @returns {string} A string representing the method.
  */
 function methodString(method: string, useColors: boolean): string {
-  const colorFunction = HttpMethodColorMap[method];
+  const colorFunction = HttpMethodColorMap[method]
   return useColors && colorFunction
     ? colorFunction(method.padEnd(7))
-    : method.padEnd(7);
+    : method.padEnd(7)
 }
 
-export default methodString;
+export default methodString

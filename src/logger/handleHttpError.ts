@@ -1,5 +1,5 @@
-import { buildLogMessage } from "~/logger/buildLogMessage";
-import { HttpError, Options, RequestInfo, StoreData } from "~/types";
+import { buildLogMessage } from '~/logger/buildLogMessage'
+import { HttpError, Options, RequestInfo, StoreData } from '~/types'
 
 /**
  * Handles an HTTP error and logs it.
@@ -13,10 +13,10 @@ export function handleHttpError(
   request: RequestInfo,
   error: HttpError,
   store: StoreData,
-  options?: Options,
+  options?: Options
 ): void {
-  const statusCode = error.status || 500;
+  const statusCode = error.status || 500
   console.error(
-    buildLogMessage("ERROR", request, { status: statusCode }, store, options),
-  );
+    buildLogMessage('ERROR', request, { status: statusCode }, store, options)
+  )
 }

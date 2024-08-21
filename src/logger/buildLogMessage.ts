@@ -1,4 +1,4 @@
-import chalk from "chalk";
+import chalk from 'chalk'
 
 import {
   LogComponents,
@@ -6,16 +6,16 @@ import {
   LogLevel,
   Options,
   RequestInfo,
-  StoreData,
-} from "~/types";
-import durationString from "~/utils/duration";
-import logString from "~/utils/log";
-import methodString from "~/utils/method";
-import pathString from "~/utils/path";
-import statusString from "~/utils/status";
+  StoreData
+} from '~/types'
+import durationString from '~/utils/duration'
+import logString from '~/utils/log'
+import methodString from '~/utils/method'
+import pathString from '~/utils/path'
+import statusString from '~/utils/status'
 
 const defaultLogFormat =
-  "🦊 {now} {level} {duration} {method} {pathname} {status} {message} {ip}";
+  '🦊 {now} {level} {duration} {method} {pathname} {status} {message} {ip}'
 
 /**
  * Builds a log message.
@@ -34,9 +34,9 @@ export function buildLogMessage(
   data: LogData,
   store: StoreData,
   options?: Options,
-  useColors: boolean = true,
+  useColors: boolean = true
 ): string {
-  const now = new Date();
+  const now = new Date()
   const components: LogComponents = {
     now: useColors
       ? chalk.bgYellow(chalk.black(now.toLocaleString()))
@@ -47,19 +47,19 @@ export function buildLogMessage(
     method: methodString(request.method, useColors),
     pathname: pathString(request),
     status: statusString(data.status || 200, useColors),
-    message: data.message || "",
+    message: data.message || '',
     ip:
-      options?.config?.ip && request.headers.get("x-forwarded-for")
-        ? `IP: ${request.headers.get("x-forwarded-for")}`
-        : "",
-  };
+      options?.config?.ip && request.headers.get('x-forwarded-for')
+        ? `IP: ${request.headers.get('x-forwarded-for')}`
+        : ''
+  }
 
-  const logFormat = options?.config?.customLogFormat || defaultLogFormat;
+  const logFormat = options?.config?.customLogFormat || defaultLogFormat
 
   return logFormat.replace(/{(\w+)}/g, (_, key: string) => {
     if (key in components) {
-      return components[key as keyof LogComponents] || "";
+      return components[key as keyof LogComponents] || ''
     }
-    return "";
-  });
+    return ''
+  })
 }

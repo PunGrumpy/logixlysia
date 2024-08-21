@@ -1,4 +1,4 @@
-import { RequestInfo } from "~/types";
+import { RequestInfo } from '~/types'
 
 /**
  * Returns the path string.
@@ -8,10 +8,10 @@ import { RequestInfo } from "~/types";
  */
 const pathString = (requestInfo: RequestInfo): string | undefined => {
   try {
-    return new URL(requestInfo.url).pathname;
+    return new URL(requestInfo.url).pathname
   } catch {
-    return undefined;
+    return undefined
   }
-};
+}
 
-export default pathString;
+export default pathString

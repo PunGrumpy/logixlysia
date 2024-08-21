@@ -1,24 +1,24 @@
 interface RequestInfo {
-  headers: { get: (key: string) => string | null };
-  method: string;
-  url: string;
+  headers: { get: (key: string) => string | null }
+  method: string
+  url: string
 }
 
 interface Server {
-  hostname?: string;
-  port?: number;
-  protocol?: string;
+  hostname?: string
+  port?: number
+  protocol?: string
 }
 
 interface ColorMap {
-  [key: string]: (str: string) => string;
+  [key: string]: (str: string) => string
 }
 
-type LogLevel = "INFO" | "WARNING" | "ERROR" | string;
+type LogLevel = 'INFO' | 'WARNING' | 'ERROR' | string
 
 interface LogData {
-  status?: number;
-  message?: string;
+  status?: number
+  message?: string
 }
 
 interface Logger {
@@ -26,33 +26,33 @@ interface Logger {
     level: LogLevel,
     request: RequestInfo,
     data: LogData,
-    store: StoreData,
-  ): void;
-  customLogFormat?: string;
+    store: StoreData
+  ): void
+  customLogFormat?: string
 }
 
 interface LogComponents {
-  now: string;
-  epoch: string;
-  level: string;
-  duration: string;
-  method: string;
-  pathname: string | undefined;
-  status: string;
-  message: string;
-  ip: string;
+  now: string
+  epoch: string
+  level: string
+  duration: string
+  method: string
+  pathname: string | undefined
+  status: string
+  message: string
+  ip: string
 }
 
 interface StoreData {
-  beforeTime: bigint;
+  beforeTime: bigint
 }
 
 class HttpError extends Error {
-  status: number;
+  status: number
 
   constructor(status: number, message: string) {
-    super(message);
-    this.status = status;
+    super(message)
+    this.status = status
   }
 }
 
@@ -61,30 +61,30 @@ interface TransportFunction {
     level: LogLevel,
     message: string,
     meta: {
-      request: RequestInfo;
-      data: LogData;
-      store: StoreData;
-    },
-  ): Promise<void> | void;
+      request: RequestInfo
+      data: LogData
+      store: StoreData
+    }
+  ): Promise<void> | void
 }
 
 interface Transport {
-  log: TransportFunction;
+  log: TransportFunction
 }
 
 interface Options {
   config?: {
-    customLogFormat?: string;
-    logFilePath?: string;
+    customLogFormat?: string
+    logFilePath?: string
     logFilter?: {
-      level?: LogLevel | LogLevel[];
-      method?: string | string[];
-      status?: number | number[];
-    } | null;
-    ip?: boolean;
-    showBanner?: boolean;
-    transports?: Transport[];
-  };
+      level?: LogLevel | LogLevel[]
+      method?: string | string[]
+      status?: number | number[]
+    } | null
+    ip?: boolean
+    showBanner?: boolean
+    transports?: Transport[]
+  }
 }
 
 export {
@@ -99,5 +99,5 @@ export {
   Server,
   StoreData,
   Transport,
-  TransportFunction,
-};
+  TransportFunction
+}
