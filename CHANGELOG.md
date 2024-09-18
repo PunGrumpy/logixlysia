@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.6.2](https://github.com/PunGrumpy/logixlysia/compare/v3.6.1...v3.6.2) (2024-09-18)
+
+
+### Bug Fixes
+
+* **logtofile:** store error to log file ([1bb2d07](https://github.com/PunGrumpy/logixlysia/commit/1bb2d07ae0c815742a9eb7c930ac8487ac287b2c)), closes [#63](https://github.com/PunGrumpy/logixlysia/issues/63)
+
 ## [3.6.1](https://github.com/PunGrumpy/logixlysia/compare/v3.6.0...v3.6.1) (2024-08-21)
 
 
