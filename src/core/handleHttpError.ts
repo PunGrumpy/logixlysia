@@ -1,3 +1,4 @@
+import { logToFile } from '../transports'
 import { HttpError, Options, RequestInfo, StoreData } from '../types'
 import { buildLogMessage } from './buildLogMessage'
 
@@ -11,4 +12,19 @@ export function handleHttpError(
   console.error(
     buildLogMessage('ERROR', request, { status: statusCode }, store, options)
   )
+
+  const promises = []
+
+  if (options?.config?.logFilePath) {
+    promises.push(
+      logToFile(
+        options.config.logFilePath,
+        'ERROR',
+        request,
+        { status: statusCode },
+        store,
+        options
+      )
+    )
+  }
 }
