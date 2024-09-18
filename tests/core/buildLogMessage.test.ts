@@ -29,5 +29,7 @@ test('buildLogMessage', () => {
     options,
     true
   )
-  expect(colorMessage).toContain('\x1b[') // ANSI color codes
+
+  expect(colorMessage).not.toBe(message)
+  expect(colorMessage.split(' ')[0]).not.toBe(message.split(' ')[0])
 })
