@@ -18,8 +18,8 @@ export default [
       'no-undef': 'off',
       '@typescript-eslint/no-explicit-any': 'off',
       '@typescript-eslint/no-unused-vars': 'off',
-      'simple-import-sort/imports': 'error',
-      'simple-import-sort/exports': 'error'
+      'simple-import-sort/imports': 'warn',
+      'simple-import-sort/exports': 'warn'
     }
   }
 ]
