@@ -1,37 +1,42 @@
-interface RequestInfo {
+export interface RequestInfo {
   headers: { get: (key: string) => string | null }
   method: string
   url: string
 }
 
-interface Server {
+export interface Server {
   hostname?: string
   port?: number
   protocol?: string
 }
 
-interface ColorMap {
+export interface ColorMap {
   [key: string]: (str: string) => string
 }
 
-type LogLevel = 'INFO' | 'WARNING' | 'ERROR' | string
+export type LogLevel = 'INFO' | 'WARNING' | 'ERROR' | string
 
-interface LogData {
+export interface LogData {
   status?: number
   message?: string
 }
 
-interface Logger {
+export interface Logger {
   log(
     level: LogLevel,
     request: RequestInfo,
     data: LogData,
     store: StoreData
   ): void
+  handleHttpError(
+    request: RequestInfo,
+    error: HttpError,
+    store: StoreData
+  ): void
   customLogFormat?: string
 }
 
-interface LogComponents {
+export interface LogComponents {
   now: string
   epoch: string
   level: string
@@ -43,11 +48,11 @@ interface LogComponents {
   ip: string
 }
 
-interface StoreData {
+export interface StoreData {
   beforeTime: bigint
 }
 
-class HttpError extends Error {
+export class HttpError extends Error {
   status: number
 
   constructor(status: number, message: string) {
@@ -56,7 +61,7 @@ class HttpError extends Error {
   }
 }
 
-interface TransportFunction {
+export interface TransportFunction {
   (
     level: LogLevel,
     message: string,
@@ -68,11 +73,11 @@ interface TransportFunction {
   ): Promise<void> | void
 }
 
-interface Transport {
+export interface Transport {
   log: TransportFunction
 }
 
-interface Options {
+export interface Options {
   config?: {
     customLogFormat?: string
     logFilePath?: string
@@ -85,19 +90,4 @@ interface Options {
     showBanner?: boolean
     transports?: Transport[]
   }
-}
-
-export {
-  ColorMap,
-  HttpError,
-  LogComponents,
-  LogData,
-  Logger,
-  LogLevel,
-  Options,
-  RequestInfo,
-  Server,
-  StoreData,
-  Transport,
-  TransportFunction
 }

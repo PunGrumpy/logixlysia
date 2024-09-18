@@ -7,27 +7,18 @@ import {
   Options,
   RequestInfo,
   StoreData
-} from '~/types'
-import durationString from '~/utils/duration'
-import logString from '~/utils/log'
-import methodString from '~/utils/method'
-import pathString from '~/utils/path'
-import statusString from '~/utils/status'
+} from '../types'
+import {
+  durationString,
+  logString,
+  methodString,
+  pathString,
+  statusString
+} from '../utils'
 
 const defaultLogFormat =
   '🦊 {now} {level} {duration} {method} {pathname} {status} {message} {ip}'
 
-/**
- * Builds a log message.
- *
- * @param {LogLevel} level The log level.
- * @param {RequestInfo} request The request information.
- * @param {LogData} data The log data.
- * @param {StoreData} store The store data.
- * @param {Options} options The logger options.
- * @param {boolean} useColors Whether to apply colors to the log message.
- * @returns {string} The formatted log message.
- */
 export function buildLogMessage(
   level: LogLevel,
   request: RequestInfo,

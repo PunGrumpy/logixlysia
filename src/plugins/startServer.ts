@@ -1,25 +1,12 @@
-import { Options, Server } from '~/types'
+import { Options, Server } from '../types'
 
-/**
- * Creates a box text.
- *
- * @param {string} text The text.
- * @param {number} width The box width.
- * @returns {string} The box text.
- */
 const createBoxText = (text: string, width: number): string => {
   const paddingLength = Math.max(0, (width - text.length) / 2)
   const padding = ' '.repeat(paddingLength)
   return `${padding}${text}${padding}`.padEnd(width)
 }
 
-/**
- * Starts the server string.
- *
- * @param {Server} config The server configuration.
- * @returns {void} The server string.
- */
-function startServer(config: Server, options?: Options): void {
+export default function startServer(config: Server, options?: Options): void {
   const { hostname, port, protocol } = config
   const showBanner = options?.config?.showBanner ?? true
 
@@ -44,5 +31,3 @@ function startServer(config: Server, options?: Options): void {
     console.log(`🦊 Elysia is running at ${protocol}://${hostname}:${port}`)
   }
 }
-
-export default startServer

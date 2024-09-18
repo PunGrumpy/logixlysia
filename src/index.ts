@@ -1,24 +1,9 @@
-import { Server } from 'bun'
-import Elysia from 'elysia'
+import { Elysia } from 'elysia'
 
-import { createLogger, handleHttpError } from '~/logger'
-import { HttpError, Options } from '~/types'
-import startServer from '~/utils/start'
+import { createLogger } from './core'
+import { startServer } from './plugins'
+import { HttpError, Options, Server } from './types'
 
-/**
- * Creates a logger plugin for ElysiaJS.
- *
- * @export
- * @module logger
- * @category Logger
- * @subcategory Functions
- *
- * @name Logixlysia
- * @description Logixlysia is a logger plugin for ElysiaJS.
- * @param {Options} [options] Configuration options for the logger.
- *
- * @returns {Elysia} The logger plugin for ElysiaJS.
- */
 export default function logixlysia(options?: Options): Elysia {
   const log = createLogger(options)
 
@@ -33,14 +18,14 @@ export default function logixlysia(options?: Options): Elysia {
       log.log('INFO', request, { status: 200 }, store as { beforeTime: bigint })
     })
     .onError({ as: 'global' }, ({ request, error, store }) => {
-      handleHttpError(
+      log.handleHttpError(
         request,
         error as HttpError,
-        store as { beforeTime: bigint },
-        options
+        store as { beforeTime: bigint }
       )
     })
 }
 
-export { createLogger } from '~/logger'
-export { handleHttpError } from '~/logger'
+export { createLogger } from './core'
+export { handleHttpError } from './core'
+export { logToTransports } from './transports'

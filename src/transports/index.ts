@@ -1,22 +1,2 @@
-import { buildLogMessage } from '~/logger/buildLogMessage'
-import { LogData, LogLevel, Options, RequestInfo, StoreData } from '~/types'
-
-export async function logToTransports(
-  level: LogLevel,
-  request: RequestInfo,
-  data: LogData,
-  store: StoreData,
-  options?: Options
-): Promise<void> {
-  if (!options?.config?.transports || options.config.transports.length === 0) {
-    return
-  }
-
-  const message = buildLogMessage(level, request, data, store, options, false)
-
-  const promises = options.config.transports.map(transport =>
-    transport.log(level, message, { request, data, store })
-  )
-
-  await Promise.all(promises)
-}
+export { logToTransports } from './console'
+export { logToFile } from './file'
