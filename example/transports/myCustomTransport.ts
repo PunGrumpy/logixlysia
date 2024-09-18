@@ -1,4 +1,10 @@
-import { LogData, LogLevel, RequestInfo, StoreData, Transport } from '~/types'
+import {
+  LogData,
+  LogLevel,
+  RequestInfo,
+  StoreData,
+  Transport
+} from '../../src/types'
 
 class MyCustomTransport implements Transport {
   async log(
