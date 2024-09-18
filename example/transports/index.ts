@@ -1,7 +1,6 @@
 import { Elysia } from 'elysia'
 
-import logixlysia from '~/index'
-
+import logixlysia from '../../src/index'
 import MyCustomTransport from './myCustomTransport'
 
 const app = new Elysia()

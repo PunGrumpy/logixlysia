@@ -1,17 +1,11 @@
-import { RequestInfo } from '~/types'
+import { RequestInfo } from '../types'
 
-/**
- * Returns the path string.
- *
- * @param {RequestInfo} requestInfo The request info.
- * @returns {string | undefined} The path string.
- */
-const pathString = (requestInfo: RequestInfo): string | undefined => {
+export default function pathString(
+  requestInfo: RequestInfo
+): string | undefined {
   try {
     return new URL(requestInfo.url).pathname
   } catch {
     return undefined
   }
 }
-
-export default pathString
