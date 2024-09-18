@@ -87,6 +87,7 @@ export interface Options {
       status?: number | number[]
     } | null
     ip?: boolean
+    useColors?: boolean
     showBanner?: boolean
     transports?: Transport[]
   }
