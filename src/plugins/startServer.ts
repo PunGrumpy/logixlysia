@@ -8,7 +8,7 @@ const createBoxText = (text: string, width: number): string => {
 
 export default function startServer(config: Server, options?: Options): void {
   const { hostname, port, protocol } = config
-  const showBanner = options?.config?.showBanner ?? true
+  const showBanner = options?.config?.startupMessageFormat !== 'simple'
 
   if (showBanner) {
     const ELYSIA_VERSION = import.meta.require('elysia/package.json').version
