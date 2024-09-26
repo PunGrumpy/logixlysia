@@ -21,7 +21,8 @@ const app = new Elysia({
 }).use(
   logixlysia({
     config: {
-      showBanner: true,
+      showStartupMessage: true,
+      startupMessageFormat: 'simple',
       ip: true,
       logFilePath: './logs/example.log',
       customLogFormat:
@@ -48,7 +49,7 @@ app.listen(3000)
 | Option                 | Type                     | Description                                                           | Default                                                                   |
 | ---------------------- | ------------------------ | --------------------------------------------------------------------- | ------------------------------------------------------------------------- |
 | `showStartupMessage`   | `boolean`                | Display the startup message                                           | `true`                                                                    |
-| `startupMessageFormat` | `"banner"` \| `"simple"` | Choose the startup message format                                     | `"banner"`                                                                  |
+| `startupMessageFormat` | `"banner"` \| `"simple"` | Choose the startup message format                                     | `"banner"`                                                                |
 | `ip`                   | `boolean`                | Display the incoming IP address based on the `X-Forwarded-For` header | `false`                                                                   |
 | `customLogMessage`     | `string`                 | Custom log message to display                                         | `🦊 {now} {level} {duration} {method} {pathname} {status} {message} {ip}` |
 | `logFilter`            | `object`                 | Filter the logs based on the level, method, and status                | `null`                                                                    |
