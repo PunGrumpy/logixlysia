@@ -88,7 +88,8 @@ export interface Options {
     } | null
     ip?: boolean
     useColors?: boolean
-    showBanner?: boolean
+    showStartupMessage?: boolean
+    startupMessageFormat?: 'banner' | 'simple'
     transports?: Transport[]
   }
 }

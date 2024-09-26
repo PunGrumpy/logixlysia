@@ -10,7 +10,10 @@ export default function logixlysia(options?: Options): Elysia {
   return new Elysia({
     name: 'Logixlysia'
   })
-    .onStart(ctx => startServer(ctx.server as Server, options))
+    .onStart(ctx => {
+        const showStartupMessage = options?.config?.showStartupMessage ?? true
+        if (showStartupMessage) startServer(ctx.server as Server, options)}
+    )
     .onRequest(ctx => {
       ctx.store = { beforeTime: process.hrtime.bigint() }
     })
@@ -26,6 +29,6 @@ export default function logixlysia(options?: Options): Elysia {
     })
 }
 
-export { createLogger } from './core'
-export { handleHttpError } from './core'
+export { createLogger, handleHttpError } from './core'
 export { logToTransports } from './transports'
+
