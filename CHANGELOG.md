@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.7.0](https://github.com/PunGrumpy/logixlysia/compare/v3.6.2...v3.7.0) (2024-09-26)
+
+
+### Features
+
+* **optional:** add startup message config ([c7a76db](https://github.com/PunGrumpy/logixlysia/commit/c7a76dbc0f30f4c9c607b52dedc49979e26b67ec))
+
 ## [3.6.2](https://github.com/PunGrumpy/logixlysia/compare/v3.6.1...v3.6.2) (2024-09-18)
 
 
