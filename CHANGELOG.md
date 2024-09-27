@@ -5,7 +5,7 @@
 
 ### Features
 
-* **optional:** add startup message config ([#66](https://github.com/PunGrumpy/logixlysia/pull/66)) ([c7a76db](https://github.com/PunGrumpy/logixlysia/commit/c7a76dbc0f30f4c9c607b52dedc49979e26b67ec))
+* **optional:** add startup message config ([#66](https://github.com/PunGrumpy/logixlysia/pull/66)) ([c7a76db](https://github.com/PunGrumpy/logixlysia/commit/c7a76dbc0f30f4c9c607b52dedc49979e26b67ec)) by [@n0ky4](https://github.com/n0ky4)
 
 ## [3.6.2](https://github.com/PunGrumpy/logixlysia/compare/v3.6.1...v3.6.2) (2024-09-18)
 
