@@ -3,8 +3,6 @@ name: 🤖 Automatic Labeler
 on:
   issues:
     types: [opened, labeled, unlabeled, reopened]
-  pull_request:
-    types: [opened, labeled, unlabeled, synchronize, reopened]
   pull_request_target:
     types: [opened, labeled, unlabeled, synchronize, reopened]
 
