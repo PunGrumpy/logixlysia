@@ -1,0 +1,43 @@
+name: 👧 Pull Request Title
+
+on:
+  pull_request_target:
+    types: [opened, edited, synchronize, reopened, ready_for_review]
+
+permissions:
+  pull-requests: read
+
+jobs:
+  pr-title:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+    name: 📝 Validate Title
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: 🚦 Validate Title
+        uses: amannn/action-semantic-pull-request@v5
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          requireScope: true
+          subjectPattern: ^(?![A-Z]).+$
+          scopes: |
+            .+
+          types: |
+            build
+            chore
+            ci
+            docs
+            feat
+            fix
+            merge
+            perf
+            refactor
+            revert
+            style
+            test
+            wip
+          ignoreLabels: |
+            autorelease: pending
