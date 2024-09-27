@@ -10,6 +10,12 @@
   "maintainers": [
     "PunGrumpy"
   ],
+  "contributors": [
+    {
+      "name": "n0ky4",
+      "url": "https://github.com/n0ky4"
+    }
+  ],
   "publishConfig": {
     "access": "public"
   },
