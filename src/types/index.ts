@@ -77,6 +77,10 @@ export interface Transport {
   log: TransportFunction
 }
 
+export interface TimestampConfig {
+  translateTime?: boolean | string
+}
+
 export interface Options {
   config?: {
     customLogFormat?: string
@@ -91,5 +95,6 @@ export interface Options {
     showStartupMessage?: boolean
     startupMessageFormat?: 'banner' | 'simple'
     transports?: Transport[]
+    timestamp?: TimestampConfig // Add this new option
   }
 }

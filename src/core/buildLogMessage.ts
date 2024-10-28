@@ -10,6 +10,7 @@ import {
 } from '../types'
 import {
   durationString,
+  formatTimestamp,
   logString,
   methodString,
   pathString,
@@ -38,14 +39,16 @@ export function buildLogMessage(
   const now = new Date()
   const components: LogComponents = {
     now: actuallyUseColors
-      ? chalk.bgYellow(chalk.black(now.toLocaleString()))
-      : now.toLocaleString(),
+      ? chalk.bgYellow(
+          chalk.black(formatTimestamp(now, options?.config?.timestamp))
+        )
+      : formatTimestamp(now, options?.config?.timestamp),
     epoch: Math.floor(now.getTime() / 1000).toString(),
-    level: logString(level, actuallyUseColors),
-    duration: durationString(store.beforeTime, actuallyUseColors),
-    method: methodString(request.method, actuallyUseColors),
+    level: logString(level, useColors),
+    duration: durationString(store.beforeTime, useColors),
+    method: methodString(request.method, useColors),
     pathname: pathString(request),
-    status: statusString(data.status || 200, actuallyUseColors),
+    status: statusString(data.status || 200, useColors),
     message: data.message || '',
     ip:
       options?.config?.ip && request.headers.get('x-forwarded-for')

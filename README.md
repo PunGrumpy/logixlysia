@@ -23,6 +23,9 @@ const app = new Elysia({
     config: {
       showStartupMessage: true,
       startupMessageFormat: 'simple',
+      timestamp: {
+        translateTime: 'yyyy-mm-dd HH:MM:ss'
+      },
       ip: true,
       logFilePath: './logs/example.log',
       customLogFormat:
@@ -50,6 +53,7 @@ app.listen(3000)
 | ---------------------- | ------------------------ | --------------------------------------------------------------------- | ------------------------------------------------------------------------- |
 | `showStartupMessage`   | `boolean`                | Display the startup message                                           | `true`                                                                    |
 | `startupMessageFormat` | `"banner"` \| `"simple"` | Choose the startup message format                                     | `"banner"`                                                                |
+| `timestamp`            | `object`                 | Display the timestamp in the logs                                     | `{ translateTime: 'yyyy-mm-dd HH:MM:ss' }`                                |
 | `ip`                   | `boolean`                | Display the incoming IP address based on the `X-Forwarded-For` header | `false`                                                                   |
 | `customLogMessage`     | `string`                 | Custom log message to display                                         | `🦊 {now} {level} {duration} {method} {pathname} {status} {message} {ip}` |
 | `logFilter`            | `object`                 | Filter the logs based on the level, method, and status                | `null`                                                                    |

@@ -10,6 +10,9 @@ const app = new Elysia({
       config: {
         showStartupMessage: true,
         startupMessageFormat: 'simple',
+        timestamp: {
+          translateTime: 'yyyy-mm-dd HH:MM:ss.SSS'
+        },
         logFilePath: './logs/example.log',
         ip: true,
         customLogFormat:
