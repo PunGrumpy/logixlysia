@@ -1,5 +1,16 @@
 # Changelog
 
+## [4.0.0](https://github.com/PunGrumpy/logixlysia/compare/v3.7.0...v4.0.0) (2024-10-28)
+
+
+### ⚠ BREAKING CHANGES
+
+* **timestamp:** The timestamp format in logs will now respect the new timestamp configuration options when provided
+
+### Features
+
+* **timestamp:** add customize timestamp formatting ([5a4e2a5](https://github.com/PunGrumpy/logixlysia/commit/5a4e2a5230443761d8c2ca99d9ebc586ff26a8c0)), closes [#69](https://github.com/PunGrumpy/logixlysia/issues/69)
+
 ## [3.7.0](https://github.com/PunGrumpy/logixlysia/compare/v3.6.2...v3.7.0) (2024-09-26)
 
 
