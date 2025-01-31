@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.1.1](https://github.com/PunGrumpy/logixlysia/compare/v4.1.0...v4.1.1) (2025-01-31)
+
+
+### Bug Fixes
+
+* **package:** wrong place @elysiajs/swagger and move to devDependencies ([a5e1a96](https://github.com/PunGrumpy/logixlysia/commit/a5e1a96606f53883a50331a94c1ba844dff67dc3))
+
 ## [4.1.0](https://github.com/PunGrumpy/logixlysia/compare/v4.0.0...v4.1.0) (2025-01-31)
 
 
