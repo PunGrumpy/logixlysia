@@ -1,3 +1,4 @@
+import { swagger } from '@elysiajs/swagger'
 import { Elysia } from 'elysia'
 
 import logixlysia from '../src/index'
@@ -5,6 +6,11 @@ import logixlysia from '../src/index'
 const app = new Elysia({
   name: 'Basic Example'
 })
+  .use(
+    swagger({
+      exclude: '/'
+    })
+  )
   .use(
     logixlysia({
       config: {
@@ -16,7 +22,7 @@ const app = new Elysia({
         logFilePath: './logs/example.log',
         ip: true,
         customLogFormat:
-          '🦊 {now} {level} {duration} {method} {pathname} {status} {message} {ip} {epoch}'
+          '🦊 {now} {level} {duration} {method} {pathname} {status} {message} {ip}'
         // logFilter: {
         //   level: ['ERROR', 'WARNING'],
         //   status: [500, 404],
@@ -26,32 +32,54 @@ const app = new Elysia({
     })
   )
   .get('/', () => {
+    return { message: 'Welcome to Basic Elysia with Logixlysia' }
+  })
+  .get('/success/:id', ({ params: { id } }) => {
     return {
-      message: 'Basic Example'
+      id,
+      message: `Successfully retrieved item ${id}`
     }
   })
   .get('/error', () => {
-    throw new Error('This is an error message.')
+    throw new Error('Internal Server Error')
   })
-  .post('/', () => {
+  .get('/custom-error', () => {
+    throw { status: 503, message: 'Service Unavailable' }
+  })
+  .post('/items', ({ body }) => {
     return {
-      message: 'Basic Example'
+      message: 'Item created',
+      data: body
     }
   })
-  .put('/', () => {
+  .put('/items/:id', ({ params: { id }, body }) => {
     return {
-      message: 'Basic Example'
+      message: `Item ${id} updated`,
+      data: body
     }
   })
-  .delete('/', () => {
+  .patch('/items/:id', ({ params: { id }, body }) => {
     return {
-      message: 'Basic Example'
+      message: `Item ${id} partially updated`,
+      data: body
     }
   })
-  .patch('/', () => {
+  .delete('/items/:id', ({ params: { id } }) => {
     return {
-      message: 'Basic Example'
+      message: `Item ${id} deleted`
     }
+  })
+  .post('/status', ({ set }) => {
+    set.status = 201 // Use number status code
+    return { message: 'Created with 201 status' }
+  })
+  .get('/rate-limited', ({ set }) => {
+    set.status = 'Too Many Requests' // Use string status code
+    return { message: 'Too Many Requests' }
   })
 
 app.listen(3000)
+
+// header for testing
+// key: "Authorization"
+// value: "Bearer 1234567890"
