@@ -44,6 +44,8 @@ app.listen(3000)
 
 > [!NOTE]
 > You can discover more about example in the [example](example) directory.
+
+> [!TIP]
 > Also, you can play my example with Swagger UI on `http://localhost:3000/swagger`.
 
 ## `📚` Documentation
