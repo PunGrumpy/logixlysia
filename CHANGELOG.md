@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.1.0](https://github.com/PunGrumpy/logixlysia/compare/v4.0.0...v4.1.0) (2025-01-31)
+
+
+### Features
+
+* **logging:** add status string parsing and error handling ([32800ac](https://github.com/PunGrumpy/logixlysia/commit/32800acb0fbfdf957e2975b5773b0a350e3af0d8)), closes [#71](https://github.com/PunGrumpy/logixlysia/issues/71)
+
 ## [4.0.0](https://github.com/PunGrumpy/logixlysia/compare/v3.7.0...v4.0.0) (2024-10-28)
 
 
