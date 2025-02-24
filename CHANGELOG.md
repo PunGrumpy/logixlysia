@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.1.2](https://github.com/PunGrumpy/logixlysia/compare/v4.1.1...v4.1.2) (2025-02-24)
+
+
+### Bug Fixes
+
+* **logixlysia:** ensure message is a string in response headers ([2f9eeee](https://github.com/PunGrumpy/logixlysia/commit/2f9eeeeb1ec1ab7454e6633c28aa112963f54ed6)), closes [#74](https://github.com/PunGrumpy/logixlysia/issues/74)
+
 ## [4.1.1](https://github.com/PunGrumpy/logixlysia/compare/v4.1.0...v4.1.1) (2025-01-31)
 
 
