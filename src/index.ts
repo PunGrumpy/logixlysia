@@ -25,7 +25,7 @@ export default function logixlysia(options?: Options): Elysia {
         request,
         {
           status,
-          message: set.headers?.['x-message'] || ''
+          message: String(set.headers?.['x-message'] || '')
         },
         store as { beforeTime: bigint }
       )
