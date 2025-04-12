@@ -1,11 +1,11 @@
 .github/
 .husky/
-.trunk/
 example/
 src/
 test/
 node_modules/
 .gitguardian.yml
+.gitattributes
 .gitsubmodules
 .gitignore
 .prettierignore

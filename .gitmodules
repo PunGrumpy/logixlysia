@@ -1,3 +1,0 @@
-[submodule ".trunk/configs"]
-	path = .trunk/configs
-	url = git@github.com:PunGrumpy/.trunk.git

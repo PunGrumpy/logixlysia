@@ -1,8 +1,14 @@
 import { promises as fs } from 'fs'
 import { dirname } from 'path'
 
-import { buildLogMessage } from '../core/buildLogMessage'
-import { LogData, LogLevel, Options, RequestInfo, StoreData } from '../types'
+import {
+  LogData,
+  LogLevel,
+  Options,
+  RequestInfo,
+  StoreData
+} from '../interfaces'
+import { buildLogMessage } from '../logger/buildLogMessage'
 
 const dirCache = new Set<string>()
 

@@ -1,21 +1,21 @@
 import chalk from 'chalk'
 
 import {
-  LogComponents,
-  LogData,
-  LogLevel,
-  Options,
-  RequestInfo,
-  StoreData
-} from '../types'
-import {
   durationString,
   formatTimestamp,
   logString,
   methodString,
   pathString,
   statusString
-} from '../utils'
+} from '../helpers'
+import {
+  LogComponents,
+  LogData,
+  LogLevel,
+  Options,
+  RequestInfo,
+  StoreData
+} from '../interfaces'
 
 const defaultLogFormat =
   '🦊 {now} {level} {duration} {method} {pathname} {status} {message} {ip}'

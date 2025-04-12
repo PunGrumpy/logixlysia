@@ -1,4 +1,4 @@
-import { LogLevel } from '../types'
+import { LogLevel } from '../interfaces'
 import { LogLevelColorMap } from './colorMapping'
 
 export default function logString(level: LogLevel, useColors: boolean): string {

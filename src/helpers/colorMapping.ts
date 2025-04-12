@@ -1,6 +1,6 @@
 import chalk from 'chalk'
 
-import { ColorMap } from '../types'
+import { ColorMap } from '../interfaces'
 
 export const LogLevelColorMap: ColorMap = {
   INFO: chalk.bgGreen.black,
