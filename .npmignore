@@ -2,7 +2,7 @@
 .husky/
 example/
 src/
-test/
+__tests__/
 node_modules/
 .gitguardian.yml
 .gitattributes

@@ -1,6 +1,6 @@
 import { describe, expect, mock, test } from 'bun:test'
 
-import { logToTransports } from '../../output'
+import { logToTransports } from '../../src/output'
 
 describe('logToTransports', () => {
   test('should log to console by default', () => {

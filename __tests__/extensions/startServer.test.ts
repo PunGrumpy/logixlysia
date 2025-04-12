@@ -1,7 +1,7 @@
 import { describe, expect, mock, test } from 'bun:test'
 
-import { startServer } from '../../extensions'
-import { Options } from '../../interfaces'
+import { startServer } from '../../src/extensions'
+import { Options } from '../../src/interfaces'
 
 describe('startServer', () => {
   test('should show banner format by default', () => {
