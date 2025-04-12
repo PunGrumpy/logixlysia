@@ -23,12 +23,13 @@
   "scripts": {
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "test": "bun test --timeout 5000 --coverage",
+    "test": "bun test --timeout 5000",
     "test:ci": "bun test --timeout 5000 --coverage --coverage-reporter=lcov",
     "publish": "npm publish",
     "dev": "bun run --watch example/basic.ts",
     "prepare": "husky",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "test:coverage": "bun test --timeout 5000 --coverage"
   },
   "os": [
     "darwin",
