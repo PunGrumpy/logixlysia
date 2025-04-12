@@ -29,7 +29,8 @@
     "dev": "bun run --watch example/basic.ts",
     "prepare": "husky",
     "format": "prettier --write .",
-    "test:coverage": "bun test --timeout 5000 --coverage"
+    "test:coverage": "bun test --timeout 5000 --coverage",
+    "clean": "git clean -fdx && rm -rf node_modules && rm -rf logs"
   },
   "os": [
     "darwin",
