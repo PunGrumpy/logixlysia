@@ -1,35 +1,40 @@
 {
-	"$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
-	"linter": {
-		"rules": {
-			"suspicious": {
-				"noConsoleLog": "off"
-			}
-		}
-	},
-	"formatter": {
-		"bracketSpacing": true,
-		"lineEnding": "lf",
-		"indentWidth": 2
-	},
-	"javascript": {
-		"globals": ["Liveblocks"],
-		"parser": {
-			"unsafeParameterDecoratorsEnabled": true
-		},
-		"formatter": {
-			"arrowParentheses": "asNeeded",
-			"quoteStyle": "single",
-			"semicolons": "asNeeded",
-			"trailingCommas": "none"
-		}
-	},
-	"files": {
-		"ignore": [
+  "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+  "extends": ["ultracite"],
+  "linter": {
+    "rules": {
+      "suspicious": {
+        "noConsoleLog": "off",
+        "noConsole": "off"
+      },
+      "style": {
+        "useThrowOnlyError": "off"
+      }
+    }
+  },
+  "formatter": {
+    "bracketSpacing": true,
+    "lineEnding": "lf",
+    "indentWidth": 2
+  },
+  "javascript": {
+    "globals": ["Liveblocks"],
+    "parser": {
+      "unsafeParameterDecoratorsEnabled": true
+    },
+    "formatter": {
+      "arrowParentheses": "asNeeded",
+      "quoteStyle": "single",
+      "semicolons": "asNeeded",
+      "trailingCommas": "none"
+    }
+  },
+  "files": {
+   "ignore": [
 			"node_modules/",
 			"CHANGELOG.md",
 			"website/components/ui/",
 			"website/.source"
 		]
-	}
+  }
 }
