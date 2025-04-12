@@ -1,5 +1,3 @@
-import { logToTransports } from '../transports'
-import { logToFile } from '../transports'
 import {
   LogData,
   Logger,
@@ -7,7 +5,8 @@ import {
   Options,
   RequestInfo,
   StoreData
-} from '../types'
+} from '../interfaces'
+import { logToFile, logToTransports } from '../output'
 import { buildLogMessage } from './buildLogMessage'
 import { filterLog } from './filter'
 import { handleHttpError } from './handleHttpError'

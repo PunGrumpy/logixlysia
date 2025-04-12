@@ -1,4 +1,4 @@
-import { LogLevel, Options } from '../types'
+import { LogLevel, Options } from '../interfaces'
 
 const checkFilter = (filterValue: any, value: any) =>
   Array.isArray(filterValue)

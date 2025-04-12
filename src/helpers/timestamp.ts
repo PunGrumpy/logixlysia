@@ -1,4 +1,4 @@
-import { TimestampConfig } from '../types'
+import { TimestampConfig } from '../interfaces'
 
 // const DEFAULT_TIMESTAMP_FORMAT = 'yyyy-mm-dd HH:MM:ss'
 const SYS_TIME = 'SYS:STANDARD'

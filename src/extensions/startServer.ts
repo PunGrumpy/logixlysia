@@ -1,4 +1,4 @@
-import { Options, Server } from '../types'
+import { Options, Server } from '../interfaces'
 
 const createBoxText = (text: string, width: number): string => {
   const paddingLength = Math.max(0, (width - text.length) / 2)

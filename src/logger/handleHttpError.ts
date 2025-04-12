@@ -1,5 +1,5 @@
-import { logToFile } from '../transports'
-import { HttpError, Options, RequestInfo, StoreData } from '../types'
+import { HttpError, Options, RequestInfo, StoreData } from '../interfaces'
+import { logToFile } from '../output'
 import { buildLogMessage } from './buildLogMessage'
 
 export function handleHttpError(

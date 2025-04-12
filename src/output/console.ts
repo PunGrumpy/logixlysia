@@ -1,5 +1,11 @@
-import { buildLogMessage } from '../core/buildLogMessage'
-import { LogData, LogLevel, Options, RequestInfo, StoreData } from '../types'
+import {
+  LogData,
+  LogLevel,
+  Options,
+  RequestInfo,
+  StoreData
+} from '../interfaces'
+import { buildLogMessage } from '../logger/buildLogMessage'
 
 export async function logToTransports(
   level: LogLevel,

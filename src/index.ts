@@ -1,9 +1,9 @@
 import { Elysia } from 'elysia'
 
-import { createLogger } from './core'
-import { startServer } from './plugins'
-import { HttpError, Options, Server } from './types'
-import { getStatusCode } from './utils/status'
+import { startServer } from './extensions'
+import { getStatusCode } from './helpers/status'
+import { HttpError, Options, Server } from './interfaces'
+import { createLogger } from './logger'
 
 export default function logixlysia(options?: Options): Elysia {
   const log = createLogger(options)
@@ -40,5 +40,5 @@ export default function logixlysia(options?: Options): Elysia {
     })
 }
 
-export { createLogger, handleHttpError } from './core'
-export { logToTransports } from './transports'
+export { createLogger, handleHttpError } from './logger'
+export { logToTransports } from './output'

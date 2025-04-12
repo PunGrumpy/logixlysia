@@ -1,4 +1,4 @@
-import { RequestInfo } from '../types'
+import { RequestInfo } from '../interfaces'
 
 export default function pathString(
   requestInfo: RequestInfo
