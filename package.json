@@ -28,10 +28,7 @@
     "publish": "npm publish",
     "dev": "bun run --watch example/basic.ts",
     "prepare": "husky",
-    "lint:staged": "lint-staged",
-    "format": "prettier --write --config .trunk/configs/.prettierrc.yaml .",
-    "trunk:check": "trunk check",
-    "trunk:fmt": "trunk fmt"
+    "format": "prettier --write ."
   },
   "os": [
     "darwin",
