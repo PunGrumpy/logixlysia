@@ -16,7 +16,7 @@ describe('startServer', () => {
     }
     const options: Options = {}
 
-    startServer(mockServer as any, options)
+    startServer(mockServer, options)
     expect(consoleLog).toHaveBeenCalledWith(expect.stringContaining('┌'))
     console.log = originalConsoleLog
   })
@@ -37,7 +37,7 @@ describe('startServer', () => {
       }
     }
 
-    startServer(mockServer as any, options)
+    startServer(mockServer, options)
     expect(consoleLog).toHaveBeenCalledWith(
       expect.stringContaining('🦊 Elysia is running at')
     )
