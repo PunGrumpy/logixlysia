@@ -27,14 +27,36 @@ describe('createLogger', () => {
     const originalConsoleLog = console.log
     console.log = consoleLog
 
+    // Test INFO level
     logger.log(
       'INFO',
       new Request('http://localhost'),
       { status: 200 },
       { beforeTime: BigInt(0) }
     )
-    expect(consoleLog).toHaveBeenCalled()
+    expect(consoleLog).toHaveBeenCalledWith(expect.stringContaining('INFO'))
 
+    // Reset mock to test ERROR level
+    consoleLog.mockReset()
+    logger.log(
+      'ERROR',
+      new Request('http://localhost'),
+      { status: 500 },
+      { beforeTime: BigInt(0) }
+    )
+    expect(consoleLog).toHaveBeenCalled()
+    expect(consoleLog).toHaveBeenCalledWith(expect.stringContaining('ERROR'))
+
+    // Reset mock to test WARN level
+    consoleLog.mockReset()
+    logger.log(
+      'WARN',
+      new Request('http://localhost'),
+      { status: 400 },
+      { beforeTime: BigInt(0) }
+    )
+    expect(consoleLog).toHaveBeenCalled()
+    expect(consoleLog).toHaveBeenCalledWith(expect.stringContaining('WARN'))
     console.log = originalConsoleLog
   })
 })
