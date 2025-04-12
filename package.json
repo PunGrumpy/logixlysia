@@ -27,7 +27,7 @@
     "dev": "bun run --watch example/basic.ts",
     "prepare": "husky",
     "test:coverage": "bun test --timeout 5000 --coverage",
-    "clean": "git clean -fdx && rm -rf node_modules && rm -rf logs"
+    "clean": "git clean -fdx && rm -rf node_modules && rm -rf logs && cd website && rm -rf node_modules && rm -rf .next && rm -rf .source"
   },
   "os": ["darwin", "linux", "win32"],
   "badges": [
