@@ -4,7 +4,7 @@ import {
   RequestInfo,
   StoreData,
   Transport
-} from '../../src/types'
+} from '../../src/interfaces'
 
 class MyCustomTransport implements Transport {
   async log(
