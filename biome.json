@@ -25,6 +25,11 @@
 		}
 	},
 	"files": {
-		"ignore": ["node_modules/", "CHANGELOG.md"]
+		"ignore": [
+			"node_modules/",
+			"CHANGELOG.md",
+			"website/components/ui/",
+			"website/.source"
+		]
 	}
 }
