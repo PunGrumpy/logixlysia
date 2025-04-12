@@ -1,6 +1,5 @@
 .github/
 .husky/
-.trunk/
 example/
 src/
 test/
