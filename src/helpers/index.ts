@@ -1,4 +1,4 @@
-export { HttpMethodColorMap, LogLevelColorMap } from './colorMapping'
+export { HttpMethodColorMap, LogLevelColorMap } from './color-mapping'
 export { default as durationString } from './duration'
 export { default as logString } from './log'
 export { default as methodString } from './method'

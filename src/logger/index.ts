@@ -1,2 +1,2 @@
-export { createLogger } from './createLogger'
-export { handleHttpError } from './handleHttpError'
+export { createLogger } from './create-logger'
+export { handleHttpError } from './handle-http-error'

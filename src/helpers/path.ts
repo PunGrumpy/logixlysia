@@ -1,11 +1,11 @@
 import type { RequestInfo } from '../interfaces'
 
 export default function pathString(
-	requestInfo: RequestInfo
+  requestInfo: RequestInfo
 ): string | undefined {
-	try {
-		return new URL(requestInfo.url).pathname
-	} catch {
-		return undefined
-	}
+  try {
+    return new URL(requestInfo.url).pathname
+  } catch {
+    return undefined
+  }
 }
