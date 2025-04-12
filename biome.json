@@ -1,0 +1,30 @@
+{
+	"$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+	"linter": {
+		"rules": {
+			"suspicious": {
+				"noConsoleLog": "off"
+			}
+		}
+	},
+	"formatter": {
+		"bracketSpacing": true,
+		"lineEnding": "lf",
+		"indentWidth": 2
+	},
+	"javascript": {
+		"globals": ["Liveblocks"],
+		"parser": {
+			"unsafeParameterDecoratorsEnabled": true
+		},
+		"formatter": {
+			"arrowParentheses": "asNeeded",
+			"quoteStyle": "single",
+			"semicolons": "asNeeded",
+			"trailingCommas": "none"
+		}
+	},
+	"files": {
+		"ignore": ["node_modules/", "CHANGELOG.md"]
+	}
+}

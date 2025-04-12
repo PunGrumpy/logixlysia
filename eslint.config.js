@@ -4,22 +4,22 @@ import globals from 'globals'
 import tseslint from 'typescript-eslint'
 
 export default [
-  pluginJs.configs.recommended,
-  ...tseslint.configs.recommended,
-  { files: ['**/*.{js,mjs,cjs,ts}'] },
-  {
-    languageOptions: {
-      globals: globals.browser
-    },
-    plugins: {
-      'simple-import-sort': simpleImportSort
-    },
-    rules: {
-      'no-undef': 'off',
-      '@typescript-eslint/no-explicit-any': 'off',
-      '@typescript-eslint/no-unused-vars': 'off',
-      'simple-import-sort/imports': 'warn',
-      'simple-import-sort/exports': 'warn'
-    }
-  }
+	pluginJs.configs.recommended,
+	...tseslint.configs.recommended,
+	{ files: ['**/*.{js,mjs,cjs,ts}'] },
+	{
+		languageOptions: {
+			globals: globals.browser
+		},
+		plugins: {
+			'simple-import-sort': simpleImportSort
+		},
+		rules: {
+			'no-undef': 'off',
+			'@typescript-eslint/no-explicit-any': 'off',
+			'@typescript-eslint/no-unused-vars': 'off',
+			'simple-import-sort/imports': 'warn',
+			'simple-import-sort/exports': 'warn'
+		}
+	}
 ]

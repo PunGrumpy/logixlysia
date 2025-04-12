@@ -1,22 +1,22 @@
-import { LogLevel, Options } from '../interfaces'
+import type { LogLevel, Options } from '../interfaces'
 
-const checkFilter = (filterValue: any, value: any) =>
-  Array.isArray(filterValue)
-    ? filterValue.includes(value)
-    : filterValue === value
+const checkFilter = (filterValue: unknown, value: unknown) =>
+	Array.isArray(filterValue)
+		? filterValue.includes(value)
+		: filterValue === value
 
 export function filterLog(
-  logLevel: LogLevel,
-  status: number,
-  method: string,
-  options?: Options
+	logLevel: LogLevel,
+	status: number,
+	method: string,
+	options?: Options
 ): boolean {
-  const filter = options?.config?.logFilter
-  if (!filter) return true
+	const filter = options?.config?.logFilter
+	if (!filter) return true
 
-  return (
-    (!filter.level || checkFilter(filter.level, logLevel)) &&
-    (!filter.status || checkFilter(filter.status, status)) &&
-    (!filter.method || checkFilter(filter.method, method))
-  )
+	return (
+		(!filter.level || checkFilter(filter.level, logLevel)) &&
+		(!filter.status || checkFilter(filter.status, status)) &&
+		(!filter.method || checkFilter(filter.method, method))
+	)
 }
