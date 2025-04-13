@@ -162,7 +162,7 @@ const MarqueeItem = ({
 )
 
 export const Playground = () => {
-  const paddedLogs = [...logs, ...logs, ...logs, ...logs]
+  const paddedLogs = [...logs, ...logs, ...logs]
 
   return (
     <section
@@ -172,16 +172,16 @@ export const Playground = () => {
       <p className="font-medium text-muted-foreground text-sm">
         Plug and log your Elysia.js app with Logixlysia
       </p>
-      <div className="sm:-my-8 grid w-full gap-8 overflow-hidden sm:h-56 sm:py-8 [&>div]:flex">
+      <div className="sm:-my-8 grid w-full gap-8 overflow-hidden sm:h-72 sm:py-8 [&>div]:flex">
         <MarqueeProvider
           direction="up"
-          speed={20}
+          speed={15}
           loop={0}
           delay={0}
           autoFill
           className="!overflow-visible flex items-center"
         >
-          <div className="flex flex-col space-y-1 py-4">
+          <div className="flex flex-col space-y-2 py-4">
             {paddedLogs.map((log, index) => (
               <MarqueeItem
                 key={`${log.method}-${log.pathname}-${log.timestamp}-${index}`}
