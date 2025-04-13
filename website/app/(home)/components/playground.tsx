@@ -58,7 +58,7 @@ export const logs = [
   {
     icon: '🦊',
     timestamp: '2025-04-13 15:00:19.225',
-    duration: '379μs',
+    duration: '1ms',
     method: 'GET',
     pathname: '/',
     status: 200,
@@ -66,26 +66,8 @@ export const logs = [
   },
   {
     icon: '🦊',
-    timestamp: '2025-04-13 15:00:20.225',
-    duration: '1ms',
-    method: 'POST',
-    pathname: '/items',
-    status: 201,
-    type: 'INFO'
-  },
-  {
-    icon: '🦊',
-    timestamp: '2025-04-13 15:00:20.235',
-    duration: '379μs',
-    method: 'GET',
-    pathname: '/success/123',
-    status: 200,
-    type: 'INFO'
-  },
-  {
-    icon: '🦊',
     timestamp: '2025-04-13 15:00:21.245',
-    duration: '379μs',
+    duration: '509μs',
     method: 'POST',
     pathname: '/items',
     status: 201,
@@ -94,7 +76,7 @@ export const logs = [
   {
     icon: '🦊',
     timestamp: '2025-04-13 15:00:22.225',
-    duration: '379μs',
+    duration: '900ns',
     method: 'PUT',
     pathname: '/items/123',
     status: 200,
@@ -103,7 +85,7 @@ export const logs = [
   {
     icon: '🦊',
     timestamp: '2025-04-13 15:00:23.30',
-    duration: '379μs',
+    duration: '1ms',
     method: 'DELETE',
     pathname: '/items/123',
     status: 200,
@@ -112,36 +94,18 @@ export const logs = [
   {
     icon: '🦊',
     timestamp: '2025-04-13 15:00:30.225',
-    duration: '379μs',
+    duration: '10s',
     method: 'PATCH',
     pathname: '/items/123',
-    status: 200,
-    type: 'INFO'
-  },
-  {
-    icon: '🦊',
-    timestamp: '2025-04-13 15:01:30.225',
-    duration: '379μs',
-    method: 'GET',
-    pathname: '/error',
     status: 500,
     type: 'ERROR'
   },
   {
     icon: '🦊',
-    timestamp: '2025-04-13 15:02:30.225',
-    duration: '379μs',
-    method: 'GET',
-    pathname: '/warning',
-    status: 400,
-    type: 'WARNING'
-  },
-  {
-    icon: '🦊',
-    timestamp: '2025-04-13 15:03:30.225',
-    duration: '379μs',
-    method: 'GET',
-    pathname: '/info',
+    timestamp: '2025-04-13 15:00:31.225',
+    duration: '1ms',
+    method: 'HEAD',
+    pathname: '/items/123',
     status: 200,
     type: 'INFO'
   }
@@ -180,7 +144,7 @@ const MarqueeItem = ({
 )
 
 export const Playground = () => {
-  const paddedLogs = [...logs, ...logs, ...logs]
+  const paddedLogs = [...logs, ...logs, ...logs, ...logs, ...logs]
 
   return (
     <section
