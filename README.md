@@ -44,7 +44,7 @@ app.listen(3000)
 
 ## `📚` Documentation
 
-Check out the [website]() for more detailed documentation and examples.
+Check out the [website](https://logixlysia.vercel.app) for more detailed documentation and examples.
 
 ## `📄` License
 
