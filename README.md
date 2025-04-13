@@ -42,39 +42,9 @@ const app = new Elysia({
 app.listen(3000)
 ```
 
-> [!NOTE]
-> You can discover more about example in the [example](example) directory.
-
-> [!TIP]
-> Also, you can play my example with Swagger UI on `http://localhost:3000/swagger`.
-
 ## `📚` Documentation
 
-### Options
-
-| Option                 | Type                     | Description                                                           | Default                                                                   |
-| ---------------------- | ------------------------ | --------------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| `showStartupMessage`   | `boolean`                | Display the startup message                                           | `true`                                                                    |
-| `startupMessageFormat` | `"banner"` \| `"simple"` | Choose the startup message format                                     | `"banner"`                                                                |
-| `timestamp`            | `object`                 | Display the timestamp in the logs                                     | `{ translateTime: 'yyyy-mm-dd HH:MM:ss' }`                                |
-| `ip`                   | `boolean`                | Display the incoming IP address based on the `X-Forwarded-For` header | `false`                                                                   |
-| `customLogMessage`     | `string`                 | Custom log message to display                                         | `🦊 {now} {level} {duration} {method} {pathname} {status} {message} {ip}` |
-| `logFilter`            | `object`                 | Filter the logs based on the level, method, and status                | `null`                                                                    |
-| `logFilePath`          | `string`                 | Path to the log file                                                  | `./logs/elysia.log`                                                       |
-
-### Custom Log Message
-
-| Placeholder  | Description                                                                 |
-| ------------ | --------------------------------------------------------------------------- |
-| `{now}`      | Current date and time in `YYYY-MM-DD HH:mm:ss` format                       |
-| `{level}`    | Log level (`INFO`, `WARNING`, `ERROR`)                                      |
-| `{duration}` | Request duration in milliseconds                                            |
-| `{method}`   | Request method (`GET`, `POST`, `PUT`, `DELETE`, `PATCH`, `HEAD`, `OPTIONS`) |
-| `{pathname}` | Request pathname                                                            |
-| `{status}`   | Response status code                                                        |
-| `{message}`  | Custom message                                                              |
-| `{ip}`       | Incoming IP address                                                         |
-| `{epoch}`    | Current date and time in Unix epoch format (seconds since January 1, 1970   |
+Check out the [website]() for more detailed documentation and examples.
 
 ## `📄` License
 
