@@ -6,7 +6,8 @@ export const layout: DocsLayoutProps = {
   tree: source.pageTree,
   nav: {
     mode: 'top',
-    title: <Logo />
+    title: <Logo />,
+    transparentMode: 'always'
   },
   githubUrl: 'https://github.com/PunGrumpy/logixlysia',
   disableThemeSwitch: true,
