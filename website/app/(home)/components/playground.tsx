@@ -177,11 +177,10 @@ export const Playground = () => {
           direction="up"
           speed={15}
           loop={0}
-          delay={0}
           autoFill
           className="!overflow-visible flex items-center"
         >
-          <div className="flex flex-col space-y-2 py-4">
+          <div className="flex flex-col space-y-1 py-4">
             {paddedLogs.map((log, index) => (
               <MarqueeItem
                 key={`${log.method}-${log.pathname}-${log.timestamp}-${index}`}
