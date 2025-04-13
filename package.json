@@ -7,9 +7,7 @@
   "main": "src/index.ts",
   "author": "PunGrumpy",
   "publisher": "PunGrumpy",
-  "maintainers": [
-    "PunGrumpy"
-  ],
+  "maintainers": ["PunGrumpy"],
   "contributors": [
     {
       "name": "n0ky4",
@@ -26,16 +24,12 @@
     "test": "bun test --timeout 5000",
     "test:ci": "bun test --timeout 5000 --coverage --coverage-reporter=lcov",
     "publish": "npm publish",
-    "dev": "bun run --watch example/basic.ts",
+    "dev": "cd website && bun dev",
     "prepare": "husky",
     "test:coverage": "bun test --timeout 5000 --coverage",
     "clean": "git clean -fdx && rm -rf node_modules && rm -rf logs && cd website && rm -rf node_modules && rm -rf .next && rm -rf .source"
   },
-  "os": [
-    "darwin",
-    "linux",
-    "win32"
-  ],
+  "os": ["darwin", "linux", "win32"],
   "badges": [
     {
       "name": "npm",
@@ -63,7 +57,7 @@
   "bugs": {
     "url": "https://github.com/PunGrumpy/logixlysia/issues"
   },
-  "homepage": "https://github.com/PunGrumpy/logixlysia#readme",
+  "homepage": "https://logixlysia.vercel.app",
   "keywords": [
     "web",
     "logging",
