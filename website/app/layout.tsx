@@ -1,10 +1,10 @@
+import { Toaster } from '@/components/ui/sonner'
 import './globals.css'
 
 import { cn } from '@/lib/utils'
 import { RootProvider } from 'fumadocs-ui/provider'
 import { Geist, Geist_Mono } from 'next/font/google'
 import type { ReactNode } from 'react'
-import { Toaster } from 'sonner'
 
 const geistSans = Geist({
   adjustFontFallback: true,
@@ -24,12 +24,16 @@ const geistMono = Geist_Mono({
   variable: '--font-mono'
 })
 
-export default function Layout({ children }: { children: ReactNode }) {
+interface RootLayoutProps {
+  children: ReactNode
+}
+
+export default function Layout({ children }: RootLayoutProps) {
   return (
     <html lang="en" suppressHydrationWarning className="scroll-smooth">
       <body
         className={cn(
-          'flex min-h-screen font-sans antialiased',
+          'font-sans antialiased',
           geistSans.variable,
           geistMono.variable
         )}
