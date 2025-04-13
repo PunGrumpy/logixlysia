@@ -2,6 +2,24 @@ enhancement:
   - head-branch:
       ['^feature', 'feature', '^feat', 'feat', '^enhancement', 'enhancement']
 
+website:
+  - head-branch:
+      ['^website', 'website']
+  - changed-files:
+      - any-glob-to-any-file: '**/website/**/*'
+
+docs:
+  - head-branch:
+      ['^docs', 'docs']
+  - changed-files:
+      - any-glob-to-any-file: '**/docs/**/*'
+  - changed-files:
+      - any-glob-to-any-file: '**/*.md'
+  - changed-files:
+      - any-glob-to-any-file: '**/*.markdown'
+  - changed-files:
+      - any-glob-to-any-file: '**/*.mdx'
+
 source:
   - changed-files:
       - any-glob-to-any-file: '**/*.{js,jsx,ts,tsx}'
