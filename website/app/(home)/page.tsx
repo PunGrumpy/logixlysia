@@ -19,7 +19,7 @@ export default function HomePage() {
         <Image
           src={FoxLogixlysia}
           alt="Fox - Logixlysia"
-          className="absolute inset-0 size-full object-cover opacity-30 dark:opacity-15"
+          className="-z-10 absolute inset-0 size-full object-cover opacity-30 dark:opacity-15"
         />
         <Hero />
       </div>
