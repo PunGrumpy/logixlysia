@@ -179,7 +179,7 @@ export const Playground = () => {
           loop={0}
           delay={0}
           autoFill
-          className="overflow-visible! flex items-center"
+          className="!overflow-visible flex items-center"
         >
           <div className="flex flex-col space-y-1 py-4">
             {paddedLogs.map((log, index) => (
