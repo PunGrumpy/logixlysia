@@ -1,5 +1,32 @@
 # Changelog
 
+## [4.2.0](https://github.com/PunGrumpy/logixlysia/compare/v4.1.2...v4.2.0) (2025-04-13)
+
+
+### Features
+
+* **docs:** add screenshot to documentation introduction ([800bb17](https://github.com/PunGrumpy/logixlysia/commit/800bb17dcfda88699cd7a0a2dc2e199e5704ce61))
+* **website:** add new components and integrate react-fast-marquee ([6332f62](https://github.com/PunGrumpy/logixlysia/commit/6332f622c22fccf4cbadfb2a0099b9fac723f61a))
+* **website:** add Open Graph image for enhanced social sharing ([de35d41](https://github.com/PunGrumpy/logixlysia/commit/de35d413bf6a10b06933eb2619d3cb6459618c3e))
+* **website:** add transparent mode to navigation title ([9c01757](https://github.com/PunGrumpy/logixlysia/commit/9c01757f8808b5792b792fc1ed56e5b6e26603d2))
+* **website:** add website documentation ([82e281c](https://github.com/PunGrumpy/logixlysia/commit/82e281cd5c08fa948ecf103eb70f218e61029142))
+* **website:** enhance logging features and update documentation ([fa7ea45](https://github.com/PunGrumpy/logixlysia/commit/fa7ea45ae8c535a22b52e94a46df5931009e013f))
+* **website:** initialize new documentation website with Fumadocs ([c864d9f](https://github.com/PunGrumpy/logixlysia/commit/c864d9f00ea6d0250f2db8b20a994975da18185e))
+* **website:** integrate GitHub info component into layout ([5cd282c](https://github.com/PunGrumpy/logixlysia/commit/5cd282c072e56d90a7554a78dad1f27e8eb13400))
+
+
+### Bug Fixes
+
+* **docs:** correct license information in documentation ([e64f156](https://github.com/PunGrumpy/logixlysia/commit/e64f1565a2100a08ee324ddf68769726dcc6d9ff))
+* **docs:** update file logging examples for clarity and consistency ([1d8653f](https://github.com/PunGrumpy/logixlysia/commit/1d8653f5aa97f8b6d829a10c0a510fc5a5b7dcae))
+* **docs:** update help section for user support ([84e5052](https://github.com/PunGrumpy/logixlysia/commit/84e5052ddf4ef8e636d68be113d866df2d13fd09))
+* **playground:** correct class name syntax for overflow visibility ([25ed919](https://github.com/PunGrumpy/logixlysia/commit/25ed919c1592129d8495afbc2927befb0c431fa0))
+* **website:** adjust z-index for background image and hero component ([af593a7](https://github.com/PunGrumpy/logixlysia/commit/af593a709d625df06f2f0e7ecff55764be46cdd5))
+* **website:** adjust z-index for hero component to improve visibility ([4cc144e](https://github.com/PunGrumpy/logixlysia/commit/4cc144e50c5e0e869e62c3821edd2216acf4cacd))
+* **website:** simplify sidebar configuration in layout component ([dc7e479](https://github.com/PunGrumpy/logixlysia/commit/dc7e47962085c4922dcfaad83e1ce0e38dcfeff0))
+* **website:** update logo assets and adjust class names ([18c8c57](https://github.com/PunGrumpy/logixlysia/commit/18c8c57a2337f3242e77eb0234afee487039f554))
+* **website:** update sidebar configuration to include collapsible property ([2d27ee3](https://github.com/PunGrumpy/logixlysia/commit/2d27ee31b3eeb79505a70dee2fef214a45fb1a9e))
+
 ## [4.1.2](https://github.com/PunGrumpy/logixlysia/compare/v4.1.1...v4.1.2) (2025-02-24)
 
 
