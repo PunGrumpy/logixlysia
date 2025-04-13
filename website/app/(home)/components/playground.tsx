@@ -126,6 +126,24 @@ export const logs = [
     pathname: '/error',
     status: 500,
     type: 'ERROR'
+  },
+  {
+    icon: '🦊',
+    timestamp: '2025-04-13 15:02:30.225',
+    duration: '379μs',
+    method: 'GET',
+    pathname: '/warning',
+    status: 400,
+    type: 'WARNING'
+  },
+  {
+    icon: '🦊',
+    timestamp: '2025-04-13 15:03:30.225',
+    duration: '379μs',
+    method: 'GET',
+    pathname: '/info',
+    status: 200,
+    type: 'INFO'
   }
 ]
 
