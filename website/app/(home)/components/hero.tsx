@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 
 export const Hero = () => (
-  <div className="flex flex-col items-start gap-8">
+  <div className="z-10 flex flex-col items-start gap-8">
     <h1 className="text-5xl sm:text-6xl">The logger for Elysia.js</h1>
     <p className="mx-auto max-w-2xl text-lg text-muted-foreground">
       Logixlysia is a logger for Elysia, a web framework for Node.js. It is
