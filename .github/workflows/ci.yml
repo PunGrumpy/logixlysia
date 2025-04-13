@@ -47,8 +47,11 @@ jobs:
             ${{ runner.os }}-
       - name: 🔽 Install Dependencies
         run: bun install
-      - name: ⚖️ Lint
-        run: bun lint
+      - name: 🐶 Lint Dog
+        uses: mongolyy/reviewdog-action-biome@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          reporter: github-pr-review
 
   test:
     needs: [lint]
