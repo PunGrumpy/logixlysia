@@ -1,0 +1,98 @@
+---
+title: Contributing
+description: How to run tests, add new providers, and contribute to Logixlysia.
+---
+
+Thank you for your interest in contributing to Logixlysia! This guide will help you get started with development, testing, and adding new providers.
+
+## Getting Started
+
+To get started with Logixlysia development, follow these steps:
+
+1. Fork the repository
+2. Clone your fork:
+   ```bash
+   git clone https://github.com/PunGrumpy/logixlysia.git
+   cd logixlysia
+   ```
+3. Install dependencies:
+   ```bash
+   bun install
+   ```
+
+## Development Setup
+
+Logixlysia is built with:
+- Bun as the runtime
+- TypeScript for type safety
+- ElysiaJS as the web framework
+
+### Project Structure
+
+```
+src/
+├── logger/        # Core logging functionality
+├── output/        # Output handlers and formatters
+├── extensions/    # Additional features and extensions
+├── helpers/       # Utility functions
+├── interfaces/    # TypeScript interfaces
+└── index.ts       # Main entry point
+```
+
+## Running Tests
+
+To run the test suite:
+
+```bash
+bun test
+```
+
+For watching tests during development:
+
+```bash
+bun test --watch
+```
+
+## Adding New Features
+
+### Adding a New Provider
+
+1. Create a new file in the `src/providers` directory
+2. Implement the provider interface
+3. Add tests for your provider
+4. Update the documentation
+
+### Code Style
+
+- Follow TypeScript best practices
+- Use meaningful variable and function names
+- Add JSDoc comments for public APIs
+- Keep functions small and focused
+
+## Pull Request Process
+
+1. Create a new branch for your feature/fix
+2. Make your changes
+3. Run tests and ensure they pass
+4. Update documentation if needed
+5. Submit a pull request with a clear description
+
+### PR Checklist
+
+- [ ] Tests added/updated
+- [ ] Documentation updated
+- [ ] Code follows style guidelines
+- [ ] Changes are backward compatible
+
+## Documentation
+
+Documentation is written in MDX and located in the `website/content/docs` directory. When adding new features:
+
+1. Add relevant documentation
+2. Include code examples
+3. Update the API reference if needed
+
+## Questions?
+
+Feel free to open an issue if you have any questions or need help getting started. We're happy to help!
+

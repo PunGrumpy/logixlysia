@@ -15,7 +15,7 @@ const app = new Elysia({
     logixlysia({
       config: {
         showStartupMessage: true,
-        startupMessageFormat: 'simple',
+        startupMessageFormat: 'banner',
         timestamp: {
           translateTime: 'yyyy-mm-dd HH:MM:ss.SSS'
         },
@@ -78,7 +78,7 @@ const app = new Elysia({
     return { message: 'Too Many Requests' }
   })
 
-app.listen(3000)
+app.listen(3001)
 
 // header for testing
 // key: "Authorization"
