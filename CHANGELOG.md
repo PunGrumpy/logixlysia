@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.2.1](https://github.com/PunGrumpy/logixlysia/compare/v4.2.0...v4.2.1) (2025-04-13)
+
+
+### Bug Fixes
+
+* **ci:** replace lint step with Reviewdog integration for enhanced linting feedback ([81cd883](https://github.com/PunGrumpy/logixlysia/commit/81cd883b29723ffe640cc99dff9716a1613989ef))
+
 ## [4.2.0](https://github.com/PunGrumpy/logixlysia/compare/v4.1.2...v4.2.0) (2025-04-13)
 
 
