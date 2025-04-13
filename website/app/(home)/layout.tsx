@@ -11,7 +11,8 @@ export default function Layout({ children }: LayoutProps) {
     <DocsLayout
       {...layout}
       sidebar={{
-        hidden: true
+        hidden: true,
+        collapsible: false
       }}
       tabMode="sidebar"
     >
