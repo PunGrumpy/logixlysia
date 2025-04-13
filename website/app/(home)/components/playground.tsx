@@ -144,7 +144,7 @@ const MarqueeItem = ({
 )
 
 export const Playground = () => {
-  const paddedLogs = [...logs, ...logs, ...logs, ...logs, ...logs]
+  const paddedLogs = [...logs, ...logs, ...logs, ...logs]
 
   return (
     <section
@@ -154,7 +154,7 @@ export const Playground = () => {
       <p className="font-medium text-muted-foreground text-sm">
         Plug and log your Elysia.js app with Logixlysia
       </p>
-      <div className="sm:-my-8 grid w-full gap-8 overflow-hidden sm:h-72 sm:py-8 [&>div]:flex">
+      <div className="sm:-my-8 grid w-full gap-8 overflow-hidden sm:h-64 sm:py-8 [&>div]:flex">
         <MarqueeProvider
           direction="up"
           speed={15}
