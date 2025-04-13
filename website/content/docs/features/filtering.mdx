@@ -1,0 +1,121 @@
+---
+title: Log Filtering
+description: Learn how to filter logs in Logixlysia.
+---
+
+Filter logs based on various criteria using Logixlysia's flexible filtering system.
+
+## Basic Usage
+
+```ts
+logixlysia({
+  config: {
+    logFilter: {
+      level: ['ERROR', 'WARNING'],
+      status: [500, 404],
+      method: 'GET'
+    }
+  }
+})
+```
+
+## Filter Types
+
+### By Log Level
+
+Filter logs based on their severity level:
+
+```ts
+logFilter: {
+  level: ['ERROR', 'WARNING'] // Only log ERROR and WARNING messages
+}
+```
+
+Available levels:
+- `ERROR` - Error messages
+- `WARNING` - Warning messages
+- `INFO` - Information messages
+
+### By HTTP Status
+
+Filter logs based on HTTP status codes:
+
+```ts
+logFilter: {
+  status: [500, 404] // Only log 500 and 404 responses
+}
+```
+
+### By HTTP Method
+
+Filter logs based on HTTP methods:
+
+```ts
+logFilter: {
+  method: 'GET' // Only log GET requests
+}
+```
+
+Available methods:
+- `GET`
+- `POST`
+- `PUT`
+- `DELETE`
+- `PATCH`
+- `HEAD`
+- `OPTIONS`
+
+### Combined Filters
+
+Combine multiple filter criteria:
+
+```ts
+logFilter: {
+  level: ['ERROR'],
+  status: [500],
+  method: ['POST', 'PUT']
+}
+```
+
+## Advanced Filtering
+
+### Custom Filter Function
+
+Create custom filter logic:
+
+```ts
+logFilter: (log) => {
+  // Custom filtering logic
+  return log.status >= 400 || log.level === 'ERROR'
+}
+```
+
+### Environment-Specific Filters
+
+```ts
+logFilter: process.env.NODE_ENV === 'production' 
+  ? { level: ['ERROR'] }
+  : null // Log everything in development
+```
+
+## Best Practices
+
+1. **Production Environment**
+   - Filter to essential logs only
+   - Focus on errors and warnings
+   - Consider performance impact
+
+2. **Development Environment**
+   - Log everything for debugging
+   - Use detailed filters for specific issues
+   - Enable all log levels
+
+3. **Security**
+   - Filter sensitive routes
+   - Avoid logging sensitive data
+   - Use appropriate log levels
+
+4. **Performance**
+   - Use simple filters in production
+   - Avoid complex filter functions
+   - Consider using different filters for different environments 

@@ -1,0 +1,62 @@
+---
+title: Startup Messages
+description: Learn how to customize startup messages in Logixlysia.
+---
+
+Customize how your application announces its startup with Logixlysia's flexible startup message system.
+
+## Basic Usage
+
+```ts
+logixlysia({
+  config: {
+    showStartupMessage: true,
+    startupMessageFormat: 'simple' // or 'banner'
+  }
+})
+```
+
+## Message Formats
+
+### Simple Format
+
+A clean, minimal startup message:
+
+```
+🦊 Logixlysia is running on http://localhost:3000
+```
+
+### Banner Format
+
+A beautiful ASCII art banner (default):
+
+```
+    ┌─────────────────────────────────────────────────┐
+    │                                                 │
+    │                 Elysia v1.1.23                  │
+    │                                                 │
+    │  🦊 Elysia is running at http://localhost:3000  │
+    │                                                 │
+    └─────────────────────────────────────────────────┘
+```
+
+## Configuration Options
+
+| Option | Type | Description | Default |
+|--------|------|-------------|---------|
+| `showStartupMessage` | `boolean` | Whether to show the startup message | `true` |
+| `startupMessageFormat` | `'simple' \| 'banner'` | The format of the startup message | `'banner'` |
+
+## Customization
+
+You can customize the startup message by:
+
+1. Setting `showStartupMessage` to `false` to disable it
+2. Choosing between `'simple'` and `'banner'` formats
+3. Extending the startup message system with custom formats
+
+## Best Practices
+
+- Use `'banner'` format in development for better visibility
+- Use `'simple'` format in production for cleaner logs
+- Consider disabling startup messages in production if not needed 

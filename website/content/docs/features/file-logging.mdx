@@ -1,0 +1,127 @@
+---
+title: File Logging
+description: Learn how to save logs to files in Logixlysia.
+---
+
+Save your logs to files for persistence and analysis using Logixlysia's file logging system.
+
+## Basic Usage
+
+```ts
+logixlysia({
+  config: {
+    logFilePath: './logs/app.log'
+  }
+})
+```
+
+## Configuration Options
+
+| Option | Type | Description | Default |
+|--------|------|-------------|---------|
+| `logFilePath` | `string` | Path to the log file | `'./logs/elysia.log'` |
+| `logRotation` | `object` | Log rotation settings | `null` |
+
+## Log Rotation
+
+Configure log rotation to manage file size and retention:
+
+```ts
+logixlysia({
+  config: {
+    logFilePath: './logs/app.log',
+    logRotation: {
+      maxSize: '10m',    // Rotate when file reaches 10MB
+      maxFiles: '7d',    // Keep logs for 7 days
+      compress: true     // Compress rotated logs
+    }
+  }
+})
+```
+
+### Rotation Options
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `maxSize` | `string` | Maximum file size before rotation (e.g., '10m', '1g') |
+| `maxFiles` | `string` | Maximum age of files to keep (e.g., '7d', '30d') |
+| `compress` | `boolean` | Whether to compress rotated logs |
+
+## Multiple Log Files
+
+Create separate log files for different purposes:
+
+```ts
+logixlysia({
+  config: {
+    logFilePath: {
+      error: './logs/error.log',
+      access: './logs/access.log',
+      debug: './logs/debug.log'
+    }
+  }
+})
+```
+
+## File Format
+
+Logs are written in a structured format:
+
+```
+🦊 2025-04-13 15:00:19.225 INFO  123.45ms GET /api/users 200 
+🦊 2025-04-13 15:00:20.225 ERROR 234.56ms POST /api/users 500 Error creating user
+```
+
+## Best Practices
+
+1. **File Organization**
+   - Use descriptive file names
+   - Organize logs by type/level
+   - Consider using date-based directories
+
+2. **Rotation Strategy**
+   - Set appropriate maxSize based on traffic
+   - Configure retention based on storage
+   - Enable compression for space savings
+
+3. **Performance**
+   - Use async file writing
+   - Consider buffering for high-volume logs
+   - Monitor disk space usage
+
+4. **Security**
+   - Set appropriate file permissions
+   - Avoid logging sensitive data
+   - Regular log review and cleanup
+
+## Example Configurations
+
+### Production Configuration
+
+```ts
+logixlysia({
+  config: {
+    logFilePath: './logs/production.log',
+    logRotation: {
+      maxSize: '100m',
+      maxFiles: '30d',
+      compress: true
+    }
+  }
+})
+```
+
+### Development Configuration
+
+```ts
+logixlysia({
+  config: {
+    logFilePath: './logs/development.log',
+    logRotation: {
+      maxSize: '10m',
+      maxFiles: '7d',
+      compress: false
+    }
+  }
+})
+``` 

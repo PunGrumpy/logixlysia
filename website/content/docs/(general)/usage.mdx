@@ -1,0 +1,185 @@
+---
+title: Usage
+description: Learn how to use Logixlysia in your Elysia applications.
+---
+
+## Installation
+
+Logixlysia is available as an npm package. You can install it using Bun:
+
+```package-install
+logixlysia
+```
+
+## Basic Usage
+
+After installing Logixlysia, you can import and use it in your Elysia application:
+
+```ts
+import { Elysia } from 'elysia'
+import logixlysia from 'logixlysia'
+
+const app = new Elysia({
+  name: 'My App'
+}).use(
+  logixlysia({
+    config: {
+      showStartupMessage: true,
+      startupMessageFormat: 'simple',
+      timestamp: {
+        translateTime: 'yyyy-mm-dd HH:MM:ss'
+      }
+    }
+  })
+)
+
+app.listen(3000)
+```
+
+## Configuration Options
+
+Logixlysia provides various configuration options to customize your logging experience:
+
+### Basic Configuration
+
+```ts
+logixlysia({
+  config: {
+    // Show startup message when server starts
+    showStartupMessage: true,
+    
+    // Choose between 'banner' or 'simple' format
+    startupMessageFormat: 'simple',
+    
+    // Customize timestamp format
+    timestamp: {
+      translateTime: 'yyyy-mm-dd HH:MM:ss'
+    },
+    
+    // Show IP address in logs
+    ip: true,
+    
+    // Specify log file path
+    logFilePath: './logs/app.log'
+  }
+})
+```
+
+### Custom Log Format
+
+You can customize the log message format using placeholders:
+
+```ts
+logixlysia({
+  config: {
+    customLogFormat: '🦊 {now} {level} {duration} {method} {pathname} {status} {message} {ip}'
+  }
+})
+```
+
+Available placeholders:
+- `{now}` - Current date and time
+- `{level}` - Log level (INFO, WARNING, ERROR)
+- `{duration}` - Request duration in milliseconds
+- `{method}` - HTTP method
+- `{pathname}` - Request path
+- `{status}` - Response status code
+- `{message}` - Custom message
+- `{ip}` - Client IP address
+- `{epoch}` - Unix timestamp
+
+### Log Filtering
+
+Filter logs based on level, status, or method:
+
+```ts
+logixlysia({
+  config: {
+    logFilter: {
+      level: ['ERROR', 'WARNING'],
+      status: [500, 404],
+      method: 'GET'
+    }
+  }
+})
+```
+
+## Advanced Usage
+
+### Custom Log Handlers
+
+You can extend Logixlysia by creating custom log handlers:
+
+```ts
+import { LogHandler } from 'logixlysia'
+
+class CustomHandler implements LogHandler {
+  handle(log: LogEntry) {
+    // Custom log handling logic
+  }
+}
+
+logixlysia({
+  config: {
+    handlers: [new CustomHandler()]
+  }
+})
+```
+
+### Error Handling
+
+Logixlysia automatically captures and logs errors:
+
+```ts
+app.get('/error', () => {
+  throw new Error('Something went wrong!')
+})
+```
+
+This will automatically log the error with stack trace and request details.
+
+## Best Practices
+
+1. **Log Levels**
+   - Use appropriate log levels (INFO, WARNING, ERROR)
+   - Avoid excessive logging in production
+
+2. **Performance**
+   - Use log filtering in production
+   - Consider using file logging for important events
+
+3. **Security**
+   - Be careful with logging sensitive information
+   - Use log filtering to exclude sensitive routes
+
+## Examples
+
+### Basic API with Logging
+
+```ts
+import { Elysia } from 'elysia'
+import logixlysia from 'logixlysia'
+
+const app = new Elysia()
+  .use(logixlysia())
+  .get('/', () => 'Hello World')
+  .post('/users', ({ body }) => {
+    // Create user logic
+    return { success: true }
+  })
+  .listen(3000)
+```
+
+### Custom Error Handling
+
+```ts
+app.onError(({ code, error, set }) => {
+  // Custom error handling
+  set.status = code
+  return { error: error.message }
+})
+```
+
+## Need Help?
+
+If you have any questions or need help, feel free to open an issue on our GitHub repository or join our community on Discord.

@@ -30,11 +30,11 @@
     }
   },
   "files": {
-   "ignore": [
-			"node_modules/",
-			"CHANGELOG.md",
-			"website/components/ui/",
-			"website/.source"
-		]
+    "ignore": [
+      "node_modules/",
+      "CHANGELOG.md",
+      "website/components/ui/",
+      "website/.source"
+    ]
   }
 }
