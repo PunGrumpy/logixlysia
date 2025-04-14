@@ -29,7 +29,7 @@
     "dev": "cd website && bun dev",
     "prepare": "husky",
     "test:coverage": "bun test --timeout 5000 --coverage",
-    "clean": "git clean -fdx && rm -rf node_modules && rm -rf logs && cd website && rm -rf node_modules && rm -rf .next && rm -rf .source",
+    "clean": "git clean -fdx",
     "build": "bunup",
     "build:watch": "bunup --watch"
   },
