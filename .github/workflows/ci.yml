@@ -126,6 +126,9 @@ jobs:
           key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}
       - name: 🔽 Install Dependencies
         run: bun install
+      - name: 🏗️ Build
+        if: ${{ steps.release.outputs.release_created }}
+        run: bun run build
       - name: 🏷️ Tag stable versions
         if: ${{ steps.release.outputs.release_created }}
         run: |
