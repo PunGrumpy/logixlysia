@@ -11,16 +11,18 @@ on:
 env:
   SCOPE_OWNER: '@pungrumpy'
 
-permissions:
-  contents: read
-  pull-requests: write
-
 jobs:
   codeql:
+    permissions:
+      actions: read
+      security-events: write
     name: 🫸 CodeQL
     uses: ./.github/workflows/codeql.yml
 
   lint:
+    permissions:
+      contents: read
+      pull-requests: write
     needs: [codeql]
     strategy:
       fail-fast: false
@@ -86,6 +88,9 @@ jobs:
         run: bun run test:ci
 
   release:
+    permissions:
+      contents: write
+      pull-requests: write
     strategy:
       fail-fast: false
       matrix:
@@ -93,9 +98,6 @@ jobs:
         node-version: [22]
     if: ${{ github.ref == 'refs/heads/main' && !contains(github.event.head_commit.message, '[skip ci]') }}
     name: 🚀 Release
-    permissions:
-      contents: write
-      pull-requests: write
     runs-on: ${{ matrix.os }}
     needs: [test]
     steps:
