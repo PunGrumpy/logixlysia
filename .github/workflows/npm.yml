@@ -2,7 +2,7 @@ name: 📦 Node Package Manager
 
 on:
   workflow_run:
-    workflows: ['🧝 Continuous Delivery']
+    workflows: ['🤹‍♂️ Continuous Integration']
     types: [completed]
     branches: [main]
 
