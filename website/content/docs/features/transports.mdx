@@ -1,0 +1,142 @@
+---
+title: Custom Transports
+description: Send logs to external services with custom transports.
+---
+
+Logixlysia allows you to send logs to external services using custom transports.
+
+## Basic Transport
+
+Create a basic transport:
+
+```ts
+const consoleTransport = {
+  log: (level, message, meta) => {
+    console.log(`[${level}] ${message}`, meta)
+  }
+}
+
+app.use(logixlysia({
+  config: {
+    transports: [consoleTransport]
+  }
+}))
+```
+
+## External Services
+
+### Elasticsearch Transport
+
+```ts
+const elasticsearchTransport = {
+  log: async (level, message, meta) => {
+    await fetch('http://elasticsearch:9200/logs/_doc', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        level,
+        message,
+        ...meta,
+        timestamp: new Date().toISOString()
+      })
+    })
+  }
+}
+```
+
+### MongoDB Transport
+
+```ts
+const mongodbTransport = {
+  log: async (level, message, meta) => {
+    await db.collection('logs').insertOne({
+      level,
+      message,
+      ...meta,
+      timestamp: new Date()
+    })
+  }
+}
+```
+
+### Slack Transport
+
+```ts
+const slackTransport = {
+  log: async (level, message, meta) => {
+    if (level === 'ERROR') {
+      await fetch('https://hooks.slack.com/services/...', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          text: `[${level}] ${message}\n${JSON.stringify(meta, null, 2)}`
+        })
+      })
+    }
+  }
+}
+```
+
+## Multiple Transports
+
+Use multiple transports together:
+
+```ts
+app.use(logixlysia({
+  config: {
+    transports: [
+      consoleTransport,
+      elasticsearchTransport,
+      slackTransport
+    ]
+  }
+}))
+```
+
+## Best Practices
+
+1. **Error Handling**
+   - Handle transport errors gracefully
+   - Implement retry logic
+   - Log transport failures
+
+2. **Performance**
+   - Use async transports
+   - Implement batching
+   - Consider rate limiting
+
+3. **Security**
+   - Secure transport credentials
+   - Validate log data
+   - Implement access control
+
+## Example Configurations
+
+### Production Setup
+
+```ts
+app.use(logixlysia({
+  config: {
+    transports: [
+      elasticsearchTransport,
+      slackTransport
+    ]
+  }
+}))
+```
+
+### Development Setup
+
+```ts
+app.use(logixlysia({
+  config: {
+    transports: [
+      consoleTransport,
+      mongodbTransport
+    ]
+  }
+})) 

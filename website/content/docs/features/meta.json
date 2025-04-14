@@ -1,4 +1,18 @@
 {
   "root": true,
-  "description": "Features"
+  "title": "Features",
+  "description": "Explore the powerful features of Logixlysia",
+  "pages": [
+    "index",
+    "startup",
+    "formatting",
+    "filtering",
+    "file-logging",
+    "log-rotation",
+    "log-levels",
+    "metrics",
+    "transports",
+    "error-handling",
+    "context"
+  ]
 }

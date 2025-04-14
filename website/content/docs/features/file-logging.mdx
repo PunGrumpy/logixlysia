@@ -20,32 +20,6 @@ logixlysia({
 | Option | Type | Description | Default |
 |--------|------|-------------|---------|
 | `logFilePath` | `string` | Path to the log file | `'./logs/elysia.log'` |
-| `logRotation` | `object` | Log rotation settings | `null` |
-
-## Log Rotation
-
-Configure log rotation to manage file size and retention:
-
-```ts
-logixlysia({
-  config: {
-    logFilePath: './logs/app.log',
-    logRotation: {
-      maxSize: '10m',    // Rotate when file reaches 10MB
-      maxFiles: '7d',    // Keep logs for 7 days
-      compress: true     // Compress rotated logs
-    }
-  }
-})
-```
-
-### Rotation Options
-
-| Option | Type | Description |
-|--------|------|-------------|
-| `maxSize` | `string` | Maximum file size before rotation (e.g., '10m', '1g') |
-| `maxFiles` | `string` | Maximum age of files to keep (e.g., '7d', '30d') |
-| `compress` | `boolean` | Whether to compress rotated logs |
 
 ## Multiple Log Files
 
@@ -79,17 +53,12 @@ Logs are written in a structured format:
    - Organize logs by type/level
    - Consider using date-based directories
 
-2. **Rotation Strategy**
-   - Set appropriate maxSize based on traffic
-   - Configure retention based on storage
-   - Enable compression for space savings
-
-3. **Performance**
+2. **Performance**
    - Use async file writing
    - Consider buffering for high-volume logs
    - Monitor disk space usage
 
-4. **Security**
+3. **Security**
    - Set appropriate file permissions
    - Avoid logging sensitive data
    - Regular log review and cleanup
@@ -101,12 +70,7 @@ Logs are written in a structured format:
 ```ts
 logixlysia({
   config: {
-    logFilePath: './logs/production.log',
-    logRotation: {
-      maxSize: '100m',
-      maxFiles: '30d',
-      compress: true
-    }
+    logFilePath: './logs/production.log'
   }
 })
 ```
@@ -116,12 +80,7 @@ logixlysia({
 ```ts
 logixlysia({
   config: {
-    logFilePath: './logs/development.log',
-    logRotation: {
-      maxSize: '10m',
-      maxFiles: '7d',
-      compress: false
-    }
+    logFilePath: './logs/development.log'
   }
 })
 ``` 

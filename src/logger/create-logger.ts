@@ -11,6 +11,16 @@ import { buildLogMessage } from './build-log-message'
 import { filterLog } from './filter'
 import { handleHttpError } from './handle-http-error'
 
+function getMetrics(): LogData['metrics'] {
+  const memoryUsage = process.memoryUsage().heapUsed / 1024 / 1024 // MB
+  const cpuUsage = process.cpuUsage()
+
+  return {
+    memoryUsage,
+    cpuUsage: cpuUsage.user / 1000000 // convert to seconds
+  }
+}
+
 async function log(
   level: LogLevel,
   request: RequestInfo,
@@ -20,6 +30,16 @@ async function log(
 ): Promise<void> {
   if (!filterLog(level, data.status || 200, request.method, options)) {
     return
+  }
+
+  // Add metrics if not provided
+  if (!data.metrics) {
+    data.metrics = getMetrics()
+  }
+
+  // Add stack trace for errors
+  if (level === 'ERROR' && !data.stack) {
+    data.stack = new Error(`Error: ${data.message || 'Unknown error'}`).stack
   }
 
   const logMessage = buildLogMessage(level, request, data, store, options, true)
