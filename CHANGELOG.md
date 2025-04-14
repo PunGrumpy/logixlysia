@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.2.2](https://github.com/PunGrumpy/logixlysia/compare/v4.2.1...v4.2.2) (2025-04-14)
+
+
+### Bug Fixes
+
+* **package:** remove unused devDependencies for cleaner setup ([7dab60f](https://github.com/PunGrumpy/logixlysia/commit/7dab60fcbccac59f8ac092ab4024c6ca249d00c2))
+
 ## [4.2.1](https://github.com/PunGrumpy/logixlysia/compare/v4.2.0...v4.2.1) (2025-04-13)
 
 
