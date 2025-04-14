@@ -12,11 +12,11 @@ export default function Layout({ children }: LayoutProps) {
       {...layout}
       tabMode="sidebar"
       containerProps={{
-        className: 'md:[&_[id=nd-sidebar]]:hidden'
+        className: 'md:[&_[id=nd-sidebar]]:hidden max-h-screen'
       }}
     >
       <main
-        className="max-h-screen w-full"
+        className="w-full"
         style={{
           paddingTop: 'var(--fd-nav-height)'
         }}
