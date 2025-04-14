@@ -3,10 +3,17 @@ name: 🤹‍♂️ Continuous Integration
 on:
   push:
   pull_request:
+    types:
+      - opened
+      - synchronize
   workflow_dispatch:
 
 env:
   SCOPE_OWNER: '@pungrumpy'
+
+permissions:
+  contents: read
+  pull-requests: write
 
 jobs:
   codeql:
@@ -32,17 +39,13 @@ jobs:
           registry-url: https://registry.npmjs.org/
           scope: ${{ env.SCOPE_OWNER }}
       - name: 🍞 Setup Bun
-        uses: oven-sh/setup-bun@v1
-      - name: 🌵 Cache bun
+        uses: oven-sh/setup-bun@v2
+      - name: 🌵 Cache Bun
+        id: bun-cache
         uses: actions/cache@v4
-        id: cache-bun
         with:
-          path: ~/.bun
-          key: ${{ runner.os }}-bun-${{ matrix.node-version }}-${{ hashFiles('**/bun.lockb') }}
-          restore-keys: |
-            ${{ runner.os }}-bun-${{ matrix.node-version }}-
-            ${{ runner.os }}-bun-
-            ${{ runner.os }}-
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}
       - name: 🔽 Install Dependencies
         run: bun install
       - name: 🐶 Lint Dog
@@ -70,17 +73,13 @@ jobs:
           registry-url: https://registry.npmjs.org/
           scope: ${{ env.SCOPE_OWNER }}
       - name: 🍞 Setup Bun
-        uses: oven-sh/setup-bun@v1
-      - name: 🌵 Cache bun
+        uses: oven-sh/setup-bun@v2
+      - name: 🌵 Cache Bun
+        id: bun-cache
         uses: actions/cache@v4
-        id: cache-bun
         with:
-          path: ~/.bun
-          key: ${{ runner.os }}-bun-${{ matrix.node-version }}-${{ hashFiles('**/bun.lockb') }}
-          restore-keys: |
-            ${{ runner.os }}-bun-${{ matrix.node-version }}-
-            ${{ runner.os }}-bun-
-            ${{ runner.os }}-
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}
       - name: 🔽 Install Dependencies
         run: bun install
       - name: 🧪 Test
@@ -115,17 +114,13 @@ jobs:
           registry-url: https://registry.npmjs.org/
           scope: ${{ env.SCOPE_OWNER }}
       - name: 🍞 Setup Bun
-        uses: oven-sh/setup-bun@v1
-      - name: 🌵 Cache bun
+        uses: oven-sh/setup-bun@v2
+      - name: 🌵 Cache Bun
+        id: bun-cache
         uses: actions/cache@v4
-        id: cache-bun
         with:
-          path: ~/.bun
-          key: ${{ runner.os }}-bun-${{ matrix.node-version }}-${{ hashFiles('**/bun.lockb') }}
-          restore-keys: |
-            ${{ runner.os }}-bun-${{ matrix.node-version }}-
-            ${{ runner.os }}-bun-
-            ${{ runner.os }}-
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}
       - name: 🔽 Install Dependencies
         run: bun install
       - name: 🏷️ Tag stable versions
