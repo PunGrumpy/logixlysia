@@ -1,4 +1,5 @@
 {
   "root": true,
-  "description": "General"
+  "title": "General",
+  "description": "General information about the project."
 }
