@@ -20,10 +20,10 @@ const app = new Elysia({
         customLogFormat:
           '🦊 {now} {level} {duration} {method} {pathname} {status} {message} {ip}'
         }
-    })
+    }))
     .get('/', () => {
         return { message: 'Welcome to Basic Elysia with Logixlysia' }
-    }
+    })
         
 app.listen(3000)`
 
