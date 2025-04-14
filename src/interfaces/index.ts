@@ -14,11 +14,18 @@ export interface ColorMap {
   [key: string]: (str: string) => string
 }
 
-export type LogLevel = 'INFO' | 'WARNING' | 'ERROR' | string
+export type LogLevel = 'DEBUG' | 'INFO' | 'WARNING' | 'ERROR' | string
 
 export interface LogData {
   status?: number
   message?: string
+  context?: Record<string, string | number | boolean | null>
+  stack?: string
+  metrics?: {
+    memoryUsage?: number
+    cpuUsage?: number
+    responseSize?: number
+  }
 }
 
 export interface Logger {
@@ -83,6 +90,11 @@ export interface Options {
   config?: {
     customLogFormat?: string
     logFilePath?: string
+    logRotation?: {
+      maxSize?: number // in MB
+      maxFiles?: number
+      compress?: boolean
+    }
     logFilter?: {
       level?: LogLevel | LogLevel[]
       method?: string | string[]

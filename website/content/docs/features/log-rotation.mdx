@@ -1,0 +1,160 @@
+---
+title: Log Rotation
+description: Manage log file sizes and retention with Logixlysia.
+---
+
+Logixlysia provides powerful log rotation capabilities to help you manage your log files efficiently.
+
+## Basic Configuration
+
+```ts
+logixlysia({
+  config: {
+    logFilePath: './logs/app.log',
+    logRotation: {
+      maxSize: '10m',    // Rotate when file reaches 10MB
+      maxFiles: '7d',    // Keep logs for 7 days
+      compress: true     // Compress rotated logs
+    }
+  }
+})
+```
+
+## Rotation Options
+
+### Size-based Rotation
+
+Rotate logs based on file size:
+
+```ts
+logRotation: {
+  maxSize: '10m',    // 10 megabytes
+  // or
+  maxSize: '1g',     // 1 gigabyte
+  // or
+  maxSize: 10485760  // 10MB in bytes
+}
+```
+
+### Time-based Rotation
+
+Rotate logs based on time intervals:
+
+```ts
+logRotation: {
+  interval: '1d',    // Rotate daily
+  // or
+  interval: '1h',    // Rotate hourly
+  // or
+  interval: '1w'     // Rotate weekly
+}
+```
+
+### Retention Policy
+
+Configure how long to keep rotated logs:
+
+```ts
+logRotation: {
+  maxFiles: '7d',    // Keep logs for 7 days
+  // or
+  maxFiles: '30d',   // Keep logs for 30 days
+  // or
+  maxFiles: 10       // Keep last 10 files
+}
+```
+
+## Compression
+
+Enable compression for rotated logs:
+
+```ts
+logRotation: {
+  compress: true,    // Enable compression
+  compression: 'gzip' // Use gzip compression
+}
+```
+
+## Multiple Rotation Strategies
+
+Combine different rotation strategies:
+
+```ts
+logRotation: {
+  maxSize: '100m',   // Rotate when file reaches 100MB
+  interval: '1d',    // Also rotate daily
+  maxFiles: '30d',   // Keep logs for 30 days
+  compress: true     // Compress rotated logs
+}
+```
+
+## Best Practices
+
+1. **Size Management**
+   - Set appropriate maxSize based on traffic
+   - Consider disk space availability
+   - Monitor log growth rate
+
+2. **Retention**
+   - Configure retention based on requirements
+   - Consider compliance needs
+   - Balance storage costs
+
+3. **Compression**
+   - Enable compression for space savings
+   - Consider CPU impact
+   - Choose appropriate compression level
+
+4. **Monitoring**
+   - Monitor rotation success
+   - Track disk space usage
+   - Set up alerts for issues
+
+## Example Configurations
+
+### Production Setup
+
+```ts
+logixlysia({
+  config: {
+    logFilePath: './logs/production.log',
+    logRotation: {
+      maxSize: '100m',
+      interval: '1d',
+      maxFiles: '30d',
+      compress: true
+    }
+  }
+})
+```
+
+### Development Setup
+
+```ts
+logixlysia({
+  config: {
+    logFilePath: './logs/development.log',
+    logRotation: {
+      maxSize: '10m',
+      maxFiles: '7d',
+      compress: false
+    }
+  }
+})
+```
+
+### High-Volume Setup
+
+```ts
+logixlysia({
+  config: {
+    logFilePath: './logs/high-volume.log',
+    logRotation: {
+      maxSize: '1g',
+      interval: '1h',
+      maxFiles: '7d',
+      compress: true
+    }
+  }
+})
+``` 

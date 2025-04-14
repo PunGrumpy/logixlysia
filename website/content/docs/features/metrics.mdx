@@ -1,0 +1,129 @@
+---
+title: Metrics Tracking
+description: Monitor system performance and resource usage with Logixlysia.
+---
+
+Logixlysia provides built-in metrics tracking to help you monitor your application's performance and resource usage.
+
+## Available Metrics
+
+### Memory Usage
+
+Track heap memory usage in megabytes:
+
+```ts
+logixlysia({
+  config: {
+    customLogFormat: '{level} {method} {path} {memoryUsage}MB'
+  }
+})
+```
+
+### CPU Usage
+
+Monitor CPU usage in seconds:
+
+```ts
+logixlysia({
+  config: {
+    customLogFormat: '{level} {method} {path} {cpuUsage}s'
+  }
+})
+```
+
+### Response Size
+
+Track response sizes in bytes:
+
+```ts
+logixlysia({
+  config: {
+    customLogFormat: '{level} {method} {path} {responseSize}B'
+  }
+})
+```
+
+## Configuration
+
+Enable metrics tracking in your configuration:
+
+```ts
+logixlysia({
+  config: {
+    metrics: {
+      memory: true,
+      cpu: true,
+      responseSize: true
+    }
+  }
+})
+```
+
+## Custom Metrics
+
+Add your own custom metrics:
+
+```ts
+app.use(logixlysia({
+  config: {
+    customLogFormat: '{level} {method} {path} {customMetric}'
+  }
+}))
+
+app.derive(({ request }) => {
+  const start = process.hrtime()
+  
+  return {
+    beforeTime: start,
+    customMetric: calculateCustomMetric()
+  }
+})
+```
+
+## Best Practices
+
+1. **Performance Impact**
+   - Enable only necessary metrics
+   - Consider sampling in high-traffic scenarios
+   - Monitor metrics collection overhead
+
+2. **Storage**
+   - Configure appropriate retention
+   - Consider aggregation for long-term storage
+   - Use appropriate storage backend
+
+3. **Analysis**
+   - Set up alerts for critical metrics
+   - Create dashboards for visualization
+   - Regular review of metric trends
+
+## Example Configurations
+
+### Production Monitoring
+
+```ts
+logixlysia({
+  config: {
+    metrics: {
+      memory: true,
+      cpu: true,
+      responseSize: true
+    },
+    customLogFormat: '{level} {method} {path} {memoryUsage}MB {cpuUsage}s {responseSize}B'
+  }
+})
+```
+
+### Development Debugging
+
+```ts
+logixlysia({
+  config: {
+    metrics: {
+      memory: true,
+      cpu: true
+    },
+    customLogFormat: '{level} {method} {path} {memoryUsage}MB {cpuUsage}s'
+  }
+})
+``` 
