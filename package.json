@@ -1,13 +1,15 @@
 {
   "name": "logixlysia",
-  "version": "4.2.1",
+  "version": "1.0.0",
   "description": "🦊 Logixlysia is a logger for Elysia",
   "type": "module",
   "module": "src/index.ts",
   "main": "src/index.ts",
   "author": "PunGrumpy",
   "publisher": "PunGrumpy",
-  "maintainers": ["PunGrumpy"],
+  "maintainers": [
+    "PunGrumpy"
+  ],
   "contributors": [
     {
       "name": "n0ky4",
@@ -29,7 +31,11 @@
     "test:coverage": "bun test --timeout 5000 --coverage",
     "clean": "git clean -fdx && rm -rf node_modules && rm -rf logs && cd website && rm -rf node_modules && rm -rf .next && rm -rf .source"
   },
-  "os": ["darwin", "linux", "win32"],
+  "os": [
+    "darwin",
+    "linux",
+    "win32"
+  ],
   "badges": [
     {
       "name": "npm",
