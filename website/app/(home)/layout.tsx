@@ -17,7 +17,7 @@ export default function Layout({ children }: LayoutProps) {
       tabMode="sidebar"
     >
       <main
-        className="w-full"
+        className="max-h-screen w-full"
         style={{
           paddingTop: 'var(--fd-nav-height)'
         }}
