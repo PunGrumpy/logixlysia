@@ -10,11 +10,10 @@ export default function Layout({ children }: LayoutProps) {
   return (
     <DocsLayout
       {...layout}
-      sidebar={{
-        hidden: true,
-        collapsible: false
-      }}
       tabMode="sidebar"
+      containerProps={{
+        className: 'md:[&_[id=nd-sidebar]]:hidden'
+      }}
     >
       <main
         className="max-h-screen w-full"
