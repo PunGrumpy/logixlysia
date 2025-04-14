@@ -104,25 +104,12 @@ jobs:
     steps:
       - name: 🔔 Checkout
         uses: actions/checkout@v4
-      - name: ⚙️ Release Please Config
-        id: release-please-config
-        run: |
-          if [ -f .github/release-please-config.json ]; then
-              echo "config-file=.github/release-please-config.json" >> $GITHUB_OUTPUT
-              [ -f .github/release-please-manifest.json ] &&
-              echo "manifest-file=.github/release-please-manifest.json" >> $GITHUB_OUTPUT
-              [ -f .github/.release-please-manifest.json ] &&
-              echo "manifest-file=.github/.release-please-manifest.json" >> $GITHUB_OUTPUT
-          else
-              echo "release-type=simple" >> $GITHUB_OUTPUT
-          fi
       - name: 💤 Automated Release
         uses: googleapis/release-please-action@v4
         id: release
         with:
-          config-file: ${{ steps.release-please-config.outputs.config-file }}
-          release-type: ${{ steps.release-please-config.outputs.release-type }}
-          manifest-file: ${{ steps.release-please-config.outputs.manifest-file }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          release-type: node
       - name: 📦 Setup Node
         uses: actions/setup-node@v4
         with:
