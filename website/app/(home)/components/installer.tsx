@@ -5,8 +5,12 @@ interface SnippetProps {
 }
 
 export const Installer = ({ code }: SnippetProps) => (
-  <div className="flex items-center gap-2 rounded-md border py-[9px] pr-[9px] pl-4">
+  <div className="flex items-center gap-2 rounded-md border bg-muted/5 py-[9px] pr-[9px] pl-4 backdrop-blur-lg dark:bg-muted-foreground/5">
     <pre className="text-sm">{code}</pre>
-    <CopyButton name="Installer" className="ml-0 rounded-sm" code={code} />
+    <CopyButton
+      name="Installer"
+      className="ml-0 rounded-sm hover:bg-accent/15 dark:hover:bg-accent-foreground/15"
+      code={code}
+    />
   </div>
 )
