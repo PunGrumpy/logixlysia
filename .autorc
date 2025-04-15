@@ -1,0 +1,7 @@
+{
+  "plugins": ["npm", "first-time-contributor", "released"],
+  "owner": "pungrumpy",
+  "repo": "logixlysia",
+  "name": "Noppakorn Kaewsalabnil",
+  "email": "hello@pungrumpy.com"
+}
