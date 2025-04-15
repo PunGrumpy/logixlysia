@@ -1,3 +1,15 @@
+# v4.2.7 (Tue Apr 15 2025)
+
+#### 🐛 Bug Fix
+
+- Dev/auto [#90](https://github.com/PunGrumpy/logixlysia/pull/90) ([@PunGrumpy](https://github.com/PunGrumpy))
+
+#### Authors: 1
+
+- Noppakorn Kaewsalabnil ([@PunGrumpy](https://github.com/PunGrumpy))
+
+---
+
 # v4.2.3 (Tue Apr 15 2025)
 
 #### 🐛 Bug Fix
