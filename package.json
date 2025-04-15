@@ -1,6 +1,6 @@
 {
   "name": "logixlysia",
-  "version": "4.2.2",
+  "version": "4.2.3",
   "description": "🦊 Logixlysia is a logger for Elysia",
   "type": "module",
   "main": "dist/index.js",
@@ -25,7 +25,6 @@
     "format": "ultracite format",
     "test": "bun test --timeout 5000",
     "test:ci": "bun test --timeout 5000 --coverage --coverage-reporter=lcov",
-    "publish": "npm publish",
     "dev": "cd website && bun dev",
     "prepare": "husky",
     "test:coverage": "bun test --timeout 5000 --coverage",
