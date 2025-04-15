@@ -75,7 +75,6 @@
     "elysia": "^1.1.23"
   },
   "devDependencies": {
-    "@auto-it/first-time-contributor": "^11.3.0",
     "@biomejs/biome": "1.9.4",
     "bun-types": "^1.1.33",
     "bunup": "^0.4.15",

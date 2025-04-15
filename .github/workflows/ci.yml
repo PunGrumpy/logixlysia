@@ -15,7 +15,6 @@ jobs:
       contents: read
       actions: read
       security-events: write
-    name: 🫸 CodeQL
     uses: ./.github/workflows/codeql.yml
 
   lint:
@@ -73,8 +72,12 @@ jobs:
     steps:
       - name: 🔔 Checkout
         uses: actions/checkout@v4
-      - name: 🥺 Prepare Repository
-        run: git fetch --unshallow --tags
+      - name: 💤 Automated Release
+        uses: googleapis/release-please-action@v4
+        id: release
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          release-type: node
       - name: 🍞 Setup Bun
         uses: oven-sh/setup-bun@v2
       - name: 🌵 Cache Bun
@@ -86,9 +89,21 @@ jobs:
       - name: 🔽 Install Dependencies
         run: bun install
       - name: 🏗️ Build
+        if: ${{ steps.release.outputs.release_created }}
         run: bun run build
-      - name: 🚢 Auto Shipit
+      - name: 🏷️ Tag stable versions
+        if: ${{ steps.release.outputs.release_created }}
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email github-actions[bot]@users.noreply.github.com
+          git remote add gh-token "https://${{ secrets.GITHUB_TOKEN }}@github.com/google-github-actions/release-please-action.git"
+          git tag -d stable || true
+          git push origin :stable || true
+          git tag -a stable -m "chore: release stable version ${{ steps.release.outputs.tag_name }}"
+          git push origin stable
+      - name: 📦 Publish
+        if: ${{ steps.release.outputs.release_created }}
+        run: npm publish
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: bunx auto shipit
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        continue-on-error: true

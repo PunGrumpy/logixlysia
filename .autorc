@@ -1,7 +1,0 @@
-{
-  "plugins": ["npm", "first-time-contributor", "released"],
-  "owner": "pungrumpy",
-  "repo": "logixlysia",
-  "name": "PunGrumpy",
-  "email": "108584943+PunGrumpy@users.noreply.github.com"
-}
