@@ -2,10 +2,8 @@ name: 🤹‍♂️ Continuous Integration
 
 on:
   push:
-  pull_request:
-    types:
-      - opened
-      - synchronize
+    branches:
+      - main
   workflow_dispatch:
 
 env:
@@ -51,11 +49,8 @@ jobs:
           key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}
       - name: 🔽 Install Dependencies
         run: bun install
-      - name: 🐶 Lint Dog
-        uses: mongolyy/reviewdog-action-biome@v1
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          reporter: github-pr-review
+      - name: ☣️ Linting
+        run: bun run lint
 
   test:
     needs: [lint]
