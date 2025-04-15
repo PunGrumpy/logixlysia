@@ -1,5 +1,20 @@
 # Changelog
 
+## [4.3.0](https://github.com/PunGrumpy/logixlysia/compare/v4.2.2...v4.3.0) (2025-04-15)
+
+
+### Features
+
+* **build:** add bunup configuration and update package.json for build process ([2197488](https://github.com/PunGrumpy/logixlysia/commit/219748800ad783f5bd18e0229d5718b0c808a9ae))
+* **build:** add bunup for make bundle faster ([33cc54f](https://github.com/PunGrumpy/logixlysia/commit/33cc54f096334e754cf18c965734a50256659012))
+* **logging:** enhance logging features with metrics tracking and log rotation ([236d652](https://github.com/PunGrumpy/logixlysia/commit/236d652c6b4368021186f169202997c4cad8750d))
+* **logging:** enhance logging features with metrics tracking and log rotation ([594215e](https://github.com/PunGrumpy/logixlysia/commit/594215e89fcb11046aafa9f697403c6deb97761b))
+
+
+### Bug Fixes
+
+* **snippet:** correct syntax error in Elysia app configuration ([b154a8b](https://github.com/PunGrumpy/logixlysia/commit/b154a8b9e3d29e63465d591154e975e2024443ca))
+
 ## [4.2.2](https://github.com/PunGrumpy/logixlysia/compare/v4.2.1...v4.2.2) (2025-04-14)
 
 
