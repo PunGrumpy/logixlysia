@@ -93,6 +93,11 @@ jobs:
           manifest-file: ${{ steps.release-please-config.outputs.manifest-file }}
       - name: 🍞 Setup Bun
         uses: oven-sh/setup-bun@v2
+      - name: 🔑 Setup NPM
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: https://registry.npmjs.org/
       - name: 🌵 Cache Bun
         id: bun-cache
         uses: actions/cache@v4
