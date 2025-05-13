@@ -51,5 +51,6 @@ export type {
   RequestInfo,
   StoreData,
   HttpError,
-  Transport
+  Transport,
+  Options
 } from './interfaces'
