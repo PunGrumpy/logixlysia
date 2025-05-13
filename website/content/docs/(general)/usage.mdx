@@ -108,20 +108,24 @@ logixlysia({
 
 ### Custom Log Handlers
 
-You can extend Logixlysia by creating custom log handlers:
+You can extend Logixlysia by creating custom loggers:
 
 ```ts
-import { LogHandler } from 'logixlysia'
+import { Logger, LogLevel, RequestInfo, LogData, StoreData, HttpError } from 'logixlysia'
 
-class CustomHandler implements LogHandler {
-  handle(log: LogEntry) {
+class CustomLogger implements Logger {
+  log(level: LogLevel, request: RequestInfo, data: LogData, store: StoreData) {
     // Custom log handling logic
+  }
+
+  handleHttpError(request: RequestInfo, error: HttpError, store: StoreData) {
+    // Custom error handling logic
   }
 }
 
 logixlysia({
   config: {
-    handlers: [new CustomHandler()]
+    transports: [new CustomLogger()]
   }
 })
 ```

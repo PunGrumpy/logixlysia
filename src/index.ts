@@ -44,3 +44,12 @@ export default function logixlysia(options?: Options): Elysia {
 
 export { createLogger, handleHttpError } from './logger'
 export { logToTransports } from './output'
+export type {
+  Logger,
+  LogLevel,
+  LogData,
+  RequestInfo,
+  StoreData,
+  HttpError,
+  Transport
+} from './interfaces'
