@@ -1,29 +1,3 @@
-# v4.2.3 (Tue Apr 15 2025)
-
-#### 🐛 Bug Fix
-
-- feat(logging): enhance logging features with metrics tracking and log rotation [#89](https://github.com/PunGrumpy/logixlysia/pull/89) ([@PunGrumpy](https://github.com/PunGrumpy))
-- refactor(meta): update meta.json to include title and enhance description [#89](https://github.com/PunGrumpy/logixlysia/pull/89) ([@PunGrumpy](https://github.com/PunGrumpy))
-- feat(build): add bunup for make bundle faster [#87](https://github.com/PunGrumpy/logixlysia/pull/87) ([@PunGrumpy](https://github.com/PunGrumpy))
-
-#### ⚠️ Pushed to `main`
-
-- chore(package): bump version to 4.2.3 and remove publish script ([@PunGrumpy](https://github.com/PunGrumpy))
-- ci(codeql): simplify CodeQL analysis configuration ([@PunGrumpy](https://github.com/PunGrumpy))
-- ci(workflow): add .autorc file and update CI workflow for improved automation ([@PunGrumpy](https://github.com/PunGrumpy))
-- chore(package): update @biomejs/biome version in devDependencies ([@PunGrumpy](https://github.com/PunGrumpy))
-- ci(workflow): streamline CI configuration by simplifying linting and event triggers ([@PunGrumpy](https://github.com/PunGrumpy))
-- ci(labeler): simplify labeler workflow by removing issue triggers ([@PunGrumpy](https://github.com/PunGrumpy))
-- ci(pr): update pull request workflow for improved checks ([@PunGrumpy](https://github.com/PunGrumpy))
-- chore(ci): remove npm workflow from GitHub Actions ([@PunGrumpy](https://github.com/PunGrumpy))
-- fix(snippet): correct syntax error in Elysia app configuration ([@PunGrumpy](https://github.com/PunGrumpy))
-
-#### Authors: 1
-
-- Noppakorn Kaewsalabnil ([@PunGrumpy](https://github.com/PunGrumpy))
-
----
-
 # Changelog
 
 ## [5.0.0](https://github.com/PunGrumpy/logixlysia/compare/logixlysia-v4.2.7...logixlysia-v5.0.0) (2025-05-13)
