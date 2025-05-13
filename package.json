@@ -6,16 +6,10 @@
   "main": "dist/index.js",
   "module": "dist/index.js",
   "types": "dist/index.d.ts",
-  "files": [
-    "dist",
-    "README.md",
-    "LICENSE"
-  ],
+  "files": ["dist", "README.md", "LICENSE"],
   "author": "PunGrumpy",
   "publisher": "PunGrumpy",
-  "maintainers": [
-    "PunGrumpy"
-  ],
+  "maintainers": ["PunGrumpy"],
   "contributors": [
     {
       "name": "n0ky4",
@@ -38,11 +32,7 @@
     "build": "bunup",
     "build:watch": "bunup --watch"
   },
-  "os": [
-    "darwin",
-    "linux",
-    "win32"
-  ],
+  "os": ["darwin", "linux", "win32"],
   "badges": [
     {
       "name": "npm",
