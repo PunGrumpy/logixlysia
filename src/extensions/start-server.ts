@@ -7,9 +7,9 @@ const createBoxText = (text: string, width: number): string => {
 }
 
 export default function startServer(config: Server, options?: Options): void {
-  const hostname = config?.hostname || 'localhost'
-  const port = config?.port || 3000
-  const protocol = config?.protocol || 'http'
+  const hostname = config?.hostname ?? 'localhost'
+  const port = config?.port ?? 3000
+  const protocol = config?.protocol ?? 'http'
   const showBanner = options?.config?.startupMessageFormat !== 'simple'
 
   if (showBanner) {
