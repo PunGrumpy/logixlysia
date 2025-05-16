@@ -18,11 +18,13 @@ export default function logixlysia(options?: Options): Elysia {
       }
     })
     .onRequest(ctx => {
-      ctx.store = {
+      const store = {
         beforeTime: process.hrtime.bigint(),
         logger: log,
         hasCustomLog: false
       }
+      ctx.store = store
+      log.store = store
     })
     .onAfterHandle({ as: 'global' }, ({ request, set, store }) => {
       const storeData = store as StoreData

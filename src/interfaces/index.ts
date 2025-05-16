@@ -29,6 +29,7 @@ export interface LogData {
 }
 
 export interface Logger {
+  store?: StoreData
   log(
     level: LogLevel,
     request: RequestInfo,

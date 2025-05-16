@@ -68,14 +68,16 @@ async function log(
 }
 
 export function createLogger(options?: Options): Logger {
-  return {
+  const logger: Logger = {
+    store: undefined,
     log: (level, request, data, store) =>
       log(level, request, data, store, options),
     handleHttpError: (request, error, store) =>
       handleHttpError(request, error, store, options),
     customLogFormat: options?.config?.customLogFormat,
     info: (request, message, context, store) => {
-      const storeData = store || { beforeTime: process.hrtime.bigint() }
+      const storeData = store ||
+        logger.store || { beforeTime: process.hrtime.bigint() }
       storeData.hasCustomLog = true
       return log(
         'INFO',
@@ -86,7 +88,8 @@ export function createLogger(options?: Options): Logger {
       )
     },
     error: (request, message, context, store) => {
-      const storeData = store || { beforeTime: process.hrtime.bigint() }
+      const storeData = store ||
+        logger.store || { beforeTime: process.hrtime.bigint() }
       storeData.hasCustomLog = true
       return log(
         'ERROR',
@@ -97,7 +100,8 @@ export function createLogger(options?: Options): Logger {
       )
     },
     warn: (request, message, context, store) => {
-      const storeData = store || { beforeTime: process.hrtime.bigint() }
+      const storeData = store ||
+        logger.store || { beforeTime: process.hrtime.bigint() }
       storeData.hasCustomLog = true
       return log(
         'WARNING',
@@ -108,7 +112,8 @@ export function createLogger(options?: Options): Logger {
       )
     },
     debug: (request, message, context, store) => {
-      const storeData = store || { beforeTime: process.hrtime.bigint() }
+      const storeData = store ||
+        logger.store || { beforeTime: process.hrtime.bigint() }
       storeData.hasCustomLog = true
       return log(
         'DEBUG',
@@ -119,4 +124,5 @@ export function createLogger(options?: Options): Logger {
       )
     }
   }
+  return logger
 }
