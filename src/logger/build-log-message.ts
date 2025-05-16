@@ -50,7 +50,15 @@ export function buildLogMessage(
     pathname: pathString(request),
     status: statusString(data.status || 200, useColors),
     message: data.message || '',
-    context: data.context ? JSON.stringify(data.context) : '',
+    context: data.context
+      ? (() => {
+          try {
+            return JSON.stringify(data.context)
+          } catch (error) {
+            return `[Error serializing context: ${error instanceof Error ? error.message : 'Unknown error'}]`
+          }
+        })()
+      : '',
     ip:
       options?.config?.ip && request.headers.get('x-forwarded-for')
         ? `IP: ${request.headers.get('x-forwarded-for')}`
