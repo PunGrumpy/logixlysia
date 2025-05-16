@@ -2,7 +2,7 @@ import { Elysia } from 'elysia'
 
 import { startServer } from './extensions'
 import { getStatusCode } from './helpers/status'
-import type { HttpError, Options, Server } from './interfaces'
+import type { HttpError, Options, Server, StoreData } from './interfaces'
 import { createLogger } from './logger'
 
 export default function logixlysia(options?: Options): Elysia {
@@ -18,9 +18,19 @@ export default function logixlysia(options?: Options): Elysia {
       }
     })
     .onRequest(ctx => {
-      ctx.store = { beforeTime: process.hrtime.bigint() }
+      ctx.store = {
+        beforeTime: process.hrtime.bigint(),
+        logger: log,
+        hasCustomLog: true
+      }
     })
     .onAfterHandle({ as: 'global' }, ({ request, set, store }) => {
+      const storeData = store as StoreData
+
+      if (storeData.hasCustomLog) {
+        return
+      }
+
       const status = getStatusCode(set.status || 200)
       log.log(
         'INFO',
@@ -29,7 +39,7 @@ export default function logixlysia(options?: Options): Elysia {
           status,
           message: String(set.headers?.['x-message'] || '')
         },
-        store as { beforeTime: bigint }
+        storeData
       )
     })
     .onError({ as: 'global' }, ({ request, error, set, store }) => {
@@ -37,7 +47,7 @@ export default function logixlysia(options?: Options): Elysia {
       log.handleHttpError(
         request,
         { ...error, status } as HttpError,
-        store as { beforeTime: bigint }
+        store as StoreData
       )
     })
 }
@@ -52,5 +62,6 @@ export type {
   StoreData,
   HttpError,
   Transport,
-  Options
+  Options,
+  LogixlysiaContext
 } from './interfaces'
