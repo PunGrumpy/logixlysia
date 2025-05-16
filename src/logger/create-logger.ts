@@ -73,6 +73,50 @@ export function createLogger(options?: Options): Logger {
       log(level, request, data, store, options),
     handleHttpError: (request, error, store) =>
       handleHttpError(request, error, store, options),
-    customLogFormat: options?.config?.customLogFormat
+    customLogFormat: options?.config?.customLogFormat,
+    info: (request, message, context, store) => {
+      const storeData = store || { beforeTime: process.hrtime.bigint() }
+      storeData.hasCustomLog = true
+      return log(
+        'INFO',
+        request,
+        { message, context, status: 200 },
+        storeData,
+        options
+      )
+    },
+    error: (request, message, context, store) => {
+      const storeData = store || { beforeTime: process.hrtime.bigint() }
+      storeData.hasCustomLog = true
+      return log(
+        'ERROR',
+        request,
+        { message, context, status: 500 },
+        storeData,
+        options
+      )
+    },
+    warn: (request, message, context, store) => {
+      const storeData = store || { beforeTime: process.hrtime.bigint() }
+      storeData.hasCustomLog = true
+      return log(
+        'WARNING',
+        request,
+        { message, context, status: 200 },
+        storeData,
+        options
+      )
+    },
+    debug: (request, message, context, store) => {
+      const storeData = store || { beforeTime: process.hrtime.bigint() }
+      storeData.hasCustomLog = true
+      return log(
+        'DEBUG',
+        request,
+        { message, context, status: 200 },
+        storeData,
+        options
+      )
+    }
   }
 }

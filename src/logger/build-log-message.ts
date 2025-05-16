@@ -18,7 +18,7 @@ import type {
 } from '../interfaces'
 
 const defaultLogFormat =
-  '🦊 {now} {level} {duration} {method} {pathname} {status} {message} {ip}'
+  '🦊 {now} {level} {duration} {method} {pathname} {status} {message} {context} {ip}'
 
 function shouldUseColors(useColors: boolean, options?: Options): boolean {
   if (options?.config?.useColors !== undefined) {
@@ -50,6 +50,7 @@ export function buildLogMessage(
     pathname: pathString(request),
     status: statusString(data.status || 200, useColors),
     message: data.message || '',
+    context: data.context ? JSON.stringify(data.context) : '',
     ip:
       options?.config?.ip && request.headers.get('x-forwarded-for')
         ? `IP: ${request.headers.get('x-forwarded-for')}`
