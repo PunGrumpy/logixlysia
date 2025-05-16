@@ -21,7 +21,7 @@ export default function logixlysia(options?: Options): Elysia {
       ctx.store = {
         beforeTime: process.hrtime.bigint(),
         logger: log,
-        hasCustomLog: true
+        hasCustomLog: false
       }
     })
     .onAfterHandle({ as: 'global' }, ({ request, set, store }) => {
