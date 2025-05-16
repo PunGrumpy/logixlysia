@@ -27,20 +27,18 @@ export default function logixlysia(options?: Options): Elysia {
     .onAfterHandle({ as: 'global' }, ({ request, set, store }) => {
       const storeData = store as StoreData
 
-      if (storeData.hasCustomLog) {
-        return
+      if (!storeData.hasCustomLog) {
+        const status = getStatusCode(set.status || 200)
+        log.log(
+          'INFO',
+          request,
+          {
+            status,
+            message: String(set.headers?.['x-message'] || '')
+          },
+          storeData
+        )
       }
-
-      const status = getStatusCode(set.status || 200)
-      log.log(
-        'INFO',
-        request,
-        {
-          status,
-          message: String(set.headers?.['x-message'] || '')
-        },
-        storeData
-      )
     })
     .onError({ as: 'global' }, ({ request, error, set, store }) => {
       const status = getStatusCode(set.status || 500)
