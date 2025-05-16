@@ -10,7 +10,7 @@
       "devDependencies": {
         "@biomejs/biome": "1.9.4",
         "bun-types": "^1.1.33",
-        "bunup": "^0.5.11",
+        "bunup": "^0.6.1",
         "globals": "^16.0.0",
         "husky": "^9.1.6",
         "ultracite": "^4.2.1",
@@ -129,11 +129,11 @@
 
     "@types/node": ["@types/node@22.15.17", "", { "dependencies": { "undici-types": "~6.21.0" } }, "sha512-wIX2aSZL5FE+MR0JlvF87BNVrtFWf6AE6rxSE9X7OwnVvoyCQjpzSRJ+M87se/4QCkCiebQAqrJ0y6fwIyi7nw=="],
 
-    "bun-dts": ["bun-dts@0.1.22", "", { "dependencies": { "coffi": "^0.1.28", "oxc-parser": "^0.68.1", "oxc-resolver": "^8.0.0", "oxc-transform": "^0.67.0", "ts-import-resolver": "^0.1.19" }, "peerDependencies": { "typescript": ">=4.5.0" }, "optionalPeers": ["typescript"] }, "sha512-++gd2QhS3vLIXj57BWqiVCjreh0vAjIYtzSIpIay2qUXzSm3pzsI9IRnmvu99QjvINrsS8SiFAFrjOAXS7k03Q=="],
+    "bun-dts": ["bun-dts@0.1.23", "", { "dependencies": { "coffi": "^0.1.28", "oxc-parser": "^0.68.1", "oxc-resolver": "^8.0.0", "oxc-transform": "^0.67.0", "ts-import-resolver": "^0.1.19" }, "peerDependencies": { "typescript": ">=4.5.0" }, "optionalPeers": ["typescript"] }, "sha512-2VZnqaGy4aJPs4EMO52qLNNE3o5acdxgHoB4hhhcktju+g5mqL25sc/LMVMjkLkvj1JGoBBS4TlT9CgBlnM2Kw=="],
 
     "bun-types": ["bun-types@1.2.13", "", { "dependencies": { "@types/node": "*" } }, "sha512-rRjA1T6n7wto4gxhAO/ErZEtOXyEZEmnIHQfl0Dt1QQSB4QV0iP6BZ9/YB5fZaHFQ2dwHFrmPaRQ9GGMX01k9Q=="],
 
-    "bunup": ["bunup@0.5.18", "", { "dependencies": { "@clack/prompts": "^0.10.1", "bun-dts": "^0.1.21", "chokidar": "^4.0.3", "coffi": "^0.1.28", "package-manager-detector": "^1.2.0", "tinyexec": "^1.0.1" }, "peerDependencies": { "typescript": ">=4.5.0" }, "optionalPeers": ["typescript"], "bin": { "bunup": "bin/bunup.mjs" } }, "sha512-sr6hbBWDdnGtr+50joyIsN9uHuGodaaLpSDjr0COiUSHt/+uS1N8GVLL7NXmEzsVkS3iGWIjIULmW+fc4vfpvA=="],
+    "bunup": ["bunup@0.6.2", "", { "dependencies": { "@clack/prompts": "^0.10.1", "bun-dts": "^0.1.23", "chokidar": "^4.0.3", "coffi": "^0.1.28", "package-manager-detector": "^1.2.0", "tinyexec": "^1.0.1" }, "peerDependencies": { "typescript": ">=4.5.0" }, "optionalPeers": ["typescript"], "bin": { "bunup": "bin/bunup.mjs" } }, "sha512-BhywSzw0SgVAU3RJGQEM6aQohHzpmAqhA9/BsNuFy7hQXaM5Grt9tTNVeJsENUA5W9tWrMCGoHHAwHFRqlIyog=="],
 
     "chalk": ["chalk@5.4.1", "", {}, "sha512-zgVZuo2WcZgfUEmsn6eO3kINexW8RAE4maiQ8QNs8CtpPCSyMiYsULR3HQYkm3w8FIA3SberyMJMSldGsW+U3w=="],
 
