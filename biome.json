@@ -1,27 +1,27 @@
 {
-  "$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
+  "$schema": "https://biomejs.dev/schemas/2.0.5/schema.json",
   "extends": ["ultracite"],
   "linter": {
     "rules": {
       "suspicious": {
-        "noConsoleLog": "off",
         "noConsole": "off"
       },
       "style": {
-        "useThrowOnlyError": "off"
+        "useThrowOnlyError": "off",
+        "noParameterAssign": "error",
+        "useAsConstAssertion": "error",
+        "useDefaultParameterLast": "error",
+        "useEnumInitializers": "error",
+        "useSelfClosingElements": "error",
+        "useSingleVarDeclarator": "error",
+        "noUnusedTemplateLiteral": "error",
+        "useNumberNamespace": "error",
+        "noInferrableTypes": "error",
+        "noUselessElse": "error"
       }
     }
   },
-  "formatter": {
-    "bracketSpacing": true,
-    "lineEnding": "lf",
-    "indentWidth": 2
-  },
   "javascript": {
-    "globals": ["Liveblocks"],
-    "parser": {
-      "unsafeParameterDecoratorsEnabled": true
-    },
     "formatter": {
       "arrowParentheses": "asNeeded",
       "quoteStyle": "single",
@@ -30,11 +30,13 @@
     }
   },
   "files": {
-    "ignore": [
-      "node_modules/",
-      "CHANGELOG.md",
-      "website/components/ui/",
-      "website/.source"
+    "includes": [
+      "**",
+      "!**/node_modules/",
+      "!**/CHANGELOG.md",
+      "!**/website/components/ui/**",
+      "!**/website/.source",
+      "!**/website/app/globals.css"
     ]
   }
 }
