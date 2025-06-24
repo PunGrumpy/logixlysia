@@ -123,7 +123,6 @@ const MarqueeItem = ({
   <div
     className="group mx-8 block font-mono text-sm sm:mx-16"
     key={`${method}-${pathname}-${timestamp}`}
-    aria-label={`Log entry for ${method} ${pathname} at ${timestamp}`}
   >
     <div className="flex space-x-2">
       <span>{icon}</span>
@@ -148,19 +147,19 @@ export const Playground = () => {
 
   return (
     <section
-      id="playground"
       className="grid gap-8 overflow-hidden py-16 text-center"
+      id="playground"
     >
       <p className="font-medium text-muted-foreground text-sm">
         Plug and log your Elysia.js app with Logixlysia
       </p>
       <div className="sm:-my-8 grid w-full gap-8 overflow-hidden sm:h-64 sm:py-8 [&>div]:flex">
         <MarqueeProvider
-          direction="up"
-          speed={15}
-          loop={0}
           autoFill
           className="!overflow-visible flex items-center"
+          direction="up"
+          loop={0}
+          speed={15}
         >
           <div className="flex flex-col space-y-1 py-4">
             {paddedLogs.map((log, index) => (

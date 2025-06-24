@@ -36,7 +36,7 @@ function formatCustomTime(date: Date, format: string): string {
 }
 
 export function formatTimestamp(date: Date, config?: TimestampConfig): string {
-  if (!config || !config.translateTime) {
+  if (!config?.translateTime) {
     return date.toISOString()
   }
 

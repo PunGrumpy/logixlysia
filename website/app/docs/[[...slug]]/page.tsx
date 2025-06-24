@@ -1,4 +1,3 @@
-import { source } from '@/lib/source'
 import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
 import defaultMdxComponents from 'fumadocs-ui/mdx'
 import {
@@ -8,6 +7,7 @@ import {
   DocsTitle
 } from 'fumadocs-ui/page'
 import { notFound } from 'next/navigation'
+import { source } from '@/lib/source'
 
 interface PageProps {
   params: Promise<{ slug?: string[] }>
@@ -25,11 +25,11 @@ export default async function Page(props: PageProps) {
 
   return (
     <DocsPage
-      toc={page.data.toc}
       full={page.data.full}
       tableOfContent={{
         style: 'clerk'
       }}
+      toc={page.data.toc}
     >
       <DocsTitle>{page.data.title}</DocsTitle>
       <DocsDescription>{page.data.description}</DocsDescription>

@@ -1,10 +1,10 @@
 import { Toaster } from '@/components/ui/sonner'
 import './globals.css'
 
-import { cn } from '@/lib/utils'
 import { RootProvider } from 'fumadocs-ui/provider'
 import { Geist, Geist_Mono } from 'next/font/google'
 import type { ReactNode } from 'react'
+import { cn } from '@/lib/utils'
 
 const geistSans = Geist({
   adjustFontFallback: true,
@@ -30,7 +30,7 @@ interface RootLayoutProps {
 
 export default function Layout({ children }: RootLayoutProps) {
   return (
-    <html lang="en" suppressHydrationWarning className="scroll-smooth">
+    <html className="scroll-smooth" lang="en" suppressHydrationWarning>
       <body
         className={cn(
           'font-sans antialiased',

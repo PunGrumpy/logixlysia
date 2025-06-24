@@ -6,6 +6,6 @@ export default function pathString(
   try {
     return new URL(requestInfo.url).pathname
   } catch {
-    return undefined
+    return
   }
 }

@@ -1,5 +1,5 @@
-import { cn } from '@/lib/utils'
 import { DynamicCodeBlock } from 'fumadocs-ui/components/dynamic-codeblock'
+import { cn } from '@/lib/utils'
 
 const code = `import { Elysia } from 'elysia'
 import logixlysia from 'logixlysia'
@@ -36,6 +36,6 @@ export const HeroSnippet = () => (
       '[&_pre]:p-6'
     )}
   >
-    <DynamicCodeBlock lang="typescript" code={code} />
+    <DynamicCodeBlock code={code} lang="typescript" />
   </div>
 )

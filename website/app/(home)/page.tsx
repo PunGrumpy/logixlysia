@@ -1,6 +1,6 @@
-import { createMetadata } from '@/lib/metadata'
 import type { Metadata } from 'next'
 import Image from 'next/image'
+import { createMetadata } from '@/lib/metadata'
 import { Hero } from './components/hero'
 import { Playground } from './components/playground'
 import { HeroSnippet } from './components/snippet'
@@ -17,9 +17,9 @@ export default function HomePage() {
     <div className="grid h-[calc(100dvh-var(--fd-nav-height))] divide-x overflow-hidden md:grid-cols-2">
       <div className="relative flex items-end justify-start p-8 lg:p-16">
         <Image
-          src={FoxLogixlysia}
           alt="Fox - Logixlysia"
           className="-z-10 absolute inset-0 size-full object-cover opacity-30 dark:opacity-15"
+          src={FoxLogixlysia}
         />
         <Hero />
       </div>

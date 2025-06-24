@@ -1,7 +1,7 @@
-import { Logo } from '@/components/logo'
-import { source } from '@/lib/source'
 import { GithubInfo } from 'fumadocs-ui/components/github-info'
 import type { DocsLayoutProps } from 'fumadocs-ui/layouts/notebook'
+import { Logo } from '@/components/logo'
+import { source } from '@/lib/source'
 
 export const layout: DocsLayoutProps = {
   tree: source.pageTree,
@@ -30,7 +30,7 @@ export const layout: DocsLayoutProps = {
     {
       type: 'custom',
       children: (
-        <GithubInfo owner="PunGrumpy" repo="logixlysia" className="lg:-mx-2" />
+        <GithubInfo className="lg:-mx-2" owner="PunGrumpy" repo="logixlysia" />
       )
     }
   ],

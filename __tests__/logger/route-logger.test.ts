@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'bun:test'
 import { Elysia } from 'elysia'
-import logixlysia from '../../src'
 import type { LogixlysiaContext } from '../../src'
+import logixlysia from '../../src'
 
 describe('Route Logger', () => {
   it('should log custom messages in route handlers', async () => {

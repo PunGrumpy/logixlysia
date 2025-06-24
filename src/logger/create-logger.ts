@@ -1,7 +1,7 @@
 import type {
   LogData,
-  LogLevel,
   Logger,
+  LogLevel,
   Options,
   RequestInfo,
   StoreData
@@ -17,7 +17,7 @@ function getMetrics(): LogData['metrics'] {
 
   return {
     memoryUsage,
-    cpuUsage: cpuUsage.user / 1000000 // convert to seconds
+    cpuUsage: cpuUsage.user / 1_000_000 // convert to seconds
   }
 }
 

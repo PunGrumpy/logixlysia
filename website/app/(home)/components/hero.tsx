@@ -1,6 +1,6 @@
+import Link from 'next/link'
 import { Installer } from '@/app/(home)/components/installer'
 import { Button } from '@/components/ui/button'
-import Link from 'next/link'
 
 export const Hero = () => (
   <div className="flex flex-col items-start gap-8">
@@ -12,7 +12,7 @@ export const Hero = () => (
     </p>
     <div className="flex items-center justify-center gap-4">
       <Installer code="bun add logixlysia" />
-      <Button asChild variant="link" size="lg" className="px-4">
+      <Button asChild className="px-4" size="lg" variant="link">
         <Link href="/docs">Read the docs</Link>
       </Button>
     </div>

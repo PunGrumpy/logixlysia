@@ -1,10 +1,10 @@
 'use client'
 
-import { Button } from '@/components/ui/button'
-import { cn } from '@/lib/utils'
 import { CheckIcon, CopyIcon } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
+import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 
 type CopyButtonProps = {
   code: string
@@ -28,15 +28,15 @@ export const CopyButton = ({ code, className, name }: CopyButtonProps) => {
 
   return (
     <Button
-      id={name}
-      size="icon"
-      className={cn('-m-2 shrink-0', className)}
-      variant="ghost"
-      onClick={handleCopy}
-      disabled={copied}
       aria-label="Copy to clipboard"
+      className={cn('-m-2 shrink-0', className)}
+      disabled={copied}
+      id={name}
+      onClick={handleCopy}
+      size="icon"
+      variant="ghost"
     >
-      <Icon size={16} className="text-muted-foreground" />
+      <Icon className="text-muted-foreground" size={16} />
     </Button>
   )
 }
