@@ -29,6 +29,7 @@ export interface LogData {
 }
 
 export interface Logger {
+  store?: StoreData
   log(
     level: LogLevel,
     request: RequestInfo,
@@ -41,6 +42,30 @@ export interface Logger {
     store: StoreData
   ): void
   customLogFormat?: string
+  info(
+    request: RequestInfo,
+    message: string,
+    context?: Record<string, string | number | boolean | null>,
+    store?: StoreData
+  ): void
+  error(
+    request: RequestInfo,
+    message: string,
+    context?: Record<string, string | number | boolean | null>,
+    store?: StoreData
+  ): void
+  warn(
+    request: RequestInfo,
+    message: string,
+    context?: Record<string, string | number | boolean | null>,
+    store?: StoreData
+  ): void
+  debug(
+    request: RequestInfo,
+    message: string,
+    context?: Record<string, string | number | boolean | null>,
+    store?: StoreData
+  ): void
 }
 
 export interface LogComponents {
@@ -52,11 +77,23 @@ export interface LogComponents {
   pathname: string | undefined
   status: string
   message: string
+  context: string
   ip: string
 }
 
 export interface StoreData {
   beforeTime: bigint
+  logger?: Logger
+  hasCustomLog?: boolean // Used to skip automatic logging if there's a custom log
+}
+
+export interface LogixlysiaContext {
+  store: {
+    logger: Logger
+    beforeTime: bigint
+    hasCustomLog: boolean
+  }
+  request: RequestInfo
 }
 
 export class HttpError extends Error {
