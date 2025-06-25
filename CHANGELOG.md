@@ -1,5 +1,21 @@
 # Changelog
 
+## [5.1.0](https://github.com/PunGrumpy/logixlysia/compare/v5.0.0...v5.1.0) (2025-06-24)
+
+
+### Features
+
+* **linter:** add Ultracite cursor rules for improved accessibility and code quality ([94602aa](https://github.com/PunGrumpy/logixlysia/commit/94602aa3e733c22b849c19e1afd474a500dbbff1))
+* **logging:** add custom log methods and context support ([7c0c0b9](https://github.com/PunGrumpy/logixlysia/commit/7c0c0b995775ea058853b872d7860b4f789cdb45)), closes [#94](https://github.com/PunGrumpy/logixlysia/issues/94)
+* **tests:** add comprehensive tests for route logger functionality ([3ed0670](https://github.com/PunGrumpy/logixlysia/commit/3ed0670fe6cfae1717e4cdc0c882943f827fad96))
+
+
+### Bug Fixes
+
+* **logging:** improve context serialization in log messages ([ac74afc](https://github.com/PunGrumpy/logixlysia/commit/ac74afc8b10b4b0e3d34144dcb7053da52653738))
+* **logging:** prevent duplicate logging when using custom logs ([358f319](https://github.com/PunGrumpy/logixlysia/commit/358f319419e78bc1a206535506ddd6b84d312bfe))
+* **logging:** set hasCustomLog to false in logixlysia function ([807d0ec](https://github.com/PunGrumpy/logixlysia/commit/807d0ec09df051ad2a5b9cd5f0d85026424ad06f))
+
 ## [5.0.0](https://github.com/PunGrumpy/logixlysia/compare/logixlysia-v4.2.7...logixlysia-v5.0.0) (2025-05-13)
 
 ### Features
