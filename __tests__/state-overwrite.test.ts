@@ -7,10 +7,7 @@ describe('Elysia with state', () => {
     const app = new Elysia()
       .state('state', { a: 1 } as const)
       .use(logixlysia())
-      .get('/test', ({ store }) => {
-        console.log({ store })
-        return store.state
-      })
+      .get('/test', ({ store }) => store.state)
     expect(
       app.handle(new Request('http://localhost/test')).then(x => x.json())
     ).resolves.toMatchObject({
@@ -20,10 +17,7 @@ describe('Elysia with state', () => {
   it('Should return state without logixlysia', () => {
     const app = new Elysia()
       .state('state', { a: 1 } as const)
-      .get('/test', ({ store }) => {
-        console.log({ store })
-        return store.state
-      })
+      .get('/test', ({ store }) => store.state)
     expect(
       app.handle(new Request('http://localhost/test')).then(x => x.json())
     ).resolves.toMatchObject({
