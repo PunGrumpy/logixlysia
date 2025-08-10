@@ -19,6 +19,7 @@ export default function logixlysia(options?: Options): Elysia {
     })
     .onRequest(ctx => {
       const store = {
+        ...ctx.store,
         beforeTime: process.hrtime.bigint(),
         logger: log,
         hasCustomLog: false
