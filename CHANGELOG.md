@@ -1,5 +1,12 @@
 # Changelog
 
+## [5.1.1](https://github.com/PunGrumpy/logixlysia/compare/v5.1.0...v5.1.1) (2025-08-10)
+
+
+### Bug Fixes
+
+* preserve existing state when initializing logixlysia store ([484840e](https://github.com/PunGrumpy/logixlysia/commit/484840eab642c1c91f63f07c04258c77e677274b)), closes [#108](https://github.com/PunGrumpy/logixlysia/issues/108)
+
 ## [5.1.0](https://github.com/PunGrumpy/logixlysia/compare/v5.0.0...v5.1.0) (2025-06-24)
 
 
