@@ -85,7 +85,7 @@
     "elysia": "^1.1.23"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.0.5",
+    "@biomejs/biome": "2.1.4",
     "bun-types": "^1.1.33",
     "bunup": "^0.8.48",
     "globals": "^16.0.0",
