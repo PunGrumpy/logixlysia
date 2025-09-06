@@ -22,6 +22,7 @@ export default function logixlysia(options?: Options): Elysia {
         ...ctx.store,
         beforeTime: process.hrtime.bigint(),
         logger: log,
+        pino: log.pino, // Expose Pino logger directly
         hasCustomLog: false
       }
       ctx.store = store

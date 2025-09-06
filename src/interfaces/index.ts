@@ -1,3 +1,5 @@
+import type { Logger as PinoLogger } from 'pino'
+
 export interface RequestInfo {
   headers: { get: (key: string) => string | null }
   method: string
@@ -30,6 +32,7 @@ export interface LogData {
 
 export interface Logger {
   store?: StoreData
+  pino: PinoLogger // Expose the underlying Pino logger instance
   log(
     level: LogLevel,
     request: RequestInfo,
@@ -84,12 +87,14 @@ export interface LogComponents {
 export interface StoreData {
   beforeTime: bigint
   logger?: Logger
+  pino?: PinoLogger // Direct access to Pino logger
   hasCustomLog?: boolean // Used to skip automatic logging if there's a custom log
 }
 
 export interface LogixlysiaContext {
   store: {
     logger: Logger
+    pino: PinoLogger // Direct access to Pino logger
     beforeTime: bigint
     hasCustomLog: boolean
   }
@@ -123,6 +128,20 @@ export interface TimestampConfig {
   translateTime?: boolean | string
 }
 
+export interface PinoConfig {
+  level?: string
+  prettyPrint?: boolean | object
+  redact?: string[] | object
+  base?: object
+  serializers?: object
+  timestamp?: boolean | (() => string)
+  messageKey?: string
+  errorKey?: string
+  formatters?: object
+  hooks?: object
+  transport?: object | object[]
+}
+
 export interface Options {
   config?: {
     customLogFormat?: string
@@ -142,6 +161,7 @@ export interface Options {
     showStartupMessage?: boolean
     startupMessageFormat?: 'banner' | 'simple'
     transports?: Transport[]
-    timestamp?: TimestampConfig // Add this new option
+    timestamp?: TimestampConfig
+    pino?: PinoConfig // Pino-specific configuration
   }
 }

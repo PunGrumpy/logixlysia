@@ -1,3 +1,5 @@
+import pino = require('pino')
+import type { Logger as PinoLogger } from 'pino'
 import type {
   LogData,
   Logger,
@@ -21,7 +23,62 @@ function getMetrics(): LogData['metrics'] {
   }
 }
 
+function createPinoInstance(options?: Options): PinoLogger {
+  const pinoConfig = options?.config?.pino || {}
+  
+  // If pretty printing is enabled and not in production
+  if (pinoConfig.prettyPrint && process.env.NODE_ENV !== 'production') {
+    const transport = pino.transport({
+      target: 'pino-pretty',
+      options: {
+        colorize: true,
+        translateTime: 'HH:MM:ss Z',
+        ignore: 'pid,hostname',
+        ...(typeof pinoConfig.prettyPrint === 'object' ? pinoConfig.prettyPrint : {})
+      }
+    })
+    
+    const config = {
+      level: pinoConfig.level || 'info',
+      timestamp: pinoConfig.timestamp ?? true,
+      messageKey: pinoConfig.messageKey || 'msg',
+      errorKey: pinoConfig.errorKey || 'err',
+      base: pinoConfig.base || { pid: process.pid }
+    }
+    
+    return pino(config, transport)
+  }
+
+  // Production or non-pretty print configuration
+  const config = {
+    level: pinoConfig.level || 'info',
+    timestamp: pinoConfig.timestamp ?? true,
+    messageKey: pinoConfig.messageKey || 'msg',
+    errorKey: pinoConfig.errorKey || 'err',
+    base: pinoConfig.base || { pid: process.pid }
+  }
+
+  return pino(config)
+}
+
+function mapLogLevelToPino(level: LogLevel): string {
+  switch (level.toUpperCase()) {
+    case 'DEBUG':
+      return 'debug'
+    case 'INFO':
+      return 'info'
+    case 'WARNING':
+    case 'WARN':
+      return 'warn'
+    case 'ERROR':
+      return 'error'
+    default:
+      return 'info'
+  }
+}
+
 async function log(
+  pinoLogger: PinoLogger,
   level: LogLevel,
   request: RequestInfo,
   data: LogData,
@@ -42,8 +99,34 @@ async function log(
     data.stack = new Error(`Error: ${data.message || 'Unknown error'}`).stack
   }
 
-  const logMessage = buildLogMessage(level, request, data, store, options, true)
-  console.log(logMessage)
+  // Create structured log object for Pino
+  const logObject = {
+    level: level,
+    method: request.method,
+    url: request.url,
+    status: data.status,
+    message: data.message,
+    context: data.context,
+    metrics: data.metrics,
+    duration: Number(process.hrtime.bigint() - store.beforeTime) / 1_000_000, // Convert to milliseconds
+    ip: options?.config?.ip && request.headers.get('x-forwarded-for') 
+      ? request.headers.get('x-forwarded-for') 
+      : undefined,
+    stack: data.stack
+  }
+
+  // Log using Pino with the appropriate level
+  const pinoLevel = mapLogLevelToPino(level)
+  const logMethod = pinoLogger[pinoLevel as keyof PinoLogger] as Function
+  if (typeof logMethod === 'function') {
+    logMethod.call(pinoLogger, logObject, data.message || 'Request processed')
+  }
+
+  // Keep legacy console output if customLogFormat is provided
+  if (options?.config?.customLogFormat) {
+    const logMessage = buildLogMessage(level, request, data, store, options, true)
+    console.log(logMessage)
+  }
 
   const promises: Promise<void>[] = []
 
@@ -68,10 +151,13 @@ async function log(
 }
 
 export function createLogger(options?: Options): Logger {
+  const pinoLogger = createPinoInstance(options)
+
   const logger: Logger = {
     store: undefined,
+    pino: pinoLogger, // Expose the Pino instance
     log: (level, request, data, store) =>
-      log(level, request, data, store, options),
+      log(pinoLogger, level, request, data, store, options),
     handleHttpError: (request, error, store) =>
       handleHttpError(request, error, store, options),
     customLogFormat: options?.config?.customLogFormat,
@@ -80,6 +166,7 @@ export function createLogger(options?: Options): Logger {
         logger.store || { beforeTime: process.hrtime.bigint() }
       storeData.hasCustomLog = true
       return log(
+        pinoLogger,
         'INFO',
         request,
         { message, context, status: 200 },
@@ -92,6 +179,7 @@ export function createLogger(options?: Options): Logger {
         logger.store || { beforeTime: process.hrtime.bigint() }
       storeData.hasCustomLog = true
       return log(
+        pinoLogger,
         'ERROR',
         request,
         { message, context, status: 500 },
@@ -104,6 +192,7 @@ export function createLogger(options?: Options): Logger {
         logger.store || { beforeTime: process.hrtime.bigint() }
       storeData.hasCustomLog = true
       return log(
+        pinoLogger,
         'WARNING',
         request,
         { message, context, status: 200 },
@@ -116,6 +205,7 @@ export function createLogger(options?: Options): Logger {
         logger.store || { beforeTime: process.hrtime.bigint() }
       storeData.hasCustomLog = true
       return log(
+        pinoLogger,
         'DEBUG',
         request,
         { message, context, status: 200 },

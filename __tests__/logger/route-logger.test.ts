@@ -22,8 +22,10 @@ describe('Route Logger', () => {
     }
 
     app.get('/test', ({ store, request }: LogixlysiaContext) => {
-      const { logger } = store
+      const { logger, pino } = store
       logger.info(request, 'Test message', { test: 'value' })
+      // Test direct Pino access
+      expect(pino).toBeDefined()
       return { success: true }
     })
 
@@ -145,5 +147,31 @@ describe('Route Logger', () => {
     expect(logs[0]).toContain('Test message')
     expect(logs[0]).toContain('"userId":123')
     expect(logs[0]).toContain('"action":"test"')
+  })
+
+  it('should provide direct access to Pino logger in routes', async () => {
+    const app = new Elysia().use(
+      logixlysia({
+        config: {
+          showStartupMessage: false
+        }
+      })
+    )
+
+    let pinoLogger: any = null
+
+    app.get('/test', ({ store }: LogixlysiaContext) => {
+      const { pino } = store
+      pinoLogger = pino
+      return { success: true }
+    })
+
+    const response = await app.handle(new Request('http://localhost/test'))
+    expect(response.status).toBe(200)
+    expect(pinoLogger).toBeDefined()
+    expect(typeof pinoLogger.info).toBe('function')
+    expect(typeof pinoLogger.error).toBe('function')
+    expect(typeof pinoLogger.warn).toBe('function')
+    expect(typeof pinoLogger.debug).toBe('function')
   })
 })

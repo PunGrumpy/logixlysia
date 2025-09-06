@@ -82,7 +82,9 @@
   ],
   "dependencies": {
     "chalk": "^5.3.0",
-    "elysia": "^1.1.23"
+    "elysia": "^1.1.23",
+    "pino": "^9.9.4",
+    "pino-pretty": "^13.1.1"
   },
   "devDependencies": {
     "@biomejs/biome": "2.0.5",
