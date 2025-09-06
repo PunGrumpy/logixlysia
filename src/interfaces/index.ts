@@ -40,7 +40,7 @@ export interface Logger {
     request: RequestInfo,
     error: HttpError,
     store: StoreData
-  ): void
+  ): Promise<void>
   customLogFormat?: string
   info(
     request: RequestInfo,
@@ -143,5 +143,6 @@ export interface Options {
     startupMessageFormat?: 'banner' | 'simple'
     transports?: Transport[]
     timestamp?: TimestampConfig // Add this new option
+    disableInternalLogger?: boolean // Add option to disable internal console logging
   }
 }

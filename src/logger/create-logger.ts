@@ -43,7 +43,11 @@ async function log(
   }
 
   const logMessage = buildLogMessage(level, request, data, store, options, true)
-  console.log(logMessage)
+
+  // Only log to console if internal logger is not disabled
+  if (!options?.config?.disableInternalLogger) {
+    console.log(logMessage)
+  }
 
   const promises: Promise<void>[] = []
 
@@ -72,8 +76,8 @@ export function createLogger(options?: Options): Logger {
     store: undefined,
     log: (level, request, data, store) =>
       log(level, request, data, store, options),
-    handleHttpError: (request, error, store) =>
-      handleHttpError(request, error, store, options),
+    handleHttpError: async (request, error, store) =>
+      await handleHttpError(request, error, store, options),
     customLogFormat: options?.config?.customLogFormat,
     info: (request, message, context, store) => {
       const storeData = store ||
