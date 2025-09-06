@@ -29,12 +29,12 @@ describe('createLogger', () => {
 
   test('should handle different log levels', () => {
     const logger = createLogger()
-    
+
     // Mock the Pino logger methods
-    const mockInfo = mock(() => {})
-    const mockError = mock(() => {})
-    const mockWarn = mock(() => {})
-    
+    const mockInfo = mock()
+    const mockError = mock()
+    const mockWarn = mock()
+
     logger.pino.info = mockInfo
     logger.pino.error = mockError
     logger.pino.warn = mockWarn
