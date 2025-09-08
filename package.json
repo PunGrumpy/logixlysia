@@ -87,7 +87,7 @@
   "devDependencies": {
     "@biomejs/biome": "2.0.5",
     "bun-types": "^1.1.33",
-    "bunup": "^0.8.48",
+    "bunup": "^0.11.24",
     "globals": "^16.0.0",
     "husky": "^9.1.6",
     "ultracite": "^5.0.10"
