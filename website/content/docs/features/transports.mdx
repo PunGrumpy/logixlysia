@@ -25,7 +25,13 @@ Logixlysia supports three types of logging outputs:
 Create a basic transport:
 
 ```ts
-const consoleTransport = {
+// TypeScript type definitions for transport interface
+type LogLevel = 'debug' | 'info' | 'warn' | 'error'
+type Transport = {
+  log: (level: LogLevel, message: string, meta?: Record<string, unknown>) => void | Promise<void>
+}
+
+const consoleTransport: Transport = {
   log: (level, message, meta) => {
     console.log(`[${level}] ${message}`, meta)
   }
@@ -45,18 +51,25 @@ app.use(logixlysia({
 ```ts
 const elasticsearchTransport = {
   log: async (level, message, meta) => {
-    await fetch('http://elasticsearch:9200/logs/_doc', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        level,
-        message,
-        ...meta,
-        timestamp: new Date().toISOString()
+    try {
+      const res = await fetch('http://elasticsearch:9200/logs/_doc', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          level,
+          message,
+          ...meta,
+          timestamp: new Date().toISOString()
+        })
       })
-    })
+      if (!res.ok) {
+        console.error('Elasticsearch transport failed', { status: res.status, statusText: res.statusText })
+      }
+    } catch (err) {
+      console.error('Elasticsearch transport error', err)
+    }
   }
 }
 ```
@@ -66,12 +79,16 @@ const elasticsearchTransport = {
 ```ts
 const mongodbTransport = {
   log: async (level, message, meta) => {
-    await db.collection('logs').insertOne({
-      level,
-      message,
-      ...meta,
-      timestamp: new Date()
-    })
+    try {
+      await db.collection('logs').insertOne({
+        level,
+        message,
+        ...meta,
+        timestamp: new Date()
+      })
+    } catch (err) {
+      console.error('MongoDB transport error', err)
+    }
   }
 }
 ```
@@ -81,16 +98,23 @@ const mongodbTransport = {
 ```ts
 const slackTransport = {
   log: async (level, message, meta) => {
-    if (level === 'ERROR') {
-      await fetch('https://hooks.slack.com/services/...', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          text: `[${level}] ${message}\n${JSON.stringify(meta, null, 2)}`
+    if (level.toLowerCase() === 'error') {
+      const webhook = process.env.SLACK_WEBHOOK_URL
+      if (!webhook) return
+      
+      try {
+        await fetch(webhook, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            text: `[${level}] ${message}\n${JSON.stringify(meta, null, 2)}`
+          })
         })
-      })
+      } catch (err) {
+        console.error('Slack transport error', err)
+      }
     }
   }
 }
@@ -130,6 +154,8 @@ app.use(logixlysia({
 }))
 ```
 
+**Note:** In `useTransportsOnly` mode, `logFilePath` and console output are ignored.
+
 ### Selective Output Control
 
 ```ts
@@ -145,7 +171,7 @@ app.use(logixlysia({
 // Disable file logging but keep console
 app.use(logixlysia({
   config: {
-    logFilePath: '/var/log/app.log',
+    // logFilePath is ignored when disableFileLogging is true
     disableFileLogging: true,
     transports: [elasticsearchTransport]
   }
@@ -172,6 +198,7 @@ app.use(logixlysia({
    - Use `useTransportsOnly` for production environments where you only want external logging
    - Use `disableFileLogging` when you want console output but not file output
    - Use `disableInternalLogger` when you want file/transport output but not console output
+   - Avoid logging secrets or PII; redact sensitive fields where unavoidable
    - Implement access control
 
 ## Example Configurations
@@ -181,6 +208,7 @@ app.use(logixlysia({
 ```ts
 app.use(logixlysia({
   config: {
+    useTransportsOnly: true,
     transports: [
       elasticsearchTransport,
       slackTransport
@@ -194,6 +222,7 @@ app.use(logixlysia({
 ```ts
 app.use(logixlysia({
   config: {
+    disableInternalLogger: true,
     transports: [
       consoleTransport,
       mongodbTransport
