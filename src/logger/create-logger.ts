@@ -44,14 +44,24 @@ async function log(
 
   const logMessage = buildLogMessage(level, request, data, store, options, true)
 
-  // Only log to console if internal logger is not disabled
-  if (!options?.config?.disableInternalLogger) {
+  const promises: Promise<void>[] = []
+
+  // Handle console logging
+  if (
+    !(
+      options?.config?.useTransportsOnly ||
+      options?.config?.disableInternalLogger
+    )
+  ) {
     console.log(logMessage)
   }
 
-  const promises: Promise<void>[] = []
-
-  if (options?.config?.logFilePath) {
+  // Handle file logging
+  if (
+    !options?.config?.useTransportsOnly &&
+    options?.config?.logFilePath &&
+    !options?.config?.disableFileLogging
+  ) {
     promises.push(
       logToFile(
         options.config.logFilePath,
@@ -64,6 +74,7 @@ async function log(
     )
   }
 
+  // Handle transport logging
   if (options?.config?.transports?.length) {
     promises.push(logToTransports(level, request, data, store, options))
   }

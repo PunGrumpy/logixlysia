@@ -15,14 +15,24 @@ export async function handleHttpError(
     stack: error.stack
   }
 
-  // Only log to console if internal logger is not disabled
-  if (!options?.config?.disableInternalLogger) {
+  const promises: Promise<void>[] = []
+
+  // Handle console logging
+  if (
+    !(
+      options?.config?.useTransportsOnly ||
+      options?.config?.disableInternalLogger
+    )
+  ) {
     console.error(buildLogMessage('ERROR', request, logData, store, options))
   }
 
-  const promises: Promise<void>[] = []
-
-  if (options?.config?.logFilePath) {
+  // Handle file logging
+  if (
+    !options?.config?.useTransportsOnly &&
+    options?.config?.logFilePath &&
+    !options?.config?.disableFileLogging
+  ) {
     promises.push(
       logToFile(
         options.config.logFilePath,
@@ -35,6 +45,7 @@ export async function handleHttpError(
     )
   }
 
+  // Handle transport logging
   if (options?.config?.transports?.length) {
     promises.push(logToTransports('ERROR', request, logData, store, options))
   }

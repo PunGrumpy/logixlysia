@@ -144,5 +144,7 @@ export interface Options {
     transports?: Transport[]
     timestamp?: TimestampConfig // Add this new option
     disableInternalLogger?: boolean // Add option to disable internal console logging
+    disableFileLogging?: boolean // Add option to disable file logging
+    useTransportsOnly?: boolean // Add option to use only transports (disable console and file)
   }
 }
