@@ -3,7 +3,22 @@ title: Custom Transports
 description: Send logs to external services with custom transports.
 ---
 
-Logixlysia allows you to send logs to external services using custom transports.
+Logixlysia allows you to send logs to external services using custom transports. By default, transports work alongside the built-in console and file logging outputs.
+
+## Output Behavior
+
+Logixlysia supports three types of logging outputs:
+
+1. **Console Logging** - Built-in console output (can be disabled with `disableInternalLogger`)
+2. **File Logging** - Built-in file output (can be disabled with `disableFileLogging`)
+3. **Transport Logging** - Custom external services (always additive)
+
+### Controlling Outputs
+
+- **Default behavior**: Console + File (if `logFilePath` is set) + Transports
+- **`disableInternalLogger: true`**: Disables console logging only
+- **`disableFileLogging: true`**: Disables file logging only
+- **`useTransportsOnly: true`**: Disables both console and file logging, uses only transports
 
 ## Basic Transport
 
@@ -97,6 +112,46 @@ app.use(logixlysia({
 }))
 ```
 
+## Advanced Configuration
+
+### Transport-Only Logging
+
+To use only transports (disable console and file logging):
+
+```ts
+app.use(logixlysia({
+  config: {
+    useTransportsOnly: true,
+    transports: [
+      elasticsearchTransport,
+      slackTransport
+    ]
+  }
+}))
+```
+
+### Selective Output Control
+
+```ts
+// Disable console but keep file logging
+app.use(logixlysia({
+  config: {
+    logFilePath: '/var/log/app.log',
+    disableInternalLogger: true,
+    transports: [elasticsearchTransport]
+  }
+}))
+
+// Disable file logging but keep console
+app.use(logixlysia({
+  config: {
+    logFilePath: '/var/log/app.log',
+    disableFileLogging: true,
+    transports: [elasticsearchTransport]
+  }
+}))
+```
+
 ## Best Practices
 
 1. **Error Handling**
@@ -112,6 +167,11 @@ app.use(logixlysia({
 3. **Security**
    - Secure transport credentials
    - Validate log data
+
+4. **Output Management**
+   - Use `useTransportsOnly` for production environments where you only want external logging
+   - Use `disableFileLogging` when you want console output but not file output
+   - Use `disableInternalLogger` when you want file/transport output but not console output
    - Implement access control
 
 ## Example Configurations
