@@ -43,11 +43,25 @@ async function log(
   }
 
   const logMessage = buildLogMessage(level, request, data, store, options, true)
-  console.log(logMessage)
 
   const promises: Promise<void>[] = []
 
-  if (options?.config?.logFilePath) {
+  // Handle console logging
+  if (
+    !(
+      options?.config?.useTransportsOnly ||
+      options?.config?.disableInternalLogger
+    )
+  ) {
+    console.log(logMessage)
+  }
+
+  // Handle file logging
+  if (
+    !options?.config?.useTransportsOnly &&
+    options?.config?.logFilePath &&
+    !options?.config?.disableFileLogging
+  ) {
     promises.push(
       logToFile(
         options.config.logFilePath,
@@ -60,6 +74,7 @@ async function log(
     )
   }
 
+  // Handle transport logging
   if (options?.config?.transports?.length) {
     promises.push(logToTransports(level, request, data, store, options))
   }
@@ -72,8 +87,8 @@ export function createLogger(options?: Options): Logger {
     store: undefined,
     log: (level, request, data, store) =>
       log(level, request, data, store, options),
-    handleHttpError: (request, error, store) =>
-      handleHttpError(request, error, store, options),
+    handleHttpError: async (request, error, store) =>
+      await handleHttpError(request, error, store, options),
     customLogFormat: options?.config?.customLogFormat,
     info: (request, message, context, store) => {
       const storeData = store ||
