@@ -1,5 +1,13 @@
 # Changelog
 
+## [5.2.0](https://github.com/PunGrumpy/logixlysia/compare/v5.1.1...v5.2.0) (2025-09-21)
+
+
+### Features
+
+* **logger:** add option for disable internal log ([0a25e46](https://github.com/PunGrumpy/logixlysia/commit/0a25e461b001453c750869df014a30f3fbe7ef0d)), closes [#125](https://github.com/PunGrumpy/logixlysia/issues/125)
+* **logger:** add options for file and transport logging control ([8e56b0f](https://github.com/PunGrumpy/logixlysia/commit/8e56b0f39bbd80bd85ed93dc3beea6888ef3f63d))
+
 ## [5.1.1](https://github.com/PunGrumpy/logixlysia/compare/v5.1.0...v5.1.1) (2025-08-10)
 
 
