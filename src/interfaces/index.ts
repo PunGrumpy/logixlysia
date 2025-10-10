@@ -123,15 +123,19 @@ export interface TimestampConfig {
   translateTime?: boolean | string
 }
 
+export interface LogRotationConfig {
+  maxSize?: string | number // '10m', '1g', or bytes
+  maxFiles?: string | number // '7d', '30d', or count
+  interval?: string // '1d', '1h', '1w'
+  compress?: boolean // Enable compression
+  compression?: 'gzip' // Compression type
+}
+
 export interface Options {
   config?: {
     customLogFormat?: string
     logFilePath?: string
-    logRotation?: {
-      maxSize?: number // in MB
-      maxFiles?: number
-      compress?: boolean
-    }
+    logRotation?: LogRotationConfig
     logFilter?: {
       level?: LogLevel | LogLevel[]
       method?: string | string[]

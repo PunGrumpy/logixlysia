@@ -59,6 +59,7 @@ export type {
   Logger,
   LogixlysiaContext,
   LogLevel,
+  LogRotationConfig,
   Options,
   RequestInfo,
   StoreData,

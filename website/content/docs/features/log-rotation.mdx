@@ -3,7 +3,7 @@ title: Log Rotation
 description: Manage log file sizes and retention with Logixlysia.
 ---
 
-Logixlysia provides powerful log rotation capabilities to help you manage your log files efficiently.
+Logixlysia provides powerful log rotation capabilities to help you manage your log files efficiently. The rotation system automatically handles file size limits, time-based rotation, compression, and retention policies.
 
 ## Basic Configuration
 
@@ -88,6 +88,48 @@ logRotation: {
 }
 ```
 
+## How Rotation Works
+
+### File Naming Convention
+
+When a log file is rotated, it's renamed with a timestamp:
+
+```
+app.log → app.log.2025-10-10-14-30-45
+```
+
+If compression is enabled, the file is compressed after rotation:
+
+```
+app.log.2025-10-10-14-30-45 → app.log.2025-10-10-14-30-45.gz
+```
+
+### Rotation Triggers
+
+Rotation occurs automatically when:
+
+1. **Size threshold exceeded**: File size reaches or exceeds `maxSize`
+2. **Time interval elapsed**: Time since last rotation reaches `interval`
+3. **Manual rotation**: (if implemented in your application)
+
+### Retention Management
+
+After rotation, old files are automatically cleaned up based on `maxFiles`:
+
+- **Count-based**: Keep only the N most recent rotated files
+  ```ts
+  maxFiles: 10  // Keep last 10 rotated files
+  ```
+
+- **Time-based**: Keep files created within the specified time period
+  ```ts
+  maxFiles: '30d'  // Keep files from last 30 days
+  ```
+
+### Empty File Handling
+
+Empty log files are **not rotated** to avoid creating unnecessary rotated files.
+
 ## Best Practices
 
 1. **Size Management**
@@ -157,4 +199,80 @@ logixlysia({
     }
   }
 })
-``` 
+```
+
+## Supported Formats
+
+### Size Formats
+
+The `maxSize` option accepts multiple formats:
+
+- **String with unit**: `'10k'`, `'10m'`, `'1g'` (case-insensitive)
+- **Number (bytes)**: `10485760` (10MB in bytes)
+- **Decimal values**: `'1.5m'`, `'0.5g'`
+
+| Format | Bytes | Description |
+|--------|-------|-------------|
+| `'1k'` | 1,024 | 1 kilobyte |
+| `'1m'` | 1,048,576 | 1 megabyte |
+| `'1g'` | 1,073,741,824 | 1 gigabyte |
+
+### Interval Formats
+
+The `interval` option accepts:
+
+- `'1h'` - Every hour
+- `'1d'` - Every day (24 hours)
+- `'1w'` - Every week (7 days)
+
+You can use any number: `'2h'`, `'3d'`, `'2w'`, etc.
+
+### Retention Formats
+
+The `maxFiles` option accepts:
+
+- **Number**: Keep last N files (e.g., `10`)
+- **Time-based**: Keep files for N days (e.g., `'30d'`)
+
+## Important Notes
+
+### Performance
+
+- Rotation checks are optimized with caching to minimize file system operations
+- Time-based rotation tracks the last rotation time in memory
+- Compression runs asynchronously to avoid blocking log writes
+
+### Error Handling
+
+- Rotation failures **do not crash** the application
+- Errors are logged to console but normal logging continues
+- If rotation fails, logs continue writing to the current file
+
+### File Safety
+
+- Atomic file operations prevent data loss during rotation
+- Empty files are not rotated to avoid creating unnecessary files
+- Compression only occurs after successful rotation
+
+## Troubleshooting
+
+### Rotation Not Occurring
+
+Check that:
+1. File path has write permissions
+2. Size/interval thresholds are actually being exceeded
+3. No errors in console output
+
+### Disk Space Issues
+
+If running out of disk space:
+1. Reduce `maxFiles` retention
+2. Increase compression (`compress: true`)
+3. Reduce `maxSize` to rotate more frequently
+
+### Compression Not Working
+
+Ensure:
+1. `compress: true` is set
+2. `compression: 'gzip'` is specified (currently only gzip is supported)
+3. System has sufficient resources for compression
