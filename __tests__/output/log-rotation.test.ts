@@ -337,6 +337,26 @@ describe('Log Rotation File Operations', () => {
       expect(gzFiles.length).toBe(1)
     })
 
+    test('should perform rotation with compression using default (compress: true only)', async () => {
+      const filePath = join(TEST_DIR, 'compress-default.log')
+      await fs.writeFile(filePath, 'log content\n'.repeat(100))
+
+      const config: LogRotationConfig = {
+        maxSize: '1k',
+        compress: true
+        // compression not specified - should default to gzip
+      }
+
+      await performRotation(filePath, config)
+
+      // Should have one compressed rotated file
+      const files = await fs.readdir(TEST_DIR)
+      const gzFiles = files.filter(
+        f => f.startsWith('compress-default.log') && f.endsWith('.gz')
+      )
+      expect(gzFiles.length).toBe(1)
+    })
+
     test('should clean old files based on count retention', async () => {
       const filePath = join(TEST_DIR, 'cleanup-test.log')
 

@@ -127,8 +127,8 @@ export interface LogRotationConfig {
   maxSize?: string | number // '10m', '1g', or bytes
   maxFiles?: string | number // '7d', '30d', or count
   interval?: string // '1d', '1h', '1w'
-  compress?: boolean // Enable compression
-  compression?: 'gzip' // Compression type
+  compress?: boolean // Enable compression (defaults to gzip)
+  compression?: 'gzip' // Compression type (optional, defaults to 'gzip')
 }
 
 export interface Options {

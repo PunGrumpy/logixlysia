@@ -129,8 +129,8 @@ export async function performRotation(
       return
     }
 
-    // Compress if enabled
-    if (config.compress && config.compression === 'gzip') {
+    // Compress if enabled (defaults to gzip)
+    if (config.compress) {
       await compressFile(rotatedPath)
     }
 

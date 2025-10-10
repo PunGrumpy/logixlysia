@@ -70,8 +70,16 @@ Enable compression for rotated logs:
 
 ```ts
 logRotation: {
-  compress: true,    // Enable compression
-  compression: 'gzip' // Use gzip compression
+  compress: true    // Enable compression (uses gzip by default)
+}
+```
+
+You can also explicitly specify the compression type (currently only gzip is supported):
+
+```ts
+logRotation: {
+  compress: true,
+  compression: 'gzip'
 }
 ```
 
@@ -273,6 +281,6 @@ If running out of disk space:
 ### Compression Not Working
 
 Ensure:
-1. `compress: true` is set
-2. `compression: 'gzip'` is specified (currently only gzip is supported)
-3. System has sufficient resources for compression
+1. `compress: true` is set (defaults to gzip compression)
+2. System has sufficient resources for compression
+3. Check console for compression errors
