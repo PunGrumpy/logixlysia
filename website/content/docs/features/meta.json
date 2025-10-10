@@ -10,6 +10,7 @@
     "file-logging",
     "log-rotation",
     "log-levels",
+    "pino-integration",
     "metrics",
     "transports",
     "error-handling",

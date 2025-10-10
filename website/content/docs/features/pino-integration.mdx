@@ -1,0 +1,560 @@
+---
+title: Pino Integration
+description: High-performance structured logging with Pino in Logixlysia.
+---
+
+Logixlysia integrates [Pino](https://github.com/pinojs/pino), a high-performance JSON-first logging library, as its primary logging backend. This integration provides structured logging capabilities while maintaining backward compatibility with the existing Logixlysia API.
+
+## Why Pino?
+
+Pino offers several advantages for production logging:
+
+- **High Performance** - One of the fastest Node.js loggers available
+- **Structured Logging** - JSON-first approach for better log parsing and analysis
+- **Production Ready** - Battle-tested in production environments
+- **Flexible** - Extensive configuration options and transport support
+- **Standards Compliant** - Follows logging best practices
+
+## Basic Usage
+
+Pino is integrated automatically when you use Logixlysia. No additional setup is required:
+
+```ts
+import { Elysia } from 'elysia'
+import logixlysia from 'logixlysia'
+
+const app = new Elysia()
+  .use(logixlysia())
+  .get('/', ({ store }) => {
+    // Logixlysia logger (powered by Pino)
+    store.logger.info(request, 'Hello World!')
+    
+    return { message: 'Hello World!' }
+  })
+```
+
+## Configuration
+
+Configure Pino through the `config.pino` option:
+
+### Log Level
+
+Set the minimum log level:
+
+```ts
+logixlysia({
+  config: {
+    pino: {
+      level: 'debug' // 'fatal', 'error', 'warn', 'info', 'debug', 'trace'
+    }
+  }
+})
+```
+
+### Pretty Printing
+
+Enable pretty printing for development:
+
+```ts
+logixlysia({
+  config: {
+    pino: {
+      prettyPrint: true
+    }
+  }
+})
+```
+
+Or with custom options:
+
+```ts
+logixlysia({
+  config: {
+    pino: {
+      prettyPrint: {
+        colorize: true,
+        translateTime: 'HH:MM:ss Z',
+        ignore: 'pid,hostname'
+      }
+    }
+  }
+})
+```
+
+### Custom Keys
+
+Customize the message and error field names:
+
+```ts
+logixlysia({
+  config: {
+    pino: {
+      messageKey: 'message',  // Default: 'msg'
+      errorKey: 'error'       // Default: 'err'
+    }
+  }
+})
+```
+
+### Redacting Sensitive Data
+
+Redact sensitive fields from logs:
+
+```ts
+logixlysia({
+  config: {
+    pino: {
+      redact: ['password', 'token', 'apiKey', 'creditCard']
+    }
+  }
+})
+```
+
+Or with paths:
+
+```ts
+logixlysia({
+  config: {
+    pino: {
+      redact: {
+        paths: ['user.password', 'req.headers.authorization'],
+        remove: true // Completely remove instead of replacing with [Redacted]
+      }
+    }
+  }
+})
+```
+
+### Base Fields
+
+Add base fields to all logs:
+
+```ts
+logixlysia({
+  config: {
+    pino: {
+      base: {
+        service: 'my-api',
+        version: '1.0.0',
+        environment: process.env.NODE_ENV
+      }
+    }
+  }
+})
+```
+
+### Timestamp Configuration
+
+Configure timestamp format:
+
+```ts
+logixlysia({
+  config: {
+    pino: {
+      timestamp: true // Enable timestamps (default)
+    }
+  }
+})
+```
+
+Or use a custom timestamp function:
+
+```ts
+logixlysia({
+  config: {
+    pino: {
+      timestamp: () => `,"time":"${new Date().toISOString()}"`
+    }
+  }
+})
+```
+
+### Transport Configuration
+
+Configure custom transports for advanced logging:
+
+```ts
+logixlysia({
+  config: {
+    pino: {
+      transport: {
+        target: 'pino-pretty',
+        options: {
+          colorize: true,
+          translateTime: 'HH:MM:ss Z',
+          ignore: 'pid,hostname'
+        }
+      }
+    }
+  }
+})
+```
+
+Multiple transports:
+
+```ts
+logixlysia({
+  config: {
+    pino: {
+      transport: [
+        {
+          target: 'pino-pretty',
+          options: { colorize: true }
+        },
+        {
+          target: 'pino/file',
+          options: { destination: './app.log' }
+        }
+      ]
+    }
+  }
+})
+```
+
+## Direct Pino Access
+
+Access the Pino logger instance directly for advanced logging features:
+
+### Basic Access
+
+```ts
+app.get('/users', ({ store }) => {
+  const { pino } = store
+  
+  // Use Pino directly for structured logging
+  pino.info({ 
+    action: 'list_users',
+    count: 10 
+  }, 'Users retrieved')
+  
+  return users
+})
+```
+
+### Structured Logging
+
+Log with structured data for better analysis:
+
+```ts
+app.get('/users/:id', ({ store, params }) => {
+  const { pino } = store
+  
+  pino.info({
+    userId: params.id,
+    action: 'view_profile',
+    timestamp: Date.now(),
+    metadata: {
+      userAgent: request.headers.get('user-agent'),
+      ip: request.headers.get('x-forwarded-for')
+    }
+  }, 'User profile viewed')
+  
+  return user
+})
+```
+
+### Child Loggers
+
+Create child loggers with context:
+
+```ts
+app.get('/api/orders/:id', ({ store, params }) => {
+  const { pino } = store
+  
+  // Create a child logger with order context
+  const orderLogger = pino.child({ 
+    orderId: params.id,
+    module: 'order-service' 
+  })
+  
+  orderLogger.info('Fetching order details')
+  orderLogger.debug({ query: 'SELECT * FROM orders WHERE id = ?' })
+  orderLogger.info('Order retrieved successfully')
+  
+  return order
+})
+```
+
+### Performance Logging
+
+Track operation performance:
+
+```ts
+app.post('/api/process', async ({ store, body }) => {
+  const { pino } = store
+  const startTime = Date.now()
+  
+  const result = await processData(body)
+  
+  pino.info({
+    operation: 'process_data',
+    duration: Date.now() - startTime,
+    itemsProcessed: result.count,
+    memory: process.memoryUsage().heapUsed / 1024 / 1024,
+    success: true
+  }, 'Data processing completed')
+  
+  return result
+})
+```
+
+### Error Logging
+
+Log errors with full context:
+
+```ts
+app.get('/api/risky', ({ store }) => {
+  const { pino } = store
+  
+  try {
+    performRiskyOperation()
+  } catch (error) {
+    pino.error({
+      err: error,
+      operation: 'risky_operation',
+      context: { 
+        attempted: true,
+        timestamp: Date.now()
+      }
+    }, 'Operation failed')
+    
+    throw error
+  }
+})
+```
+
+## Environment-based Configuration
+
+Configure Pino differently for development and production:
+
+### Development Configuration
+
+```ts
+const isDev = process.env.NODE_ENV === 'development'
+
+logixlysia({
+  config: {
+    pino: {
+      level: isDev ? 'debug' : 'info',
+      prettyPrint: isDev,
+      transport: isDev ? {
+        target: 'pino-pretty',
+        options: {
+          colorize: true,
+          translateTime: 'HH:MM:ss Z',
+          ignore: 'pid,hostname'
+        }
+      } : undefined
+    }
+  }
+})
+```
+
+### Production Configuration
+
+```ts
+logixlysia({
+  config: {
+    pino: {
+      level: 'info',
+      prettyPrint: false, // Disable pretty printing in production
+      base: {
+        service: 'my-api',
+        version: process.env.APP_VERSION,
+        environment: 'production'
+      },
+      redact: ['password', 'token', 'apiKey'],
+      timestamp: true
+    }
+  }
+})
+```
+
+## Migration Guide
+
+If you're upgrading from a previous version of Logixlysia:
+
+### Backward Compatibility
+
+All existing Logixlysia logging methods continue to work:
+
+```ts
+// These still work as before
+store.logger.info(request, 'Info message')
+store.logger.error(request, 'Error message')
+store.logger.warn(request, 'Warning message')
+store.logger.debug(request, 'Debug message')
+```
+
+### Accessing Pino
+
+Now you can also access Pino directly:
+
+```ts
+// New: Direct Pino access
+store.pino.info({ userId: 123 }, 'User action')
+```
+
+### No Breaking Changes
+
+The integration is fully backward compatible. You can:
+- Continue using existing Logixlysia methods
+- Gradually adopt Pino features
+- Mix both approaches in the same application
+
+## Best Practices
+
+### 1. Use Structured Logging
+
+Instead of string interpolation:
+
+```ts
+// ❌ Don't do this
+pino.info(`User ${userId} performed ${action}`)
+
+// ✅ Do this
+pino.info({ userId, action }, 'User performed action')
+```
+
+### 2. Create Child Loggers
+
+For scoped logging with context:
+
+```ts
+// ✅ Create child loggers for different modules
+const authLogger = pino.child({ module: 'auth' })
+const dbLogger = pino.child({ module: 'database' })
+```
+
+### 3. Log Performance Metrics
+
+Track important metrics:
+
+```ts
+// ✅ Log performance data
+pino.info({
+  operation: 'db_query',
+  duration: queryTime,
+  rowsAffected: result.length
+}, 'Database query completed')
+```
+
+### 4. Redact Sensitive Data
+
+Always redact sensitive information:
+
+```ts
+// ✅ Configure redaction
+logixlysia({
+  config: {
+    pino: {
+      redact: ['password', 'token', 'ssn', 'creditCard']
+    }
+  }
+})
+```
+
+### 5. Use Appropriate Log Levels
+
+Follow log level guidelines:
+
+- **trace** - Very detailed debug information
+- **debug** - Debug information for development
+- **info** - General informational messages
+- **warn** - Warning messages for potential issues
+- **error** - Error messages for failures
+- **fatal** - Critical errors that may cause shutdown
+
+### 6. Environment-based Configuration
+
+Configure differently per environment:
+
+```ts
+// ✅ Different configs for different environments
+const pinoConfig = {
+  level: process.env.LOG_LEVEL || (isDev ? 'debug' : 'info'),
+  prettyPrint: isDev,
+  redact: isProd ? sensitiveFields : []
+}
+```
+
+## Complete Example
+
+Here's a complete example combining multiple features:
+
+```ts
+import { Elysia } from 'elysia'
+import logixlysia from 'logixlysia'
+
+const isDev = process.env.NODE_ENV === 'development'
+
+const app = new Elysia()
+  .use(
+    logixlysia({
+      config: {
+        pino: {
+          level: isDev ? 'debug' : 'info',
+          prettyPrint: isDev,
+          base: {
+            service: 'user-api',
+            version: '1.0.0',
+            environment: process.env.NODE_ENV
+          },
+          redact: ['password', 'token', 'apiKey'],
+          transport: isDev ? {
+            target: 'pino-pretty',
+            options: {
+              colorize: true,
+              translateTime: 'HH:MM:ss Z',
+              ignore: 'pid,hostname'
+            }
+          } : undefined
+        }
+      }
+    })
+  )
+  .get('/users/:id', ({ store, params }) => {
+    const { pino } = store
+    const startTime = Date.now()
+    
+    // Create scoped logger
+    const userLogger = pino.child({ 
+      userId: params.id,
+      module: 'user-service'
+    })
+    
+    userLogger.debug('Fetching user profile')
+    
+    try {
+      const user = getUserById(params.id)
+      
+      userLogger.info({
+        action: 'get_user',
+        duration: Date.now() - startTime,
+        success: true
+      }, 'User profile retrieved')
+      
+      return user
+    } catch (error) {
+      userLogger.error({
+        err: error,
+        action: 'get_user',
+        duration: Date.now() - startTime,
+        success: false
+      }, 'Failed to retrieve user profile')
+      
+      throw error
+    }
+  })
+  .listen(3000)
+
+console.log('Server running on http://localhost:3000')
+```
+
+## Additional Resources
+
+- [Pino Documentation](https://github.com/pinojs/pino)
+- [Pino Pretty](https://github.com/pinojs/pino-pretty)
+- [Pino Transports](https://github.com/pinojs/pino/blob/master/docs/transports.md)
+- [Best Practices](https://github.com/pinojs/pino/blob/master/docs/best-practices.md)
+
