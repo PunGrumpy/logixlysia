@@ -1,5 +1,5 @@
 import { promises as fs } from 'node:fs'
-import { dirname, join } from 'node:path'
+import { basename, dirname, join } from 'node:path'
 
 export interface ParsedRetention {
   type: 'count' | 'time'
@@ -153,7 +153,7 @@ export function updateRotationTime(filePath: string): void {
  */
 export async function getRotatedFiles(filePath: string): Promise<string[]> {
   const dir = dirname(filePath)
-  const baseName = filePath.split('/').pop() || ''
+  const baseName = basename(filePath)
 
   try {
     const files = await fs.readdir(dir)
