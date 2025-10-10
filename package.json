@@ -81,16 +81,16 @@
     "middleware"
   ],
   "dependencies": {
-    "chalk": "^5.3.0",
-    "elysia": "^1.1.23"
+    "chalk": "^5.6.2",
+    "elysia": "^1.4.10"
   },
   "devDependencies": {
     "@biomejs/biome": "2.0.5",
-    "bun-types": "^1.1.33",
-    "bunup": "^0.8.48",
-    "globals": "^16.0.0",
-    "husky": "^9.1.6",
-    "ultracite": "^5.0.10"
+    "bun-types": "^1.2.23",
+    "bunup": "^0.14.20",
+    "globals": "^16.4.0",
+    "husky": "^9.1.7",
+    "ultracite": "5.0.10"
   },
   "peerDependencies": {
     "typescript": "^5.2.2"
