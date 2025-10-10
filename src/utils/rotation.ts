@@ -130,7 +130,7 @@ export async function shouldRotateByTime(
 
   // Check cache first
   const cachedTime = rotationTimeCache.get(filePath)
-  if (cachedTime) {
+  if (cachedTime !== undefined) {
     return now - cachedTime >= interval
   }
 
