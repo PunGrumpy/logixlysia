@@ -5,6 +5,7 @@ import { createGzip } from 'node:zlib'
 import type { LogRotationConfig } from '../interfaces'
 import {
   getRotatedFiles,
+  parseInterval,
   parseRetention,
   parseSize,
   updateRotationTime
@@ -166,6 +167,21 @@ export async function shouldRotate(
       }
     } catch (error) {
       console.error(`Failed to check file size for ${filePath}:`, error)
+    }
+  }
+
+  // Check time-based rotation
+  if (config.interval) {
+    try {
+      const intervalMs = parseInterval(config.interval)
+      const stats = await fs.stat(filePath)
+      const age = Date.now() - stats.mtimeMs
+      if (age >= intervalMs) {
+        return true
+      }
+    } catch (error) {
+      // Log parse or stat errors and treat as no-op
+      console.error(`Failed to check file age for ${filePath}:`, error)
     }
   }
 
