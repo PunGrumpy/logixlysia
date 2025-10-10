@@ -43,7 +43,7 @@ export interface Logger {
     request: RequestInfo,
     error: HttpError,
     store: StoreData
-  ): void
+  ): Promise<void>
   customLogFormat?: string
   info(
     request: RequestInfo,
@@ -142,15 +142,19 @@ export interface PinoConfig {
   transport?: object | object[]
 }
 
+export interface LogRotationConfig {
+  maxSize?: string | number // '10m', '1g', or bytes
+  maxFiles?: string | number // '7d', '30d', or count
+  interval?: string // '1d', '1h', '1w'
+  compress?: boolean // Enable compression (defaults to gzip)
+  compression?: 'gzip' // Compression type (optional, defaults to 'gzip')
+}
+
 export interface Options {
   config?: {
     customLogFormat?: string
     logFilePath?: string
-    logRotation?: {
-      maxSize?: number // in MB
-      maxFiles?: number
-      compress?: boolean
-    }
+    logRotation?: LogRotationConfig
     logFilter?: {
       level?: LogLevel | LogLevel[]
       method?: string | string[]
@@ -161,7 +165,10 @@ export interface Options {
     showStartupMessage?: boolean
     startupMessageFormat?: 'banner' | 'simple'
     transports?: Transport[]
-    timestamp?: TimestampConfig
-    pino?: PinoConfig // Pino-specific configuration
+    timestamp?: TimestampConfig // Add this new option
+    disableInternalLogger?: boolean // Add option to disable internal console logging
+    disableFileLogging?: boolean // Add option to disable file logging
+    useTransportsOnly?: boolean // Add option to use only transports (disable console and file)
+    pino?: PinoConfig
   }
 }

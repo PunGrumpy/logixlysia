@@ -142,6 +142,39 @@ app.get('/error', () => {
 
 This will automatically log the error with stack trace and request details.
 
+### Output Control
+
+Logixlysia supports multiple logging outputs that can be controlled independently:
+
+```ts
+logixlysia({
+  config: {
+    // Control console output
+    disableInternalLogger: false, // Default: false (console enabled)
+    
+    // Control file output
+    logFilePath: '/var/log/app.log',
+    disableFileLogging: false, // Default: false (file enabled if logFilePath is set)
+    
+    // Control transport output
+    transports: [
+      // Custom transports are always additive
+      elasticsearchTransport,
+      slackTransport
+    ],
+    
+    // Use only transports (disable console and file)
+    useTransportsOnly: false // Default: false
+  }
+})
+```
+
+**Output Behavior:**
+- **Default**: Console + File (if `logFilePath` is set) + Transports
+- **`disableInternalLogger: true`**: Disables console logging only
+- **`disableFileLogging: true`**: Disables file logging only  
+- **`useTransportsOnly: true`**: Disables both console and file logging, uses only transports
+
 ## Best Practices
 
 1. **Log Levels**

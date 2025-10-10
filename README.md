@@ -28,6 +28,12 @@ const app = new Elysia({
       },
       ip: true,
       logFilePath: './logs/example.log',
+      logRotation: {
+        maxSize: '10m',
+        interval: '1d',
+        maxFiles: '7d',
+        compress: true
+      },
       customLogFormat:
         '🦊 {now} {level} {duration} {method} {pathname} {status} {message} {ip} {epoch}',
       logFilter: {

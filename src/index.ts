@@ -44,9 +44,9 @@ export default function logixlysia(options?: Options): Elysia {
         )
       }
     })
-    .onError({ as: 'global' }, ({ request, error, set, store }) => {
+    .onError({ as: 'global' }, async ({ request, error, set, store }) => {
       const status = getStatusCode(set.status || 500)
-      log.handleHttpError(
+      await log.handleHttpError(
         request,
         { ...error, status } as HttpError,
         store as StoreData
@@ -60,6 +60,7 @@ export type {
   Logger,
   LogixlysiaContext,
   LogLevel,
+  LogRotationConfig,
   Options,
   RequestInfo,
   StoreData,

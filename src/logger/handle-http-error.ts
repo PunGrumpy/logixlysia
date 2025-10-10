@@ -1,30 +1,54 @@
 import type { HttpError, Options, RequestInfo, StoreData } from '../interfaces'
-import { logToFile } from '../output'
+import { logToFile, logToTransports } from '../output'
 import { buildLogMessage } from './build-log-message'
 
-export function handleHttpError(
+export async function handleHttpError(
   request: RequestInfo,
   error: HttpError,
   store: StoreData,
   options?: Options
-): void {
+): Promise<void> {
   const statusCode = error.status || 500
-  console.error(
-    buildLogMessage('ERROR', request, { status: statusCode }, store, options)
-  )
+  const logData = {
+    status: statusCode,
+    message: error.message,
+    stack: error.stack
+  }
 
   const promises: Promise<void>[] = []
 
-  if (options?.config?.logFilePath) {
+  // Handle console logging
+  if (
+    !(
+      options?.config?.useTransportsOnly ||
+      options?.config?.disableInternalLogger
+    )
+  ) {
+    console.error(buildLogMessage('ERROR', request, logData, store, options))
+  }
+
+  // Handle file logging
+  if (
+    !options?.config?.useTransportsOnly &&
+    options?.config?.logFilePath &&
+    !options?.config?.disableFileLogging
+  ) {
     promises.push(
       logToFile(
         options.config.logFilePath,
         'ERROR',
         request,
-        { status: statusCode },
+        logData,
         store,
         options
       )
     )
   }
+
+  // Handle transport logging
+  if (options?.config?.transports?.length) {
+    promises.push(logToTransports('ERROR', request, logData, store, options))
+  }
+
+  await Promise.all(promises)
 }
