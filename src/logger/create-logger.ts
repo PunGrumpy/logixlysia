@@ -92,8 +92,7 @@ function emitPinoLog(
   ) => void
   const hasCustomPinoOutput = Boolean(options?.config?.pino?.transport)
   const shouldEmitPino =
-    !options?.config?.disableInternalLogger &&
-    (!options?.config?.useTransportsOnly || hasCustomPinoOutput)
+    !options?.config?.useTransportsOnly || hasCustomPinoOutput
 
   if (shouldEmitPino && typeof logMethod === 'function') {
     logMethod.call(pinoLogger, logObject, message)
