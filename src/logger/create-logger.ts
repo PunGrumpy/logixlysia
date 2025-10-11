@@ -49,15 +49,24 @@ function createPrettyTransport(prettyPrint: boolean | object) {
 
 function createPinoInstance(options?: Options): PinoLogger {
   const pinoConfig = options?.config?.pino || {}
-  const { prettyPrint, ...rest } = pinoConfig
-  const config = buildPinoConfig(pinoConfig, rest)
+  const { prettyPrint, transport, ...rest } = pinoConfig
+  const config = buildPinoConfig(
+    {
+      level: pinoConfig.level,
+      timestamp: pinoConfig.timestamp,
+      messageKey: pinoConfig.messageKey,
+      errorKey: pinoConfig.errorKey,
+      base: pinoConfig.base
+    } as PinoConfig,
+    rest
+  )
 
   if (prettyPrint && process.env.NODE_ENV !== 'production') {
     return pino(config, createPrettyTransport(prettyPrint))
   }
 
-  if (pinoConfig.transport) {
-    return pino(config, pino.transport(pinoConfig.transport as never))
+  if (transport) {
+    return pino(config, pino.transport(transport))
   }
 
   return pino(config)
