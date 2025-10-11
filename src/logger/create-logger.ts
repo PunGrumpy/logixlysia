@@ -5,6 +5,7 @@ import type {
   Logger,
   LogLevel,
   Options,
+  PinoConfig,
   RequestInfo,
   StoreData
 } from '../interfaces'
@@ -23,41 +24,40 @@ function getMetrics(): LogData['metrics'] {
   }
 }
 
-function createPinoInstance(options?: Options): PinoLogger {
-  const pinoConfig = options?.config?.pino || {}
-
-  // If pretty printing is enabled and not in production
-  if (pinoConfig.prettyPrint && process.env.NODE_ENV !== 'production') {
-    const transport = pino.transport({
-      target: 'pino-pretty',
-      options: {
-        colorize: true,
-        translateTime: 'HH:MM:ss Z',
-        ignore: 'pid,hostname',
-        ...(typeof pinoConfig.prettyPrint === 'object'
-          ? pinoConfig.prettyPrint
-          : {})
-      }
-    })
-
-    const config = {
-      level: pinoConfig.level || 'info',
-      timestamp: pinoConfig.timestamp ?? true,
-      messageKey: pinoConfig.messageKey || 'msg',
-      errorKey: pinoConfig.errorKey || 'err',
-      base: pinoConfig.base || { pid: process.pid }
-    }
-
-    return pino(config, transport)
-  }
-
-  // Production or non-pretty print configuration
-  const config = {
+function buildPinoConfig(pinoConfig: PinoConfig, rest: Partial<PinoConfig>) {
+  return {
     level: pinoConfig.level || 'info',
     timestamp: pinoConfig.timestamp ?? true,
     messageKey: pinoConfig.messageKey || 'msg',
     errorKey: pinoConfig.errorKey || 'err',
-    base: pinoConfig.base || { pid: process.pid }
+    base: pinoConfig.base || { pid: process.pid },
+    ...rest
+  } as const
+}
+
+function createPrettyTransport(prettyPrint: boolean | object) {
+  return pino.transport({
+    target: 'pino-pretty',
+    options: {
+      colorize: true,
+      translateTime: 'HH:MM:ss Z',
+      ignore: 'pid,hostname',
+      ...(typeof prettyPrint === 'object' ? prettyPrint : {})
+    }
+  })
+}
+
+function createPinoInstance(options?: Options): PinoLogger {
+  const pinoConfig = options?.config?.pino || {}
+  const { prettyPrint, ...rest } = pinoConfig
+  const config = buildPinoConfig(pinoConfig, rest)
+
+  if (prettyPrint && process.env.NODE_ENV !== 'production') {
+    return pino(config, createPrettyTransport(prettyPrint))
+  }
+
+  if (pinoConfig.transport) {
+    return pino(config, pino.transport(pinoConfig.transport as never))
   }
 
   return pino(config)
