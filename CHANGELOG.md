@@ -1,5 +1,29 @@
 # Changelog
 
+## [5.3.0](https://github.com/PunGrumpy/logixlysia/compare/v5.2.0...v5.3.0) (2025-10-11)
+
+
+### Features
+
+* **log-rotation:** enhance compression handling and documentation ([e874ae4](https://github.com/PunGrumpy/logixlysia/commit/e874ae44eea76a6a0d125c3f2133a56cddfa6d49))
+* **log-rotation:** implement complete rotation with interval support ([673b800](https://github.com/PunGrumpy/logixlysia/commit/673b8005b04bb1b3d8ba15e86f6df37b9a5746b6))
+* **log-rotation:** implement complete rotation with interval support ([9016a51](https://github.com/PunGrumpy/logixlysia/commit/9016a51db90fb4cc0853a5adfb32eb15623a6a8f)), closes [#138](https://github.com/PunGrumpy/logixlysia/issues/138)
+* **pino-integration:** enhance documentation and features for Pino integration ([67c67d7](https://github.com/PunGrumpy/logixlysia/commit/67c67d76a3a710cd4864bbc94256f01a2bef10fa))
+* **pino-integration:** enhance documentation and features for Pino integration ([3968a51](https://github.com/PunGrumpy/logixlysia/commit/3968a5161f056986f3ccfcb07031142b542a872f))
+* **rotation:** add time-based rotation support in shouldRotate function ([4addd18](https://github.com/PunGrumpy/logixlysia/commit/4addd182cee0aa570092b63fdebbd549294028d6))
+
+
+### Bug Fixes
+
+* **logger:** add warning for unknown log levels in mapLogLevelToPino function ([b18b044](https://github.com/PunGrumpy/logixlysia/commit/b18b044bab81d8d0018d08924def6950a90040a2))
+* **logger:** enhance Pino output handling in emitPinoLog function ([cd9d4b7](https://github.com/PunGrumpy/logixlysia/commit/cd9d4b7d37883fad90e79e91e6f8a7a753dbfff6))
+* **logger:** enhance transport handling and client IP logging ([e81d81d](https://github.com/PunGrumpy/logixlysia/commit/e81d81d70b3694fe81db1773a8cbce82af1edd29))
+* **logger:** improve error handling in log function ([a1874e1](https://github.com/PunGrumpy/logixlysia/commit/a1874e120154600baaed4109a2b6fe6f99db3181))
+* **logger:** improve error stack handling in log function ([ab01fb2](https://github.com/PunGrumpy/logixlysia/commit/ab01fb2170c204e35670ab01b4f42e1187c044ef))
+* **pino-integration:** remove outdated best practices link from documentation ([2cb8b0c](https://github.com/PunGrumpy/logixlysia/commit/2cb8b0cba487e77c1bd41acf525f0cd7ceb6f93c))
+* **rotation:** improve cache check in shouldRotateByTime function ([9c5ea06](https://github.com/PunGrumpy/logixlysia/commit/9c5ea06e8cbdad2bb8a95369be54daa15cb37d21))
+* **rotation:** use basename for file path extraction in getRotatedFiles function ([60f27b0](https://github.com/PunGrumpy/logixlysia/commit/60f27b09f33dc3490b73a036465bf896a40551ca))
+
 ## [5.2.0](https://github.com/PunGrumpy/logixlysia/compare/v5.1.1...v5.2.0) (2025-09-21)
 
 
