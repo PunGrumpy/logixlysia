@@ -95,8 +95,10 @@ async function log(
     data.metrics = getMetrics()
   }
 
+  let err: Error | undefined
   if (level === 'ERROR' && !data.stack) {
-    data.stack = new Error(`Error: ${data.message || 'Unknown error'}`).stack
+    err = new Error(`Error: ${data.message || 'Unknown error'}`)
+    data.stack = err.stack
   }
 
   const logObject = {
