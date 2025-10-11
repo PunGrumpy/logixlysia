@@ -1,4 +1,4 @@
-import type { Logger as PinoLogger } from 'pino'
+import type { LoggerOptions, Logger as PinoLogger } from 'pino'
 
 export interface RequestInfo {
   headers: { get: (key: string) => string | null }
@@ -128,18 +128,8 @@ export interface TimestampConfig {
   translateTime?: boolean | string
 }
 
-export interface PinoConfig {
-  level?: string
+export type PinoConfig = LoggerOptions & {
   prettyPrint?: boolean | object
-  redact?: string[] | object
-  base?: object
-  serializers?: object
-  timestamp?: boolean | (() => string)
-  messageKey?: string
-  errorKey?: string
-  formatters?: object
-  hooks?: object
-  transport?: object | object[]
 }
 
 export interface LogRotationConfig {
