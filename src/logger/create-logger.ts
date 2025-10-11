@@ -79,54 +79,35 @@ function mapLogLevelToPino(level: LogLevel): string {
   }
 }
 
-async function log(
+function emitPinoLog(
   pinoLogger: PinoLogger,
   level: LogLevel,
-  request: RequestInfo,
-  data: LogData,
-  store: StoreData,
+  logObject: Record<string, unknown>,
+  message: string,
   options?: Options
-): Promise<void> {
-  if (!filterLog(level, data.status || 200, request.method, options)) {
-    return
-  }
-
-  if (!data.metrics) {
-    data.metrics = getMetrics()
-  }
-
-  let err: Error | undefined
-  if (level === 'ERROR' && !data.stack) {
-    err = new Error(`Error: ${data.message || 'Unknown error'}`)
-    data.stack = err.stack
-  }
-
-  const logObject = {
-    level,
-    method: request.method,
-    url: request.url,
-    status: data.status,
-    message: data.message,
-    context: data.context,
-    metrics: data.metrics,
-    duration: Number(process.hrtime.bigint() - store.beforeTime) / 1_000_000, // Convert to milliseconds
-    ip:
-      options?.config?.ip && request.headers.get('x-forwarded-for')
-        ? request.headers.get('x-forwarded-for')
-        : undefined,
-    stack: data.stack
-  }
-
+): void {
   const pinoLevel = mapLogLevelToPino(level)
   const logMethod = pinoLogger[pinoLevel as keyof PinoLogger] as (
     ...args: unknown[]
   ) => void
-  if (typeof logMethod === 'function') {
-    logMethod.call(pinoLogger, logObject, data.message || 'Request processed')
+  const hasCustomPinoOutput = Boolean(options?.config?.pino?.transport)
+  const shouldEmitPino =
+    !options?.config?.disableInternalLogger &&
+    (!options?.config?.useTransportsOnly || hasCustomPinoOutput)
+
+  if (shouldEmitPino && typeof logMethod === 'function') {
+    logMethod.call(pinoLogger, logObject, message)
   }
+}
 
-  const logMessage = buildLogMessage(level, request, data, store, options, true)
-
+async function handleOutputs(
+  level: LogLevel,
+  request: RequestInfo,
+  data: LogData,
+  store: StoreData,
+  options?: Options,
+  logMessage?: string
+): Promise<void> {
   const promises: Promise<void>[] = []
 
   // Handle console logging
@@ -163,6 +144,56 @@ async function log(
   }
 
   await Promise.all(promises)
+}
+
+async function log(
+  pinoLogger: PinoLogger,
+  level: LogLevel,
+  request: RequestInfo,
+  data: LogData,
+  store: StoreData,
+  options?: Options
+): Promise<void> {
+  if (!filterLog(level, data.status || 200, request.method, options)) {
+    return
+  }
+
+  if (!data.metrics) {
+    data.metrics = getMetrics()
+  }
+
+  if (level === 'ERROR' && !data.stack) {
+    const err = new Error(`Error: ${data.message || 'Unknown error'}`)
+    data.stack = err.stack
+  }
+
+  const logObject = {
+    level,
+    method: request.method,
+    url: request.url,
+    status: data.status,
+    message: data.message,
+    context: data.context,
+    metrics: data.metrics,
+    duration: Number(process.hrtime.bigint() - store.beforeTime) / 1_000_000,
+    ip:
+      options?.config?.ip && request.headers.get('x-forwarded-for')
+        ? request.headers.get('x-forwarded-for')
+        : undefined,
+    stack: data.stack
+  }
+
+  emitPinoLog(
+    pinoLogger,
+    level,
+    logObject,
+    data.message || 'Request processed',
+    options
+  )
+
+  const logMessage = buildLogMessage(level, request, data, store, options, true)
+
+  await handleOutputs(level, request, data, store, options, logMessage)
 }
 
 export function createLogger(options?: Options): Logger {
