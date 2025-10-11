@@ -84,6 +84,7 @@ function mapLogLevelToPino(level: LogLevel): string {
     case 'ERROR':
       return 'error'
     default:
+      console.warn(`Unknown log level "${level}", defaulting to "info"`)
       return 'info'
   }
 }
