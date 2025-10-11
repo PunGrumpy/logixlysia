@@ -24,14 +24,13 @@ function getMetrics(): LogData['metrics'] {
   }
 }
 
-function buildPinoConfig(pinoConfig: PinoConfig, rest: Partial<PinoConfig>) {
+function buildPinoConfig(pinoConfig: PinoConfig) {
   return {
     level: pinoConfig.level || 'info',
     timestamp: pinoConfig.timestamp ?? true,
     messageKey: pinoConfig.messageKey || 'msg',
     errorKey: pinoConfig.errorKey || 'err',
-    base: pinoConfig.base || { pid: process.pid },
-    ...rest
+    base: pinoConfig.base || { pid: process.pid }
   } as const
 }
 
@@ -50,16 +49,10 @@ function createPrettyTransport(prettyPrint: boolean | object) {
 function createPinoInstance(options?: Options): PinoLogger {
   const pinoConfig = options?.config?.pino || {}
   const { prettyPrint, transport, ...rest } = pinoConfig
-  const config = buildPinoConfig(
-    {
-      level: pinoConfig.level,
-      timestamp: pinoConfig.timestamp,
-      messageKey: pinoConfig.messageKey,
-      errorKey: pinoConfig.errorKey,
-      base: pinoConfig.base
-    } as PinoConfig,
-    rest
-  )
+  const config = {
+    ...buildPinoConfig(pinoConfig),
+    ...rest
+  }
 
   if (prettyPrint && process.env.NODE_ENV !== 'production') {
     return pino(config, createPrettyTransport(prettyPrint))
