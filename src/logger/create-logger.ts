@@ -103,7 +103,9 @@ function emitPinoLog(
   const logMethod = pinoLogger[pinoLevel as keyof PinoLogger] as (
     ...args: unknown[]
   ) => void
-  const hasCustomPinoOutput = Boolean(options?.config?.pino?.transport)
+  const hasCustomPinoOutput = Boolean(
+    options?.config?.pino?.transport || options?.config?.pino?.prettyPrint
+  )
   const shouldEmitPino =
     !options?.config?.useTransportsOnly || hasCustomPinoOutput
 
