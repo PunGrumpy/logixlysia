@@ -1,3 +1,5 @@
+import type { LoggerOptions, Logger as PinoLogger } from 'pino'
+
 export interface RequestInfo {
   headers: { get: (key: string) => string | null }
   method: string
@@ -30,6 +32,7 @@ export interface LogData {
 
 export interface Logger {
   store?: StoreData
+  pino: PinoLogger // Expose the underlying Pino logger instance
   log(
     level: LogLevel,
     request: RequestInfo,
@@ -84,12 +87,14 @@ export interface LogComponents {
 export interface StoreData {
   beforeTime: bigint
   logger?: Logger
+  pino?: PinoLogger // Direct access to Pino logger
   hasCustomLog?: boolean // Used to skip automatic logging if there's a custom log
 }
 
 export interface LogixlysiaContext {
   store: {
     logger: Logger
+    pino: PinoLogger // Direct access to Pino logger
     beforeTime: bigint
     hasCustomLog: boolean
   }
@@ -123,6 +128,10 @@ export interface TimestampConfig {
   translateTime?: boolean | string
 }
 
+export type PinoConfig = LoggerOptions & {
+  prettyPrint?: boolean | Record<string, unknown>
+}
+
 export interface LogRotationConfig {
   maxSize?: string | number // '10m', '1g', or bytes
   maxFiles?: string | number // '7d', '30d', or count
@@ -150,5 +159,6 @@ export interface Options {
     disableInternalLogger?: boolean // Add option to disable internal console logging
     disableFileLogging?: boolean // Add option to disable file logging
     useTransportsOnly?: boolean // Add option to use only transports (disable console and file)
+    pino?: PinoConfig
   }
 }

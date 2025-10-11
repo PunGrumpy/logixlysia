@@ -106,6 +106,45 @@ logixlysia({
 
 ## Advanced Usage
 
+### Pino Integration
+
+Logixlysia is powered by [Pino](https://github.com/pinojs/pino), a high-performance JSON logger. You can access the Pino instance directly for advanced logging:
+
+```ts
+app.get('/users/:id', ({ store, params }) => {
+  const { pino } = store
+  
+  // Use Pino for structured logging
+  pino.info({
+    userId: params.id,
+    action: 'view_profile'
+  }, 'User profile accessed')
+  
+  // Create child loggers with context
+  const userLogger = pino.child({ userId: params.id })
+  userLogger.debug('Fetching user data')
+  
+  return { user: 'data' }
+})
+```
+
+Configure Pino options:
+
+```ts
+logixlysia({
+  config: {
+    pino: {
+      level: 'debug',
+      prettyPrint: true,
+      redact: ['password', 'token'],
+      base: { service: 'my-api' }
+    }
+  }
+})
+```
+
+Learn more in the [Pino Integration](/docs/features/pino-integration) guide.
+
 ### Custom Log Handlers
 
 You can extend Logixlysia by creating custom loggers:

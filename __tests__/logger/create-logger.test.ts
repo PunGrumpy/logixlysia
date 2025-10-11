@@ -9,25 +9,35 @@ describe('createLogger', () => {
     expect(logger).toBeDefined()
     expect(typeof logger.log).toBe('function')
     expect(typeof logger.handleHttpError).toBe('function')
+    expect(logger.pino).toBeDefined() // Should have Pino instance
   })
 
   test('should create a logger with custom options', () => {
     const options: Options = {
       config: {
-        showStartupMessage: false
+        showStartupMessage: false,
+        pino: {
+          level: 'debug',
+          prettyPrint: true
+        }
       }
     }
     const logger = createLogger(options)
     expect(logger).toBeDefined()
+    expect(logger.pino).toBeDefined()
   })
 
   test('should handle different log levels', () => {
     const logger = createLogger()
-    const consoleLog = mock(() => {
-      return
-    })
-    const originalConsoleLog = console.log
-    console.log = consoleLog
+
+    // Mock the Pino logger methods
+    const mockInfo = mock()
+    const mockError = mock()
+    const mockWarn = mock()
+
+    logger.pino.info = mockInfo
+    logger.pino.error = mockError
+    logger.pino.warn = mockWarn
 
     // Test INFO level
     logger.log(
@@ -36,29 +46,49 @@ describe('createLogger', () => {
       { status: 200 },
       { beforeTime: BigInt(0) }
     )
-    expect(consoleLog).toHaveBeenCalledWith(expect.stringContaining('INFO'))
+    expect(mockInfo).toHaveBeenCalled()
 
-    // Reset mock to test ERROR level
-    consoleLog.mockReset()
+    // Test ERROR level
     logger.log(
       'ERROR',
       new Request('http://localhost'),
       { status: 500 },
       { beforeTime: BigInt(0) }
     )
-    expect(consoleLog).toHaveBeenCalled()
-    expect(consoleLog).toHaveBeenCalledWith(expect.stringContaining('ERROR'))
+    expect(mockError).toHaveBeenCalled()
 
-    // Reset mock to test WARN level
-    consoleLog.mockReset()
+    // Test WARN level
     logger.log(
-      'WARN',
+      'WARNING',
       new Request('http://localhost'),
       { status: 400 },
       { beforeTime: BigInt(0) }
     )
-    expect(consoleLog).toHaveBeenCalled()
-    expect(consoleLog).toHaveBeenCalledWith(expect.stringContaining('WARN'))
-    console.log = originalConsoleLog
+    expect(mockWarn).toHaveBeenCalled()
+  })
+
+  test('should expose Pino logger instance', () => {
+    const logger = createLogger()
+    expect(logger.pino).toBeDefined()
+    expect(typeof logger.pino.info).toBe('function')
+    expect(typeof logger.pino.error).toBe('function')
+    expect(typeof logger.pino.warn).toBe('function')
+    expect(typeof logger.pino.debug).toBe('function')
+  })
+
+  test('should create Pino logger with custom configuration', () => {
+    const options: Options = {
+      config: {
+        pino: {
+          level: 'debug',
+          messageKey: 'message',
+          errorKey: 'error'
+        }
+      }
+    }
+    const logger = createLogger(options)
+    expect(logger.pino).toBeDefined()
+    // Note: We can't easily test the internal configuration of Pino,
+    // but we can verify the logger was created successfully
   })
 })
