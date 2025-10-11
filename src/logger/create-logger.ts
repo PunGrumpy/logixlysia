@@ -59,7 +59,17 @@ function createPinoInstance(options?: Options): PinoLogger {
   }
 
   if (transport) {
-    return pino(config, pino.transport(transport))
+    if (typeof transport === 'object' && 'target' in transport) {
+      return pino(
+        config,
+        pino.transport(
+          transport as pino.TransportSingleOptions | pino.TransportMultiOptions
+        )
+      )
+    }
+    console.warn(
+      'Invalid transport configuration provided, falling back to default'
+    )
   }
 
   return pino(config)
@@ -169,8 +179,23 @@ async function log(
     data.stack = err.stack
   }
 
+  const errorKey = options?.config?.pino?.errorKey || 'err'
+  const err =
+    level === 'ERROR' && data.stack
+      ? {
+          name: 'Error',
+          message: data.message || 'Unknown error',
+          stack: data.stack
+        }
+      : undefined
+
+  const forwardedFor = request.headers.get('x-forwarded-for')
+  const clientIp =
+    options?.config?.ip && forwardedFor
+      ? forwardedFor.split(',')[0]?.trim()
+      : undefined
+
   const logObject = {
-    level,
     method: request.method,
     url: request.url,
     status: data.status,
@@ -178,11 +203,8 @@ async function log(
     context: data.context,
     metrics: data.metrics,
     duration: Number(process.hrtime.bigint() - store.beforeTime) / 1_000_000,
-    ip:
-      options?.config?.ip && request.headers.get('x-forwarded-for')
-        ? request.headers.get('x-forwarded-for')
-        : undefined,
-    stack: data.stack
+    ip: clientIp,
+    [errorKey]: err
   }
 
   emitPinoLog(
