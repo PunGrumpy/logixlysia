@@ -129,7 +129,7 @@ export interface TimestampConfig {
 }
 
 export type PinoConfig = LoggerOptions & {
-  prettyPrint?: boolean | object
+  prettyPrint?: boolean | Record<string, unknown>
 }
 
 export interface LogRotationConfig {
