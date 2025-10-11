@@ -172,7 +172,7 @@ async function log(
   }
 
   if (level === 'ERROR' && !data.stack) {
-    const err = new Error(`Error: ${data.message || 'Unknown error'}`)
+    const err = new Error(data.message || 'Unknown error')
     data.stack = err.stack
   }
 
