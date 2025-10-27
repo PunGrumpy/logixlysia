@@ -92,7 +92,7 @@
     "bunup": "^0.14.20",
     "globals": "^16.4.0",
     "husky": "^9.1.7",
-    "ultracite": "5.0.10"
+    "ultracite": "6.0.3"
   },
   "peerDependencies": {
     "typescript": "^5.2.2"
