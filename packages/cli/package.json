@@ -1,0 +1,93 @@
+{
+  "name": "logixlysia",
+  "version": "5.3.0",
+  "description": "🦊 Logixlysia is a logger for Elysia",
+  "type": "module",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "author": "PunGrumpy",
+  "publisher": "PunGrumpy",
+  "maintainers": [
+    "PunGrumpy"
+  ],
+  "contributors": [
+    {
+      "name": "n0ky4",
+      "url": "https://github.com/n0ky4"
+    }
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "license": "MIT",
+  "scripts": {
+    "build": "bunup",
+    "test": "bun test --timeout 5000",
+    "test:ci": "bun test --timeout 5000 --coverage --coverage-reporter=lcov",
+    "prepare": "husky",
+    "test:coverage": "bun test --timeout 5000 --coverage",
+    "clean": "git clean -fdx"
+  },
+  "os": [
+    "darwin",
+    "linux",
+    "win32"
+  ],
+  "badges": [
+    {
+      "name": "npm",
+      "url": "https://img.shields.io/npm/v/logixlysia.svg",
+      "description": "npm version",
+      "href": "https://www.npmjs.com/package/logixlysia"
+    },
+    {
+      "name": "npm",
+      "url": "https://img.shields.io/npm/dt/logixlysia.svg",
+      "description": "npm downloads",
+      "href": "https://www.npmjs.com/package/logixlysia"
+    },
+    {
+      "name": "GitHub issues",
+      "url": "https://img.shields.io/github/issues/PunGrumpy/logixlysia.svg",
+      "description": "GitHub issues",
+      "href": "https://github.com/PunGrumpy/logixlysia/issues"
+    }
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/PunGrumpy/logixlysia.git"
+  },
+  "bugs": {
+    "url": "https://github.com/PunGrumpy/logixlysia/issues"
+  },
+  "homepage": "https://logixlysia.vercel.app",
+  "keywords": [
+    "web",
+    "logging",
+    "logger",
+    "elysia",
+    "elysiajs",
+    "logixlysia",
+    "middleware"
+  ],
+  "dependencies": {
+    "chalk": "^5.6.2",
+    "elysia": "^1.4.10",
+    "pino": "^10.0.0",
+    "pino-pretty": "^13.1.2"
+  },
+  "devDependencies": {
+    "bun-types": "^1.2.23",
+    "bunup": "^0.14.20",
+    "globals": "^16.4.0"
+  },
+  "peerDependencies": {
+    "typescript": "^5.2.2"
+  }
+}

@@ -5,8 +5,7 @@
   "editor.formatOnPaste": true,
   "emmet.showExpandedAbbreviation": "never",
   "editor.codeActionsOnSave": {
-    "quickfix.biome": "explicit",
-    "source.organizeImports.biome": "explicit"
+    "source.fixAll.biome": "explicit"
   },
   "[typescript]": {
     "editor.defaultFormatter": "biomejs.biome"

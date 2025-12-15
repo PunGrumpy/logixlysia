@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'bun:test'
 import { Elysia } from 'elysia'
 import type { Logger as PinoLogger } from 'pino'
-import type { LogixlysiaContext } from '../../src'
-import logixlysia from '../../src'
+import type { LogixlysiaContext } from '../../packages/cli'
+import logixlysia from '../../packages/cli'
 
 describe('Route Logger', () => {
   it('should log custom messages in route handlers', async () => {

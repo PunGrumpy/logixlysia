@@ -3,10 +3,12 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "build": "next build --turbopack",
-    "dev": "next dev --turbopack",
+    "build": "next build",
+    "dev": "next dev --port 3000",
     "start": "next start",
-    "postinstall": "fumadocs-mdx"
+    "postinstall": "fumadocs-mdx",
+    "clean": "git clean -xdf .next .cache .turbo dist node_modules",
+    "typecheck": "fumadocs-mdx && next typegen && tsc --noEmit --emitDeclarationOnly false"
   },
   "dependencies": {
     "@radix-ui/react-slot": "^1.2.3",

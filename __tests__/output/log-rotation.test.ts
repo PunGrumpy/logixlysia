@@ -3,22 +3,22 @@ import { promises as fs } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
-import type { LogRotationConfig, Options } from '../../src/interfaces'
-import { logToFile } from '../../src/output/file'
+import type { LogRotationConfig, Options } from '../../packages/cli/interfaces'
+import { logToFile } from '../../packages/cli/output/file'
 import {
   compressFile,
   getRotatedFileName,
   performRotation,
   rotateFile,
   shouldRotate
-} from '../../src/output/rotation-manager'
+} from '../../packages/cli/output/rotation-manager'
 import {
   getRotatedFiles,
   parseInterval,
   parseRetention,
   parseSize,
   shouldRotateBySize
-} from '../../src/utils/rotation'
+} from '../../packages/cli/utils/rotation'
 
 const TEST_DIR = join(tmpdir(), 'logixlysia-rotation-test')
 const ROTATED_FILENAME_PATTERN = /app\.log\.\d{4}-\d{2}-\d{2}-\d{2}-\d{2}-\d{2}/
