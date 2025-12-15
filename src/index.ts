@@ -5,12 +5,16 @@ import { getStatusCode } from './helpers/status'
 import type { HttpError, Options, Server, StoreData } from './interfaces'
 import { createLogger } from './logger'
 
-export default function logixlysia(options?: Options): Elysia {
+export default function logixlysia(options?: Options) {
   const log = createLogger(options)
 
   return new Elysia({
     name: 'Logixlysia'
   })
+    .state('beforeTime', process.hrtime.bigint())
+    .state('logger', log)
+    .state('pino', log.pino)
+    .state('hasCustomLog', false)
     .onStart(ctx => {
       const showStartupMessage = options?.config?.showStartupMessage ?? true
       if (showStartupMessage) {
@@ -18,15 +22,11 @@ export default function logixlysia(options?: Options): Elysia {
       }
     })
     .onRequest(ctx => {
-      const store = {
-        ...ctx.store,
-        beforeTime: process.hrtime.bigint(),
-        logger: log,
-        pino: log.pino, // Expose Pino logger directly
-        hasCustomLog: false
-      }
-      ctx.store = store
-      log.store = store
+      ctx.store.beforeTime = process.hrtime.bigint()
+      ctx.store.logger = log
+      ctx.store.pino = log.pino // Expose Pino logger directly
+      ctx.store.hasCustomLog = false
+      log.store = ctx.store
     })
     .onAfterHandle({ as: 'global' }, ({ request, set, store }) => {
       const storeData = store as StoreData

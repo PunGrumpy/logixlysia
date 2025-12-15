@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'bun:test'
 import { Elysia } from 'elysia'
 import type { Logger as PinoLogger } from 'pino'
-import type { LogixlysiaContext } from '../../src'
 import logixlysia from '../../src'
 
 describe('Route Logger', () => {
@@ -22,7 +21,7 @@ describe('Route Logger', () => {
       logs.push(args.join(' '))
     }
 
-    app.get('/test', ({ store, request }: LogixlysiaContext) => {
+    app.get('/test', ({ store, request }) => {
       const { logger, pino } = store
       logger.info(request, 'Test message', { test: 'value' })
       // Test direct Pino access
@@ -57,7 +56,7 @@ describe('Route Logger', () => {
       logs.push(args.join(' '))
     }
 
-    app.get('/test', ({ store, request }: LogixlysiaContext) => {
+    app.get('/test', ({ store, request }) => {
       const { logger } = store
       logger.info(request, 'Custom log message')
       return { success: true }
@@ -90,7 +89,7 @@ describe('Route Logger', () => {
       logs.push(args.join(' '))
     }
 
-    app.get('/test', ({ store, request }: LogixlysiaContext) => {
+    app.get('/test', ({ store, request }) => {
       const { logger } = store
       logger.debug(request, 'Debug message')
       logger.info(request, 'Info message')
@@ -128,7 +127,7 @@ describe('Route Logger', () => {
       logs.push(args.join(' '))
     }
 
-    app.get('/test', ({ store, request }: LogixlysiaContext) => {
+    app.get('/test', ({ store, request }) => {
       const { logger } = store
       logger.info(request, 'Test message', {
         userId: 123,
@@ -161,7 +160,7 @@ describe('Route Logger', () => {
 
     let pinoLogger: PinoLogger | undefined
 
-    app.get('/test', ({ store }: LogixlysiaContext) => {
+    app.get('/test', ({ store }) => {
       const { pino } = store
       pinoLogger = pino
       return { success: true }
