@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 
-import { getStatusCode } from '../../helpers/status'
+import { getStatusCode } from '../../src/helpers/status'
 
 describe('getStatusCode', () => {
   test('should return correct status code for valid input', () => {

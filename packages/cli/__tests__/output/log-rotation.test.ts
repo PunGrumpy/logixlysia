@@ -3,15 +3,15 @@ import { promises as fs } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
-import type { LogRotationConfig, Options } from '../../interfaces'
-import { logToFile } from '../../output/file'
+import type { LogRotationConfig, Options } from '../../src/interfaces'
+import { logToFile } from '../../src/output/file'
 import {
   compressFile,
   getRotatedFileName,
   performRotation,
   rotateFile,
   shouldRotate
-} from '../../output/rotation-manager'
+} from '../../src/output/rotation-manager'
 import {
   getRotatedFiles,
   parseInterval,
