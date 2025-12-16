@@ -1,3 +1,5 @@
+'use client'
+
 import {
   IconBattery,
   IconBrandGithub,
@@ -79,22 +81,24 @@ export const Footer = () => (
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
-          <Button className="rounded-full px-6" nativeButton={false} size="lg">
-            <Link href="/docs">Read docs</Link>
+          <Button
+            className="rounded-full px-6"
+            nativeButton={false}
+            render={<Link href="/docs" />}
+            size="lg"
+          >
+            Read docs
           </Button>
           <Button
             className="rounded-full px-6"
             nativeButton={false}
+            render={
+              <Link external href="https://github.com/PunGrumpy/logixlysia" />
+            }
             size="lg"
             variant="outline"
           >
-            <Link
-              href="https://github.com/PunGrumpy/logixlysia"
-              rel="noreferrer"
-              target="_blank"
-            >
-              Open GitHub
-            </Link>
+            Open GitHub
           </Button>
         </div>
       </div>
