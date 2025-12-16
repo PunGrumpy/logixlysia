@@ -1,7 +1,17 @@
-import { DocsLayout } from 'fumadocs-ui/layouts/notebook'
-import type { ReactNode } from 'react'
-import { layout } from '@/lib/layout'
+import { DocsLayout as FumadocsDocsLayout } from 'fumadocs-ui/layouts/notebook'
+import { baseOptions } from '@/lib/layout'
+import { source } from '@/lib/source'
 
-export default function Layout({ children }: { children: ReactNode }) {
-  return <DocsLayout {...layout}>{children}</DocsLayout>
-}
+const DocsLayout = async ({ children }: LayoutProps<'/docs'>) => (
+  <FumadocsDocsLayout
+    {...baseOptions()}
+    nav={{ ...baseOptions().nav, mode: 'top' }}
+    sidebar={{ collapsible: false, className: 'bg-card! border-r' }}
+    tabMode="navbar"
+    tree={source.pageTree}
+  >
+    {children}
+  </FumadocsDocsLayout>
+)
+
+export default DocsLayout
