@@ -1,28 +1,12 @@
-import { DocsLayout } from 'fumadocs-ui/layouts/notebook'
-import type { ReactNode } from 'react'
-import { layout } from '@/lib/layout'
+import { HomeLayout as FumadocsHomeLayout } from 'fumadocs-ui/layouts/home'
+import { baseOptions } from '@/lib/layout'
 
-interface LayoutProps {
-  children: ReactNode
-}
+const HomeLayout = ({ children }: LayoutProps<'/'>) => (
+  <FumadocsHomeLayout {...baseOptions()}>
+    <div className="relative mx-auto grid w-full max-w-(--fd-layout-width) gap-24 px-4 sm:gap-32">
+      {children}
+    </div>
+  </FumadocsHomeLayout>
+)
 
-export default function Layout({ children }: LayoutProps) {
-  return (
-    <DocsLayout
-      {...layout}
-      containerProps={{
-        className: 'md:[&_[id=nd-sidebar]]:hidden max-h-screen'
-      }}
-      tabMode="sidebar"
-    >
-      <main
-        className="w-full"
-        style={{
-          paddingTop: 'var(--fd-nav-height)'
-        }}
-      >
-        {children}
-      </main>
-    </DocsLayout>
-  )
-}
+export default HomeLayout

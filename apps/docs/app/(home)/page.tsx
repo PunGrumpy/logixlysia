@@ -1,34 +1,28 @@
 import type { Metadata } from 'next'
-import Image from 'next/image'
 import { createMetadata } from '@/lib/metadata'
+import { Comparison } from './components/comparison'
+import { CallToAction } from './components/cta'
+import { Demo } from './components/demo'
+import { Footer } from './components/footer'
 import { Hero } from './components/hero'
 import { Playground } from './components/playground'
-import { HeroSnippet } from './components/snippet'
-import FoxLogixlysia from './fox-logixlysia.png'
 
-const title = 'Logixlysia | The logger for Elysia.js'
-const description =
+export const metadata: Metadata = createMetadata(
+  'The logger for Elysia.js | Logixlysia',
   'Logixlysia is a logger for Elysia.js, a web framework for Deno. It provides a simple and easy-to-use interface for logging messages in your Elysia.js framework.'
+)
 
-export const metadata: Metadata = createMetadata(title, description)
-
-export default function HomePage() {
-  return (
-    <div className="grid h-[calc(100dvh-var(--fd-nav-height))] divide-x overflow-hidden md:grid-cols-2">
-      <div className="relative flex items-end justify-start p-8 lg:p-16">
-        <Image
-          alt="Fox - Logixlysia"
-          className="-z-10 absolute inset-0 size-full object-cover opacity-30 dark:opacity-15"
-          src={FoxLogixlysia}
-        />
-        <Hero />
-      </div>
-      <div className="hidden grid-rows-2 divide-y overflow-hidden md:grid">
-        <div className="grid overflow-auto">
-          <HeroSnippet />
-        </div>
-        <Playground />
-      </div>
+const HomePage = () => (
+  <>
+    <div className="grid gap-8 pt-8 sm:pt-20 md:grid-cols-[1.5fr_2fr] md:gap-0">
+      <Hero />
+      <Demo />
     </div>
-  )
-}
+    <Playground />
+    <Comparison />
+    <CallToAction />
+    <Footer />
+  </>
+)
+
+export default HomePage

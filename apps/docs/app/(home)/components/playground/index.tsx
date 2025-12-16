@@ -1,0 +1,179 @@
+import { Image } from 'fumadocs-core/framework'
+import { cn } from '@/lib/utils'
+import Background from './background.png'
+
+const logLevel = {
+  INFO: {
+    color: 'text-muted bg-green-600'
+  },
+  WARNING: {
+    color: 'text-muted bg-yellow-600'
+  },
+  ERROR: {
+    color: 'text-muted bg-red-600'
+  }
+}
+
+const httpMethod = {
+  GET: {
+    color: 'text-green-500'
+  },
+  POST: {
+    color: 'text-yellow-500'
+  },
+  PUT: {
+    color: 'text-blue-500'
+  },
+  PATCH: {
+    color: 'text-purple-500'
+  },
+  DELETE: {
+    color: 'text-red-500'
+  },
+  HEAD: {
+    color: 'text-cyan-500'
+  },
+  OPTIONS: {
+    color: 'text-purple-500'
+  }
+}
+
+const statusCode = (status: number) => {
+  if (status >= 500) {
+    return 'text-red-500'
+  }
+  if (status >= 400) {
+    return 'text-yellow-500'
+  }
+  if (status >= 300) {
+    return 'text-cyan-500'
+  }
+  if (status >= 200) {
+    return 'text-green-500'
+  }
+  return 'text-white'
+}
+
+export const logs = [
+  {
+    icon: '🦊',
+    timestamp: '2025-04-13 15:00:19.225',
+    duration: '1ms',
+    method: 'GET',
+    pathname: '/',
+    status: 200,
+    type: 'INFO'
+  },
+  {
+    icon: '🦊',
+    timestamp: '2025-04-13 15:00:21.245',
+    duration: '509μs',
+    method: 'POST',
+    pathname: '/items',
+    status: 201,
+    type: 'INFO'
+  },
+  {
+    icon: '🦊',
+    timestamp: '2025-04-13 15:00:22.225',
+    duration: '900ns',
+    method: 'PUT',
+    pathname: '/items/123',
+    status: 200,
+    type: 'INFO'
+  },
+  {
+    icon: '🦊',
+    timestamp: '2025-04-13 15:00:23.30',
+    duration: '1ms',
+    method: 'DELETE',
+    pathname: '/items/123',
+    status: 200,
+    type: 'INFO'
+  },
+  {
+    icon: '🦊',
+    timestamp: '2025-04-13 15:00:30.225',
+    duration: '10s',
+    method: 'PATCH',
+    pathname: '/items/123',
+    status: 500,
+    type: 'ERROR'
+  },
+  {
+    icon: '🦊',
+    timestamp: '2025-04-13 15:00:31.225',
+    duration: '1ms',
+    method: 'HEAD',
+    pathname: '/items/123',
+    status: 200,
+    type: 'INFO'
+  }
+]
+
+const LOG_REPEAT_COUNT = 10
+
+const Output = () => (
+  <code className="flex animate-marquee-vertical flex-col will-change-transform">
+    <div className="flex flex-col">
+      {Array.from({ length: LOG_REPEAT_COUNT }).flatMap(() =>
+        logs.map(log => (
+          <div
+            className="mx-3 flex shrink-0 items-center gap-2 whitespace-nowrap py-0.5 sm:mx-8 md:mx-16"
+            key={Math.random().toString()}
+          >
+            <span>{log.icon}</span>
+            <span className="bg-yellow-500 px-2 text-muted">
+              {log.timestamp}
+            </span>
+            <span
+              className={cn(
+                'px-2',
+                logLevel[log.type as keyof typeof logLevel].color
+              )}
+            >
+              {log.type}
+            </span>
+            <span className="px-4 text-muted-foreground/50">
+              {log.duration}
+            </span>
+            <span
+              className={cn(
+                httpMethod[log.method as keyof typeof httpMethod].color
+              )}
+            >
+              {log.method}
+            </span>
+            <span className="text-muted-foreground">{log.pathname}</span>
+            <span className={statusCode(log.status)}>{log.status}</span>
+          </div>
+        ))
+      )}
+    </div>
+  </code>
+)
+
+export const Playground = () => (
+  <section className="relative isolate overflow-hidden rounded-xl sm:rounded-2xl md:rounded-3xl">
+    <Image
+      alt="Playground background"
+      className="absolute top-0 left-0 size-full object-cover"
+      height={1000}
+      src={Background}
+      width={1000}
+    />
+
+    <div className="size-full sm:px-16 sm:pt-16">
+      <article
+        className={cn(
+          'max-h-128 overflow-x-auto overflow-y-hidden rounded-x-xl rounded-t-xl p-8 sm:rounded-x-2xl sm:rounded-t-2xl',
+          'hide-scrollbar bg-black/80 backdrop-blur-sm'
+        )}
+      >
+        <pre className="font-mono text-sm text-white">
+          <Output />
+        </pre>
+      </article>
+    </div>
+  </section>
+)
