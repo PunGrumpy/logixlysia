@@ -27,15 +27,23 @@ const app = new Elysia({
         
 app.listen(3000)`
 
-export const HeroSnippet = () => (
+export const Demo = () => (
   <div
     className={cn(
-      '[&>figure]:rounded-none',
-      '[&>figure]:border-none',
+      '[&>figure]:font-mono',
       '[&>figure]:text-base',
-      '[&_pre]:p-6'
+      '[&_pre]:p-4'
     )}
   >
-    <DynamicCodeBlock code={code} lang="typescript" />
+    <DynamicCodeBlock
+      code={code}
+      lang="typescript"
+      options={{
+        themes: {
+          light: 'github-light',
+          dark: 'vesper'
+        }
+      }}
+    />
   </div>
 )
