@@ -36,7 +36,7 @@ export const Installer = ({ code }: InstallerProps) => {
     <InputGroup className="h-10 bg-card font-mono shadow-none">
       <InputGroupAddon>
         <InputGroupText className="font-normal text-muted-foreground">
-          $
+          🦊~
         </InputGroupText>
       </InputGroupAddon>
       <InputGroupInput readOnly value={code} />
