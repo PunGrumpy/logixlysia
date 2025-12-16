@@ -1,52 +1,27 @@
-import { Toaster } from '@/components/ui/sonner'
-import './globals.css'
-
-import { RootProvider } from 'fumadocs-ui/provider'
-import { Geist, Geist_Mono } from 'next/font/google'
+import { RootProvider } from 'fumadocs-ui/provider/next'
+import './global.css'
 import type { ReactNode } from 'react'
-import { cn } from '@/lib/utils'
+import { Toaster } from '@/components/ui/sonner'
+import { fonts } from '@/lib/fonts'
 
-const geistSans = Geist({
-  adjustFontFallback: true,
-  display: 'swap',
-  fallback: ['ui-sans-serif', 'system-ui'],
-  preload: true,
-  subsets: ['latin'],
-  variable: '--font-sans'
-})
-
-const geistMono = Geist_Mono({
-  adjustFontFallback: true,
-  display: 'swap',
-  fallback: ['ui-monospace', 'monospace'],
-  preload: true,
-  subsets: ['latin'],
-  variable: '--font-mono'
-})
-
-interface RootLayoutProps {
-  children: ReactNode
+type LayoutProps = {
+  readonly children: ReactNode
 }
 
-export default function Layout({ children }: RootLayoutProps) {
-  return (
-    <html className="scroll-smooth" lang="en" suppressHydrationWarning>
-      <body
-        className={cn(
-          'font-sans antialiased',
-          geistSans.variable,
-          geistMono.variable
-        )}
+const Layout = ({ children }: LayoutProps) => (
+  <html className={fonts} lang="en" suppressHydrationWarning>
+    <body className="flex min-h-screen flex-col">
+      <RootProvider
+        theme={{
+          defaultTheme: undefined,
+          enableSystem: true
+        }}
       >
-        <RootProvider
-          theme={{
-            defaultTheme: 'system'
-          }}
-        >
-          {children}
-          <Toaster />
-        </RootProvider>
-      </body>
-    </html>
-  )
-}
+        {children}
+      </RootProvider>
+      <Toaster />
+    </body>
+  </html>
+)
+
+export default Layout
