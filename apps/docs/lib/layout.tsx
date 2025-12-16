@@ -1,16 +1,16 @@
-import { GithubInfo } from 'fumadocs-ui/components/github-info'
-import type { DocsLayoutProps } from 'fumadocs-ui/layouts/notebook'
-import { Logo } from '@/components/logo'
-import { source } from '@/lib/source'
+import type { BaseLayoutProps } from 'fumadocs-ui/layouts/shared'
+import { Icons } from '@/components/icons'
 
-export const layout: DocsLayoutProps = {
-  tree: source.pageTree,
+export const baseOptions = (): BaseLayoutProps => ({
   nav: {
-    mode: 'top',
-    title: <Logo />,
-    transparentMode: 'always'
+    title: (
+      <span className="flex items-center gap-2">
+        <Icons.logo className="size-5" />
+        <span className="font-semibold text-lg tracking-tight">Logixlysia</span>
+      </span>
+    ),
+    url: '/'
   },
-  disableThemeSwitch: true,
   links: [
     {
       text: 'Home',
@@ -26,16 +26,10 @@ export const layout: DocsLayoutProps = {
       text: 'NPM',
       url: 'https://www.npmjs.com/package/logixlysia',
       active: 'none'
-    },
-    {
-      type: 'custom',
-      children: (
-        <GithubInfo className="lg:-mx-2" owner="PunGrumpy" repo="logixlysia" />
-      )
     }
   ],
-  tabMode: 'navbar',
-  sidebar: {
-    collapsible: false
+  githubUrl: 'https://github.com/PunGrumpy/logixlysia',
+  themeSwitch: {
+    mode: 'light-dark-system'
   }
-}
+})
