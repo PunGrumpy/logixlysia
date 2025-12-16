@@ -7,14 +7,10 @@ import {
   spyOn,
   test
 } from 'bun:test'
-import type {
-  Options,
-  RequestInfo,
-  StoreData
-} from '../../packages/cli/interfaces'
-import { HttpError } from '../../packages/cli/interfaces'
-import { createLogger } from '../../packages/cli/logger/create-logger'
-import { handleHttpError } from '../../packages/cli/logger/handle-http-error'
+import type { Options, RequestInfo, StoreData } from '../../interfaces'
+import { HttpError } from '../../interfaces'
+import { createLogger } from '../../logger/create-logger'
+import { handleHttpError } from '../../logger/handle-http-error'
 
 // Mock fs module
 mock.module('node:fs/promises', () => ({

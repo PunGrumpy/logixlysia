@@ -1,7 +1,7 @@
 import { describe, expect, mock, test } from 'bun:test'
 
-import type { Options } from '../../packages/cli/interfaces'
-import { createLogger } from '../../packages/cli/logger'
+import type { Options } from '../../interfaces'
+import { createLogger } from '../../logger'
 
 describe('createLogger', () => {
   test('should create a logger with default options', () => {

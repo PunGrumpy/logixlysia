@@ -12,8 +12,8 @@ import type {
   Options,
   RequestInfo,
   StoreData
-} from '../../packages/cli/interfaces'
-import { createLogger } from '../../packages/cli/logger/create-logger'
+} from '../../interfaces'
+import { createLogger } from '../../logger/create-logger'
 
 describe('disableInternalLogger', () => {
   let consoleSpy: ReturnType<typeof spyOn>
