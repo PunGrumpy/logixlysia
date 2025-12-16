@@ -1,5 +1,5 @@
+import './globals.css'
 import { RootProvider } from 'fumadocs-ui/provider/next'
-import './global.css'
 import type { ReactNode } from 'react'
 import { Toaster } from '@/components/ui/sonner'
 import { fonts } from '@/lib/fonts'
