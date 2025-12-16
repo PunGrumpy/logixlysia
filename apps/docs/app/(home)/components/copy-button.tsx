@@ -1,6 +1,6 @@
 'use client'
 
-import { CheckIcon, CopyIcon } from 'lucide-react'
+import { IconCheck, IconCopy } from '@tabler/icons-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -14,7 +14,7 @@ type CopyButtonProps = {
 
 export const CopyButton = ({ code, className, name }: CopyButtonProps) => {
   const [copied, setCopied] = useState(false)
-  const Icon = copied ? CheckIcon : CopyIcon
+  const Icon = copied ? IconCheck : IconCopy
 
   const handleCopy = () => {
     navigator.clipboard.writeText(code)
