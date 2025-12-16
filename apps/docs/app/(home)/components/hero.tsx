@@ -12,7 +12,7 @@ export const Hero = () => (
     </p>
     <div className="flex items-center justify-center gap-4">
       <Installer code="bun add logixlysia" />
-      <Button asChild className="px-4" size="lg" variant="link">
+      <Button className="px-4" size="lg" variant="link">
         <Link href="/docs">Read the docs</Link>
       </Button>
     </div>
