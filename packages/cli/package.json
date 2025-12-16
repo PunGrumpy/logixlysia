@@ -28,11 +28,9 @@
   "license": "MIT",
   "scripts": {
     "build": "bunup",
-    "test": "bun test --timeout 5000",
-    "test:ci": "bun test --timeout 5000 --coverage --coverage-reporter=lcov",
-    "prepare": "husky",
-    "test:coverage": "bun test --timeout 5000 --coverage",
-    "clean": "git clean -fdx"
+    "test": "bun test",
+    "test:coverage": "bun test --coverage --coverage-reporter=lcov",
+    "clean": "git clean -fdx dist node_modules"
   },
   "os": [
     "darwin",
