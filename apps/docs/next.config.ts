@@ -4,7 +4,12 @@ import type { NextConfig } from 'next'
 const withMDX = createMDX()
 
 const config: NextConfig = {
-  pageExtensions: ['js', 'jsx', 'md', 'mdx', 'ts', 'tsx']
+  reactStrictMode: true,
+
+  images: {
+    formats: ['image/avif', 'image/webp'],
+    remotePatterns: []
+  }
 }
 
 export default withMDX(config)
