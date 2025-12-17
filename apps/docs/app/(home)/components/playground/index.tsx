@@ -1,6 +1,5 @@
-import { Image } from 'fumadocs-core/framework'
 import { cn } from '@/lib/utils'
-import Background from './background.png'
+import { Background } from './background'
 
 const logLevel = {
   INFO: {
@@ -116,14 +115,20 @@ const LOG_REPEAT_COUNT = 10
 const Output = () => (
   <code className="flex animate-marquee-vertical flex-col will-change-transform">
     <div className="flex flex-col">
-      {Array.from({ length: LOG_REPEAT_COUNT }).flatMap(() =>
-        logs.map(log => (
+      {Array.from(
+        { length: LOG_REPEAT_COUNT },
+        (_, repeatIndex) => repeatIndex
+      ).flatMap(repeatIndex =>
+        logs.map((log, logIndex) => (
           <div
-            className="mx-3 flex shrink-0 items-center gap-2 whitespace-nowrap py-0.5 sm:mx-8 md:mx-16"
-            key={Math.random().toString()}
+            className="mx-3 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5 py-0.5 text-[11px] leading-4 sm:mx-8 sm:flex-nowrap sm:gap-2 sm:text-sm md:mx-16"
+            key={`${repeatIndex}-${logIndex}-${log.method}-${log.pathname}-${log.status}-${log.type}`}
           >
             <span>{log.icon}</span>
-            <span className="bg-yellow-500 px-2 text-muted">
+            <span className="bg-yellow-500 px-1.5 text-muted sm:hidden">
+              {log.timestamp.split(' ')[1] ?? log.timestamp}
+            </span>
+            <span className="hidden bg-yellow-500 px-2 text-muted sm:inline">
               {log.timestamp}
             </span>
             <span
@@ -134,18 +139,28 @@ const Output = () => (
             >
               {log.type}
             </span>
-            <span className="px-4 text-muted-foreground/50">
+            <span className="hidden px-4 text-muted-foreground/50 md:inline">
               {log.duration}
             </span>
             <span
               className={cn(
+                'font-semibold',
                 httpMethod[log.method as keyof typeof httpMethod].color
               )}
             >
               {log.method}
             </span>
-            <span className="text-muted-foreground">{log.pathname}</span>
-            <span className={statusCode(log.status)}>{log.status}</span>
+            <span className="min-w-0 flex-1 truncate text-muted-foreground sm:flex-none sm:truncate sm:break-all">
+              {log.pathname}
+            </span>
+            <span
+              className={cn(
+                'font-semibold tabular-nums',
+                statusCode(log.status)
+              )}
+            >
+              {log.status}
+            </span>
           </div>
         ))
       )}
@@ -164,7 +179,7 @@ export const Playground = () => (
           'hide-scrollbar bg-black/80 backdrop-blur-sm'
         )}
       >
-        <pre className="font-mono text-sm text-white">
+        <pre className="select-none whitespace-normal font-mono text-xs sm:text-sm">
           <Output />
         </pre>
       </article>
