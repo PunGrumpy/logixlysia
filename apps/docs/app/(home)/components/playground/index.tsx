@@ -154,14 +154,8 @@ const Output = () => (
 )
 
 export const Playground = () => (
-  <section className="relative isolate overflow-hidden rounded-xl sm:rounded-2xl md:rounded-3xl">
-    <Image
-      alt="Playground background"
-      className="absolute top-0 left-0 size-full object-cover"
-      height={1000}
-      src={Background}
-      width={1000}
-    />
+  <section className="relative flex w-full flex-col items-center justify-center overflow-hidden rounded-xl sm:rounded-2xl md:rounded-3xl">
+    <Background />
 
     <div className="size-full sm:px-16 sm:pt-16">
       <article
