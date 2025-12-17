@@ -1,5 +1,4 @@
-import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
-import defaultMdxComponents from 'fumadocs-ui/mdx'
+import { createRelativeLink } from 'fumadocs-ui/mdx'
 import {
   DocsBody,
   DocsDescription,
@@ -9,6 +8,7 @@ import {
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { getPageImage, source } from '@/lib/source'
+import { getMDXComponents } from '@/mdx-components'
 
 const Page = async (props: PageProps<'/[...slug]'>) => {
   const { slug } = await props.params
@@ -21,22 +21,17 @@ const Page = async (props: PageProps<'/[...slug]'>) => {
   const MDXContent = page.data.body
 
   return (
-    <DocsPage
-      full={page.data.full}
-      tableOfContent={{
-        style: 'clerk'
-      }}
-      toc={page.data.toc}
-    >
-      <DocsTitle>{page.data.title}</DocsTitle>
+    <DocsPage full={page.data.full} toc={page.data.toc}>
+      <DocsTitle className="font-light font-serif text-3xl md:text-4xl lg:text-5xl">
+        {page.data.title}
+      </DocsTitle>
       <DocsDescription>{page.data.description}</DocsDescription>
       <DocsBody>
         <MDXContent
-          components={{
-            ...defaultMdxComponents,
-            Tab,
-            Tabs
-          }}
+          components={getMDXComponents({
+            // this allows you to link to other pages with relative file paths
+            a: createRelativeLink(source, page)
+          })}
         />
       </DocsBody>
     </DocsPage>
