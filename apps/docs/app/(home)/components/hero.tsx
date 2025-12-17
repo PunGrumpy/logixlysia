@@ -36,7 +36,7 @@ export const Hero = () => (
     <div className="flex h-fit max-w-md flex-row items-center gap-4">
       <Installer code="bun add logixlysia" />
       <Button className="px-4" size="lg" variant="link">
-        <Link href="/docs">Read the docs</Link>
+        <Link href="/introduction">Read the docs</Link>
       </Button>
     </div>
   </section>
