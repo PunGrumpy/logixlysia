@@ -9,6 +9,15 @@ const config: NextConfig = {
   images: {
     formats: ['image/avif', 'image/webp'],
     remotePatterns: []
+  },
+
+  rewrites() {
+    return [
+      {
+        source: '/:path*.mdx',
+        destination: '/llms.mdx/:path*'
+      }
+    ]
   }
 }
 
