@@ -7,7 +7,9 @@ import {
 } from 'fumadocs-ui/page'
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
-import { getPageImage, source } from '@/lib/source'
+import { CopyMarkdown } from '@/components/copy-markdown'
+import { ViewOptions } from '@/components/page-actions'
+import { getLLMText, getPageImage, source } from '@/lib/source'
 import { getMDXComponents } from '@/mdx-components'
 
 const Page = async (props: PageProps<'/[...slug]'>) => {
@@ -19,6 +21,7 @@ const Page = async (props: PageProps<'/[...slug]'>) => {
   }
 
   const MDXContent = page.data.body
+  const markdown = await getLLMText(page)
 
   return (
     <DocsPage full={page.data.full} toc={page.data.toc}>
@@ -26,6 +29,13 @@ const Page = async (props: PageProps<'/[...slug]'>) => {
         {page.data.title}
       </DocsTitle>
       <DocsDescription>{page.data.description}</DocsDescription>
+      <div className="flex flex-row flex-wrap items-center gap-2 border-b pb-6">
+        <CopyMarkdown markdown={markdown} />
+        <ViewOptions
+          githubUrl={`https://github.com/PunGrumpy/logixlysia/blob/main/apps/docs/content/${page.path}`}
+          markdownUrl={`${page.url}.mdx`}
+        />
+      </div>
       <DocsBody>
         <MDXContent
           components={getMDXComponents({
