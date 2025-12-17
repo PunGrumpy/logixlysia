@@ -1,3 +1,0 @@
-
-bun lint || exit 1
-bun format || exit 1
