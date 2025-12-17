@@ -1,0 +1,6 @@
+{
+  "title": "Docs",
+  "description": "Documentation for Logixlysia.",
+  "pages": ["introduction", "contributing", "usage"],
+  "root": true
+}

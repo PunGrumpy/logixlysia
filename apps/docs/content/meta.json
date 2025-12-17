@@ -1,0 +1,6 @@
+{
+  "title": "Logixlysia",
+  "description": "The logger for Elysia.js",
+  "pages": ["(docs)", "features"],
+  "root": true
+}

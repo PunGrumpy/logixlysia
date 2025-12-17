@@ -6,16 +6,13 @@ import {
   DocsPage,
   DocsTitle
 } from 'fumadocs-ui/page'
+import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
-import { source } from '@/lib/source'
+import { getPageImage, source } from '@/lib/source'
 
-interface PageProps {
-  params: Promise<{ slug?: string[] }>
-}
-
-export default async function Page(props: PageProps) {
-  const params = await props.params
-  const page = source.getPage(params.slug)
+const Page = async (props: PageProps<'/[...slug]'>) => {
+  const { slug } = await props.params
+  const page = source.getPage(slug)
 
   if (!page) {
     notFound()
@@ -48,18 +45,34 @@ export default async function Page(props: PageProps) {
 
 export const generateStaticParams = () => source.generateParams()
 
-export const generateMetadata = async (props: {
-  params: Promise<{ slug?: string[] }>
-}) => {
-  const params = await props.params
-  const page = source.getPage(params.slug)
+export const generateMetadata = async (
+  props: PageProps<'/[...slug]'>
+): Promise<Metadata> => {
+  const { slug } = await props.params
+  const page = source.getPage(slug)
 
   if (!page) {
-    notFound()
+    return {}
   }
+
+  const { url } = getPageImage(page)
 
   return {
     title: `${page.data.title} | Logixlysia`,
-    description: page.data.description
+    description: page.data.description,
+    openGraph: {
+      title: `${page.data.title} | Logixlysia`,
+      description: page.data.description,
+      images: [{ url, width: 1200, height: 630 }]
+    },
+    twitter: {
+      creator: '@PunGrumpy',
+      card: 'summary_large_image',
+      images: [{ url, width: 1200, height: 630 }],
+      title: `${page.data.title} | Logixlysia`,
+      description: page.data.description
+    }
   }
 }
+
+export default Page

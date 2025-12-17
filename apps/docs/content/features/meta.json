@@ -3,7 +3,7 @@
   "title": "Features",
   "description": "Explore the powerful features of Logixlysia",
   "pages": [
-    "index",
+    "introduction",
     "startup",
     "formatting",
     "filtering",
