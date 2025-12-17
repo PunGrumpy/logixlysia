@@ -138,6 +138,9 @@
   ::file-selector-button {
     @apply border-border;
   }
+  ::selection {
+    @apply bg-foreground/10;
+  }
   * {
     @apply min-w-0;
   }
