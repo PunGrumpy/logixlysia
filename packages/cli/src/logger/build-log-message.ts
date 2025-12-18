@@ -1,13 +1,11 @@
 import chalk from 'chalk'
 
-import {
-  durationString,
-  formatTimestamp,
-  logString,
-  methodString,
-  pathString,
-  statusString
-} from '../helpers'
+import durationString from '../helpers/duration'
+import logString from '../helpers/log'
+import methodString from '../helpers/method'
+import pathString from '../helpers/path'
+import statusString from '../helpers/status'
+import { formatTimestamp } from '../helpers/timestamp'
 import type {
   LogComponents,
   LogData,
@@ -27,14 +25,23 @@ function shouldUseColors(useColors: boolean, options?: Options): boolean {
   return useColors && process.env.NO_COLOR === undefined
 }
 
-export function buildLogMessage(
-  level: LogLevel,
-  request: RequestInfo,
-  data: LogData,
-  store: StoreData,
-  options?: Options,
+export type BuildLogMessageArgs = {
+  level: LogLevel
+  request: RequestInfo
+  data: LogData
+  store: StoreData
+  options?: Options
+  useColors?: boolean
+}
+
+export function buildLogMessage({
+  level,
+  request,
+  data,
+  store,
+  options,
   useColors = true
-): string {
+}: BuildLogMessageArgs): string {
   const actuallyUseColors = shouldUseColors(useColors, options)
   const now = new Date()
   const components: LogComponents = {
@@ -48,8 +55,8 @@ export function buildLogMessage(
     duration: durationString(store.beforeTime, useColors),
     method: methodString(request.method, useColors),
     pathname: pathString(request),
-    status: statusString(data.status || 200, useColors),
-    message: data.message || '',
+    status: statusString(data.status ?? 200, useColors),
+    message: data.message ?? '',
     context: data.context
       ? (() => {
           try {
@@ -65,7 +72,7 @@ export function buildLogMessage(
         : ''
   }
 
-  const logFormat = options?.config?.customLogFormat || defaultLogFormat
+  const logFormat = options?.config?.customLogFormat ?? defaultLogFormat
 
   return logFormat.replace(/{(\w+)}/g, (_, key: string) => {
     if (key in components) {

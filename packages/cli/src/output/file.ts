@@ -57,19 +57,35 @@ async function checkAndRotate(
   }
 }
 
-export async function logToFile(
-  filePath: string,
-  level: LogLevel,
-  request: RequestInfo,
-  data: LogData,
-  store: StoreData,
+export type LogToFileArgs = {
+  filePath: string
+  level: LogLevel
+  request: RequestInfo
+  data: LogData
+  store: StoreData
   options?: Options
-): Promise<void> {
+}
+
+export async function logToFile({
+  filePath,
+  level,
+  request,
+  data,
+  store,
+  options
+}: LogToFileArgs): Promise<void> {
   await ensureDirectoryExists(filePath)
 
   // Check and perform rotation if needed
   await checkAndRotate(filePath, options)
 
-  const logMessage = `${buildLogMessage(level, request, data, store, options, false)}\n`
+  const logMessage = `${buildLogMessage({
+    level,
+    request,
+    data,
+    store,
+    options,
+    useColors: false
+  })}\n`
   await fs.appendFile(filePath, logMessage, { flag: 'a' })
 }

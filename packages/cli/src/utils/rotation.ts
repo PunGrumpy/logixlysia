@@ -1,7 +1,7 @@
 import { promises as fs } from 'node:fs'
 import { basename, dirname, join } from 'node:path'
 
-export interface ParsedRetention {
+export type ParsedRetention = {
   type: 'count' | 'time'
   value: number
 }

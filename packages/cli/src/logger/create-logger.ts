@@ -9,7 +9,8 @@ import type {
   RequestInfo,
   StoreData
 } from '../interfaces'
-import { logToFile, logToTransports } from '../output'
+import { logToTransports } from '../output/console'
+import { logToFile } from '../output/file'
 import { buildLogMessage } from './build-log-message'
 import { filterLog } from './filter'
 import { handleHttpError } from './handle-http-error'
@@ -92,13 +93,60 @@ function mapLogLevelToPino(level: LogLevel): string {
   }
 }
 
-function emitPinoLog(
-  pinoLogger: PinoLogger,
-  level: LogLevel,
-  logObject: Record<string, unknown>,
-  message: string,
+function getClientIp(
+  request: RequestInfo,
   options?: Options
-): void {
+): string | undefined {
+  if (!options?.config?.ip) {
+    return
+  }
+
+  const forwardedFor = request.headers.get('x-forwarded-for')
+  if (!forwardedFor) {
+    return
+  }
+
+  return forwardedFor.split(',')[0]?.trim()
+}
+
+function getErrorDetails(
+  level: LogLevel,
+  data: LogData
+):
+  | {
+      name: 'Error'
+      message: string
+      stack: string
+    }
+  | undefined {
+  if (level !== 'ERROR') {
+    return
+  }
+
+  const message = data.message ?? 'Unknown error'
+  const stack = data.stack ?? new Error(message).stack
+  if (!stack) {
+    return
+  }
+
+  return { name: 'Error', message, stack }
+}
+
+type EmitPinoLogArgs = {
+  pinoLogger: PinoLogger
+  level: LogLevel
+  logObject: Record<string, unknown>
+  message: string
+  options?: Options
+}
+
+function emitPinoLog({
+  pinoLogger,
+  level,
+  logObject,
+  message,
+  options
+}: EmitPinoLogArgs): void {
   const pinoLevel = mapLogLevelToPino(level)
   const logMethod = pinoLogger[pinoLevel as keyof PinoLogger] as (
     ...args: unknown[]
@@ -114,14 +162,23 @@ function emitPinoLog(
   }
 }
 
-async function handleOutputs(
-  level: LogLevel,
-  request: RequestInfo,
-  data: LogData,
-  store: StoreData,
-  options?: Options,
-  logMessage?: string
-): Promise<void> {
+type HandleOutputsArgs = {
+  level: LogLevel
+  request: RequestInfo
+  data: LogData
+  store: StoreData
+  options?: Options
+  logMessage: string
+}
+
+async function handleOutputs({
+  level,
+  request,
+  data,
+  store,
+  options,
+  logMessage
+}: HandleOutputsArgs): Promise<void> {
   const promises: Promise<void>[] = []
 
   // Handle console logging
@@ -141,149 +198,143 @@ async function handleOutputs(
     !options?.config?.disableFileLogging
   ) {
     promises.push(
-      logToFile(
-        options.config.logFilePath,
+      logToFile({
+        filePath: options.config.logFilePath,
         level,
         request,
         data,
         store,
         options
-      )
+      })
     )
   }
 
   // Handle transport logging
   if (options?.config?.transports?.length) {
-    promises.push(logToTransports(level, request, data, store, options))
+    promises.push(logToTransports({ level, request, data, store, options }))
   }
 
   await Promise.all(promises)
 }
 
-async function log(
-  pinoLogger: PinoLogger,
-  level: LogLevel,
-  request: RequestInfo,
-  data: LogData,
-  store: StoreData,
-  options?: Options
-): Promise<void> {
-  if (!filterLog(level, data.status || 200, request.method, options)) {
-    return
-  }
-
-  if (!data.metrics) {
-    data.metrics = getMetrics()
-  }
-
-  if (level === 'ERROR' && !data.stack) {
-    const err = new Error(data.message || 'Unknown error')
-    data.stack = err.stack
-  }
-
-  const errorKey = options?.config?.pino?.errorKey || 'err'
-  const err =
-    level === 'ERROR' && data.stack
-      ? {
-          name: 'Error',
-          message: data.message || 'Unknown error',
-          stack: data.stack
-        }
-      : undefined
-
-  const forwardedFor = request.headers.get('x-forwarded-for')
-  const clientIp =
-    options?.config?.ip && forwardedFor
-      ? forwardedFor.split(',')[0]?.trim()
-      : undefined
-
-  const logObject = {
-    method: request.method,
-    url: request.url,
-    status: data.status,
-    message: data.message,
-    context: data.context,
-    metrics: data.metrics,
-    duration: Number(process.hrtime.bigint() - store.beforeTime) / 1_000_000,
-    ip: clientIp,
-    [errorKey]: err
-  }
-
-  emitPinoLog(
-    pinoLogger,
-    level,
-    logObject,
-    data.message || 'Request processed',
-    options
-  )
-
-  const logMessage = buildLogMessage(level, request, data, store, options, true)
-
-  await handleOutputs(level, request, data, store, options, logMessage)
-}
-
 export function createLogger(options?: Options): Logger {
   const pinoLogger = createPinoInstance(options)
+
+  type LogInternalArgs = {
+    level: LogLevel
+    request: RequestInfo
+    data: LogData
+    store: StoreData
+  }
+
+  const logInternal = async ({
+    level,
+    request,
+    data,
+    store
+  }: LogInternalArgs): Promise<void> => {
+    if (!filterLog(level, data.status ?? 200, request.method, options)) {
+      return
+    }
+
+    if (!data.metrics) {
+      data.metrics = getMetrics()
+    }
+
+    const errorKey = options?.config?.pino?.errorKey ?? 'err'
+    const err = getErrorDetails(level, data)
+    const clientIp = getClientIp(request, options)
+
+    const logObject = {
+      method: request.method,
+      url: request.url,
+      status: data.status,
+      message: data.message,
+      context: data.context,
+      metrics: data.metrics,
+      duration: Number(process.hrtime.bigint() - store.beforeTime) / 1_000_000,
+      ip: clientIp,
+      [errorKey]: err
+    }
+
+    emitPinoLog({
+      pinoLogger,
+      level,
+      logObject,
+      message: data.message ?? 'Request processed',
+      options
+    })
+
+    const logMessage = buildLogMessage({
+      level,
+      request,
+      data,
+      store,
+      options,
+      useColors: true
+    })
+
+    await handleOutputs({
+      level,
+      request,
+      data,
+      store,
+      options,
+      logMessage
+    })
+  }
 
   const logger: Logger = {
     store: undefined,
     pino: pinoLogger, // Expose the Pino instance
     log: (level, request, data, store) =>
-      log(pinoLogger, level, request, data, store, options),
-    handleHttpError: async (request, error, store) =>
-      await handleHttpError(request, error, store, options),
+      logInternal({ level, request, data, store }),
+    handleHttpError: (request, error, store) =>
+      handleHttpError(request, error, store, options),
     customLogFormat: options?.config?.customLogFormat,
     info: (request, message, context, store) => {
-      const storeData = store ||
-        logger.store || { beforeTime: process.hrtime.bigint() }
+      const storeData = store ??
+        logger.store ?? { beforeTime: process.hrtime.bigint() }
       storeData.hasCustomLog = true
-      return log(
-        pinoLogger,
-        'INFO',
+      return logInternal({
+        level: 'INFO',
         request,
-        { message, context, status: 200 },
-        storeData,
-        options
-      )
+        data: { message, context, status: 200 },
+        store: storeData
+      })
     },
     error: (request, message, context, store) => {
-      const storeData = store ||
-        logger.store || { beforeTime: process.hrtime.bigint() }
+      const storeData = store ??
+        logger.store ?? { beforeTime: process.hrtime.bigint() }
       storeData.hasCustomLog = true
-      return log(
-        pinoLogger,
-        'ERROR',
+      return logInternal({
+        level: 'ERROR',
         request,
-        { message, context, status: 500 },
-        storeData,
-        options
-      )
+        data: { message, context, status: 500 },
+        store: storeData
+      })
     },
     warn: (request, message, context, store) => {
-      const storeData = store ||
-        logger.store || { beforeTime: process.hrtime.bigint() }
+      const storeData = store ??
+        logger.store ?? { beforeTime: process.hrtime.bigint() }
       storeData.hasCustomLog = true
-      return log(
-        pinoLogger,
-        'WARNING',
+      return logInternal({
+        level: 'WARNING',
         request,
-        { message, context, status: 200 },
-        storeData,
-        options
-      )
+        data: { message, context, status: 200 },
+        store: storeData
+      })
     },
     debug: (request, message, context, store) => {
-      const storeData = store ||
-        logger.store || { beforeTime: process.hrtime.bigint() }
+      const storeData = store ??
+        logger.store ?? { beforeTime: process.hrtime.bigint() }
       storeData.hasCustomLog = true
-      return log(
-        pinoLogger,
-        'DEBUG',
+      return logInternal({
+        level: 'DEBUG',
         request,
-        { message, context, status: 200 },
-        storeData,
-        options
-      )
+        data: { message, context, status: 200 },
+        store: storeData
+      })
     }
   }
   return logger
