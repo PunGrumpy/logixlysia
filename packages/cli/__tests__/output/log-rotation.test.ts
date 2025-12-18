@@ -18,7 +18,7 @@ import {
   parseRetention,
   parseSize,
   shouldRotateBySize
-} from '../../utils/rotation'
+} from '../../src/utils/rotation'
 
 const TEST_DIR = join(tmpdir(), 'logixlysia-rotation-test')
 const ROTATED_FILENAME_PATTERN = /app\.log\.\d{4}-\d{2}-\d{2}-\d{2}-\d{2}-\d{2}/
@@ -363,7 +363,6 @@ describe('Log Rotation File Operations', () => {
       // Create multiple rotated files sequentially to ensure different modification times
       const createFiles = async () => {
         for (let i = 0; i < 5; i++) {
-          // biome-ignore lint: Sequential execution needed for different modification times
           await fs.writeFile(
             `${filePath}.2025-10-${String(10 - i).padStart(2, '0')}-12-00-00`,
             `content${i}`
@@ -509,7 +508,6 @@ describe('Log Rotation Integration', () => {
     // Pre-create some old rotated files sequentially to ensure different modification times
     const createOldFiles = async () => {
       for (let i = 0; i < 5; i++) {
-        // biome-ignore lint: Sequential execution needed for different modification times
         await fs.writeFile(
           `${filePath}.2025-10-0${i + 1}-12-00-00`,
           `old content ${i}`
