@@ -1,0 +1,16 @@
+{
+  "name": "example",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "bun run --port 3001 src/index.ts"
+  },
+  "dependencies": {
+    "logixlysia": "*",
+    "elysia": "^1.4.10"
+  },
+  "devDependencies": {
+    "bun-types": "^1.2.23",
+    "typescript": "^5.9.3"
+  }
+}
