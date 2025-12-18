@@ -10,6 +10,6 @@
     }
   },
   "files": {
-    "includes": ["**/*", "!apps/website/components/ui", "!__tests__"]
+    "includes": ["**/*", "!apps/docs/components/ui", "!__tests__"]
   }
 }
