@@ -3,29 +3,13 @@
   "version": "5.3.0",
   "description": "🦊 Logixlysia is a logger for Elysia",
   "type": "module",
-  "main": "dist/index.js",
-  "module": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "bin": {
+    "logixlysia": "dist/index.js"
+  },
   "files": [
     "dist",
-    "README.md",
-    "LICENSE"
+    "README.md"
   ],
-  "author": "PunGrumpy",
-  "publisher": "PunGrumpy",
-  "maintainers": [
-    "PunGrumpy"
-  ],
-  "contributors": [
-    {
-      "name": "n0ky4",
-      "url": "https://github.com/n0ky4"
-    }
-  ],
-  "publishConfig": {
-    "access": "public"
-  },
-  "license": "MIT",
   "scripts": {
     "dev": "bunup --watch",
     "build": "bunup",
@@ -33,48 +17,25 @@
     "test:coverage": "bun test --coverage --coverage-reporter=lcov",
     "clean": "git clean -fdx dist node_modules"
   },
-  "os": [
-    "darwin",
-    "linux",
-    "win32"
-  ],
-  "badges": [
-    {
-      "name": "npm",
-      "url": "https://img.shields.io/npm/v/logixlysia.svg",
-      "description": "npm version",
-      "href": "https://www.npmjs.com/package/logixlysia"
-    },
-    {
-      "name": "npm",
-      "url": "https://img.shields.io/npm/dt/logixlysia.svg",
-      "description": "npm downloads",
-      "href": "https://www.npmjs.com/package/logixlysia"
-    },
-    {
-      "name": "GitHub issues",
-      "url": "https://img.shields.io/github/issues/PunGrumpy/logixlysia.svg",
-      "description": "GitHub issues",
-      "href": "https://github.com/PunGrumpy/logixlysia/issues"
-    }
-  ],
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/PunGrumpy/logixlysia.git"
-  },
+  "author": "Noppakorn Kaewsalabnil <hello@pungrumpy.com>",
   "bugs": {
     "url": "https://github.com/PunGrumpy/logixlysia/issues"
   },
   "homepage": "https://logixlysia.vercel.app",
   "keywords": [
-    "web",
-    "logging",
-    "logger",
-    "elysia",
-    "elysiajs",
     "logixlysia",
-    "middleware"
+    "elysiajs",
+    "logger"
   ],
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/PunGrumpy/logixlysia.git"
+  },
   "dependencies": {
     "chalk": "^5.6.2",
     "elysia": "^1.4.10",
@@ -82,7 +43,7 @@
     "pino-pretty": "^13.1.2"
   },
   "devDependencies": {
-    "bun-types": "^1.2.23",
+    "@types/bun": "^1.2.23",
     "bunup": "^0.14.20",
     "globals": "^16.4.0"
   },
