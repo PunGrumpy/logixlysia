@@ -15,13 +15,13 @@ export type LogToTransportsArgs = {
   options?: Options
 }
 
-export async function logToTransports({
+export const logToTransports = async ({
   level,
   request,
   data,
   store,
   options
-}: LogToTransportsArgs): Promise<void> {
+}: LogToTransportsArgs): Promise<void> => {
   if (!options?.config?.transports || options.config.transports.length === 0) {
     return
   }

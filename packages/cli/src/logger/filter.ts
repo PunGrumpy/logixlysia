@@ -5,12 +5,12 @@ const checkFilter = (filterValue: unknown, value: unknown) =>
     ? filterValue.includes(value)
     : filterValue === value
 
-export function filterLog(
+export const filterLog = (
   logLevel: LogLevel,
   status: number,
   method: string,
   options?: Options
-): boolean {
+): boolean => {
   const filter = options?.config?.logFilter
   if (!filter) {
     return true

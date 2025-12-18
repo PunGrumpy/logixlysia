@@ -3,12 +3,12 @@ import { logToTransports } from '../output/console'
 import { logToFile } from '../output/file'
 import { buildLogMessage } from './build-log-message'
 
-export async function handleHttpError(
+export const handleHttpError = async (
   request: RequestInfo,
   error: HttpError,
   store: StoreData,
   options?: Options
-): Promise<void> {
+): Promise<void> => {
   const statusCode = error.status ?? 500
   const logData = {
     status: statusCode,

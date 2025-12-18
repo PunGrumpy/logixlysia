@@ -18,7 +18,7 @@ import type {
 const defaultLogFormat =
   '🦊 {now} {level} {duration} {method} {pathname} {status} {message} {context} {ip}'
 
-function shouldUseColors(useColors: boolean, options?: Options): boolean {
+const shouldUseColors = (useColors: boolean, options?: Options): boolean => {
   if (options?.config?.useColors !== undefined) {
     return options.config.useColors && process.env.NO_COLOR === undefined
   }
@@ -34,14 +34,14 @@ export type BuildLogMessageArgs = {
   useColors?: boolean
 }
 
-export function buildLogMessage({
+export const buildLogMessage = ({
   level,
   request,
   data,
   store,
   options,
   useColors = true
-}: BuildLogMessageArgs): string {
+}: BuildLogMessageArgs): string => {
   const actuallyUseColors = shouldUseColors(useColors, options)
   const now = new Date()
   const components: LogComponents = {

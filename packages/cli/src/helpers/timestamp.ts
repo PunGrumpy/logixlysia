@@ -5,7 +5,7 @@ const SYS_TIME = 'SYS:STANDARD'
 
 const pad = (n: number): string => n.toString().padStart(2, '0')
 
-function formatSystemTime(date: Date): string {
+const formatSystemTime = (date: Date): string => {
   const year = date.getFullYear()
   const month = pad(date.getMonth() + 1)
   const day = pad(date.getDate())
@@ -17,8 +17,8 @@ function formatSystemTime(date: Date): string {
   return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}.${ms}`
 }
 
-function formatCustomTime(date: Date, format: string): string {
-  const tokens: { [key: string]: string | number } = {
+const formatCustomTime = (date: Date, format: string): string => {
+  const tokens: Record<string, string | number> = {
     yyyy: date.getFullYear(),
     yy: date.getFullYear().toString().slice(-2),
     mm: pad(date.getMonth() + 1),
@@ -35,7 +35,10 @@ function formatCustomTime(date: Date, format: string): string {
   )
 }
 
-export function formatTimestamp(date: Date, config?: TimestampConfig): string {
+export const formatTimestamp = (
+  date: Date,
+  config?: TimestampConfig
+): string => {
   if (!config?.translateTime) {
     return date.toISOString()
   }

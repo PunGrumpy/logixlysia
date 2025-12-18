@@ -15,7 +15,7 @@ const RETENTION_PATTERN = /^(\d+)\s*d$/
  * Parse size string to bytes
  * Supports: '10m', '1g', '100k', or raw number
  */
-export function parseSize(size: string | number): number {
+export const parseSize = (size: string | number): number => {
   if (typeof size === 'number') {
     return size
   }
@@ -41,7 +41,7 @@ export function parseSize(size: string | number): number {
  * Parse interval string to milliseconds
  * Supports: '1h', '1d', '1w'
  */
-export function parseInterval(interval: string): number {
+export const parseInterval = (interval: string): number => {
   const units: Record<string, number> = {
     h: 60 * 60 * 1000, // hour
     d: 24 * 60 * 60 * 1000, // day
@@ -71,7 +71,7 @@ export function parseInterval(interval: string): number {
  * Parse retention string or number
  * Returns object with type (count or time) and value
  */
-export function parseRetention(retention: string | number): ParsedRetention {
+export const parseRetention = (retention: string | number): ParsedRetention => {
   if (typeof retention === 'number') {
     return { type: 'count', value: retention }
   }
@@ -89,10 +89,10 @@ export function parseRetention(retention: string | number): ParsedRetention {
 /**
  * Check if file should be rotated based on size
  */
-export async function shouldRotateBySize(
+export const shouldRotateBySize = async (
   filePath: string,
   maxSize: number
-): Promise<boolean> {
+): Promise<boolean> => {
   try {
     const stats = await fs.stat(filePath)
     return stats.size >= maxSize
@@ -106,7 +106,7 @@ export async function shouldRotateBySize(
  * Get the last rotation time for a file
  * Uses file modification time as a proxy
  */
-async function getLastRotationTime(filePath: string): Promise<number> {
+const getLastRotationTime = async (filePath: string): Promise<number> => {
   try {
     const stats = await fs.stat(filePath)
     return stats.mtime.getTime()
@@ -122,10 +122,10 @@ const rotationTimeCache = new Map<string, number>()
 /**
  * Check if file should be rotated based on time interval
  */
-export async function shouldRotateByTime(
+export const shouldRotateByTime = async (
   filePath: string,
   interval: number
-): Promise<boolean> {
+): Promise<boolean> => {
   const now = Date.now()
 
   // Check cache first
@@ -144,14 +144,14 @@ export async function shouldRotateByTime(
 /**
  * Update the last rotation time in cache
  */
-export function updateRotationTime(filePath: string): void {
+export const updateRotationTime = (filePath: string): void => {
   rotationTimeCache.set(filePath, Date.now())
 }
 
 /**
  * Get rotated files for a given log file
  */
-export async function getRotatedFiles(filePath: string): Promise<string[]> {
+export const getRotatedFiles = async (filePath: string): Promise<string[]> => {
   const dir = dirname(filePath)
   const baseName = basename(filePath)
 

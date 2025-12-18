@@ -15,7 +15,10 @@ import {
  * Generate a rotated file name with timestamp
  * Example: app.log -> app.log.2025-10-10-14-30-45
  */
-export function getRotatedFileName(filePath: string, timestamp: Date): string {
+export const getRotatedFileName = (
+  filePath: string,
+  timestamp: Date
+): string => {
   const year = timestamp.getFullYear()
   const month = String(timestamp.getMonth() + 1).padStart(2, '0')
   const day = String(timestamp.getDate()).padStart(2, '0')
@@ -29,7 +32,7 @@ export function getRotatedFileName(filePath: string, timestamp: Date): string {
 /**
  * Rotate a log file by renaming it with a timestamp
  */
-export async function rotateFile(filePath: string): Promise<string> {
+export const rotateFile = async (filePath: string): Promise<string> => {
   try {
     // Check if file exists and has content
     const stats = await fs.stat(filePath)
@@ -55,7 +58,7 @@ export async function rotateFile(filePath: string): Promise<string> {
 /**
  * Compress a file using gzip
  */
-export async function compressFile(filePath: string): Promise<void> {
+export const compressFile = async (filePath: string): Promise<void> => {
   try {
     const compressedPath = `${filePath}.gz`
     const source = createReadStream(filePath)
@@ -74,10 +77,10 @@ export async function compressFile(filePath: string): Promise<void> {
 /**
  * Clean old rotated files based on retention policy
  */
-export async function cleanOldFiles(
+export const cleanOldFiles = async (
   filePath: string,
   config: LogRotationConfig
-): Promise<void> {
+): Promise<void> => {
   if (!config.maxFiles) {
     return
   }
@@ -118,10 +121,10 @@ export async function cleanOldFiles(
 /**
  * Perform complete rotation: rotate, compress (if enabled), and clean old files
  */
-export async function performRotation(
+export const performRotation = async (
   filePath: string,
   config: LogRotationConfig
-): Promise<void> {
+): Promise<void> => {
   try {
     // Rotate the file
     const rotatedPath = await rotateFile(filePath)
@@ -145,10 +148,10 @@ export async function performRotation(
 /**
  * Check if rotation is needed based on configuration
  */
-export async function shouldRotate(
+export const shouldRotate = async (
   filePath: string,
   config: LogRotationConfig
-): Promise<boolean> {
+): Promise<boolean> => {
   try {
     // Check file existence
     await fs.access(filePath)

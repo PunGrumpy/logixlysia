@@ -7,10 +7,7 @@ const timeUnits = [
   { unit: 'ns', threshold: 1, decimalPlaces: 0 }
 ]
 
-export default function durationString(
-  beforeTime: bigint,
-  useColors: boolean
-): string {
+const durationString = (beforeTime: bigint, useColors: boolean): string => {
   const nanoseconds = Number(process.hrtime.bigint() - beforeTime)
 
   for (const { unit, threshold, decimalPlaces } of timeUnits) {
@@ -25,3 +22,5 @@ export default function durationString(
     ? chalk.gray('0ns'.padStart(8).padEnd(16))
     : '0ns'.padStart(8).padEnd(16)
 }
+
+export default durationString

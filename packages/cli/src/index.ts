@@ -19,7 +19,7 @@ import { createLogger as createLoggerImpl } from './logger/create-logger'
 import { handleHttpError as handleHttpErrorImpl } from './logger/handle-http-error'
 import { logToTransports as logToTransportsImpl } from './output/console'
 
-export default function logixlysia(options?: OptionsType): Elysia {
+const logixlysia = (options?: OptionsType): Elysia => {
   const log = createLoggerImpl(options)
 
   return new Elysia({
@@ -67,6 +67,8 @@ export default function logixlysia(options?: OptionsType): Elysia {
       )
     })
 }
+
+export default logixlysia
 
 export const createLogger = createLoggerImpl
 export const handleHttpError = handleHttpErrorImpl

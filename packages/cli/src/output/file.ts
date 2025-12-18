@@ -14,7 +14,7 @@ import { performRotation, shouldRotate } from './rotation-manager'
 
 const dirCache = new Set<string>()
 
-async function ensureDirectoryExists(filePath: string): Promise<void> {
+const ensureDirectoryExists = async (filePath: string): Promise<void> => {
   const dir = dirname(filePath)
   if (!dirCache.has(dir)) {
     await fs.mkdir(dir, { recursive: true })
@@ -25,10 +25,10 @@ async function ensureDirectoryExists(filePath: string): Promise<void> {
 /**
  * Check if rotation is needed and perform it
  */
-async function checkAndRotate(
+const checkAndRotate = async (
   filePath: string,
   options?: Options
-): Promise<void> {
+): Promise<void> => {
   const rotationConfig = options?.config?.logRotation
   if (!rotationConfig) {
     return
@@ -66,14 +66,14 @@ export type LogToFileArgs = {
   options?: Options
 }
 
-export async function logToFile({
+export const logToFile = async ({
   filePath,
   level,
   request,
   data,
   store,
   options
-}: LogToFileArgs): Promise<void> {
+}: LogToFileArgs): Promise<void> => {
   await ensureDirectoryExists(filePath)
 
   // Check and perform rotation if needed

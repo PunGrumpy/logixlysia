@@ -1,17 +1,14 @@
 import chalk from 'chalk'
 import { StatusMap } from 'elysia'
 
-export function getStatusCode(status: string | number): number {
+export const getStatusCode = (status: string | number): number => {
   if (typeof status === 'number') {
     return status
   }
   return (StatusMap as Record<string, number>)[status] || 500
 }
 
-export default function statusString(
-  status: number,
-  useColors: boolean
-): string {
+const statusString = (status: number, useColors: boolean): string => {
   const statusStr = status.toString()
   if (!useColors) {
     return statusStr
@@ -31,3 +28,5 @@ export default function statusString(
   }
   return chalk.white(statusStr)
 }
+
+export default statusString

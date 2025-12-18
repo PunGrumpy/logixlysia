@@ -15,7 +15,7 @@ import { buildLogMessage } from './build-log-message'
 import { filterLog } from './filter'
 import { handleHttpError } from './handle-http-error'
 
-function getMetrics(): LogData['metrics'] {
+const getMetrics = (): LogData['metrics'] => {
   const memoryUsage = process.memoryUsage().heapUsed / 1024 / 1024 // MB
   const cpuUsage = process.cpuUsage()
 
@@ -25,18 +25,17 @@ function getMetrics(): LogData['metrics'] {
   }
 }
 
-function buildPinoConfig(pinoConfig: PinoConfig) {
-  return {
+const buildPinoConfig = (pinoConfig: PinoConfig) =>
+  ({
     level: pinoConfig.level || 'info',
     timestamp: pinoConfig.timestamp ?? true,
     messageKey: pinoConfig.messageKey || 'msg',
     errorKey: pinoConfig.errorKey || 'err',
     base: pinoConfig.base || { pid: process.pid }
-  } as const
-}
+  }) as const
 
-function createPrettyTransport(prettyPrint: boolean | object) {
-  return pino.transport({
+const createPrettyTransport = (prettyPrint: boolean | object) =>
+  pino.transport({
     target: 'pino-pretty',
     options: {
       colorize: true,
@@ -45,9 +44,8 @@ function createPrettyTransport(prettyPrint: boolean | object) {
       ...(typeof prettyPrint === 'object' ? prettyPrint : {})
     }
   })
-}
 
-function createPinoInstance(options?: Options): PinoLogger {
+const createPinoInstance = (options?: Options): PinoLogger => {
   const pinoConfig = options?.config?.pino || {}
   const { prettyPrint, transport, ...rest } = pinoConfig
   const config = {
@@ -76,7 +74,7 @@ function createPinoInstance(options?: Options): PinoLogger {
   return pino(config)
 }
 
-function mapLogLevelToPino(level: LogLevel): string {
+const mapLogLevelToPino = (level: LogLevel): string => {
   switch (level.toUpperCase()) {
     case 'DEBUG':
       return 'debug'
@@ -93,10 +91,10 @@ function mapLogLevelToPino(level: LogLevel): string {
   }
 }
 
-function getClientIp(
+const getClientIp = (
   request: RequestInfo,
   options?: Options
-): string | undefined {
+): string | undefined => {
   if (!options?.config?.ip) {
     return
   }
@@ -109,7 +107,7 @@ function getClientIp(
   return forwardedFor.split(',')[0]?.trim()
 }
 
-function getErrorDetails(
+const getErrorDetails = (
   level: LogLevel,
   data: LogData
 ):
@@ -118,7 +116,7 @@ function getErrorDetails(
       message: string
       stack: string
     }
-  | undefined {
+  | undefined => {
   if (level !== 'ERROR') {
     return
   }
@@ -140,13 +138,13 @@ type EmitPinoLogArgs = {
   options?: Options
 }
 
-function emitPinoLog({
+const emitPinoLog = ({
   pinoLogger,
   level,
   logObject,
   message,
   options
-}: EmitPinoLogArgs): void {
+}: EmitPinoLogArgs): void => {
   const pinoLevel = mapLogLevelToPino(level)
   const logMethod = pinoLogger[pinoLevel as keyof PinoLogger] as (
     ...args: unknown[]
@@ -171,14 +169,14 @@ type HandleOutputsArgs = {
   logMessage: string
 }
 
-async function handleOutputs({
+const handleOutputs = async ({
   level,
   request,
   data,
   store,
   options,
   logMessage
-}: HandleOutputsArgs): Promise<void> {
+}: HandleOutputsArgs): Promise<void> => {
   const promises: Promise<void>[] = []
 
   // Handle console logging
@@ -217,7 +215,7 @@ async function handleOutputs({
   await Promise.all(promises)
 }
 
-export function createLogger(options?: Options): Logger {
+export const createLogger = (options?: Options): Logger => {
   const pinoLogger = createPinoInstance(options)
 
   type LogInternalArgs = {
