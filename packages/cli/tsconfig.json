@@ -1,7 +1,6 @@
 {
   "$schema": "https://json.schemastore.org/tsconfig",
   "display": "Default",
-  "include": ["src"],
   "exclude": ["__tests__"],
   "compilerOptions": {
     "esModuleInterop": true,
