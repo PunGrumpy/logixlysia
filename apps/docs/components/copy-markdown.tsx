@@ -1,7 +1,7 @@
 'use client'
 
+import { IconCheck, IconCopy } from '@tabler/icons-react'
 import { useCopyButton } from 'fumadocs-ui/utils/use-copy-button'
-import { CheckIcon, CopyIcon } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from './ui/button'
 
@@ -24,7 +24,7 @@ export const CopyMarkdown = ({ markdown }: CopyMarkdownProps) => {
     }
   })
 
-  const Icon = checked ? CheckIcon : CopyIcon
+  const Icon = checked ? IconCheck : IconCopy
 
   return (
     <Button
