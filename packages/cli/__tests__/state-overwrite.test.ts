@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test'
 import { Elysia } from 'elysia'
-import logixlysia from '../index'
+import logixlysia from '../src'
 
 describe('Elysia with state', () => {
   it('Should return state with logixlysia', () => {

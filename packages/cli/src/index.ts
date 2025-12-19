@@ -1,12 +1,26 @@
 import { Elysia } from 'elysia'
 
-import { startServer } from './extensions'
+import startServer from './extensions/start-server'
 import { getStatusCode } from './helpers/status'
-import type { HttpError, Options, Server, StoreData } from './interfaces'
-import { createLogger } from './logger'
+import type {
+  HttpError as HttpErrorType,
+  LogData as LogDataType,
+  Logger as LoggerType,
+  LogixlysiaContext as LogixlysiaContextType,
+  LogLevel as LogLevelType,
+  LogRotationConfig as LogRotationConfigType,
+  Options as OptionsType,
+  RequestInfo as RequestInfoType,
+  Server as ServerType,
+  StoreData as StoreDataType,
+  Transport as TransportType
+} from './interfaces'
+import { createLogger as createLoggerImpl } from './logger/create-logger'
+import { handleHttpError as handleHttpErrorImpl } from './logger/handle-http-error'
+import { logToTransports as logToTransportsImpl } from './output/console'
 
-export default function logixlysia(options?: Options): Elysia {
-  const log = createLogger(options)
+const logixlysia = (options?: OptionsType): Elysia => {
+  const log = createLoggerImpl(options)
 
   return new Elysia({
     name: 'Logixlysia'
@@ -14,7 +28,7 @@ export default function logixlysia(options?: Options): Elysia {
     .onStart(ctx => {
       const showStartupMessage = options?.config?.showStartupMessage ?? true
       if (showStartupMessage) {
-        startServer(ctx.server as Server, options)
+        startServer(ctx.server as ServerType, options)
       }
     })
     .onRequest(ctx => {
@@ -29,42 +43,44 @@ export default function logixlysia(options?: Options): Elysia {
       log.store = store
     })
     .onAfterHandle({ as: 'global' }, ({ request, set, store }) => {
-      const storeData = store as StoreData
+      const storeData = store as StoreDataType
 
       if (!storeData.hasCustomLog) {
-        const status = getStatusCode(set.status || 200)
+        const status = getStatusCode(set.status ?? 200)
         log.log(
           'INFO',
           request,
           {
             status,
-            message: String(set.headers?.['x-message'] || '')
+            message: String(set.headers?.['x-message'] ?? '')
           },
           storeData
         )
       }
     })
     .onError({ as: 'global' }, async ({ request, error, set, store }) => {
-      const status = getStatusCode(set.status || 500)
+      const status = getStatusCode(set.status ?? 500)
       await log.handleHttpError(
         request,
-        { ...error, status } as HttpError,
-        store as StoreData
+        { ...error, status } as HttpErrorType,
+        store as StoreDataType
       )
     })
 }
 
-export type {
-  HttpError,
-  LogData,
-  Logger,
-  LogixlysiaContext,
-  LogLevel,
-  LogRotationConfig,
-  Options,
-  RequestInfo,
-  StoreData,
-  Transport
-} from './interfaces'
-export { createLogger, handleHttpError } from './logger'
-export { logToTransports } from './output'
+export default logixlysia
+
+export const createLogger = createLoggerImpl
+export const handleHttpError = handleHttpErrorImpl
+export const logToTransports = logToTransportsImpl
+
+export type HttpError = HttpErrorType
+export type LogData = LogDataType
+export type Logger = LoggerType
+export type LogixlysiaContext = LogixlysiaContextType
+export type LogLevel = LogLevelType
+export type LogRotationConfig = LogRotationConfigType
+export type Options = OptionsType
+export type RequestInfo = RequestInfoType
+export type StoreData = StoreDataType
+export type Transport = TransportType

@@ -1,24 +1,24 @@
 import type { LoggerOptions, Logger as PinoLogger } from 'pino'
 
-export interface RequestInfo {
+export type RequestInfo = {
   headers: { get: (key: string) => string | null }
   method: string
   url: string
 }
 
-export interface Server {
+export type Server = {
   hostname?: string
   port?: number
   protocol?: string
 }
 
-export interface ColorMap {
+export type ColorMap = {
   [key: string]: (str: string) => string
 }
 
 export type LogLevel = 'DEBUG' | 'INFO' | 'WARNING' | 'ERROR' | string
 
-export interface LogData {
+export type LogData = {
   status?: number
   message?: string
   context?: Record<string, string | number | boolean | null>
@@ -30,7 +30,7 @@ export interface LogData {
   }
 }
 
-export interface Logger {
+export type Logger = {
   store?: StoreData
   pino: PinoLogger // Expose the underlying Pino logger instance
   log(
@@ -71,7 +71,7 @@ export interface Logger {
   ): void
 }
 
-export interface LogComponents {
+export type LogComponents = {
   now: string
   epoch: string
   level: string
@@ -84,14 +84,14 @@ export interface LogComponents {
   ip: string
 }
 
-export interface StoreData {
+export type StoreData = {
   beforeTime: bigint
   logger?: Logger
   pino?: PinoLogger // Direct access to Pino logger
   hasCustomLog?: boolean // Used to skip automatic logging if there's a custom log
 }
 
-export interface LogixlysiaContext {
+export type LogixlysiaContext = {
   store: {
     logger: Logger
     pino: PinoLogger // Direct access to Pino logger
@@ -120,11 +120,11 @@ export type TransportFunction = (
   }
 ) => Promise<void> | void
 
-export interface Transport {
+export type Transport = {
   log: TransportFunction
 }
 
-export interface TimestampConfig {
+export type TimestampConfig = {
   translateTime?: boolean | string
 }
 
@@ -132,7 +132,7 @@ export type PinoConfig = LoggerOptions & {
   prettyPrint?: boolean | Record<string, unknown>
 }
 
-export interface LogRotationConfig {
+export type LogRotationConfig = {
   maxSize?: string | number // '10m', '1g', or bytes
   maxFiles?: string | number // '7d', '30d', or count
   interval?: string // '1d', '1h', '1w'
@@ -140,7 +140,7 @@ export interface LogRotationConfig {
   compression?: 'gzip' // Compression type (optional, defaults to 'gzip')
 }
 
-export interface Options {
+export type Options = {
   config?: {
     customLogFormat?: string
     logFilePath?: string

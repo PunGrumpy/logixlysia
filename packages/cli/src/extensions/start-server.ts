@@ -6,7 +6,7 @@ const createBoxText = (text: string, width: number): string => {
   return `${padding}${text}${padding}`.padEnd(width)
 }
 
-export default function startServer(config: Server, options?: Options): void {
+const startServer = (config: Server, options?: Options): void => {
   const hostname = config?.hostname ?? 'localhost'
   const port = config?.port ?? 3000
   const protocol = config?.protocol ?? 'http'
@@ -32,3 +32,5 @@ export default function startServer(config: Server, options?: Options): void {
     console.log(`🦊 Elysia is running at ${protocol}://${hostname}:${port}`)
   }
 }
+
+export default startServer

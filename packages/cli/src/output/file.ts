@@ -14,7 +14,7 @@ import { performRotation, shouldRotate } from './rotation-manager'
 
 const dirCache = new Set<string>()
 
-async function ensureDirectoryExists(filePath: string): Promise<void> {
+const ensureDirectoryExists = async (filePath: string): Promise<void> => {
   const dir = dirname(filePath)
   if (!dirCache.has(dir)) {
     await fs.mkdir(dir, { recursive: true })
@@ -25,10 +25,10 @@ async function ensureDirectoryExists(filePath: string): Promise<void> {
 /**
  * Check if rotation is needed and perform it
  */
-async function checkAndRotate(
+const checkAndRotate = async (
   filePath: string,
   options?: Options
-): Promise<void> {
+): Promise<void> => {
   const rotationConfig = options?.config?.logRotation
   if (!rotationConfig) {
     return
@@ -57,19 +57,35 @@ async function checkAndRotate(
   }
 }
 
-export async function logToFile(
-  filePath: string,
-  level: LogLevel,
-  request: RequestInfo,
-  data: LogData,
-  store: StoreData,
+export type LogToFileArgs = {
+  filePath: string
+  level: LogLevel
+  request: RequestInfo
+  data: LogData
+  store: StoreData
   options?: Options
-): Promise<void> {
+}
+
+export const logToFile = async ({
+  filePath,
+  level,
+  request,
+  data,
+  store,
+  options
+}: LogToFileArgs): Promise<void> => {
   await ensureDirectoryExists(filePath)
 
   // Check and perform rotation if needed
   await checkAndRotate(filePath, options)
 
-  const logMessage = `${buildLogMessage(level, request, data, store, options, false)}\n`
+  const logMessage = `${buildLogMessage({
+    level,
+    request,
+    data,
+    store,
+    options,
+    useColors: false
+  })}\n`
   await fs.appendFile(filePath, logMessage, { flag: 'a' })
 }
