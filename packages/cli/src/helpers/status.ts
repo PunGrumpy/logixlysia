@@ -1,32 +1,17 @@
-import chalk from 'chalk'
-import { StatusMap } from 'elysia'
+const STATUS_BY_NAME = new Map<string, number>([
+  ['OK', 200],
+  ['Not Found', 404]
+])
 
-export const getStatusCode = (status: string | number): number => {
-  if (typeof status === 'number') {
-    return status
+export const getStatusCode = (value: unknown): number => {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value
   }
-  return (StatusMap as Record<string, number>)[status] || 500
+
+  if (typeof value === 'string') {
+    const known = STATUS_BY_NAME.get(value)
+    return known ?? 500
+  }
+
+  return 500
 }
-
-const statusString = (status: number, useColors: boolean): string => {
-  const statusStr = status.toString()
-  if (!useColors) {
-    return statusStr
-  }
-
-  if (status >= 500) {
-    return chalk.red(statusStr)
-  }
-  if (status >= 400) {
-    return chalk.yellow(statusStr)
-  }
-  if (status >= 300) {
-    return chalk.cyan(statusStr)
-  }
-  if (status >= 200) {
-    return chalk.green(statusStr)
-  }
-  return chalk.white(statusStr)
-}
-
-export default statusString

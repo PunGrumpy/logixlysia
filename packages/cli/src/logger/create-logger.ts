@@ -1,339 +1,246 @@
-import type { Logger as PinoLogger } from 'pino'
-import pino from 'pino'
+import chalk from 'chalk'
+import { getStatusCode } from '../helpers/status'
 import type {
-  LogData,
-  Logger,
   LogLevel,
   Options,
-  PinoConfig,
+  Pino,
   RequestInfo,
   StoreData
 } from '../interfaces'
-import { logToTransports } from '../output/console'
-import { logToFile } from '../output/file'
-import { buildLogMessage } from './build-log-message'
-import { filterLog } from './filter'
-import { handleHttpError } from './handle-http-error'
 
-const getMetrics = (): LogData['metrics'] => {
-  const memoryUsage = process.memoryUsage().heapUsed / 1024 / 1024 // MB
-  const cpuUsage = process.cpuUsage()
+const pad2 = (value: number): string => String(value).padStart(2, '0')
+const pad3 = (value: number): string => String(value).padStart(3, '0')
 
-  return {
-    memoryUsage,
-    cpuUsage: cpuUsage.user / 1_000_000 // convert to seconds
-  }
+const shouldUseColors = (options: Options): boolean => {
+  const config = options.config
+  const enabledByConfig = config?.useColors ?? true
+
+  // Avoid ANSI sequences in non-interactive output (pipes, CI logs, files).
+  const isTty = typeof process !== 'undefined' && process.stdout?.isTTY === true
+  return enabledByConfig && isTty
 }
 
-const buildPinoConfig = (pinoConfig: PinoConfig) =>
-  ({
-    level: pinoConfig.level || 'info',
-    timestamp: pinoConfig.timestamp ?? true,
-    messageKey: pinoConfig.messageKey || 'msg',
-    errorKey: pinoConfig.errorKey || 'err',
-    base: pinoConfig.base || { pid: process.pid }
-  }) as const
-
-const createPrettyTransport = (prettyPrint: boolean | object) =>
-  pino.transport({
-    target: 'pino-pretty',
-    options: {
-      colorize: true,
-      translateTime: 'HH:MM:ss Z',
-      ignore: 'pid,hostname',
-      ...(typeof prettyPrint === 'object' ? prettyPrint : {})
-    }
-  })
-
-const createPinoInstance = (options?: Options): PinoLogger => {
-  const pinoConfig = options?.config?.pino || {}
-  const { prettyPrint, transport, ...rest } = pinoConfig
-  const config = {
-    ...buildPinoConfig(pinoConfig),
-    ...rest
+const formatTimestamp = (date: Date, pattern?: string): string => {
+  if (!pattern) {
+    return date.toISOString()
   }
 
-  if (prettyPrint && process.env.NODE_ENV !== 'production') {
-    return pino(config, createPrettyTransport(prettyPrint))
-  }
+  const yyyy = String(date.getFullYear())
+  const mm = pad2(date.getMonth() + 1)
+  const dd = pad2(date.getDate())
+  const HH = pad2(date.getHours())
+  const MM = pad2(date.getMinutes())
+  const ss = pad2(date.getSeconds())
+  const SSS = pad3(date.getMilliseconds())
 
-  if (transport) {
-    if (typeof transport === 'object' && 'target' in transport) {
-      return pino(
-        config,
-        pino.transport(
-          transport as pino.TransportSingleOptions | pino.TransportMultiOptions
-        )
-      )
-    }
-    console.warn(
-      'Invalid transport configuration provided, falling back to default'
-    )
-  }
-
-  return pino(config)
+  return pattern
+    .replaceAll('yyyy', yyyy)
+    .replaceAll('mm', mm)
+    .replaceAll('dd', dd)
+    .replaceAll('HH', HH)
+    .replaceAll('MM', MM)
+    .replaceAll('ss', ss)
+    .replaceAll('SSS', SSS)
 }
 
-const mapLogLevelToPino = (level: LogLevel): string => {
-  switch (level.toUpperCase()) {
-    case 'DEBUG':
-      return 'debug'
-    case 'INFO':
-      return 'info'
-    case 'WARNING':
-    case 'WARN':
-      return 'warn'
-    case 'ERROR':
-      return 'error'
-    default:
-      console.warn(`Unknown log level "${level}", defaulting to "info"`)
-      return 'info'
+const getIp = (request: RequestInfo): string => {
+  const forwarded = request.headers.get('x-forwarded-for')
+  if (forwarded) {
+    return forwarded.split(',')[0]?.trim() ?? ''
   }
+  return request.headers.get('x-real-ip') ?? ''
 }
 
-const getClientIp = (
-  request: RequestInfo,
-  options?: Options
-): string | undefined => {
-  if (!options?.config?.ip) {
-    return
+const getColoredLevel = (level: LogLevel, useColors: boolean): string => {
+  if (!useColors) {
+    return level
   }
 
-  const forwardedFor = request.headers.get('x-forwarded-for')
-  if (!forwardedFor) {
-    return
+  if (level === 'ERROR') {
+    return chalk.bgRed.black(level)
+  }
+  if (level === 'WARNING') {
+    return chalk.bgYellow.black(level)
+  }
+  if (level === 'DEBUG') {
+    return chalk.bgBlue.black(level)
   }
 
-  return forwardedFor.split(',')[0]?.trim()
+  return chalk.bgGreen.black(level)
 }
 
-const getErrorDetails = (
-  level: LogLevel,
-  data: LogData
-):
-  | {
-      name: 'Error'
-      message: string
-      stack: string
-    }
-  | undefined => {
-  if (level !== 'ERROR') {
-    return
+const getColoredMethod = (method: string, useColors: boolean): string => {
+  if (!useColors) {
+    return method
   }
 
-  const message = data.message ?? 'Unknown error'
-  const stack = data.stack ?? new Error(message).stack
-  if (!stack) {
-    return
+  const upper = method.toUpperCase()
+  if (upper === 'GET') {
+    return chalk.green.bold(upper)
+  }
+  if (upper === 'POST') {
+    return chalk.blue.bold(upper)
+  }
+  if (upper === 'PUT') {
+    return chalk.yellow.bold(upper)
+  }
+  if (upper === 'PATCH') {
+    return chalk.yellowBright.bold(upper)
+  }
+  if (upper === 'DELETE') {
+    return chalk.red.bold(upper)
+  }
+  if (upper === 'OPTIONS') {
+    return chalk.cyan.bold(upper)
+  }
+  if (upper === 'HEAD') {
+    return chalk.greenBright.bold(upper)
+  }
+  if (upper === 'TRACE') {
+    return chalk.magenta.bold(upper)
+  }
+  if (upper === 'CONNECT') {
+    return chalk.cyanBright.bold(upper)
   }
 
-  return { name: 'Error', message, stack }
+  return chalk.white.bold(upper)
 }
 
-type EmitPinoLogArgs = {
-  pinoLogger: PinoLogger
-  level: LogLevel
-  logObject: Record<string, unknown>
-  message: string
-  options?: Options
-}
-
-const emitPinoLog = ({
-  pinoLogger,
-  level,
-  logObject,
-  message,
-  options
-}: EmitPinoLogArgs): void => {
-  const pinoLevel = mapLogLevelToPino(level)
-  const logMethod = pinoLogger[pinoLevel as keyof PinoLogger] as (
-    ...args: unknown[]
-  ) => void
-  const hasCustomPinoOutput = Boolean(
-    options?.config?.pino?.transport || options?.config?.pino?.prettyPrint
-  )
-  const shouldEmitPino =
-    !options?.config?.useTransportsOnly || hasCustomPinoOutput
-
-  if (shouldEmitPino && typeof logMethod === 'function') {
-    logMethod.call(pinoLogger, logObject, message)
+const getColoredStatus = (status: string, useColors: boolean): string => {
+  if (!useColors) {
+    return status
   }
+
+  const numeric = Number.parseInt(status, 10)
+  if (!Number.isFinite(numeric)) {
+    return status
+  }
+
+  if (numeric >= 500) {
+    return chalk.red(status)
+  }
+  if (numeric >= 400) {
+    return chalk.yellow(status)
+  }
+  if (numeric >= 300) {
+    return chalk.cyan(status)
+  }
+  if (numeric >= 200) {
+    return chalk.green(status)
+  }
+  return chalk.gray(status)
 }
 
-type HandleOutputsArgs = {
-  level: LogLevel
-  request: RequestInfo
-  data: LogData
-  store: StoreData
-  options?: Options
-  logMessage: string
+const getColoredDuration = (duration: string, useColors: boolean): string => {
+  if (!useColors) {
+    return duration
+  }
+
+  return chalk.gray(duration)
 }
 
-const handleOutputs = async ({
+const getColoredTimestamp = (timestamp: string, useColors: boolean): string => {
+  if (!useColors) {
+    return timestamp
+  }
+
+  return chalk.bgHex('#FFA500').black(timestamp)
+}
+
+const getColoredPathname = (pathname: string, useColors: boolean): string => {
+  if (!useColors) {
+    return pathname
+  }
+
+  return chalk.whiteBright(pathname)
+}
+
+const getContextString = (value: unknown): string => {
+  if (typeof value === 'object' && value !== null) {
+    return JSON.stringify(value)
+  }
+
+  return ''
+}
+
+export const formatLine = ({
   level,
   request,
   data,
   store,
-  options,
-  logMessage
-}: HandleOutputsArgs): Promise<void> => {
-  const promises: Promise<void>[] = []
+  options
+}: {
+  level: LogLevel
+  request: RequestInfo
+  data: Record<string, unknown>
+  store: StoreData
+  options: Options
+}): string => {
+  const config = options.config
+  const useColors = shouldUseColors(options)
+  const format =
+    config?.customLogFormat ??
+    '🦊 {now} {level} {duration} {method} {pathname} {status} {message} {ip} {context}'
 
-  // Handle console logging
-  if (
-    !(
-      options?.config?.useTransportsOnly ||
-      options?.config?.disableInternalLogger
-    )
-  ) {
-    console.log(logMessage)
-  }
+  const now = new Date()
+  const epoch = String(now.getTime())
+  const rawTimestamp = formatTimestamp(now, config?.timestamp?.translateTime)
+  const timestamp = getColoredTimestamp(rawTimestamp, useColors)
 
-  // Handle file logging
-  if (
-    !options?.config?.useTransportsOnly &&
-    options?.config?.logFilePath &&
-    !options?.config?.disableFileLogging
-  ) {
-    promises.push(
-      logToFile({
-        filePath: options.config.logFilePath,
-        level,
-        request,
-        data,
-        store,
-        options
-      })
-    )
-  }
+  const message = typeof data.message === 'string' ? data.message : ''
+  const durationMs =
+    store.beforeTime === BigInt(0)
+      ? 0
+      : Number(process.hrtime.bigint() - store.beforeTime) / 1_000_000
 
-  // Handle transport logging
-  if (options?.config?.transports?.length) {
-    promises.push(logToTransports({ level, request, data, store, options }))
-  }
+  const pathname = new URL(request.url).pathname
+  const statusValue = data.status
+  const statusCode =
+    statusValue === null || statusValue === undefined
+      ? 200
+      : getStatusCode(statusValue)
+  const status = String(statusCode)
+  const ip = config?.ip === true ? getIp(request) : ''
+  const ctxString = getContextString(data.context)
+  const coloredLevel = getColoredLevel(level, useColors)
+  const coloredMethod = getColoredMethod(request.method, useColors)
+  const coloredPathname = getColoredPathname(pathname, useColors)
+  const coloredStatus = getColoredStatus(status, useColors)
+  const coloredDuration = getColoredDuration(
+    `${durationMs.toFixed(2)}ms`,
+    useColors
+  )
 
-  await Promise.all(promises)
+  return format
+    .replaceAll('{now}', timestamp)
+    .replaceAll('{epoch}', epoch)
+    .replaceAll('{level}', coloredLevel)
+    .replaceAll('{duration}', coloredDuration)
+    .replaceAll('{method}', coloredMethod)
+    .replaceAll('{pathname}', coloredPathname)
+    .replaceAll('{path}', coloredPathname)
+    .replaceAll('{status}', coloredStatus)
+    .replaceAll('{message}', message)
+    .replaceAll('{ip}', ip)
+    .replaceAll('{context}', ctxString)
 }
 
-export const createLogger = (options?: Options): Logger => {
-  const pinoLogger = createPinoInstance(options)
-
-  type LogInternalArgs = {
-    level: LogLevel
-    request: RequestInfo
-    data: LogData
-    store: StoreData
+export const logWithPino = (
+  logger: Pino,
+  level: LogLevel,
+  data: Record<string, unknown>
+): void => {
+  if (level === 'ERROR') {
+    logger.error(data)
+    return
   }
-
-  const logInternal = async ({
-    level,
-    request,
-    data,
-    store
-  }: LogInternalArgs): Promise<void> => {
-    if (!filterLog(level, data.status ?? 200, request.method, options)) {
-      return
-    }
-
-    if (!data.metrics) {
-      data.metrics = getMetrics()
-    }
-
-    const errorKey = options?.config?.pino?.errorKey ?? 'err'
-    const err = getErrorDetails(level, data)
-    const clientIp = getClientIp(request, options)
-
-    const logObject = {
-      method: request.method,
-      url: request.url,
-      status: data.status,
-      message: data.message,
-      context: data.context,
-      metrics: data.metrics,
-      duration: Number(process.hrtime.bigint() - store.beforeTime) / 1_000_000,
-      ip: clientIp,
-      [errorKey]: err
-    }
-
-    emitPinoLog({
-      pinoLogger,
-      level,
-      logObject,
-      message: data.message ?? 'Request processed',
-      options
-    })
-
-    const logMessage = buildLogMessage({
-      level,
-      request,
-      data,
-      store,
-      options,
-      useColors: true
-    })
-
-    await handleOutputs({
-      level,
-      request,
-      data,
-      store,
-      options,
-      logMessage
-    })
+  if (level === 'WARNING') {
+    logger.warn(data)
+    return
   }
-
-  const logger: Logger = {
-    store: undefined,
-    pino: pinoLogger, // Expose the Pino instance
-    log: (level, request, data, store) =>
-      logInternal({ level, request, data, store }),
-    handleHttpError: (request, error, store) =>
-      handleHttpError(request, error, store, options),
-    customLogFormat: options?.config?.customLogFormat,
-    info: (request, message, context, store) => {
-      const storeData = store ??
-        logger.store ?? { beforeTime: process.hrtime.bigint() }
-      storeData.hasCustomLog = true
-      return logInternal({
-        level: 'INFO',
-        request,
-        data: { message, context, status: 200 },
-        store: storeData
-      })
-    },
-    error: (request, message, context, store) => {
-      const storeData = store ??
-        logger.store ?? { beforeTime: process.hrtime.bigint() }
-      storeData.hasCustomLog = true
-      return logInternal({
-        level: 'ERROR',
-        request,
-        data: { message, context, status: 500 },
-        store: storeData
-      })
-    },
-    warn: (request, message, context, store) => {
-      const storeData = store ??
-        logger.store ?? { beforeTime: process.hrtime.bigint() }
-      storeData.hasCustomLog = true
-      return logInternal({
-        level: 'WARNING',
-        request,
-        data: { message, context, status: 200 },
-        store: storeData
-      })
-    },
-    debug: (request, message, context, store) => {
-      const storeData = store ??
-        logger.store ?? { beforeTime: process.hrtime.bigint() }
-      storeData.hasCustomLog = true
-      return logInternal({
-        level: 'DEBUG',
-        request,
-        data: { message, context, status: 200 },
-        store: storeData
-      })
-    }
+  if (level === 'DEBUG') {
+    logger.debug(data)
+    return
   }
-  return logger
+  logger.info(data)
 }

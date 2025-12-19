@@ -23,8 +23,6 @@ export const app = new Elysia({
   .use(
     logixlysia({
       config: {
-        showStartupMessage: true,
-        startupMessageFormat: 'simple',
         timestamp: {
           translateTime: 'yyyy-mm-dd HH:MM:ss'
         },

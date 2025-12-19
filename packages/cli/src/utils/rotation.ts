@@ -1,182 +1,91 @@
 import { promises as fs } from 'node:fs'
-import { basename, dirname, join } from 'node:path'
+import { basename, dirname } from 'node:path'
 
-export type ParsedRetention = {
-  type: 'count' | 'time'
-  value: number
-}
+const SIZE_REGEX = /^(\d+(?:\.\d+)?)(k|kb|m|mb|g|gb)$/i
+const INTERVAL_REGEX = /^(\d+)(h|d|w)$/i
+const ROTATED_REGEX = /\.(\d{4}-\d{2}-\d{2}-\d{2}-\d{2}-\d{2})(?:\.gz)?$/
 
-// Regex patterns defined at top level for performance
-const SIZE_PATTERN = /^(\d+(?:\.\d+)?)\s*([kmg])?b?$/
-const INTERVAL_PATTERN = /^(\d+)\s*([hdw])$/
-const RETENTION_PATTERN = /^(\d+)\s*d$/
-
-/**
- * Parse size string to bytes
- * Supports: '10m', '1g', '100k', or raw number
- */
-export const parseSize = (size: string | number): number => {
-  if (typeof size === 'number') {
-    return size
+export const parseSize = (value: number | string): number => {
+  if (typeof value === 'number') {
+    return value
   }
 
-  const units: Record<string, number> = {
-    k: 1024,
-    m: 1024 * 1024,
-    g: 1024 * 1024 * 1024
+  const trimmed = value.trim()
+  const asNumber = Number(trimmed)
+  if (Number.isFinite(asNumber)) {
+    return asNumber
   }
 
-  const match = size.toLowerCase().match(SIZE_PATTERN)
-  if (!match?.[1]) {
-    throw new Error(`Invalid size format: ${size}`)
-  }
-
-  const value = Number.parseFloat(match[1])
-  const unit = match[2] ?? ''
-
-  return Math.floor(value * (units[unit] ?? 1))
-}
-
-/**
- * Parse interval string to milliseconds
- * Supports: '1h', '1d', '1w'
- */
-export const parseInterval = (interval: string): number => {
-  const units: Record<string, number> = {
-    h: 60 * 60 * 1000, // hour
-    d: 24 * 60 * 60 * 1000, // day
-    w: 7 * 24 * 60 * 60 * 1000 // week
-  }
-
-  const match = interval.toLowerCase().match(INTERVAL_PATTERN)
+  const match = trimmed.match(SIZE_REGEX)
   if (!match) {
-    throw new Error(`Invalid interval format: ${interval}`)
+    throw new Error(`Invalid size format: ${value}`)
   }
 
-  const valueStr = match[1]
-  const unit = match[2] as string
+  const amount = Number(match[1])
+  const unit = match[2].toLowerCase()
 
-  if (!valueStr) {
-    throw new Error(`Invalid interval format: ${interval}`)
-  }
-  if (!unit) {
-    throw new Error(`Invalid interval format: ${interval}`)
+  let base = 1024
+  if (unit.startsWith('m')) {
+    base = 1024 * 1024
+  } else if (unit.startsWith('g')) {
+    base = 1024 * 1024 * 1024
   }
 
-  const value = Number.parseInt(valueStr, 10)
-  return value * (units[unit] ?? 0)
+  return Math.floor(amount * base)
 }
 
-/**
- * Parse retention string or number
- * Returns object with type (count or time) and value
- */
-export const parseRetention = (retention: string | number): ParsedRetention => {
-  if (typeof retention === 'number') {
-    return { type: 'count', value: retention }
+export const parseInterval = (value: string): number => {
+  const match = value.trim().match(INTERVAL_REGEX)
+  if (!match) {
+    throw new Error(`Invalid interval format: ${value}`)
   }
 
-  // Check if it's a time-based retention (e.g., '7d', '30d')
-  const match = retention.toLowerCase().match(RETENTION_PATTERN)
-  if (match?.[1]) {
-    const days = Number.parseInt(match[1], 10)
-    return { type: 'time', value: days * 24 * 60 * 60 * 1000 } // convert to milliseconds
+  const amount = Number(match[1])
+  const unit = match[2].toLowerCase()
+
+  let ms = 60 * 60 * 1000
+  if (unit === 'd') {
+    ms = 24 * 60 * 60 * 1000
+  } else if (unit === 'w') {
+    ms = 7 * 24 * 60 * 60 * 1000
   }
 
-  throw new Error(`Invalid retention format: ${retention}`)
+  return amount * ms
 }
 
-/**
- * Check if file should be rotated based on size
- */
+export const parseRetention = (
+  value: number | string
+): { type: 'count' | 'time'; value: number } => {
+  if (typeof value === 'number') {
+    return { type: 'count', value }
+  }
+  return { type: 'time', value: parseInterval(value) }
+}
+
 export const shouldRotateBySize = async (
   filePath: string,
-  maxSize: number
+  maxSizeBytes: number
 ): Promise<boolean> => {
   try {
-    const stats = await fs.stat(filePath)
-    return stats.size >= maxSize
+    const stat = await fs.stat(filePath)
+    return stat.size > maxSizeBytes
   } catch {
-    // File doesn't exist or can't be accessed
     return false
   }
 }
 
-/**
- * Get the last rotation time for a file
- * Uses file modification time as a proxy
- */
-const getLastRotationTime = async (filePath: string): Promise<number> => {
-  try {
-    const stats = await fs.stat(filePath)
-    return stats.mtime.getTime()
-  } catch {
-    // File doesn't exist, use current time
-    return Date.now()
-  }
-}
-
-// Track last rotation times in memory to avoid excessive file checks
-const rotationTimeCache = new Map<string, number>()
-
-/**
- * Check if file should be rotated based on time interval
- */
-export const shouldRotateByTime = async (
-  filePath: string,
-  interval: number
-): Promise<boolean> => {
-  const now = Date.now()
-
-  // Check cache first
-  const cachedTime = rotationTimeCache.get(filePath)
-  if (cachedTime !== undefined) {
-    return now - cachedTime >= interval
-  }
-
-  // Get last rotation time from file
-  const lastRotation = await getLastRotationTime(filePath)
-  rotationTimeCache.set(filePath, lastRotation)
-
-  return now - lastRotation >= interval
-}
-
-/**
- * Update the last rotation time in cache
- */
-export const updateRotationTime = (filePath: string): void => {
-  rotationTimeCache.set(filePath, Date.now())
-}
-
-/**
- * Get rotated files for a given log file
- */
 export const getRotatedFiles = async (filePath: string): Promise<string[]> => {
   const dir = dirname(filePath)
-  const baseName = basename(filePath)
+  const base = basename(filePath)
 
+  let entries: string[]
   try {
-    const files = await fs.readdir(dir)
-    // Match files like: app.log.2025-10-10, app.log.2025-10-10.gz
-    const rotatedPattern = new RegExp(
-      `^${baseName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\.\\d{4}-\\d{2}-\\d{2}(-\\d{2}-\\d{2}-\\d{2})?(\\.gz)?$`
-    )
-    const rotatedFiles = files
-      .filter(file => rotatedPattern.test(file))
-      .map(file => join(dir, file))
-
-    // Sort by modification time (newest first)
-    const filesWithStats = await Promise.all(
-      rotatedFiles.map(async file => {
-        const stats = await fs.stat(file)
-        return { file, mtime: stats.mtime.getTime() }
-      })
-    )
-
-    return filesWithStats
-      .sort((a, b) => b.mtime - a.mtime)
-      .map(item => item.file)
+    entries = await fs.readdir(dir)
   } catch {
     return []
   }
+
+  return entries
+    .filter(name => name.startsWith(`${base}.`) && ROTATED_REGEX.test(name))
+    .map(name => `${dir}/${name}`)
 }
