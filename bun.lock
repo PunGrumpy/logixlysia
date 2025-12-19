@@ -4,6 +4,9 @@
   "workspaces": {
     "": {
       "name": "logixlysia-monorepo",
+      "dependencies": {
+        "elysia": "1.4.19",
+      },
       "devDependencies": {
         "@biomejs/biome": "2.3.8",
         "turbo": "^2.6.3",
@@ -52,12 +55,22 @@
         "typescript": "^5.9.3",
       },
     },
+    "apps/example": {
+      "name": "example",
+      "version": "0.0.0",
+      "dependencies": {
+        "logixlysia": "*",
+      },
+      "devDependencies": {
+        "bun-types": "^1.2.23",
+        "typescript": "^5.9.3",
+      },
+    },
     "packages/cli": {
       "name": "logixlysia",
       "version": "5.3.0",
       "dependencies": {
         "chalk": "^5.6.2",
-        "elysia": "^1.4.10",
         "pino": "^10.0.0",
         "pino-pretty": "^13.1.2",
       },
@@ -67,6 +80,7 @@
         "globals": "^16.4.0",
       },
       "peerDependencies": {
+        "elysia": "^1.4.10",
         "typescript": "^5.2.2",
       },
     },
@@ -710,6 +724,8 @@
 
     "exact-mirror": ["exact-mirror@0.2.5", "", { "peerDependencies": { "@sinclair/typebox": "^0.34.15" }, "optionalPeers": ["@sinclair/typebox"] }, "sha512-u8Wu2lO8nio5lKSJubOydsdNtQmH8ENba5m0nbQYmTvsjksXKYIS1nSShdDlO8Uem+kbo+N6eD5I03cpZ+QsRQ=="],
 
+    "example": ["example@workspace:apps/example"],
+
     "exsolve": ["exsolve@1.0.8", "", {}, "sha512-LmDxfWXwcTArk8fUEnOfSZpHOJ6zOMUJKOtFLFqJLoKJetuQG874Uc7/Kki7zFLzYybmZhp1M7+98pfMqeX8yA=="],
 
     "extend": ["extend@3.0.2", "", {}, "sha512-fjquC59cD7CyW6urNXK0FBufkZcoiGG80wTuPujX590cB5Ttln20E2UB4S/WARVqhXffZl2LNgS+gQdPIIim/g=="],
@@ -1257,6 +1273,8 @@
     "bunup/chokidar": ["chokidar@4.0.3", "", { "dependencies": { "readdirp": "^4.0.1" } }, "sha512-Qgzu8kfBvo+cA4962jnP1KkS6Dop5NS6g7R5LFYJr4b8Ub94PPQXUksCw9PvXoeXPRRddRNC5C1JQUR2SMGtnA=="],
 
     "docs/typescript": ["typescript@5.9.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw=="],
+
+    "example/typescript": ["typescript@5.9.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw=="],
 
     "next/postcss": ["postcss@8.4.31", "", { "dependencies": { "nanoid": "^3.3.6", "picocolors": "^1.0.0", "source-map-js": "^1.0.2" } }, "sha512-PS08Iboia9mts/2ygV3eLpY5ghnUcfLV/EXTOW1E2qYxJKGGBUtNjN76FYHnMs36RmARn41bC0AZmn+rR0OVpQ=="],
 

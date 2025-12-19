@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "display": "Default",
+  "compilerOptions": {
+    "noUncheckedIndexedAccess": true,
+    "strict": true,
+    "allowImportingTsExtensions": true,
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "resolveJsonModule": true,
+    "types": ["bun-types"],
+    "downlevelIteration": true,
+    "noEmit": true,
+    "allowJs": true,
+    "allowSyntheticDefaultImports": true,
+    "forceConsistentCasingInFileNames": true,
+    "jsx": "react",
+    "jsxFactory": "ElysiaJSX",
+    "jsxFragmentFactory": "ElysiaJSX.Fragment",
+    "lib": ["ESNext"],
+    "moduleDetection": "force",
+    "target": "ESNext",
+    "composite": true,
+    "skipLibCheck": true
+  },
+  "include": ["src/**/*.ts"]
+}

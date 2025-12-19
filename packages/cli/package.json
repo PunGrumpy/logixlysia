@@ -27,6 +27,7 @@
   },
   "license": "MIT",
   "scripts": {
+    "dev": "bunup --watch",
     "build": "bunup",
     "test": "bun test",
     "test:coverage": "bun test --coverage --coverage-reporter=lcov",
