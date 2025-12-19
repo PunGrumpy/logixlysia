@@ -3,10 +3,12 @@
   "version": "5.3.0",
   "description": "🦊 Logixlysia is a logger for Elysia",
   "type": "module",
+  "main": "src/index.ts",
   "bin": {
-    "logixlysia": "dist/index.js"
+    "logixlysia": "src/index.ts"
   },
   "files": [
+    "src",
     "dist",
     "README.md"
   ],
@@ -15,7 +17,7 @@
     "build": "bunup",
     "test": "bun test",
     "test:coverage": "bun test --coverage --coverage-reporter=lcov",
-    "clean": "git clean -fdx dist node_modules"
+    "clean": "git clean -fdx .turbo dist node_modules"
   },
   "author": "Noppakorn Kaewsalabnil <hello@pungrumpy.com>",
   "bugs": {

@@ -7,7 +7,7 @@
     "dev": "next dev --port 3000",
     "start": "next start",
     "postinstall": "fumadocs-mdx",
-    "clean": "git clean -xdf .next .cache .turbo dist node_modules",
+    "clean": "git clean -xdf .next .cache .turbo .source dist node_modules",
     "typecheck": "fumadocs-mdx && next typegen && tsc --noEmit --emitDeclarationOnly false"
   },
   "dependencies": {
