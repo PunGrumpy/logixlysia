@@ -1,12 +1,12 @@
-name: 🫸 CodeQL
+name: 🛡️ Security Scan
 
 on:
   schedule:
-    - cron: '0 0 * * *'
+    - cron: "0 0 * * *"
   workflow_call:
 
 jobs:
-  analyze:
+  codeql:
     permissions:
       actions: read
       contents: read
@@ -26,4 +26,4 @@ jobs:
       - name: 🧪 Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v3
         with:
-          category: '/languages/javascript-typescript'
+          category: "/languages/javascript-typescript"
