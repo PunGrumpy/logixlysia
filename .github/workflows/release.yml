@@ -1,0 +1,50 @@
+name: 🚀 Release
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  id-token: write
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  release:
+    name: 🏎️ Release
+    if: ${{ !contains(github.event.head_commit.message, 'ci skip') && !contains(github.event.head_commit.message, 'skip ci') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🛫 Checkout Code
+        uses: actions/checkout@v6
+      - name: 🕺🏻 Prepare Repository
+        run: git fetch --unshallow --tags
+      - name: 🍞 Setup Bun
+        uses: oven-sh/setup-bun@v2
+      - name: 🌵 Cache Bun
+        id: bun-cache
+        uses: actions/cache@v5
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}
+      - name: 🔽 Install Dependencies
+        run: bun install
+      - name: 🦊 Build Logixlysia
+        run: bun run build --filter logixlysia
+      - name: 🎟️ Create Release PR or Publish to NPM
+        id: changesets
+        uses: changesets/action@v1
+        with:
+          version: bun run changeset version
+          publish: bun run changeset publish
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: "" # Workaround for https://github.com/changesets/action/pull/545
+      - name: ▲ Deploy to Vercel
+        if: steps.changesets.outputs.published == 'true'
+        run: bunx vercel --prod --token=${{ secrets.VERCEL_TOKEN }}
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
