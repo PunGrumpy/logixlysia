@@ -2,14 +2,13 @@ import { defineConfig } from 'bunup'
 
 const config = defineConfig({
   name: 'Logixlysia',
+  outDir: 'dist',
   entry: ['src/index.ts'],
-  format: ['esm', 'cjs'],
+  format: ['esm'],
   dts: true,
-  splitting: false,
-  sourcemap: 'inline',
-  clean: true,
   minify: true,
-  external: ['elysia', 'chalk']
+  sourcemap: 'inline',
+  external: ['elysia', 'chalk', 'pino', 'pino-pretty']
 })
 
 export default config
