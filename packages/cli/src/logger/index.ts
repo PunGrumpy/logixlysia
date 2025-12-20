@@ -68,7 +68,30 @@ export const createLogger = (options: Options = {}): Logger => {
       return
     }
 
-    console.log(formatLine({ level, request, data, store, options }))
+    const message = formatLine({ level, request, data, store, options })
+
+    switch (level) {
+      case 'DEBUG': {
+        console.debug(message)
+        break
+      }
+      case 'INFO': {
+        console.info(message)
+        break
+      }
+      case 'WARNING': {
+        console.warn(message)
+        break
+      }
+      case 'ERROR': {
+        console.error(message)
+        break
+      }
+      default: {
+        console.log(message)
+        break
+      }
+    }
   }
 
   const logWithContext = (
