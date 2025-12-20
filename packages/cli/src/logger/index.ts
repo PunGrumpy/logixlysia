@@ -9,16 +9,36 @@ import type {
 } from '../interfaces'
 import { logToTransports } from '../output'
 import { logToFile } from '../output/file'
-import { formatLine, logWithPino } from './create-logger'
+import { formatLine } from './create-logger'
 import { handleHttpError } from './handle-http-error'
 
 export const createLogger = (options: Options = {}): Logger => {
   const config = options.config
 
+  const pinoConfig = config?.pino
+  const { prettyPrint, ...pinoOptions } = pinoConfig ?? {}
+
+  const shouldPrettyPrint =
+    prettyPrint === true && pinoOptions.transport === undefined
+
+  const transport = shouldPrettyPrint
+    ? pino.transport({
+        target: 'pino-pretty',
+        options: {
+          colorize: process.stdout?.isTTY === true,
+          translateTime: config?.timestamp?.translateTime,
+          messageKey: pinoOptions.messageKey,
+          errorKey: pinoOptions.errorKey
+        }
+      })
+    : pinoOptions.transport
+
   const pinoLogger: Pino = pino({
-    level: config?.pino?.level ?? 'info',
-    messageKey: config?.pino?.messageKey,
-    errorKey: config?.pino?.errorKey
+    ...pinoOptions,
+    level: pinoOptions.level ?? 'info',
+    messageKey: pinoOptions.messageKey,
+    errorKey: pinoOptions.errorKey,
+    transport
   })
 
   const log = (
@@ -27,13 +47,6 @@ export const createLogger = (options: Options = {}): Logger => {
     data: Record<string, unknown>,
     store: StoreData
   ): void => {
-    logWithPino(pinoLogger, level, {
-      ...data,
-      level,
-      method: request.method,
-      url: request.url
-    })
-
     logToTransports({ level, request, data, store, options })
 
     const useTransportsOnly = config?.useTransportsOnly === true
