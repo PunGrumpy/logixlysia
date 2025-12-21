@@ -1,6 +1,5 @@
 import { swagger } from '@elysiajs/swagger'
-import { env } from 'bun'
-import { Elysia } from 'elysia'
+import { Elysia, env } from 'elysia'
 import packageJson from 'logixlysia/package.json'
 import { routers } from './routers'
 
@@ -23,5 +22,5 @@ export const app = new Elysia({
   .use(routers)
 
 app.listen({
-  port: env.PORT ?? 3001
+  port: env.PORT
 })
