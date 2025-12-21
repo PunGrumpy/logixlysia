@@ -2,7 +2,7 @@ import { DynamicCodeBlock } from 'fumadocs-ui/components/dynamic-codeblock'
 import { cn } from '@/lib/utils'
 
 const code = `import { Elysia } from 'elysia'
-import logixlysia from 'logixlysia'
+import logixlysia from 'logixlysia' // or import { logixlysia } from 'logixlysia'
 
 const app = new Elysia({
     name: "Elysia with Logixlysia"
