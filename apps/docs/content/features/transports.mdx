@@ -1,32 +1,28 @@
 ---
 title: Custom Transports
-description: Send logs to external services with custom transports.
+description: Send logs to external services
 ---
 
-Logixlysia allows you to send logs to external services using custom transports. By default, transports work alongside the built-in console and file logging outputs.
+Send logs to external services using custom transports. Transports work alongside built-in console and file logging.
 
 ## Output Behavior
 
 Logixlysia supports three types of logging outputs:
 
-1. **Console Logging** - Built-in console output (can be disabled with `disableInternalLogger`)
-2. **File Logging** - Built-in file output (can be disabled with `disableFileLogging`)
-3. **Transport Logging** - Custom external services (always additive)
+1. **Console Logging** - Built-in console output
+2. **File Logging** - Built-in file output
+3. **Transport Logging** - Custom external services
 
 ### Controlling Outputs
 
-- **Default behavior**: Console + File (if `logFilePath` is set) + Transports
+- **Default**: Console + File (if `logFilePath` is set) + Transports
 - **`disableInternalLogger: true`**: Disables console logging only
 - **`disableFileLogging: true`**: Disables file logging only
-- **`useTransportsOnly: true`**: Disables both console and file logging, uses only transports
+- **`useTransportsOnly: true`**: Disables both console and file, uses only transports
 
 ## Basic Transport
 
-Create a basic transport:
-
 ```ts
-// TypeScript type definitions for transport interface
-type LogLevel = 'debug' | 'info' | 'warn' | 'error'
 type Transport = {
   log: (level: LogLevel, message: string, meta?: Record<string, unknown>) => void | Promise<void>
 }
@@ -46,17 +42,15 @@ app.use(logixlysia({
 
 ## External Services
 
-### Elasticsearch Transport
+### Elasticsearch
 
 ```ts
 const elasticsearchTransport = {
   log: async (level, message, meta) => {
     try {
-      const res = await fetch('http://elasticsearch:9200/logs/_doc', {
+      await fetch('http://elasticsearch:9200/logs/_doc', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           level,
           message,
@@ -64,9 +58,6 @@ const elasticsearchTransport = {
           timestamp: new Date().toISOString()
         })
       })
-      if (!res.ok) {
-        console.error('Elasticsearch transport failed', { status: res.status, statusText: res.statusText })
-      }
     } catch (err) {
       console.error('Elasticsearch transport error', err)
     }
@@ -74,7 +65,7 @@ const elasticsearchTransport = {
 }
 ```
 
-### MongoDB Transport
+### MongoDB
 
 ```ts
 const mongodbTransport = {
@@ -93,7 +84,7 @@ const mongodbTransport = {
 }
 ```
 
-### Slack Transport
+### Slack
 
 ```ts
 const slackTransport = {
@@ -105,9 +96,7 @@ const slackTransport = {
       try {
         await fetch(webhook, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             text: `[${level}] ${message}\n${JSON.stringify(meta, null, 2)}`
           })
@@ -122,13 +111,10 @@ const slackTransport = {
 
 ## Multiple Transports
 
-Use multiple transports together:
-
 ```ts
 app.use(logixlysia({
   config: {
     transports: [
-      consoleTransport,
       elasticsearchTransport,
       slackTransport
     ]
@@ -136,11 +122,7 @@ app.use(logixlysia({
 }))
 ```
 
-## Advanced Configuration
-
-### Transport-Only Logging
-
-To use only transports (disable console and file logging):
+## Transport-Only Logging
 
 ```ts
 app.use(logixlysia({
@@ -150,82 +132,15 @@ app.use(logixlysia({
       elasticsearchTransport,
       slackTransport
     ]
-  }
-}))
-```
-
-**Note:** In `useTransportsOnly` mode, `logFilePath` and console output are ignored.
-
-### Selective Output Control
-
-```ts
-// Disable console but keep file logging
-app.use(logixlysia({
-  config: {
-    logFilePath: '/var/log/app.log',
-    disableInternalLogger: true,
-    transports: [elasticsearchTransport]
-  }
-}))
-
-// Disable file logging but keep console
-app.use(logixlysia({
-  config: {
-    // logFilePath is ignored when disableFileLogging is true
-    disableFileLogging: true,
-    transports: [elasticsearchTransport]
   }
 }))
 ```
 
 ## Best Practices
 
-1. **Error Handling**
-   - Handle transport errors gracefully
-   - Implement retry logic
-   - Log transport failures
-
-2. **Performance**
-   - Use async transports
-   - Implement batching
-   - Consider rate limiting
-
-3. **Security**
-   - Secure transport credentials
-   - Validate log data
-
-4. **Output Management**
-   - Use `useTransportsOnly` for production environments where you only want external logging
-   - Use `disableFileLogging` when you want console output but not file output
-   - Use `disableInternalLogger` when you want file/transport output but not console output
-   - Avoid logging secrets or PII; redact sensitive fields where unavoidable
-   - Implement access control
-
-## Example Configurations
-
-### Production Setup
-
-```ts
-app.use(logixlysia({
-  config: {
-    useTransportsOnly: true,
-    transports: [
-      elasticsearchTransport,
-      slackTransport
-    ]
-  }
-}))
-```
-
-### Development Setup
-
-```ts
-app.use(logixlysia({
-  config: {
-    disableInternalLogger: true,
-    transports: [
-      consoleTransport,
-      mongodbTransport
-    ]
-  }
-})) 
+- Handle transport errors gracefully
+- Implement retry logic for critical transports
+- Use async transports for better performance
+- Secure transport credentials
+- Avoid logging secrets or PII
+- Use `useTransportsOnly` for production environments where you only want external logging

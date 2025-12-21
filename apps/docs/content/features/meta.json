@@ -1,9 +1,7 @@
 {
-  "root": true,
   "title": "Features",
-  "description": "Explore the powerful features of Logixlysia",
+  "description": "Features of Logixlysia",
   "pages": [
-    "introduction",
     "startup",
     "formatting",
     "filtering",
@@ -11,9 +9,7 @@
     "log-rotation",
     "log-levels",
     "pino-integration",
-    "metrics",
-    "transports",
-    "error-handling",
-    "context"
-  ]
+    "transports"
+  ],
+  "root": true
 }

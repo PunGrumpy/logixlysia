@@ -1,50 +1,24 @@
 ---
 title: Log Levels
-description: Control the verbosity of your logs with Logixlysia.
+description: Control log verbosity
 ---
 
-Logixlysia provides multiple log levels to help you control the verbosity of your logging output.
+Control the verbosity of your logging output with Logixlysia's log level system.
 
 ## Available Levels
 
-### DEBUG
-For detailed debugging information:
-```ts
-logixlysia({
-  config: {
-    logFilter: {
-      level: 'DEBUG'
-    }
-  }
-})
+Log levels follow a hierarchy from most to least verbose:
+
+```
+DEBUG > INFO > WARNING > ERROR
 ```
 
-### INFO
-For general operational information:
-```ts
-logixlysia({
-  config: {
-    logFilter: {
-      level: 'INFO'
-    }
-  }
-})
-```
+When you set a log level, all higher levels will also be logged. For example, setting the level to `WARNING` will log both `WARNING` and `ERROR` messages.
 
-### WARNING
-For warning messages:
-```ts
-logixlysia({
-  config: {
-    logFilter: {
-      level: 'WARNING'
-    }
-  }
-})
-```
+## Configuration
 
-### ERROR
-For error conditions:
+### Single Level
+
 ```ts
 logixlysia({
   config: {
@@ -55,18 +29,8 @@ logixlysia({
 })
 ```
 
-## Level Hierarchy
+### Multiple Levels
 
-Log levels follow a hierarchy from most to least verbose:
-```
-DEBUG > INFO > WARNING > ERROR
-```
-
-When you set a log level, all higher levels will also be logged. For example, setting the level to `WARNING` will log both `WARNING` and `ERROR` messages.
-
-## Multiple Levels
-
-You can specify multiple levels to log:
 ```ts
 logixlysia({
   config: {
@@ -77,9 +41,8 @@ logixlysia({
 })
 ```
 
-## Environment-based Levels
+### Environment-based
 
-Configure different levels for different environments:
 ```ts
 logixlysia({
   config: {
@@ -92,59 +55,49 @@ logixlysia({
 })
 ```
 
+## Pino Log Levels
+
+When using Pino integration, you can also configure Pino's log levels:
+
+```ts
+logixlysia({
+  config: {
+    pino: {
+      level: 'debug' // 'fatal', 'error', 'warn', 'info', 'debug', 'trace'
+    }
+  }
+})
+```
+
 ## Best Practices
 
-1. **Development**
-   - Use DEBUG level for detailed debugging
-   - Log everything for troubleshooting
-   - Include stack traces
-
-2. **Staging**
-   - Use INFO level for normal operation
-   - Log important events
-   - Monitor warnings
-
-3. **Production**
-   - Use WARNING level for normal operation
-   - Log only important events
-   - Focus on errors and warnings
-
-4. **Monitoring**
-   - Set up alerts for ERROR level
-   - Monitor WARNING trends
-   - Review logs regularly
+- **Development**: Use `DEBUG` for detailed debugging
+- **Staging**: Use `INFO` for normal operation
+- **Production**: Use `WARNING` or `ERROR` for normal operation
+- **Monitoring**: Set up alerts for `ERROR` level
 
 ## Example Configurations
 
-### Development Setup
+### Development
+
 ```ts
-logixlysia({
-  config: {
-    logFilter: {
-      level: ['DEBUG', 'INFO', 'WARNING', 'ERROR']
-    }
-  }
-})
+logFilter: {
+  level: ['DEBUG', 'INFO', 'WARNING', 'ERROR']
+}
 ```
 
-### Production Setup
+### Production
+
 ```ts
-logixlysia({
-  config: {
-    logFilter: {
-      level: ['WARNING', 'ERROR']
-    }
-  }
-})
+logFilter: {
+  level: ['WARNING', 'ERROR']
+}
 ```
 
-### Monitoring Setup
+### Monitoring
+
 ```ts
-logixlysia({
-  config: {
-    logFilter: {
-      level: ['ERROR']
-    }
-  }
-})
-``` 
+logFilter: {
+  level: ['ERROR']
+}
+```
