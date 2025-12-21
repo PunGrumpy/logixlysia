@@ -1,5 +1,12 @@
 # Changelog
 
+## 6.0.1
+
+### Patch Changes
+
+- 0051602: Add readme in Logixlysia
+- 85ee521: Update correct code
+
 ## 6.0.0
 
 ### Major Changes
