@@ -11,21 +11,21 @@
     "changeset": "changeset",
     "changeset:version": "changeset version",
     "changeset:publish": "bun build && changeset publish",
-    "bump-deps": "bunx npm-check-updates --deep -u -x recharts && bun install",
+    "bump-deps": "bunx npm-check-updates --deep -u -x recharts -x react-resizable-panels && bun install",
     "clean": "git clean -xdf .turbo node_modules",
     "typecheck": "turbo run typecheck"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.3.8",
+    "@biomejs/biome": "2.3.10",
     "@changesets/cli": "^2.29.8",
-    "turbo": "^2.6.3",
-    "typescript": "5.9.2",
-    "ultracite": "6.4.0"
+    "turbo": "^2.7.1",
+    "typescript": "5.9.3",
+    "ultracite": "6.4.3"
   },
   "engines": {
     "node": ">=24"
   },
-  "packageManager": "bun@1.3.4",
+  "packageManager": "bun@1.3.5",
   "workspaces": [
     "apps/*",
     "packages/*"
