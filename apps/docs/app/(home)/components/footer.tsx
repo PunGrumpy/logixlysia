@@ -58,7 +58,7 @@ export const Footer = () => (
 
         <div className="pointer-events-none absolute inset-0">
           <div className="absolute inset-x-0 top-20 h-24 bg-linear-to-b from-transparent via-background/30 to-background/70" />
-          <div className="-translate-x-1/2 -bottom-72 absolute left-1/2 size-144 rounded-full bg-vesper-orange/55 blur-2xl" />
+          <div className="absolute -bottom-72 left-1/2 size-144 -translate-x-1/2 rounded-full bg-vesper-orange/55 blur-2xl" />
           <div className="absolute inset-x-0 bottom-0 h-48 bg-linear-to-t from-background/90 to-transparent" />
         </div>
       </Card>

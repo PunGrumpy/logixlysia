@@ -191,7 +191,7 @@ export const Comparison = () => (
       </p>
     </div>
 
-    <div className="-space-x-px isolate mx-auto flex flex-col items-center gap-4 lg:flex-row lg:gap-0">
+    <div className="isolate mx-auto flex flex-col items-center gap-4 -space-x-px lg:flex-row lg:gap-0">
       {features.map((feature, index) => (
         <Card
           className={cn(
