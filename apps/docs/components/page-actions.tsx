@@ -1,6 +1,10 @@
 'use client'
 
-import { ChevronDownIcon, ExternalLinkIcon, GithubIcon } from 'lucide-react'
+import {
+  IconBrandGithub,
+  IconChevronDown,
+  IconExternalLink
+} from '@tabler/icons-react'
 import {
   OpenIn,
   OpenInChatGPT,
@@ -36,7 +40,7 @@ export const ViewOptions = ({ markdownUrl, githubUrl }: ViewOptionsProps) => {
           render={
             <span>
               Open
-              <ChevronDownIcon className="size-4 text-muted-foreground" />
+              <IconChevronDown className="size-4 text-muted-foreground" />
             </span>
           }
           variant="outline"
@@ -58,9 +62,9 @@ export const ViewOptions = ({ markdownUrl, githubUrl }: ViewOptionsProps) => {
               rel="noopener"
               target="_blank"
             >
-              <GithubIcon />
+              <IconBrandGithub className="size-4" />
               <span className="flex-1">Open in GitHub</span>
-              <ExternalLinkIcon className="size-4 shrink-0 text-muted-foreground" />
+              <IconExternalLink className="size-4 shrink-0 text-muted-foreground" />
             </a>
           }
         />
