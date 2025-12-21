@@ -14,37 +14,29 @@ bun add logixlysia
 
 ```ts
 import { Elysia } from 'elysia'
-import logixlysia from 'logixlysia'
+import logixlysia from 'logixlysia' // or import { logixlysia } from 'logixlysia'
 
 const app = new Elysia({
-  name: 'Logixlysia Example'
-}).use(
-  logixlysia({
-    config: {
-      showStartupMessage: true,
-      startupMessageFormat: 'simple',
-      timestamp: {
-        translateTime: 'yyyy-mm-dd HH:MM:ss'
-      },
-      ip: true,
-      logFilePath: './logs/example.log',
-      logRotation: {
-        maxSize: '10m',
-        interval: '1d',
-        maxFiles: '7d',
-        compress: true
-      },
-      customLogFormat:
-        '🦊 {now} {level} {duration} {method} {pathname} {status} {message} {ip} {epoch}',
-      logFilter: {
-        level: ['ERROR', 'WARNING'],
-        status: [500, 404],
-        method: 'GET'
-      }
-    }
-  })
-)
-
+    name: "Elysia with Logixlysia"
+})
+  .use(
+    logixlysia({
+      config: {
+        showStartupMessage: true,
+        startupMessageFormat: 'simple',
+        timestamp: {
+          translateTime: 'yyyy-mm-dd HH:MM:ss.SSS'
+        },
+        logFilePath: './logs/example.log',
+        ip: true,
+        customLogFormat:
+          '🦊 {now} {level} {duration} {method} {pathname} {status} {message} {ip}'
+        }
+    }))
+    .get('/', () => {
+        return { message: 'Welcome to Basic Elysia with Logixlysia' }
+    })
+        
 app.listen(3000)
 ```
 
