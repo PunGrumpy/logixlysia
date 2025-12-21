@@ -14,7 +14,7 @@
     "build": "bunup",
     "test": "bun test",
     "test:coverage": "bun test --coverage --coverage-reporter=lcov",
-    "clean": "git clean -fdx .turbo dist node_modules",
+    "clean": "git clean -fdx .turbo dist node_modules coverage",
     "typecheck": "tsc --noEmit --emitDeclarationOnly false"
   },
   "author": "Noppakorn Kaewsalabnil <hello@pungrumpy.com>",
