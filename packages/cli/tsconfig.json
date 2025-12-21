@@ -1,7 +1,6 @@
 {
   "$schema": "https://json.schemastore.org/tsconfig",
   "display": "Default",
-  "exclude": ["__tests__"],
   "compilerOptions": {
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,

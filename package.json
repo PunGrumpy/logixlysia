@@ -4,6 +4,8 @@
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev",
+    "test": "turbo test",
+    "test:coverage": "turbo test:coverage",
     "lint": "ultracite check",
     "format": "ultracite fix",
     "bump-deps": "bunx npm-check-updates --deep -u -x recharts && bun install",
