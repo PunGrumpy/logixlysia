@@ -12,7 +12,8 @@
     "changeset:version": "changeset version",
     "changeset:publish": "bun build && changeset publish",
     "bump-deps": "bunx npm-check-updates --deep -u -x recharts && bun install",
-    "clean": "git clean -xdf .turbo node_modules"
+    "clean": "git clean -xdf .turbo node_modules",
+    "typecheck": "turbo run typecheck"
   },
   "devDependencies": {
     "@biomejs/biome": "2.3.8",

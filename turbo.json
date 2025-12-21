@@ -19,6 +19,9 @@
     "test:coverage": {
       "dependsOn": ["^test:coverage"]
     },
+    "typecheck": {
+      "dependsOn": ["^typecheck"]
+    },
     "clean": {
       "cache": false
     },
