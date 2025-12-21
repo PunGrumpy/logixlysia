@@ -1,94 +1,87 @@
 import { describe, expect, mock, test } from 'bun:test'
-
 import type { Options } from '../../src/interfaces'
 import { createLogger } from '../../src/logger'
+import { spyConsole } from '../_helpers/console'
+import { createMockRequest } from '../_helpers/request'
 
 describe('createLogger', () => {
-  test('should create a logger with default options', () => {
+  test('returns a logger with expected methods', () => {
     const logger = createLogger()
-    expect(logger).toBeDefined()
+    expect(logger.pino).toBeDefined()
     expect(typeof logger.log).toBe('function')
     expect(typeof logger.handleHttpError).toBe('function')
-    expect(logger.pino).toBeDefined() // Should have Pino instance
+    expect(typeof logger.info).toBe('function')
+    expect(typeof logger.warn).toBe('function')
+    expect(typeof logger.error).toBe('function')
+    expect(typeof logger.debug).toBe('function')
   })
 
-  test('should create a logger with custom options', () => {
+  test('respects disableInternalLogger and still calls transports', async () => {
+    const transport = mock<
+      (lvl: unknown, msg: unknown, meta?: unknown) => void
+    >(() => {
+      /* noop */
+    })
     const options: Options = {
       config: {
-        showStartupMessage: false,
-        pino: {
-          level: 'debug',
-          prettyPrint: true
-        }
+        transports: [{ log: transport }],
+        disableInternalLogger: true,
+        disableFileLogging: true
       }
     }
+
+    const { spies, restore } = spyConsole()
+
     const logger = createLogger(options)
-    expect(logger).toBeDefined()
-    expect(logger.pino).toBeDefined()
+    const request = createMockRequest('http://localhost/test')
+
+    logger.info(request, 'hello')
+
+    // transport should be invoked synchronously
+    expect(transport).toHaveBeenCalledTimes(1)
+    const firstCall = transport.mock.calls[0]
+    expect(firstCall).toBeDefined()
+    const [levelValue, messageValue] = firstCall ?? [undefined, undefined]
+    expect(levelValue).toBe('INFO')
+    expect(messageValue).toBe('hello')
+
+    // internal console output should be disabled
+    expect(spies.log).not.toHaveBeenCalled()
+    expect(spies.info).not.toHaveBeenCalled()
+    expect(spies.warn).not.toHaveBeenCalled()
+    expect(spies.error).not.toHaveBeenCalled()
+    expect(spies.debug).not.toHaveBeenCalled()
+
+    restore()
+
+    // Avoid unhandled async noise if any transport returns a promise in future
+    await new Promise(resolve => setTimeout(resolve, 0))
   })
 
-  test('should handle different log levels', () => {
-    const logger = createLogger()
-
-    // Mock the Pino logger methods
-    const mockInfo = mock()
-    const mockError = mock()
-    const mockWarn = mock()
-
-    logger.pino.info = mockInfo
-    logger.pino.error = mockError
-    logger.pino.warn = mockWarn
-
-    // Test INFO level
-    logger.log(
-      'INFO',
-      new Request('http://localhost'),
-      { status: 200 },
-      { beforeTime: BigInt(0) }
-    )
-    expect(mockInfo).toHaveBeenCalled()
-
-    // Test ERROR level
-    logger.log(
-      'ERROR',
-      new Request('http://localhost'),
-      { status: 500 },
-      { beforeTime: BigInt(0) }
-    )
-    expect(mockError).toHaveBeenCalled()
-
-    // Test WARN level
-    logger.log(
-      'WARNING',
-      new Request('http://localhost'),
-      { status: 400 },
-      { beforeTime: BigInt(0) }
-    )
-    expect(mockWarn).toHaveBeenCalled()
-  })
-
-  test('should expose Pino logger instance', () => {
-    const logger = createLogger()
-    expect(logger.pino).toBeDefined()
-    expect(typeof logger.pino.info).toBe('function')
-    expect(typeof logger.pino.error).toBe('function')
-    expect(typeof logger.pino.warn).toBe('function')
-    expect(typeof logger.pino.debug).toBe('function')
-  })
-
-  test('should create Pino logger with custom configuration', () => {
+  test('handleHttpError emits transport error log', async () => {
+    const transport = mock<
+      (lvl: unknown, msg: unknown, meta?: unknown) => void
+    >(() => {
+      /* noop */
+    })
     const options: Options = {
       config: {
-        pino: {
-          level: 'debug',
-          messageKey: 'message',
-          errorKey: 'error'
-        }
+        transports: [{ log: transport }],
+        disableInternalLogger: true,
+        disableFileLogging: true
       }
     }
+
     const logger = createLogger(options)
-    expect(logger.pino).toBeDefined()
-    // Note: We can't easily test the internal configuration of Pino,
-    // but we can verify the logger was created successfully
+    const request = createMockRequest('http://localhost/test')
+    const store = { beforeTime: BigInt(0) }
+
+    logger.handleHttpError(request, { status: 400, message: 'bad' }, store)
+
+    expect(transport).toHaveBeenCalledTimes(1)
+    const [levelValue] = transport.mock.calls[0] ?? [undefined]
+    expect(levelValue).toBe('ERROR')
+
+    await new Promise(resolve => setTimeout(resolve, 0))
   })
 })

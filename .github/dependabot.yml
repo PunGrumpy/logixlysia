@@ -1,13 +1,14 @@
 version: 2
 updates:
-  - package-ecosystem: npm
-    directory: '/'
+  - package-ecosystem: bun
+    directory: 'packages/cli'
     schedule:
       interval: weekly
-    reviewers:
-      - PunGrumpy
     labels:
       - dependencies
     assignees:
       - PunGrumpy
-    versioning-strategy: auto
+    commit-message:
+      prefix: chore
+      prefix-development: chore
+    versioning-strategy: increase-if-necessary

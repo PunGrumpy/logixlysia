@@ -13,6 +13,15 @@
       "cache": false,
       "persistent": true
     },
+    "test": {
+      "dependsOn": ["^test"]
+    },
+    "test:coverage": {
+      "dependsOn": ["^test:coverage"]
+    },
+    "typecheck": {
+      "dependsOn": ["^typecheck"]
+    },
     "clean": {
       "cache": false
     },

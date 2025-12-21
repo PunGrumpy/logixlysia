@@ -13,11 +13,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: 🔖 Add Labels
-        uses: actions/labeler@v5
+        uses: actions/labeler@v6
       - name: 😵 Check Conflicts
         uses: mschilde/auto-label-merge-conflicts@master
         with:
-          CONFLICT_LABEL_NAME: 'conflict'
+          CONFLICT_LABEL_NAME: "conflict"
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           MAX_RETRIES: 5
           WAIT_MS: 5000
