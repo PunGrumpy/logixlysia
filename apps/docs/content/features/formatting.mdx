@@ -1,0 +1,77 @@
+---
+title: Custom Formatting
+description: Create custom log message formats
+---
+
+Customize log message formats using placeholders to match your logging needs.
+
+## Basic Usage
+
+```ts
+logixlysia({
+  config: {
+    customLogFormat: '{now} {level} {duration}ms {method} {pathname} {status}'
+  }
+})
+```
+
+## Available Placeholders
+
+| Placeholder | Description |
+|-------------|-------------|
+| `{now}` | Current date and time |
+| `{level}` | Log level (INFO, WARNING, ERROR) |
+| `{duration}` | Request duration in milliseconds |
+| `{method}` | HTTP method |
+| `{pathname}` | Request path |
+| `{status}` | Response status code |
+| `{message}` | Custom message |
+| `{ip}` | Client IP address |
+| `{epoch}` | Unix timestamp |
+
+## Examples
+
+### Minimal Format
+
+```ts
+customLogFormat: '{method} {pathname} {status}'
+```
+
+Output:
+```
+GET /api/users 200
+```
+
+### Detailed Format
+
+```ts
+customLogFormat: '🦊 {now} {level} {duration}ms {method} {pathname} {status} {ip}'
+```
+
+Output:
+```
+🦊 2025-04-13 15:00:19 INFO 123.45ms GET /api/users 200 192.168.1.1
+```
+
+### Timestamp Format
+
+Configure timestamp format separately:
+
+```ts
+logixlysia({
+  config: {
+    customLogFormat: '{now} {level} {method} {pathname}',
+    timestamp: {
+      translateTime: 'yyyy-mm-dd HH:MM:ss'
+    }
+  }
+})
+```
+
+## Best Practices
+
+- Keep formats concise for readability
+- Include essential information only
+- Use consistent formatting across environments
+- Consider log parsing requirements when designing formats
+

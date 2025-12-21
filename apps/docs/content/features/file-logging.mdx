@@ -1,6 +1,6 @@
 ---
 title: File Logging
-description: Learn how to save logs to files in Logixlysia.
+description: Save logs to files for persistence
 ---
 
 Save your logs to files for persistence and analysis using Logixlysia's file logging system.
@@ -15,27 +15,11 @@ logixlysia({
 })
 ```
 
-## Configuration Options
+## Configuration
 
 | Option | Type | Description | Default |
 |--------|------|-------------|---------|
-| `logFilePath` | `string` | Path to the log file | `'./logs/elysia.log'` |
-
-## Multiple Log Files
-
-Create separate log files for different purposes:
-
-```ts
-logixlysia({
-  config: {
-    logFilePath: {
-      error: './logs/error.log',
-      access: './logs/access.log',
-      debug: './logs/debug.log'
-    }
-  }
-})
-```
+| `logFilePath` | `string` | Path to the log file | `undefined` |
 
 ## File Format
 
@@ -48,39 +32,25 @@ Logs are written in a structured format:
 
 ## Best Practices
 
-1. **File Organization**
-   - Use descriptive file names
-   - Organize logs by type/level
-   - Consider using date-based directories
+- Use descriptive file names
+- Organize logs by type/level
+- Consider using date-based directories
+- Set appropriate file permissions
+- Avoid logging sensitive data
+- Regular log review and cleanup
 
-2. **Performance**
-   - Use async file writing
-   - Consider buffering for high-volume logs
-   - Monitor disk space usage
+## Examples
 
-3. **Security**
-   - Set appropriate file permissions
-   - Avoid logging sensitive data
-   - Regular log review and cleanup
-
-## Example Configurations
-
-### Production Configuration
+### Production
 
 ```ts
-logixlysia({
-  config: {
-    logFilePath: './logs/production.log'
-  }
-})
+logFilePath: './logs/production.log'
 ```
 
-### Development Configuration
+### Development
 
 ```ts
-logixlysia({
-  config: {
-    logFilePath: './logs/development.log'
-  }
-})
-``` 
+logFilePath: './logs/development.log'
+```
+
+For advanced file management, see [Log Rotation](/features/log-rotation).

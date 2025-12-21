@@ -1,36 +1,24 @@
 ---
 title: Contributing
-description: How to run tests, add new providers, and contribute to Logixlysia.
+description: Contribute to Logixlysia development
 ---
 
-Thank you for your interest in contributing to Logixlysia! This guide will help you get started with development, testing, and adding new providers.
+Thank you for your interest in contributing to Logixlysia! This guide will help you get started.
 
 ## Getting Started
 
-To get started with Logixlysia development, follow these steps:
-
-<div className="fd-steps">
-   <div className="fd-step">
-      Fork the repository
-   </div>
-
-   <div className="fd-step">
-      Clone your fork
-   </div>
+1. Fork the repository
+2. Clone your fork:
    ```bash
    git clone https://github.com/PunGrumpy/logixlysia.git
    cd logixlysia
    ```
-
-   <div className="fd-step">
-      Install dependencies
-   </div>
+3. Install dependencies:
    ```bash
    bun install
    ```
-</div>
 
-## Development Setup
+## Development
 
 Logixlysia is built with:
 - Bun as the runtime
@@ -51,28 +39,17 @@ src/
 
 ## Running Tests
 
-To run the test suite:
-
 ```bash
 bun test
 ```
 
-For watching tests during development:
+Watch mode:
 
 ```bash
 bun test --watch
 ```
 
-## Adding New Features
-
-### Adding a New Provider
-
-1. Create a new file in the `src/providers` directory
-2. Implement the provider interface
-3. Add tests for your provider
-4. Update the documentation
-
-### Code Style
+## Code Style
 
 - Follow TypeScript best practices
 - Use meaningful variable and function names
@@ -94,15 +71,6 @@ bun test --watch
 - [ ] Code follows style guidelines
 - [ ] Changes are backward compatible
 
-## Documentation
-
-Documentation is written in MDX and located in the `website/content/docs` directory. When adding new features:
-
-1. Add relevant documentation
-2. Include code examples
-3. Update the API reference if needed
-
 ## Questions?
 
-Feel free to open an issue if you have any questions or need help getting started. We're happy to help!
-
+Feel free to open an issue if you have any questions or need help getting started.

@@ -1,31 +1,47 @@
 ---
 title: Introduction
-description: A brief overview of Logixlysia and how it works.
+description: Get started with Logixlysia, a high-performance logging plugin for Elysia.js
 ---
 
-![Preview](./screenshot.png)
+Logixlysia is a powerful logging plugin for [Elysia.js](https://elysiajs.com/) that provides structured, high-performance logging integrated with [Pino](https://github.com/pinojs/pino). Built for production environments, it offers flexible configuration, file logging, and seamless integration with your Elysia applications.
 
-Logixlysia is a logging plugin for [Elysia.js](https://elysiajs.com/) that provides a simple and flexible way to log requests and responses in your Elysia applications. Powered by [Pino](https://github.com/pinojs/pino), it delivers high-performance structured logging while remaining easy to use and highly configurable.
+![Preview](./preview.png)
 
-## Why use Logixlysia?
+## Features
 
-Integrating logging into your Elysia application can help you monitor and debug your application more effectively. Logixlysia provides a simple and consistent way to log requests and responses, making it easier to track down issues and understand how your application is behaving.
+- **High Performance** - Powered by Pino, one of the fastest Node.js loggers
+- **Structured Logging** - JSON-first approach for better log analysis
+- **Flexible Configuration** - Customize format, level, and output destinations
+- **File Logging** - Save logs to files with automatic rotation
+- **Transport Support** - Send logs to external services
+- **Type Safe** - Full TypeScript support
 
-### Key Features
+## Quick Start
 
-- **🚀 High Performance** - Powered by Pino, one of the fastest Node.js loggers
-- **📊 Structured Logging** - JSON-first approach for better log analysis
-- **🎨 Customizable** - Flexible configuration for format, level, and output
-- **🔧 Easy to Use** - Simple API with sensible defaults
-- **📁 File Logging** - Save logs to files with rotation support
-- **🔍 Log Filtering** - Filter by level, status, or HTTP method
-- **📦 Transport Support** - Send logs to external services
-- **🎯 Direct Pino Access** - Use Pino directly for advanced features
+```ts
+import { Elysia } from 'elysia'
+import logixlysia from 'logixlysia'
 
-## Community
+const app = new Elysia()
+  .use(logixlysia())
+  .get('/', () => 'Hello World')
+  .listen(3000)
+```
 
-Logixlysia is an [open source project](https://github.com/PunGrumpy/logixlysia) and we welcome contributions from the community. If you have any ideas or suggestions, please feel free to open an issue or submit a pull request. Check out our [contributing guide](/docs/contributing) for more information.
+## Installation
 
-## License
+```bash
+bun add logixlysia
+```
 
-Logixlysia is licensed under the [MIT License](https://github.com/PunGrumpy/logixlysia/blob/main/LICENSE). This means you can use Logixlysia in your commercial and open-source projects.
+## Why Logixlysia?
+
+Logixlysia combines the simplicity of Elysia's plugin system with Pino's high-performance logging engine. It provides a clean API for logging requests, responses, and custom events while maintaining minimal overhead.
+
+Whether you're building a small API or a large-scale application, Logixlysia scales with your needs—from simple console logging to complex multi-transport setups.
+
+## Next Steps
+
+- [Get started with basic usage](/usage)
+- [Explore features](/features)
+- [Learn about configuration options](/usage#configuration)

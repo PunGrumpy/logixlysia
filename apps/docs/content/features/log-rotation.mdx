@@ -1,9 +1,9 @@
 ---
 title: Log Rotation
-description: Manage log file sizes and retention with Logixlysia.
+description: Manage log file sizes and retention
 ---
 
-Logixlysia provides powerful log rotation capabilities to help you manage your log files efficiently. The rotation system automatically handles file size limits, time-based rotation, compression, and retention policies.
+Automatically manage log file sizes, rotation intervals, compression, and retention policies.
 
 ## Basic Configuration
 
@@ -24,81 +24,49 @@ logixlysia({
 
 ### Size-based Rotation
 
-Rotate logs based on file size:
-
 ```ts
 logRotation: {
-  maxSize: '10m',    // 10 megabytes
-  // or
-  maxSize: '1g',     // 1 gigabyte
-  // or
-  maxSize: 10485760  // 10MB in bytes
+  maxSize: '10m'    // 10 megabytes
 }
 ```
+
+Supported formats: `'1k'`, `'1m'`, `'1g'` or bytes (number)
 
 ### Time-based Rotation
 
-Rotate logs based on time intervals:
-
 ```ts
 logRotation: {
-  interval: '1d',    // Rotate daily
-  // or
-  interval: '1h',    // Rotate hourly
-  // or
-  interval: '1w'     // Rotate weekly
+  interval: '1d'    // Rotate daily
 }
 ```
+
+Supported intervals: `'1h'`, `'1d'`, `'1w'` (or any number)
 
 ### Retention Policy
 
-Configure how long to keep rotated logs:
-
 ```ts
 logRotation: {
-  maxFiles: '7d',    // Keep logs for 7 days
-  // or
-  maxFiles: '30d',   // Keep logs for 30 days
-  // or
-  maxFiles: 10       // Keep last 10 files
+  maxFiles: '7d'    // Keep logs for 7 days
 }
 ```
 
-## Compression
-
-Enable compression for rotated logs:
+Or keep a specific number of files:
 
 ```ts
 logRotation: {
-  compress: true    // Enable compression (uses gzip by default)
+  maxFiles: 10      // Keep last 10 files
 }
 ```
 
-You can also explicitly specify the compression type (currently only gzip is supported):
+### Compression
 
 ```ts
 logRotation: {
-  compress: true,
-  compression: 'gzip'
-}
-```
-
-## Multiple Rotation Strategies
-
-Combine different rotation strategies:
-
-```ts
-logRotation: {
-  maxSize: '100m',   // Rotate when file reaches 100MB
-  interval: '1d',    // Also rotate daily
-  maxFiles: '30d',   // Keep logs for 30 days
-  compress: true     // Compress rotated logs
+  compress: true    // Enable compression (gzip)
 }
 ```
 
 ## How Rotation Works
-
-### File Naming Convention
 
 When a log file is rotated, it's renamed with a timestamp:
 
@@ -106,181 +74,53 @@ When a log file is rotated, it's renamed with a timestamp:
 app.log → app.log.2025-10-10-14-30-45
 ```
 
-If compression is enabled, the file is compressed after rotation:
+If compression is enabled:
 
 ```
 app.log.2025-10-10-14-30-45 → app.log.2025-10-10-14-30-45.gz
 ```
 
-### Rotation Triggers
-
 Rotation occurs automatically when:
-
-1. **Size threshold exceeded**: File size reaches or exceeds `maxSize`
-2. **Time interval elapsed**: Time since last rotation reaches `interval`
-3. **Manual rotation**: (if implemented in your application)
-
-### Retention Management
-
-After rotation, old files are automatically cleaned up based on `maxFiles`:
-
-- **Count-based**: Keep only the N most recent rotated files
-  ```ts
-  maxFiles: 10  // Keep last 10 rotated files
-  ```
-
-- **Time-based**: Keep files created within the specified time period
-  ```ts
-  maxFiles: '30d'  // Keep files from last 30 days
-  ```
-
-### Empty File Handling
-
-Empty log files are **not rotated** to avoid creating unnecessary rotated files.
-
-## Best Practices
-
-1. **Size Management**
-   - Set appropriate maxSize based on traffic
-   - Consider disk space availability
-   - Monitor log growth rate
-
-2. **Retention**
-   - Configure retention based on requirements
-   - Consider compliance needs
-   - Balance storage costs
-
-3. **Compression**
-   - Enable compression for space savings
-   - Consider CPU impact
-   - Choose appropriate compression level
-
-4. **Monitoring**
-   - Monitor rotation success
-   - Track disk space usage
-   - Set up alerts for issues
+- File size reaches `maxSize`
+- Time interval `interval` has elapsed
 
 ## Example Configurations
 
-### Production Setup
+### Production
 
 ```ts
-logixlysia({
-  config: {
-    logFilePath: './logs/production.log',
-    logRotation: {
-      maxSize: '100m',
-      interval: '1d',
-      maxFiles: '30d',
-      compress: true
-    }
-  }
-})
+logRotation: {
+  maxSize: '100m',
+  interval: '1d',
+  maxFiles: '30d',
+  compress: true
+}
 ```
 
-### Development Setup
+### Development
 
 ```ts
-logixlysia({
-  config: {
-    logFilePath: './logs/development.log',
-    logRotation: {
-      maxSize: '10m',
-      maxFiles: '7d',
-      compress: false
-    }
-  }
-})
+logRotation: {
+  maxSize: '10m',
+  maxFiles: '7d',
+  compress: false
+}
 ```
 
-### High-Volume Setup
+### High-Volume
 
 ```ts
-logixlysia({
-  config: {
-    logFilePath: './logs/high-volume.log',
-    logRotation: {
-      maxSize: '1g',
-      interval: '1h',
-      maxFiles: '7d',
-      compress: true
-    }
-  }
-})
+logRotation: {
+  maxSize: '1g',
+  interval: '1h',
+  maxFiles: '7d',
+  compress: true
+}
 ```
-
-## Supported Formats
-
-### Size Formats
-
-The `maxSize` option accepts multiple formats:
-
-- **String with unit**: `'10k'`, `'10m'`, `'1g'` (case-insensitive)
-- **Number (bytes)**: `10485760` (10MB in bytes)
-- **Decimal values**: `'1.5m'`, `'0.5g'`
-
-| Format | Bytes | Description |
-|--------|-------|-------------|
-| `'1k'` | 1,024 | 1 kilobyte |
-| `'1m'` | 1,048,576 | 1 megabyte |
-| `'1g'` | 1,073,741,824 | 1 gigabyte |
-
-### Interval Formats
-
-The `interval` option accepts:
-
-- `'1h'` - Every hour
-- `'1d'` - Every day (24 hours)
-- `'1w'` - Every week (7 days)
-
-You can use any number: `'2h'`, `'3d'`, `'2w'`, etc.
-
-### Retention Formats
-
-The `maxFiles` option accepts:
-
-- **Number**: Keep last N files (e.g., `10`)
-- **Time-based**: Keep files for N days (e.g., `'30d'`)
 
 ## Important Notes
 
-### Performance
-
-- Rotation checks are optimized with caching to minimize file system operations
-- Time-based rotation tracks the last rotation time in memory
-- Compression runs asynchronously to avoid blocking log writes
-
-### Error Handling
-
-- Rotation failures **do not crash** the application
-- Errors are logged to console but normal logging continues
-- If rotation fails, logs continue writing to the current file
-
-### File Safety
-
-- Atomic file operations prevent data loss during rotation
-- Empty files are not rotated to avoid creating unnecessary files
-- Compression only occurs after successful rotation
-
-## Troubleshooting
-
-### Rotation Not Occurring
-
-Check that:
-1. File path has write permissions
-2. Size/interval thresholds are actually being exceeded
-3. No errors in console output
-
-### Disk Space Issues
-
-If running out of disk space:
-1. Reduce `maxFiles` retention
-2. Increase compression (`compress: true`)
-3. Reduce `maxSize` to rotate more frequently
-
-### Compression Not Working
-
-Ensure:
-1. `compress: true` is set (defaults to gzip compression)
-2. System has sufficient resources for compression
-3. Check console for compression errors
+- Empty files are not rotated
+- Rotation failures don't crash the application
+- Compression runs asynchronously
+- Old files are automatically cleaned up based on `maxFiles`

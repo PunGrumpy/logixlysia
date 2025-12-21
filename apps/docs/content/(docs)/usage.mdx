@@ -1,65 +1,36 @@
 ---
 title: Usage
-description: Learn how to use Logixlysia in your Elysia applications.
+description: Learn how to use Logixlysia in your Elysia applications
 ---
 
 ## Installation
 
-Logixlysia is available as an npm package. You can install it using Bun:
-
-```package-install
-logixlysia
+```bash
+bun add logixlysia
 ```
 
 ## Basic Usage
-
-After installing Logixlysia, you can import and use it in your Elysia application:
 
 ```ts
 import { Elysia } from 'elysia'
 import logixlysia from 'logixlysia'
 
-const app = new Elysia({
-  name: 'My App'
-}).use(
-  logixlysia({
-    config: {
-      showStartupMessage: true,
-      startupMessageFormat: 'simple',
-      timestamp: {
-        translateTime: 'yyyy-mm-dd HH:MM:ss'
-      }
-    }
-  })
-)
-
-app.listen(3000)
+const app = new Elysia()
+  .use(logixlysia())
+  .get('/', () => 'Hello World')
+  .listen(3000)
 ```
 
-## Configuration Options
+## Configuration
 
-Logixlysia provides various configuration options to customize your logging experience:
-
-### Basic Configuration
+### Basic Options
 
 ```ts
 logixlysia({
   config: {
-    // Show startup message when server starts
     showStartupMessage: true,
-    
-    // Choose between 'banner' or 'simple' format
-    startupMessageFormat: 'simple',
-    
-    // Customize timestamp format
-    timestamp: {
-      translateTime: 'yyyy-mm-dd HH:MM:ss'
-    },
-    
-    // Show IP address in logs
+    startupMessageFormat: 'simple', // or 'banner'
     ip: true,
-    
-    // Specify log file path
     logFilePath: './logs/app.log'
   }
 })
@@ -67,30 +38,33 @@ logixlysia({
 
 ### Custom Log Format
 
-You can customize the log message format using placeholders:
+Customize log messages using placeholders:
 
 ```ts
 logixlysia({
   config: {
-    customLogFormat: '🦊 {now} {level} {duration} {method} {pathname} {status} {message} {ip}'
+    customLogFormat: '{now} {level} {duration}ms {method} {pathname} {status}'
   }
 })
 ```
 
 Available placeholders:
-- `{now}` - Current date and time
-- `{level}` - Log level (INFO, WARNING, ERROR)
-- `{duration}` - Request duration in milliseconds
-- `{method}` - HTTP method
-- `{pathname}` - Request path
-- `{status}` - Response status code
-- `{message}` - Custom message
-- `{ip}` - Client IP address
-- `{epoch}` - Unix timestamp
+
+| Placeholder | Description | Example |
+| ----------- | ----------- | ----------- |
+| `{now}` | Current timestamp | `2025-12-21 10:00:00` |
+| `{level}` | Log level (INFO, WARNING, ERROR) | `INFO` |
+| `{duration}` | Request duration in milliseconds | `100ms` |
+| `{method}` | HTTP method | `GET` |
+| `{pathname}` | Request path | `/users` |
+| `{status}` | Response status code | `200` |
+| `{message}` | Custom message | `User profile accessed` |
+| `{ip}` | Client IP address | `127.0.0.1` |
+| `{epoch}` | Unix timestamp | `1734729600` |
 
 ### Log Filtering
 
-Filter logs based on level, status, or method:
+Filter logs by level, status, or method:
 
 ```ts
 logixlysia({
@@ -104,25 +78,18 @@ logixlysia({
 })
 ```
 
-## Advanced Usage
+## Pino Integration
 
-### Pino Integration
-
-Logixlysia is powered by [Pino](https://github.com/pinojs/pino), a high-performance JSON logger. You can access the Pino instance directly for advanced logging:
+Logixlysia is powered by Pino. Access the Pino instance directly:
 
 ```ts
 app.get('/users/:id', ({ store, params }) => {
   const { pino } = store
   
-  // Use Pino for structured logging
   pino.info({
     userId: params.id,
     action: 'view_profile'
   }, 'User profile accessed')
-  
-  // Create child loggers with context
-  const userLogger = pino.child({ userId: params.id })
-  userLogger.debug('Fetching user data')
   
   return { user: 'data' }
 })
@@ -143,33 +110,51 @@ logixlysia({
 })
 ```
 
-Learn more in the [Pino Integration](/docs/features/pino-integration) guide.
+Learn more in the [Pino Integration](/features/pino-integration) guide.
 
-### Custom Log Handlers
+## File Logging
 
-You can extend Logixlysia by creating custom loggers:
+Save logs to files:
 
 ```ts
-import { Logger, LogLevel, RequestInfo, LogData, StoreData, HttpError } from 'logixlysia'
-
-class CustomLogger implements Logger {
-  log(level: LogLevel, request: RequestInfo, data: LogData, store: StoreData) {
-    // Custom log handling logic
-  }
-
-  handleHttpError(request: RequestInfo, error: HttpError, store: StoreData) {
-    // Custom error handling logic
-  }
-}
-
 logixlysia({
   config: {
-    transports: [new CustomLogger()]
+    logFilePath: './logs/app.log',
+    logRotation: {
+      maxSize: '10m',
+      interval: '1d',
+      maxFiles: '7d',
+      compress: true
+    }
   }
 })
 ```
 
-### Error Handling
+See [File Logging](/features/file-logging) and [Log Rotation](/features/log-rotation) for details.
+
+## Output Control
+
+Control where logs are sent:
+
+```ts
+logixlysia({
+  config: {
+    // Disable console output
+    disableInternalLogger: false,
+    
+    // Disable file output
+    disableFileLogging: false,
+    
+    // Use only transports (disable console and file)
+    useTransportsOnly: false,
+    
+    // Custom transports
+    transports: [customTransport]
+  }
+})
+```
+
+## Error Handling
 
 Logixlysia automatically captures and logs errors:
 
@@ -179,83 +164,52 @@ app.get('/error', () => {
 })
 ```
 
-This will automatically log the error with stack trace and request details.
-
-### Output Control
-
-Logixlysia supports multiple logging outputs that can be controlled independently:
-
-```ts
-logixlysia({
-  config: {
-    // Control console output
-    disableInternalLogger: false, // Default: false (console enabled)
-    
-    // Control file output
-    logFilePath: '/var/log/app.log',
-    disableFileLogging: false, // Default: false (file enabled if logFilePath is set)
-    
-    // Control transport output
-    transports: [
-      // Custom transports are always additive
-      elasticsearchTransport,
-      slackTransport
-    ],
-    
-    // Use only transports (disable console and file)
-    useTransportsOnly: false // Default: false
-  }
-})
-```
-
-**Output Behavior:**
-- **Default**: Console + File (if `logFilePath` is set) + Transports
-- **`disableInternalLogger: true`**: Disables console logging only
-- **`disableFileLogging: true`**: Disables file logging only  
-- **`useTransportsOnly: true`**: Disables both console and file logging, uses only transports
-
-## Best Practices
-
-1. **Log Levels**
-   - Use appropriate log levels (INFO, WARNING, ERROR)
-   - Avoid excessive logging in production
-
-2. **Performance**
-   - Use log filtering in production
-   - Consider using file logging for important events
-
-3. **Security**
-   - Be careful with logging sensitive information
-   - Use log filtering to exclude sensitive routes
+Errors are automatically logged with stack traces and request details.
 
 ## Examples
 
-### Basic API with Logging
+### Production Setup
 
 ```ts
-import { Elysia } from 'elysia'
-import logixlysia from 'logixlysia'
-
 const app = new Elysia()
-  .use(logixlysia())
-  .get('/', () => 'Hello World')
-  .post('/users', ({ body }) => {
-    // Create user logic
-    return { success: true }
-  })
+  .use(
+    logixlysia({
+      config: {
+        logFilePath: './logs/production.log',
+        logRotation: {
+          maxSize: '100m',
+          interval: '1d',
+          maxFiles: '30d',
+          compress: true
+        },
+        logFilter: {
+          level: ['ERROR', 'WARNING']
+        },
+        pino: {
+          level: 'info',
+          redact: ['password', 'token', 'apiKey']
+        }
+      }
+    })
+  )
   .listen(3000)
 ```
 
-### Custom Error Handling
+### Development Setup
 
 ```ts
-app.onError(({ code, error, set }) => {
-  // Custom error handling
-  set.status = code
-  return { error: error.message }
-})
+const app = new Elysia()
+  .use(
+    logixlysia({
+      config: {
+        showStartupMessage: true,
+        startupMessageFormat: 'banner',
+        pino: {
+          level: 'debug',
+          prettyPrint: true
+        }
+      }
+    })
+  )
+  .listen(3000)
 ```
-
-## Need Help?
-
-If you have any questions or need help, feel free to open an issue on our GitHub repository or join our community on Discord.

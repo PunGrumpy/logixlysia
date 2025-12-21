@@ -1,0 +1,392 @@
+---
+title: Configuration
+description: Complete configuration reference for Logixlysia
+---
+
+Complete reference for all Logixlysia configuration options.
+
+## Configuration Object
+
+All configuration options are passed through the `config` property:
+
+```ts
+logixlysia({
+  config: {
+    // ... configuration options
+  }
+})
+```
+
+## Startup Options
+
+### `showStartupMessage`
+
+Whether to display the startup message when the server starts.
+
+- **Type:** `boolean`
+- **Default:** `true`
+
+```ts
+showStartupMessage: true
+```
+
+### `startupMessageFormat`
+
+Format of the startup message.
+
+- **Type:** `'simple' | 'banner'`
+- **Default:** `'banner'`
+
+```ts
+startupMessageFormat: 'simple' // or 'banner'
+```
+
+## Display Options
+
+### `useColors`
+
+Enable colored output in console logs.
+
+- **Type:** `boolean`
+- **Default:** `true`
+
+```ts
+useColors: true
+```
+
+### `ip`
+
+Include client IP address in logs.
+
+- **Type:** `boolean`
+- **Default:** `false`
+
+```ts
+ip: true
+```
+
+## Timestamp Options
+
+### `timestamp`
+
+Timestamp configuration.
+
+- **Type:** `{ translateTime?: string }`
+- **Default:** `undefined`
+
+```ts
+timestamp: {
+  translateTime: 'yyyy-mm-dd HH:MM:ss'
+}
+```
+
+## Formatting Options
+
+### `customLogFormat`
+
+Custom log message format using placeholders.
+
+- **Type:** `string`
+- **Default:** `undefined`
+
+```ts
+customLogFormat: '{now} {level} {duration}ms {method} {pathname} {status}'
+```
+
+Available placeholders:
+- `{now}` - Current timestamp
+- `{level}` - Log level
+- `{duration}` - Request duration
+- `{method}` - HTTP method
+- `{pathname}` - Request path
+- `{status}` - Response status
+- `{message}` - Custom message
+- `{ip}` - Client IP
+- `{epoch}` - Unix timestamp
+
+## Output Options
+
+### `transports`
+
+Array of custom transport implementations.
+
+- **Type:** `Transport[]`
+- **Default:** `[]`
+
+```ts
+transports: [
+  {
+    log: async (level, message, meta) => {
+      // Custom transport logic
+    }
+  }
+]
+```
+
+### `useTransportsOnly`
+
+Use only transports, disable console and file logging.
+
+- **Type:** `boolean`
+- **Default:** `false`
+
+```ts
+useTransportsOnly: true
+```
+
+### `disableInternalLogger`
+
+Disable console logging.
+
+- **Type:** `boolean`
+- **Default:** `false`
+
+```ts
+disableInternalLogger: true
+```
+
+### `disableFileLogging`
+
+Disable file logging.
+
+- **Type:** `boolean`
+- **Default:** `false`
+
+```ts
+disableFileLogging: true
+```
+
+## File Logging Options
+
+### `logFilePath`
+
+Path to the log file.
+
+- **Type:** `string`
+- **Default:** `undefined`
+
+```ts
+logFilePath: './logs/app.log'
+```
+
+### `logRotation`
+
+Log rotation configuration.
+
+- **Type:** `LogRotationConfig`
+- **Default:** `undefined`
+
+```ts
+logRotation: {
+  maxSize: '10m',
+  interval: '1d',
+  maxFiles: '7d',
+  compress: true
+}
+```
+
+#### `logRotation.maxSize`
+
+Maximum file size before rotation.
+
+- **Type:** `string | number`
+- **Format:** `'1k'`, `'1m'`, `'1g'` or bytes
+
+```ts
+maxSize: '10m'
+```
+
+#### `logRotation.interval`
+
+Time interval for rotation.
+
+- **Type:** `string`
+- **Format:** `'1h'`, `'1d'`, `'1w'`
+
+```ts
+interval: '1d'
+```
+
+#### `logRotation.maxFiles`
+
+Maximum number of files or retention period.
+
+- **Type:** `number | string`
+- **Format:** Number or `'7d'`, `'30d'`
+
+```ts
+maxFiles: '7d' // or 10
+```
+
+#### `logRotation.compress`
+
+Enable compression for rotated logs.
+
+- **Type:** `boolean`
+- **Default:** `false`
+
+```ts
+compress: true
+```
+
+#### `logRotation.compression`
+
+Compression algorithm.
+
+- **Type:** `'gzip'`
+- **Default:** `'gzip'`
+
+```ts
+compression: 'gzip'
+```
+
+## Pino Options
+
+### `pino`
+
+Pino logger configuration. Accepts all [Pino options](https://github.com/pinojs/pino/blob/master/docs/api.md#options).
+
+- **Type:** `PinoLoggerOptions & { prettyPrint?: boolean }`
+- **Default:** `undefined`
+
+```ts
+pino: {
+  level: 'info',
+  prettyPrint: true,
+  redact: ['password', 'token'],
+  base: {
+    service: 'my-api',
+    version: '1.0.0'
+  }
+}
+```
+
+### Common Pino Options
+
+#### `pino.level`
+
+Minimum log level.
+
+- **Type:** `'fatal' | 'error' | 'warn' | 'info' | 'debug' | 'trace'`
+- **Default:** `'info'`
+
+```ts
+pino: {
+  level: 'debug'
+}
+```
+
+#### `pino.prettyPrint`
+
+Enable pretty printing for development.
+
+- **Type:** `boolean | object`
+- **Default:** `false`
+
+```ts
+pino: {
+  prettyPrint: true
+}
+```
+
+Or with options:
+
+```ts
+pino: {
+  prettyPrint: {
+    colorize: true,
+    translateTime: 'HH:MM:ss Z',
+    ignore: 'pid,hostname'
+  }
+}
+```
+
+#### `pino.redact`
+
+Redact sensitive fields from logs.
+
+- **Type:** `string[] | object`
+- **Default:** `undefined`
+
+```ts
+pino: {
+  redact: ['password', 'token', 'apiKey']
+}
+```
+
+Or with paths:
+
+```ts
+pino: {
+  redact: {
+    paths: ['user.password', 'req.headers.authorization'],
+    remove: true
+  }
+}
+```
+
+#### `pino.base`
+
+Base fields added to all logs.
+
+- **Type:** `object`
+- **Default:** `undefined`
+
+```ts
+pino: {
+  base: {
+    service: 'my-api',
+    version: '1.0.0',
+    environment: process.env.NODE_ENV
+  }
+}
+```
+
+## Complete Example
+
+```ts
+logixlysia({
+  config: {
+    // Startup
+    showStartupMessage: true,
+    startupMessageFormat: 'banner',
+    
+    // Display
+    useColors: true,
+    ip: true,
+    
+    // Formatting
+    timestamp: {
+      translateTime: 'yyyy-mm-dd HH:MM:ss'
+    },
+    customLogFormat: '{now} {level} {duration}ms {method} {pathname} {status}',
+    
+    // File Logging
+    logFilePath: './logs/app.log',
+    logRotation: {
+      maxSize: '100m',
+      interval: '1d',
+      maxFiles: '30d',
+      compress: true
+    },
+    
+    // Output Control
+    disableInternalLogger: false,
+    disableFileLogging: false,
+    useTransportsOnly: false,
+    transports: [],
+    
+    // Pino
+    pino: {
+      level: 'info',
+      prettyPrint: false,
+      redact: ['password', 'token'],
+      base: {
+        service: 'my-api',
+        version: '1.0.0'
+      }
+    }
+  }
+})
+```
+

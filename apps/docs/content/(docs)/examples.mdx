@@ -1,0 +1,393 @@
+---
+title: Examples
+description: Real-world examples and use cases for Logixlysia
+---
+
+## Basic Setup
+
+### Minimal Configuration
+
+```ts
+import { Elysia } from 'elysia'
+import logixlysia from 'logixlysia'
+
+const app = new Elysia()
+  .use(logixlysia())
+  .get('/', () => 'Hello World')
+  .listen(3000)
+```
+
+### With Startup Message
+
+```ts
+const app = new Elysia()
+  .use(
+    logixlysia({
+      config: {
+        showStartupMessage: true,
+        startupMessageFormat: 'banner'
+      }
+    })
+  )
+  .listen(3000)
+```
+
+## Production Setup
+
+### Full Production Configuration
+
+```ts
+import { Elysia } from 'elysia'
+import logixlysia from 'logixlysia'
+
+const app = new Elysia()
+  .use(
+    logixlysia({
+      config: {
+        // Disable startup message in production
+        showStartupMessage: false,
+        
+        // File logging with rotation
+        logFilePath: './logs/production.log',
+        logRotation: {
+          maxSize: '100m',
+          interval: '1d',
+          maxFiles: '30d',
+          compress: true
+        },
+        
+        // Filter to important logs only
+        logFilter: {
+          level: ['ERROR', 'WARNING']
+        },
+        
+        // Pino configuration
+        pino: {
+          level: 'info',
+          redact: ['password', 'token', 'apiKey', 'creditCard'],
+          base: {
+            service: 'my-api',
+            version: process.env.APP_VERSION,
+            environment: 'production'
+          }
+        },
+        
+        // Use transports for external services
+        useTransportsOnly: false,
+        transports: [
+          elasticsearchTransport,
+          slackTransport
+        ]
+      }
+    })
+  )
+  .listen(3000)
+```
+
+## Development Setup
+
+### Development Configuration
+
+```ts
+const app = new Elysia()
+  .use(
+    logixlysia({
+      config: {
+        showStartupMessage: true,
+        startupMessageFormat: 'banner',
+        
+        // Pretty printing for development
+        pino: {
+          level: 'debug',
+          prettyPrint: {
+            colorize: true,
+            translateTime: 'HH:MM:ss Z',
+            ignore: 'pid,hostname'
+          }
+        }
+      }
+    })
+  )
+  .listen(3000)
+```
+
+## Custom Logging
+
+### Structured Logging with Context
+
+```ts
+app.get('/users/:id', ({ store, params }) => {
+  const { logger, pino } = store
+  
+  // Using logger helper
+  logger.info(request, 'User profile accessed', {
+    userId: params.id,
+    timestamp: Date.now()
+  })
+  
+  // Or using Pino directly
+  pino.info({
+    userId: params.id,
+    action: 'view_profile',
+    timestamp: Date.now()
+  }, 'User profile accessed')
+  
+  return getUserById(params.id)
+})
+```
+
+### Child Loggers
+
+```ts
+app.get('/api/orders/:id', ({ store, params }) => {
+  const { pino } = store
+  
+  // Create scoped logger
+  const orderLogger = pino.child({
+    orderId: params.id,
+    module: 'order-service'
+  })
+  
+  orderLogger.debug('Fetching order details')
+  orderLogger.info({ status: 'processing' }, 'Order retrieved')
+  
+  return getOrder(params.id)
+})
+```
+
+### Performance Logging
+
+```ts
+app.post('/api/process', async ({ store, body }) => {
+  const { pino } = store
+  const startTime = Date.now()
+  
+  const result = await processData(body)
+  
+  pino.info({
+    operation: 'process_data',
+    duration: Date.now() - startTime,
+    itemsProcessed: result.count,
+    memory: process.memoryUsage().heapUsed / 1024 / 1024,
+    success: true
+  }, 'Data processing completed')
+  
+  return result
+})
+```
+
+## Error Handling
+
+### Automatic Error Logging
+
+```ts
+app.get('/api/risky', ({ store }) => {
+  const { pino } = store
+  
+  try {
+    performRiskyOperation()
+  } catch (error) {
+    pino.error({
+      err: error,
+      operation: 'risky_operation',
+      context: {
+        attempted: true,
+        timestamp: Date.now()
+      }
+    }, 'Operation failed')
+    
+    throw error
+  }
+})
+```
+
+### Custom Error Handler
+
+```ts
+app.onError(({ code, error, store }) => {
+  const { pino } = store
+  
+  pino.error({
+    err: error,
+    status: code,
+    timestamp: Date.now()
+  }, 'Request failed')
+  
+  return {
+    error: error.message,
+    status: code
+  }
+})
+```
+
+## Custom Transports
+
+### Elasticsearch Transport
+
+```ts
+const elasticsearchTransport = {
+  log: async (level, message, meta) => {
+    try {
+      await fetch('http://elasticsearch:9200/logs/_doc', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          level,
+          message,
+          ...meta,
+          timestamp: new Date().toISOString()
+        })
+      })
+    } catch (err) {
+      console.error('Elasticsearch transport error', err)
+    }
+  }
+}
+
+app.use(
+  logixlysia({
+    config: {
+      transports: [elasticsearchTransport]
+    }
+  })
+)
+```
+
+### Slack Transport (Errors Only)
+
+```ts
+const slackTransport = {
+  log: async (level, message, meta) => {
+    if (level === 'ERROR') {
+      const webhook = process.env.SLACK_WEBHOOK_URL
+      if (!webhook) return
+      
+      try {
+        await fetch(webhook, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            text: `[ERROR] ${message}\n\`\`\`${JSON.stringify(meta, null, 2)}\`\`\``
+          })
+        })
+      } catch (err) {
+        console.error('Slack transport error', err)
+      }
+    }
+  }
+}
+```
+
+### MongoDB Transport
+
+```ts
+import { MongoClient } from 'mongodb'
+
+const client = new MongoClient(process.env.MONGODB_URI)
+await client.connect()
+const db = client.db('logs')
+
+const mongodbTransport = {
+  log: async (level, message, meta) => {
+    try {
+      await db.collection('logs').insertOne({
+        level,
+        message,
+        ...meta,
+        timestamp: new Date()
+      })
+    } catch (err) {
+      console.error('MongoDB transport error', err)
+    }
+  }
+}
+```
+
+## Environment-Based Configuration
+
+### Dynamic Configuration
+
+```ts
+const isDev = process.env.NODE_ENV === 'development'
+const isProd = process.env.NODE_ENV === 'production'
+
+app.use(
+  logixlysia({
+    config: {
+      showStartupMessage: isDev,
+      startupMessageFormat: isDev ? 'banner' : 'simple',
+      
+      logFilePath: isProd ? './logs/production.log' : undefined,
+      logRotation: isProd ? {
+        maxSize: '100m',
+        interval: '1d',
+        maxFiles: '30d',
+        compress: true
+      } : undefined,
+      
+      pino: {
+        level: isDev ? 'debug' : 'info',
+        prettyPrint: isDev,
+        redact: isProd ? ['password', 'token', 'apiKey'] : [],
+        base: {
+          service: 'my-api',
+          version: process.env.APP_VERSION,
+          environment: process.env.NODE_ENV
+        }
+      },
+      
+      transports: isProd ? [
+        elasticsearchTransport,
+        slackTransport
+      ] : []
+    }
+  })
+)
+```
+
+## REST API Example
+
+### Complete REST API with Logging
+
+```ts
+import { Elysia } from 'elysia'
+import logixlysia from 'logixlysia'
+
+const app = new Elysia()
+  .use(logixlysia({
+    config: {
+      pino: {
+        level: 'info',
+        base: { service: 'user-api' }
+      }
+    }
+  }))
+  .get('/users', ({ store }) => {
+    const { pino } = store
+    pino.info({ action: 'list_users' }, 'Fetching users')
+    return { users: [] }
+  })
+  .get('/users/:id', ({ store, params }) => {
+    const { pino } = store
+    const userLogger = pino.child({ userId: params.id })
+    userLogger.info('Fetching user')
+    return { user: { id: params.id } }
+  })
+  .post('/users', ({ store, body }) => {
+    const { pino } = store
+    pino.info({ action: 'create_user' }, 'Creating user')
+    return { user: body }
+  })
+  .put('/users/:id', ({ store, params, body }) => {
+    const { pino } = store
+    pino.info({ userId: params.id, action: 'update_user' }, 'Updating user')
+    return { user: { id: params.id, ...body } }
+  })
+  .delete('/users/:id', ({ store, params }) => {
+    const { pino } = store
+    pino.info({ userId: params.id, action: 'delete_user' }, 'Deleting user')
+    return { success: true }
+  })
+  .listen(3000)
+```
+

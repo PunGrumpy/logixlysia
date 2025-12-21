@@ -1,9 +1,9 @@
 ---
 title: Startup Messages
-description: Learn how to customize startup messages in Logixlysia.
+description: Customize startup messages in Logixlysia
 ---
 
-Customize how your application announces its startup with Logixlysia's flexible startup message system.
+Control how your application announces its startup with Logixlysia's flexible startup message system.
 
 ## Basic Usage
 
@@ -31,32 +31,24 @@ A clean, minimal startup message:
 A beautiful ASCII art banner (default):
 
 ```
-    ┌─────────────────────────────────────────────────┐
-    │                                                 │
-    │                 Elysia v1.1.23                  │
-    │                                                 │
-    │  🦊 Elysia is running at http://localhost:3000  │
-    │                                                 │
-    └─────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────┐
+│                                                 │
+│                 Elysia v1.4.19                  │
+│                                                 │
+│  🦊 Elysia is running at http://localhost:3001  │
+│                                                 │
+└─────────────────────────────────────────────────┘
 ```
 
-## Configuration Options
+## Configuration
 
 | Option | Type | Description | Default |
 |--------|------|-------------|---------|
 | `showStartupMessage` | `boolean` | Whether to show the startup message | `true` |
 | `startupMessageFormat` | `'simple' \| 'banner'` | The format of the startup message | `'banner'` |
 
-## Customization
-
-You can customize the startup message by:
-
-1. Setting `showStartupMessage` to `false` to disable it
-2. Choosing between `'simple'` and `'banner'` formats
-3. Extending the startup message system with custom formats
-
 ## Best Practices
 
 - Use `'banner'` format in development for better visibility
 - Use `'simple'` format in production for cleaner logs
-- Consider disabling startup messages in production if not needed 
+- Consider disabling startup messages in production if not needed
