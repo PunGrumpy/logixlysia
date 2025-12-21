@@ -1,16 +1,14 @@
-import {
-  type DefinitionBase,
-  Elysia,
-  type EphemeralType,
-  type MetadataBase,
-  type RouteBase,
-  type SingletonBase
-} from 'elysia'
+import { Elysia, type SingletonBase } from 'elysia'
 import { startServer } from './extensions'
 import type { LogixlysiaStore, Options } from './interfaces'
 import { createLogger } from './logger'
 
-export const logixlysia = (options: Options = {}) => {
+export type Logixlysia = Elysia<
+  'Logixlysia',
+  SingletonBase & { store: LogixlysiaStore }
+>
+
+export const logixlysia = (options: Options = {}): Logixlysia => {
   const didCustomLog = new WeakSet<Request>()
   const baseLogger = createLogger(options)
   const logger = {
@@ -49,15 +47,17 @@ export const logixlysia = (options: Options = {}) => {
     }
   }
 
+  const app = new Elysia({
+    name: 'Logixlysia',
+    detail: {
+      description:
+        'Logixlysia is a plugin for Elysia that provides a logger and pino logger.',
+      tags: ['logging', 'pino']
+    }
+  })
+
   return (
-    new Elysia({
-      name: 'Logixlysia',
-      detail: {
-        description:
-          'Logixlysia is a plugin for Elysia that provides a logger and pino logger.',
-        tags: ['logging', 'pino']
-      }
-    })
+    app
       .state('logger', logger)
       .state('pino', logger.pino)
       .state('beforeTime', BigInt(0))
@@ -88,7 +88,7 @@ export const logixlysia = (options: Options = {}) => {
         logger.handleHttpError(request, error, store)
       })
       // Ensure plugin lifecycle hooks (onRequest/onAfterHandle/onError) apply to the parent app.
-      .as('scoped')
+      .as('scoped') as unknown as Logixlysia
   )
 }
 
@@ -99,21 +99,8 @@ export type {
   LogLevel,
   Options,
   Pino,
-  RequestInfo,
   StoreData,
   Transport
 } from './interfaces'
-
-export type Logixlysia = Elysia<
-  string,
-  SingletonBase & {
-    store: SingletonBase['store'] & LogixlysiaStore
-  },
-  DefinitionBase,
-  MetadataBase,
-  RouteBase,
-  EphemeralType,
-  EphemeralType
->
 
 export default logixlysia
