@@ -1,25 +1,21 @@
 {
   "$schema": "https://json.schemastore.org/tsconfig",
+  "display": "Default",
   "compilerOptions": {
-    "noUncheckedIndexedAccess": true,
-    "strict": true,
-    "allowImportingTsExtensions": true,
+    "declaration": true,
+    "declarationMap": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "incremental": false,
+    "isolatedModules": true,
+    "lib": ["es2022", "DOM", "DOM.Iterable"],
     "module": "ESNext",
+    "moduleDetection": "force",
     "moduleResolution": "Bundler",
     "resolveJsonModule": true,
-    "types": ["bun-types"],
-    "downlevelIteration": true,
-    "noEmit": true,
-    "allowJs": true,
-    "allowSyntheticDefaultImports": true,
-    "forceConsistentCasingInFileNames": true,
-    "jsx": "react",
-    "jsxFactory": "ElysiaJSX",
-    "jsxFragmentFactory": "ElysiaJSX.Fragment",
-    "lib": ["ESNext"],
-    "moduleDetection": "force",
-    "target": "ESNext",
-    "composite": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "strict": true,
+    "target": "ES2022",
+    "strictNullChecks": true
   }
 }

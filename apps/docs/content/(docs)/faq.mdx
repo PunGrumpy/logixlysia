@@ -1,0 +1,287 @@
+---
+title: FAQ
+description: Frequently asked questions about Logixlysia
+---
+
+## General
+
+### What is Logixlysia?
+
+Logixlysia is a high-performance logging plugin for [Elysia.js](https://elysiajs.com/) that provides structured logging powered by [Pino](https://github.com/pinojs/pino). It offers flexible configuration, file logging, and seamless integration with Elysia applications.
+
+### Why use Logixlysia instead of plain Pino?
+
+Logixlysia provides:
+- Automatic request/response logging
+- Elysia plugin integration
+- Built-in file logging with rotation
+- Custom transport support
+- Simple configuration API
+- TypeScript support
+
+### Is Logixlysia production-ready?
+
+Yes, Logixlysia is built for production environments. It's powered by Pino, which is battle-tested in production, and includes features like log rotation, filtering, and transport support.
+
+## Installation
+
+### How do I install Logixlysia?
+
+```bash
+bun add logixlysia
+```
+
+Or with npm:
+
+```bash
+npm install logixlysia
+```
+
+### What are the requirements?
+
+- Node.js 18+ or Bun
+- Elysia.js
+
+## Configuration
+
+### How do I disable console logging?
+
+```ts
+logixlysia({
+  config: {
+    disableInternalLogger: true
+  }
+})
+```
+
+### How do I use only file logging?
+
+```ts
+logixlysia({
+  config: {
+    disableInternalLogger: true,
+    logFilePath: './logs/app.log'
+  }
+})
+```
+
+### How do I use only transports?
+
+```ts
+logixlysia({
+  config: {
+    useTransportsOnly: true,
+    transports: [myTransport]
+  }
+})
+```
+
+### How do I configure different settings for development and production?
+
+```ts
+const isDev = process.env.NODE_ENV === 'development'
+
+logixlysia({
+  config: {
+    showStartupMessage: isDev,
+    pino: {
+      level: isDev ? 'debug' : 'info',
+      prettyPrint: isDev
+    }
+  }
+})
+```
+
+## Usage
+
+### How do I access the logger in route handlers?
+
+```ts
+app.get('/users/:id', ({ store }) => {
+  const { logger, pino } = store
+  
+  // Use logger helper
+  logger.info(request, 'User accessed')
+  
+  // Or use Pino directly
+  pino.info('User accessed')
+  
+  return { user: 'data' }
+})
+```
+
+### How do I log custom messages?
+
+```ts
+app.post('/users', ({ store, body }) => {
+  const { logger } = store
+  
+  logger.info(request, 'Creating user', {
+    email: body.email
+  })
+  
+  return createUser(body)
+})
+```
+
+### How do I create child loggers?
+
+```ts
+app.get('/orders/:id', ({ store, params }) => {
+  const { pino } = store
+  
+  const orderLogger = pino.child({
+    orderId: params.id,
+    module: 'order-service'
+  })
+  
+  orderLogger.info('Processing order')
+  
+  return getOrder(params.id)
+})
+```
+
+## File Logging
+
+### How do I enable file logging?
+
+```ts
+logixlysia({
+  config: {
+    logFilePath: './logs/app.log'
+  }
+})
+```
+
+### How does log rotation work?
+
+Log rotation automatically manages log file sizes and retention:
+
+```ts
+logRotation: {
+  maxSize: '10m',    // Rotate when file reaches 10MB
+  interval: '1d',    // Also rotate daily
+  maxFiles: '7d',   // Keep logs for 7 days
+  compress: true     // Compress rotated logs
+}
+```
+
+### Can I use multiple log files?
+
+Currently, Logixlysia supports a single log file path. For multiple files, use custom transports.
+
+## Transports
+
+### How do I create a custom transport?
+
+```ts
+const myTransport = {
+  log: async (level, message, meta) => {
+    // Your logging logic here
+    await sendToService(level, message, meta)
+  }
+}
+
+logixlysia({
+  config: {
+    transports: [myTransport]
+  }
+})
+```
+
+### Can I use multiple transports?
+
+Yes, you can use multiple transports:
+
+```ts
+logixlysia({
+  config: {
+    transports: [
+      elasticsearchTransport,
+      slackTransport,
+      mongodbTransport
+    ]
+  }
+})
+```
+
+## Performance
+
+### What is the performance impact?
+
+Logixlysia is built on Pino, one of the fastest Node.js loggers. The performance impact is minimal, especially when using async transports.
+
+### Should I use file logging in production?
+
+File logging is recommended for production environments. Use log rotation to manage disk space and consider compression for space savings.
+
+### How do I reduce logging overhead?
+
+- Use log filtering to log only important events
+- Use appropriate log levels
+- Consider using transports for high-volume scenarios
+- Disable pretty printing in production
+
+## Troubleshooting
+
+### Logs are not appearing
+
+Check:
+1. Log level configuration
+2. Log filter settings
+3. Output control settings (`disableInternalLogger`, `disableFileLogging`)
+4. File permissions for file logging
+
+### File rotation is not working
+
+Ensure:
+1. `logFilePath` is set
+2. File has write permissions
+3. `maxSize` or `interval` is configured
+4. Check console for rotation errors
+
+### Pino pretty printing not working
+
+Make sure:
+1. `pino.prettyPrint` is set to `true`
+2. You're in development mode (pretty printing is typically disabled in production)
+3. You have `pino-pretty` installed if using transport-based pretty printing
+
+### Transports are not receiving logs
+
+Check:
+1. Transport is properly configured
+2. Transport `log` method is not throwing errors
+3. `useTransportsOnly` is not conflicting with other settings
+4. Check console for transport errors
+
+## Migration
+
+### How do I migrate from another logging library?
+
+1. Install Logixlysia
+2. Replace your logging setup with `logixlysia()`
+3. Update log calls to use `store.logger` or `store.pino`
+4. Configure transports if needed
+
+### Is Logixlysia backward compatible?
+
+Logixlysia maintains backward compatibility within major versions. Check the changelog for breaking changes between versions.
+
+## Support
+
+### Where can I get help?
+
+- [GitHub Issues](https://github.com/PunGrumpy/logixlysia/issues)
+- [Documentation](/)
+- [Elysia.js Discord](https://elysiajs.com/discord)
+
+### How do I report a bug?
+
+Open an issue on [GitHub](https://github.com/PunGrumpy/logixlysia/issues) with:
+- Description of the issue
+- Steps to reproduce
+- Expected behavior
+- Actual behavior
+- Environment details
+

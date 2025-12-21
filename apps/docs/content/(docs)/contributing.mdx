@@ -1,0 +1,76 @@
+---
+title: Contributing
+description: Contribute to Logixlysia development
+---
+
+Thank you for your interest in contributing to Logixlysia! This guide will help you get started.
+
+## Getting Started
+
+1. Fork the repository
+2. Clone your fork:
+   ```bash
+   git clone https://github.com/PunGrumpy/logixlysia.git
+   cd logixlysia
+   ```
+3. Install dependencies:
+   ```bash
+   bun install
+   ```
+
+## Development
+
+Logixlysia is built with:
+- Bun as the runtime
+- TypeScript for type safety
+- ElysiaJS as the web framework
+
+### Project Structure
+
+```
+src/
+├── logger/        # Core logging functionality
+├── output/        # Output handlers and formatters
+├── extensions/    # Additional features and extensions
+├── helpers/       # Utility functions
+├── interfaces/    # TypeScript interfaces
+└── index.ts       # Main entry point
+```
+
+## Running Tests
+
+```bash
+bun test
+```
+
+Watch mode:
+
+```bash
+bun test --watch
+```
+
+## Code Style
+
+- Follow TypeScript best practices
+- Use meaningful variable and function names
+- Add JSDoc comments for public APIs
+- Keep functions small and focused
+
+## Pull Request Process
+
+1. Create a new branch for your feature/fix
+2. Make your changes
+3. Run tests and ensure they pass
+4. Update documentation if needed
+5. Submit a pull request with a clear description
+
+### PR Checklist
+
+- [ ] Tests added/updated
+- [ ] Documentation updated
+- [ ] Code follows style guidelines
+- [ ] Changes are backward compatible
+
+## Questions?
+
+Feel free to open an issue if you have any questions or need help getting started.

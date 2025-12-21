@@ -1,0 +1,227 @@
+---
+title: Pino Integration
+description: High-performance structured logging with Pino
+---
+
+Logixlysia integrates [Pino](https://github.com/pinojs/pino), a high-performance JSON-first logging library, as its primary logging backend.
+
+## Why Pino?
+
+- **High Performance** - One of the fastest Node.js loggers available
+- **Structured Logging** - JSON-first approach for better log parsing
+- **Production Ready** - Battle-tested in production environments
+- **Flexible** - Extensive configuration options and transport support
+
+## Basic Usage
+
+Pino is integrated automatically. Access it through the store:
+
+```ts
+app.get('/users/:id', ({ store, params }) => {
+  const { pino } = store
+  
+  pino.info({
+    userId: params.id,
+    action: 'view_profile'
+  }, 'User profile accessed')
+  
+  return { user: 'data' }
+})
+```
+
+## Configuration
+
+### Log Level
+
+```ts
+logixlysia({
+  config: {
+    pino: {
+      level: 'debug' // 'fatal', 'error', 'warn', 'info', 'debug', 'trace'
+    }
+  }
+})
+```
+
+### Pretty Printing
+
+```ts
+logixlysia({
+  config: {
+    pino: {
+      prettyPrint: true
+    }
+  }
+})
+```
+
+Or with custom options:
+
+```ts
+logixlysia({
+  config: {
+    pino: {
+      prettyPrint: {
+        colorize: true,
+        translateTime: 'HH:MM:ss Z',
+        ignore: 'pid,hostname'
+      }
+    }
+  }
+})
+```
+
+### Redacting Sensitive Data
+
+```ts
+logixlysia({
+  config: {
+    pino: {
+      redact: ['password', 'token', 'apiKey']
+    }
+  }
+})
+```
+
+Or with paths:
+
+```ts
+logixlysia({
+  config: {
+    pino: {
+      redact: {
+        paths: ['user.password', 'req.headers.authorization'],
+        remove: true
+      }
+    }
+  }
+})
+```
+
+### Base Fields
+
+```ts
+logixlysia({
+  config: {
+    pino: {
+      base: {
+        service: 'my-api',
+        version: '1.0.0',
+        environment: process.env.NODE_ENV
+      }
+    }
+  }
+})
+```
+
+## Advanced Usage
+
+### Structured Logging
+
+```ts
+app.get('/users/:id', ({ store, params }) => {
+  const { pino } = store
+  
+  pino.info({
+    userId: params.id,
+    action: 'view_profile',
+    timestamp: Date.now()
+  }, 'User profile viewed')
+  
+  return user
+})
+```
+
+### Child Loggers
+
+Create child loggers with context:
+
+```ts
+app.get('/api/orders/:id', ({ store, params }) => {
+  const { pino } = store
+  
+  const orderLogger = pino.child({ 
+    orderId: params.id,
+    module: 'order-service' 
+  })
+  
+  orderLogger.info('Fetching order details')
+  orderLogger.debug({ query: 'SELECT * FROM orders WHERE id = ?' })
+  
+  return order
+})
+```
+
+### Performance Logging
+
+```ts
+app.post('/api/process', async ({ store, body }) => {
+  const { pino } = store
+  const startTime = Date.now()
+  
+  const result = await processData(body)
+  
+  pino.info({
+    operation: 'process_data',
+    duration: Date.now() - startTime,
+    itemsProcessed: result.count,
+    success: true
+  }, 'Data processing completed')
+  
+  return result
+})
+```
+
+### Error Logging
+
+```ts
+app.get('/api/risky', ({ store }) => {
+  const { pino } = store
+  
+  try {
+    performRiskyOperation()
+  } catch (error) {
+    pino.error({
+      err: error,
+      operation: 'risky_operation'
+    }, 'Operation failed')
+    
+    throw error
+  }
+})
+```
+
+## Environment-based Configuration
+
+```ts
+const isDev = process.env.NODE_ENV === 'development'
+
+logixlysia({
+  config: {
+    pino: {
+      level: isDev ? 'debug' : 'info',
+      prettyPrint: isDev,
+      redact: isDev ? [] : ['password', 'token', 'apiKey'],
+      base: {
+        service: 'my-api',
+        environment: process.env.NODE_ENV
+      }
+    }
+  }
+})
+```
+
+## Best Practices
+
+1. **Use Structured Logging** - Pass objects instead of string interpolation
+2. **Create Child Loggers** - For scoped logging with context
+3. **Log Performance Metrics** - Track important metrics
+4. **Redact Sensitive Data** - Always redact sensitive information
+5. **Use Appropriate Log Levels** - Follow log level guidelines
+6. **Environment-based Configuration** - Configure differently per environment
+
+## Additional Resources
+
+- [Pino Documentation](https://github.com/pinojs/pino)
+- [Pino Pretty](https://github.com/pinojs/pino-pretty)
+- [Pino Transports](https://github.com/pinojs/pino/blob/master/transports.md)

@@ -1,0 +1,15 @@
+{
+  "title": "Features",
+  "description": "Features of Logixlysia",
+  "pages": [
+    "startup",
+    "formatting",
+    "filtering",
+    "file-logging",
+    "log-rotation",
+    "log-levels",
+    "pino-integration",
+    "transports"
+  ],
+  "root": true
+}

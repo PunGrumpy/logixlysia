@@ -1,0 +1,146 @@
+---
+title: Custom Transports
+description: Send logs to external services
+---
+
+Send logs to external services using custom transports. Transports work alongside built-in console and file logging.
+
+## Output Behavior
+
+Logixlysia supports three types of logging outputs:
+
+1. **Console Logging** - Built-in console output
+2. **File Logging** - Built-in file output
+3. **Transport Logging** - Custom external services
+
+### Controlling Outputs
+
+- **Default**: Console + File (if `logFilePath` is set) + Transports
+- **`disableInternalLogger: true`**: Disables console logging only
+- **`disableFileLogging: true`**: Disables file logging only
+- **`useTransportsOnly: true`**: Disables both console and file, uses only transports
+
+## Basic Transport
+
+```ts
+type Transport = {
+  log: (level: LogLevel, message: string, meta?: Record<string, unknown>) => void | Promise<void>
+}
+
+const consoleTransport: Transport = {
+  log: (level, message, meta) => {
+    console.log(`[${level}] ${message}`, meta)
+  }
+}
+
+app.use(logixlysia({
+  config: {
+    transports: [consoleTransport]
+  }
+}))
+```
+
+## External Services
+
+### Elasticsearch
+
+```ts
+const elasticsearchTransport = {
+  log: async (level, message, meta) => {
+    try {
+      await fetch('http://elasticsearch:9200/logs/_doc', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          level,
+          message,
+          ...meta,
+          timestamp: new Date().toISOString()
+        })
+      })
+    } catch (err) {
+      console.error('Elasticsearch transport error', err)
+    }
+  }
+}
+```
+
+### MongoDB
+
+```ts
+const mongodbTransport = {
+  log: async (level, message, meta) => {
+    try {
+      await db.collection('logs').insertOne({
+        level,
+        message,
+        ...meta,
+        timestamp: new Date()
+      })
+    } catch (err) {
+      console.error('MongoDB transport error', err)
+    }
+  }
+}
+```
+
+### Slack
+
+```ts
+const slackTransport = {
+  log: async (level, message, meta) => {
+    if (level.toLowerCase() === 'error') {
+      const webhook = process.env.SLACK_WEBHOOK_URL
+      if (!webhook) return
+      
+      try {
+        await fetch(webhook, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            text: `[${level}] ${message}\n${JSON.stringify(meta, null, 2)}`
+          })
+        })
+      } catch (err) {
+        console.error('Slack transport error', err)
+      }
+    }
+  }
+}
+```
+
+## Multiple Transports
+
+```ts
+app.use(logixlysia({
+  config: {
+    transports: [
+      elasticsearchTransport,
+      slackTransport
+    ]
+  }
+}))
+```
+
+## Transport-Only Logging
+
+```ts
+app.use(logixlysia({
+  config: {
+    useTransportsOnly: true,
+    transports: [
+      elasticsearchTransport,
+      slackTransport
+    ]
+  }
+}))
+```
+
+## Best Practices
+
+- Handle transport errors gracefully
+- Implement retry logic for critical transports
+- Use async transports for better performance
+- Secure transport credentials
+- Avoid logging secrets or PII
+- Use `useTransportsOnly` for production environments where you only want external logging

@@ -1,0 +1,126 @@
+---
+title: Log Rotation
+description: Manage log file sizes and retention
+---
+
+Automatically manage log file sizes, rotation intervals, compression, and retention policies.
+
+## Basic Configuration
+
+```ts
+logixlysia({
+  config: {
+    logFilePath: './logs/app.log',
+    logRotation: {
+      maxSize: '10m',    // Rotate when file reaches 10MB
+      maxFiles: '7d',    // Keep logs for 7 days
+      compress: true     // Compress rotated logs
+    }
+  }
+})
+```
+
+## Rotation Options
+
+### Size-based Rotation
+
+```ts
+logRotation: {
+  maxSize: '10m'    // 10 megabytes
+}
+```
+
+Supported formats: `'1k'`, `'1m'`, `'1g'` or bytes (number)
+
+### Time-based Rotation
+
+```ts
+logRotation: {
+  interval: '1d'    // Rotate daily
+}
+```
+
+Supported intervals: `'1h'`, `'1d'`, `'1w'` (or any number)
+
+### Retention Policy
+
+```ts
+logRotation: {
+  maxFiles: '7d'    // Keep logs for 7 days
+}
+```
+
+Or keep a specific number of files:
+
+```ts
+logRotation: {
+  maxFiles: 10      // Keep last 10 files
+}
+```
+
+### Compression
+
+```ts
+logRotation: {
+  compress: true    // Enable compression (gzip)
+}
+```
+
+## How Rotation Works
+
+When a log file is rotated, it's renamed with a timestamp:
+
+```
+app.log → app.log.2025-10-10-14-30-45
+```
+
+If compression is enabled:
+
+```
+app.log.2025-10-10-14-30-45 → app.log.2025-10-10-14-30-45.gz
+```
+
+Rotation occurs automatically when:
+- File size reaches `maxSize`
+- Time interval `interval` has elapsed
+
+## Example Configurations
+
+### Production
+
+```ts
+logRotation: {
+  maxSize: '100m',
+  interval: '1d',
+  maxFiles: '30d',
+  compress: true
+}
+```
+
+### Development
+
+```ts
+logRotation: {
+  maxSize: '10m',
+  maxFiles: '7d',
+  compress: false
+}
+```
+
+### High-Volume
+
+```ts
+logRotation: {
+  maxSize: '1g',
+  interval: '1h',
+  maxFiles: '7d',
+  compress: true
+}
+```
+
+## Important Notes
+
+- Empty files are not rotated
+- Rotation failures don't crash the application
+- Compression runs asynchronously
+- Old files are automatically cleaned up based on `maxFiles`

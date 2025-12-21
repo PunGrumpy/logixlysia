@@ -1,0 +1,15 @@
+{
+  "title": "Documentation",
+  "description": "Documentation for Logixlysia",
+  "pages": [
+    "introduction",
+    "examples",
+    "faq",
+    "contributing",
+    "---Installation---",
+    "usage",
+    "configuration",
+    "api-reference"
+  ],
+  "root": true
+}

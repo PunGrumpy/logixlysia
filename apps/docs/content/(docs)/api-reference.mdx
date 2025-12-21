@@ -1,0 +1,247 @@
+---
+title: API Reference
+description: Complete API reference for Logixlysia
+---
+
+## Functions
+
+### `logixlysia`
+
+Main plugin function that adds logging capabilities to your Elysia application.
+
+```ts
+function logixlysia(options?: Options): Logixlysia
+```
+
+**Parameters:**
+
+- `options` (optional): Configuration options for Logixlysia
+
+**Returns:**
+
+- `Logixlysia`: Elysia instance with logging capabilities
+
+**Example:**
+
+```ts
+import logixlysia from 'logixlysia'
+
+const app = new Elysia()
+  .use(logixlysia({
+    config: {
+      showStartupMessage: true
+    }
+  }))
+```
+
+## Types
+
+### `Logixlysia`
+
+Elysia instance type with Logixlysia store.
+
+```ts
+type Logixlysia = Elysia<
+  'Logixlysia',
+  SingletonBase & { store: LogixlysiaStore }
+>
+```
+
+### `Options`
+
+Configuration options for Logixlysia.
+
+```ts
+type Options = {
+  config?: {
+    showStartupMessage?: boolean
+    startupMessageFormat?: 'simple' | 'banner'
+    useColors?: boolean
+    ip?: boolean
+    timestamp?: {
+      translateTime?: string
+    }
+    customLogFormat?: string
+    transports?: Transport[]
+    useTransportsOnly?: boolean
+    disableInternalLogger?: boolean
+    disableFileLogging?: boolean
+    logFilePath?: string
+    logRotation?: LogRotationConfig
+    pino?: PinoLoggerOptions & { prettyPrint?: boolean }
+  }
+}
+```
+
+### `LogixlysiaStore`
+
+Store type available in Elysia context.
+
+```ts
+type LogixlysiaStore = {
+  logger: Logger
+  pino: Pino
+  beforeTime?: bigint
+  [key: string]: unknown
+}
+```
+
+**Properties:**
+
+- `logger`: Logger instance with helper methods
+- `pino`: Direct Pino logger instance
+- `beforeTime`: Request start time (bigint)
+
+### `Logger`
+
+Logger interface with logging methods.
+
+```ts
+type Logger = {
+  pino: Pino
+  log: (
+    level: LogLevel,
+    request: RequestInfo,
+    data: Record<string, unknown>,
+    store: StoreData
+  ) => void
+  handleHttpError: (
+    request: RequestInfo,
+    error: unknown,
+    store: StoreData
+  ) => void
+  debug: (
+    request: RequestInfo,
+    message: string,
+    context?: Record<string, unknown>
+  ) => void
+  info: (
+    request: RequestInfo,
+    message: string,
+    context?: Record<string, unknown>
+  ) => void
+  warn: (
+    request: RequestInfo,
+    message: string,
+    context?: Record<string, unknown>
+  ) => void
+  error: (
+    request: RequestInfo,
+    message: string,
+    context?: Record<string, unknown>
+  ) => void
+}
+```
+
+### `LogLevel`
+
+Log level type.
+
+```ts
+type LogLevel = 'DEBUG' | 'INFO' | 'WARNING' | 'ERROR'
+```
+
+### `Transport`
+
+Custom transport interface.
+
+```ts
+type Transport = {
+  log: (
+    level: LogLevel,
+    message: string,
+    meta?: Record<string, unknown>
+  ) => void | Promise<void>
+}
+```
+
+### `LogRotationConfig`
+
+Log rotation configuration.
+
+```ts
+type LogRotationConfig = {
+  maxSize?: string | number
+  maxFiles?: number | string
+  interval?: string
+  compress?: boolean
+  compression?: 'gzip'
+}
+```
+
+### `Pino`
+
+Pino logger type.
+
+```ts
+type Pino = PinoLogger<never, boolean>
+```
+
+### `LogixlysiaContext`
+
+Context type for request handlers.
+
+```ts
+type LogixlysiaContext = {
+  request: Request
+  store: LogixlysiaStore
+}
+```
+
+## Classes
+
+### `HttpError`
+
+Custom HTTP error class.
+
+```ts
+class HttpError extends Error {
+  readonly status: number
+  constructor(status: number, message: string)
+}
+```
+
+**Properties:**
+
+- `status`: HTTP status code
+
+**Example:**
+
+```ts
+throw new HttpError(404, 'User not found')
+```
+
+## Usage Examples
+
+### Accessing Logger in Route Handlers
+
+```ts
+app.get('/users/:id', ({ store, params }) => {
+  const { logger, pino } = store
+  
+  // Use logger helper methods
+  logger.info(request, 'User accessed', { userId: params.id })
+  
+  // Or use Pino directly
+  pino.info({ userId: params.id }, 'User accessed')
+  
+  return { user: 'data' }
+})
+```
+
+### Custom Logging
+
+```ts
+app.post('/users', ({ store, body }) => {
+  const { logger } = store
+  
+  logger.debug(request, 'Creating user', { email: body.email })
+  
+  // ... create user logic
+  
+  logger.info(request, 'User created', { userId: newUser.id })
+  
+  return newUser
+})
+```
+

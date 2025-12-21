@@ -1,0 +1,81 @@
+---
+title: Log Filtering
+description: Filter logs based on various criteria
+---
+
+Filter logs based on level, status, or HTTP method using Logixlysia's flexible filtering system.
+
+## Basic Usage
+
+```ts
+logixlysia({
+  config: {
+    logFilter: {
+      level: ['ERROR', 'WARNING'],
+      status: [500, 404],
+      method: 'GET'
+    }
+  }
+})
+```
+
+## Filter Types
+
+### By Log Level
+
+```ts
+logFilter: {
+  level: ['ERROR', 'WARNING'] // Only log ERROR and WARNING messages
+}
+```
+
+Available levels: `ERROR`, `WARNING`, `INFO`, `DEBUG`
+
+### By HTTP Status
+
+```ts
+logFilter: {
+  status: [500, 404] // Only log 500 and 404 responses
+}
+```
+
+### By HTTP Method
+
+```ts
+logFilter: {
+  method: 'GET' // Only log GET requests
+}
+```
+
+Or multiple methods:
+
+```ts
+logFilter: {
+  method: ['POST', 'PUT']
+}
+```
+
+### Combined Filters
+
+```ts
+logFilter: {
+  level: ['ERROR'],
+  status: [500],
+  method: ['POST', 'PUT']
+}
+```
+
+## Environment-Specific Filters
+
+```ts
+logFilter: process.env.NODE_ENV === 'production' 
+  ? { level: ['ERROR'] }
+  : null // Log everything in development
+```
+
+## Best Practices
+
+- **Production**: Filter to essential logs only (errors and warnings)
+- **Development**: Log everything for debugging
+- **Security**: Filter sensitive routes and avoid logging sensitive data
+- **Performance**: Use simple filters in production

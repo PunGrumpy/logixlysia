@@ -1,0 +1,57 @@
+name: 🤖 Validate
+
+on:
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  security:
+    permissions:
+      contents: read
+      actions: read
+      security-events: write
+    uses: ./.github/workflows/security.yml
+
+  test:
+    name: 🧪 Test
+    runs-on: ubuntu-latest
+    needs:
+      - security
+    steps:
+      - name: 🛫 Checkout Code
+        uses: actions/checkout@v6
+      - name: 🍞 Setup Bun
+        uses: oven-sh/setup-bun@v2
+      - name: 🌵 Cache Bun
+        id: bun-cache
+        uses: actions/cache@v5
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}
+      - name: 🔽 Install Dependencies
+        run: bun install
+      - name: 🧪 Test
+        run: bun run test
+
+  build:
+    name: 🏗️ Build
+    runs-on: ubuntu-latest
+    needs:
+      - test
+    steps:
+      - name: 🔔 Checkout
+        uses: actions/checkout@v6
+      - name: 🍞 Setup Bun
+        uses: oven-sh/setup-bun@v2
+      - name: 🌵 Cache Bun
+        id: bun-cache
+        uses: actions/cache@v5
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}
+      - name: 🔽 Install Dependencies
+        run: bun install
+      - name: 🦊 Build Logixlysia
+        run: bun run build --filter logixlysia

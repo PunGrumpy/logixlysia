@@ -1,0 +1,103 @@
+---
+title: Log Levels
+description: Control log verbosity
+---
+
+Control the verbosity of your logging output with Logixlysia's log level system.
+
+## Available Levels
+
+Log levels follow a hierarchy from most to least verbose:
+
+```
+DEBUG > INFO > WARNING > ERROR
+```
+
+When you set a log level, all higher levels will also be logged. For example, setting the level to `WARNING` will log both `WARNING` and `ERROR` messages.
+
+## Configuration
+
+### Single Level
+
+```ts
+logixlysia({
+  config: {
+    logFilter: {
+      level: 'ERROR'
+    }
+  }
+})
+```
+
+### Multiple Levels
+
+```ts
+logixlysia({
+  config: {
+    logFilter: {
+      level: ['INFO', 'ERROR']
+    }
+  }
+})
+```
+
+### Environment-based
+
+```ts
+logixlysia({
+  config: {
+    logFilter: {
+      level: process.env.NODE_ENV === 'production' 
+        ? ['ERROR', 'WARNING']
+        : ['DEBUG', 'INFO', 'WARNING', 'ERROR']
+    }
+  }
+})
+```
+
+## Pino Log Levels
+
+When using Pino integration, you can also configure Pino's log levels:
+
+```ts
+logixlysia({
+  config: {
+    pino: {
+      level: 'debug' // 'fatal', 'error', 'warn', 'info', 'debug', 'trace'
+    }
+  }
+})
+```
+
+## Best Practices
+
+- **Development**: Use `DEBUG` for detailed debugging
+- **Staging**: Use `INFO` for normal operation
+- **Production**: Use `WARNING` or `ERROR` for normal operation
+- **Monitoring**: Set up alerts for `ERROR` level
+
+## Example Configurations
+
+### Development
+
+```ts
+logFilter: {
+  level: ['DEBUG', 'INFO', 'WARNING', 'ERROR']
+}
+```
+
+### Production
+
+```ts
+logFilter: {
+  level: ['WARNING', 'ERROR']
+}
+```
+
+### Monitoring
+
+```ts
+logFilter: {
+  level: ['ERROR']
+}
+```

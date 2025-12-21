@@ -1,0 +1,215 @@
+---
+title: Usage
+description: Learn how to use Logixlysia in your Elysia applications
+---
+
+## Installation
+
+```bash
+bun add logixlysia
+```
+
+## Basic Usage
+
+```ts
+import { Elysia } from 'elysia'
+import logixlysia from 'logixlysia'
+
+const app = new Elysia()
+  .use(logixlysia())
+  .get('/', () => 'Hello World')
+  .listen(3000)
+```
+
+## Configuration
+
+### Basic Options
+
+```ts
+logixlysia({
+  config: {
+    showStartupMessage: true,
+    startupMessageFormat: 'simple', // or 'banner'
+    ip: true,
+    logFilePath: './logs/app.log'
+  }
+})
+```
+
+### Custom Log Format
+
+Customize log messages using placeholders:
+
+```ts
+logixlysia({
+  config: {
+    customLogFormat: '{now} {level} {duration}ms {method} {pathname} {status}'
+  }
+})
+```
+
+Available placeholders:
+
+| Placeholder | Description | Example |
+| ----------- | ----------- | ----------- |
+| `{now}` | Current timestamp | `2025-12-21 10:00:00` |
+| `{level}` | Log level (INFO, WARNING, ERROR) | `INFO` |
+| `{duration}` | Request duration in milliseconds | `100ms` |
+| `{method}` | HTTP method | `GET` |
+| `{pathname}` | Request path | `/users` |
+| `{status}` | Response status code | `200` |
+| `{message}` | Custom message | `User profile accessed` |
+| `{ip}` | Client IP address | `127.0.0.1` |
+| `{epoch}` | Unix timestamp | `1734729600` |
+
+### Log Filtering
+
+Filter logs by level, status, or method:
+
+```ts
+logixlysia({
+  config: {
+    logFilter: {
+      level: ['ERROR', 'WARNING'],
+      status: [500, 404],
+      method: 'GET'
+    }
+  }
+})
+```
+
+## Pino Integration
+
+Logixlysia is powered by Pino. Access the Pino instance directly:
+
+```ts
+app.get('/users/:id', ({ store, params }) => {
+  const { pino } = store
+  
+  pino.info({
+    userId: params.id,
+    action: 'view_profile'
+  }, 'User profile accessed')
+  
+  return { user: 'data' }
+})
+```
+
+Configure Pino options:
+
+```ts
+logixlysia({
+  config: {
+    pino: {
+      level: 'debug',
+      prettyPrint: true,
+      redact: ['password', 'token'],
+      base: { service: 'my-api' }
+    }
+  }
+})
+```
+
+Learn more in the [Pino Integration](/features/pino-integration) guide.
+
+## File Logging
+
+Save logs to files:
+
+```ts
+logixlysia({
+  config: {
+    logFilePath: './logs/app.log',
+    logRotation: {
+      maxSize: '10m',
+      interval: '1d',
+      maxFiles: '7d',
+      compress: true
+    }
+  }
+})
+```
+
+See [File Logging](/features/file-logging) and [Log Rotation](/features/log-rotation) for details.
+
+## Output Control
+
+Control where logs are sent:
+
+```ts
+logixlysia({
+  config: {
+    // Disable console output
+    disableInternalLogger: false,
+    
+    // Disable file output
+    disableFileLogging: false,
+    
+    // Use only transports (disable console and file)
+    useTransportsOnly: false,
+    
+    // Custom transports
+    transports: [customTransport]
+  }
+})
+```
+
+## Error Handling
+
+Logixlysia automatically captures and logs errors:
+
+```ts
+app.get('/error', () => {
+  throw new Error('Something went wrong!')
+})
+```
+
+Errors are automatically logged with stack traces and request details.
+
+## Examples
+
+### Production Setup
+
+```ts
+const app = new Elysia()
+  .use(
+    logixlysia({
+      config: {
+        logFilePath: './logs/production.log',
+        logRotation: {
+          maxSize: '100m',
+          interval: '1d',
+          maxFiles: '30d',
+          compress: true
+        },
+        logFilter: {
+          level: ['ERROR', 'WARNING']
+        },
+        pino: {
+          level: 'info',
+          redact: ['password', 'token', 'apiKey']
+        }
+      }
+    })
+  )
+  .listen(3000)
+```
+
+### Development Setup
+
+```ts
+const app = new Elysia()
+  .use(
+    logixlysia({
+      config: {
+        showStartupMessage: true,
+        startupMessageFormat: 'banner',
+        pino: {
+          level: 'debug',
+          prettyPrint: true
+        }
+      }
+    })
+  )
+  .listen(3000)
+```

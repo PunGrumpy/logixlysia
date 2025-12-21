@@ -1,0 +1,56 @@
+---
+title: File Logging
+description: Save logs to files for persistence
+---
+
+Save your logs to files for persistence and analysis using Logixlysia's file logging system.
+
+## Basic Usage
+
+```ts
+logixlysia({
+  config: {
+    logFilePath: './logs/app.log'
+  }
+})
+```
+
+## Configuration
+
+| Option | Type | Description | Default |
+|--------|------|-------------|---------|
+| `logFilePath` | `string` | Path to the log file | `undefined` |
+
+## File Format
+
+Logs are written in a structured format:
+
+```
+🦊 2025-04-13 15:00:19.225 INFO  123.45ms GET /api/users 200 
+🦊 2025-04-13 15:00:20.225 ERROR 234.56ms POST /api/users 500 Error creating user
+```
+
+## Best Practices
+
+- Use descriptive file names
+- Organize logs by type/level
+- Consider using date-based directories
+- Set appropriate file permissions
+- Avoid logging sensitive data
+- Regular log review and cleanup
+
+## Examples
+
+### Production
+
+```ts
+logFilePath: './logs/production.log'
+```
+
+### Development
+
+```ts
+logFilePath: './logs/development.log'
+```
+
+For advanced file management, see [Log Rotation](/features/log-rotation).

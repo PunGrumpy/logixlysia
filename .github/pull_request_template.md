@@ -1,19 +1,22 @@
-## `🫀` Pull Request Template
+## Description
 
-### `🧑‍🏫` Description
+Please provide a brief description of the changes introduced in this pull request.
 
-Describe the changes you made and why you made them. If you are fixing an issue, please mention it here.
+## Related Issues
 
-### `📸` Screenshots
+Closes #<issue_number>
 
-If you are changing the UI, please include screenshots of the changes.
+## Checklist
 
-### `🔗` Related Issues
+- [ ] I've reviewed my code
+- [ ] I've written tests
+- [ ] I've generated a change set file
+- [ ] I've updated the docs, if necessary
 
-If you are fixing an issue, please mention it here.
+## Screenshots (if applicable)
 
-### `📝` Checklist
+<!-- Add screenshots to help explain your changes, especially if this is a UI-related PR. -->
 
-- [ ] I have tested the changes locally.
-- [ ] I have added tests for the changes.
-- [ ] I have updated the documentation accordingly.
+## Additional Notes
+
+<!-- Add any additional information or context about the pull request here. -->
