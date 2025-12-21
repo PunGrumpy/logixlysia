@@ -7,8 +7,6 @@ export type Pino = PinoLogger<never, boolean>
 
 export type LogLevel = 'DEBUG' | 'INFO' | 'WARNING' | 'ERROR'
 
-export type RequestInfo = Pick<Request, 'headers' | 'method' | 'url'>
-
 export type StoreData = {
   beforeTime: bigint
 }
