@@ -1,356 +1,320 @@
 # Changelog
 
-## [5.3.0](https://github.com/PunGrumpy/logixlysia/compare/v5.2.0...v5.3.0) (2025-10-11)
+## 6.0.0
 
+### Major Changes
+
+- e953969: BREAKING CHANGE: Major update from PR #171
+
+  This release includes breaking changes that may require updates to your code. Please refer to PR #171 for detailed information about the changes.
+
+## [5.3.0](https://github.com/PunGrumpy/logixlysia/compare/v5.2.0...v5.3.0) (2025-10-11)
 
 ### Features
 
-* **log-rotation:** enhance compression handling and documentation ([e874ae4](https://github.com/PunGrumpy/logixlysia/commit/e874ae44eea76a6a0d125c3f2133a56cddfa6d49))
-* **log-rotation:** implement complete rotation with interval support ([673b800](https://github.com/PunGrumpy/logixlysia/commit/673b8005b04bb1b3d8ba15e86f6df37b9a5746b6))
-* **log-rotation:** implement complete rotation with interval support ([9016a51](https://github.com/PunGrumpy/logixlysia/commit/9016a51db90fb4cc0853a5adfb32eb15623a6a8f)), closes [#138](https://github.com/PunGrumpy/logixlysia/issues/138)
-* **pino-integration:** enhance documentation and features for Pino integration ([67c67d7](https://github.com/PunGrumpy/logixlysia/commit/67c67d76a3a710cd4864bbc94256f01a2bef10fa))
-* **pino-integration:** enhance documentation and features for Pino integration ([3968a51](https://github.com/PunGrumpy/logixlysia/commit/3968a5161f056986f3ccfcb07031142b542a872f))
-* **rotation:** add time-based rotation support in shouldRotate function ([4addd18](https://github.com/PunGrumpy/logixlysia/commit/4addd182cee0aa570092b63fdebbd549294028d6))
-
+- **log-rotation:** enhance compression handling and documentation ([e874ae4](https://github.com/PunGrumpy/logixlysia/commit/e874ae44eea76a6a0d125c3f2133a56cddfa6d49))
+- **log-rotation:** implement complete rotation with interval support ([673b800](https://github.com/PunGrumpy/logixlysia/commit/673b8005b04bb1b3d8ba15e86f6df37b9a5746b6))
+- **log-rotation:** implement complete rotation with interval support ([9016a51](https://github.com/PunGrumpy/logixlysia/commit/9016a51db90fb4cc0853a5adfb32eb15623a6a8f)), closes [#138](https://github.com/PunGrumpy/logixlysia/issues/138)
+- **pino-integration:** enhance documentation and features for Pino integration ([67c67d7](https://github.com/PunGrumpy/logixlysia/commit/67c67d76a3a710cd4864bbc94256f01a2bef10fa))
+- **pino-integration:** enhance documentation and features for Pino integration ([3968a51](https://github.com/PunGrumpy/logixlysia/commit/3968a5161f056986f3ccfcb07031142b542a872f))
+- **rotation:** add time-based rotation support in shouldRotate function ([4addd18](https://github.com/PunGrumpy/logixlysia/commit/4addd182cee0aa570092b63fdebbd549294028d6))
 
 ### Bug Fixes
 
-* **logger:** add warning for unknown log levels in mapLogLevelToPino function ([b18b044](https://github.com/PunGrumpy/logixlysia/commit/b18b044bab81d8d0018d08924def6950a90040a2))
-* **logger:** enhance Pino output handling in emitPinoLog function ([cd9d4b7](https://github.com/PunGrumpy/logixlysia/commit/cd9d4b7d37883fad90e79e91e6f8a7a753dbfff6))
-* **logger:** enhance transport handling and client IP logging ([e81d81d](https://github.com/PunGrumpy/logixlysia/commit/e81d81d70b3694fe81db1773a8cbce82af1edd29))
-* **logger:** improve error handling in log function ([a1874e1](https://github.com/PunGrumpy/logixlysia/commit/a1874e120154600baaed4109a2b6fe6f99db3181))
-* **logger:** improve error stack handling in log function ([ab01fb2](https://github.com/PunGrumpy/logixlysia/commit/ab01fb2170c204e35670ab01b4f42e1187c044ef))
-* **pino-integration:** remove outdated best practices link from documentation ([2cb8b0c](https://github.com/PunGrumpy/logixlysia/commit/2cb8b0cba487e77c1bd41acf525f0cd7ceb6f93c))
-* **rotation:** improve cache check in shouldRotateByTime function ([9c5ea06](https://github.com/PunGrumpy/logixlysia/commit/9c5ea06e8cbdad2bb8a95369be54daa15cb37d21))
-* **rotation:** use basename for file path extraction in getRotatedFiles function ([60f27b0](https://github.com/PunGrumpy/logixlysia/commit/60f27b09f33dc3490b73a036465bf896a40551ca))
+- **logger:** add warning for unknown log levels in mapLogLevelToPino function ([b18b044](https://github.com/PunGrumpy/logixlysia/commit/b18b044bab81d8d0018d08924def6950a90040a2))
+- **logger:** enhance Pino output handling in emitPinoLog function ([cd9d4b7](https://github.com/PunGrumpy/logixlysia/commit/cd9d4b7d37883fad90e79e91e6f8a7a753dbfff6))
+- **logger:** enhance transport handling and client IP logging ([e81d81d](https://github.com/PunGrumpy/logixlysia/commit/e81d81d70b3694fe81db1773a8cbce82af1edd29))
+- **logger:** improve error handling in log function ([a1874e1](https://github.com/PunGrumpy/logixlysia/commit/a1874e120154600baaed4109a2b6fe6f99db3181))
+- **logger:** improve error stack handling in log function ([ab01fb2](https://github.com/PunGrumpy/logixlysia/commit/ab01fb2170c204e35670ab01b4f42e1187c044ef))
+- **pino-integration:** remove outdated best practices link from documentation ([2cb8b0c](https://github.com/PunGrumpy/logixlysia/commit/2cb8b0cba487e77c1bd41acf525f0cd7ceb6f93c))
+- **rotation:** improve cache check in shouldRotateByTime function ([9c5ea06](https://github.com/PunGrumpy/logixlysia/commit/9c5ea06e8cbdad2bb8a95369be54daa15cb37d21))
+- **rotation:** use basename for file path extraction in getRotatedFiles function ([60f27b0](https://github.com/PunGrumpy/logixlysia/commit/60f27b09f33dc3490b73a036465bf896a40551ca))
 
 ## [5.2.0](https://github.com/PunGrumpy/logixlysia/compare/v5.1.1...v5.2.0) (2025-09-21)
 
-
 ### Features
 
-* **logger:** add option for disable internal log ([0a25e46](https://github.com/PunGrumpy/logixlysia/commit/0a25e461b001453c750869df014a30f3fbe7ef0d)), closes [#125](https://github.com/PunGrumpy/logixlysia/issues/125)
-* **logger:** add options for file and transport logging control ([8e56b0f](https://github.com/PunGrumpy/logixlysia/commit/8e56b0f39bbd80bd85ed93dc3beea6888ef3f63d))
+- **logger:** add option for disable internal log ([0a25e46](https://github.com/PunGrumpy/logixlysia/commit/0a25e461b001453c750869df014a30f3fbe7ef0d)), closes [#125](https://github.com/PunGrumpy/logixlysia/issues/125)
+- **logger:** add options for file and transport logging control ([8e56b0f](https://github.com/PunGrumpy/logixlysia/commit/8e56b0f39bbd80bd85ed93dc3beea6888ef3f63d))
 
 ## [5.1.1](https://github.com/PunGrumpy/logixlysia/compare/v5.1.0...v5.1.1) (2025-08-10)
 
-
 ### Bug Fixes
 
-* preserve existing state when initializing logixlysia store ([484840e](https://github.com/PunGrumpy/logixlysia/commit/484840eab642c1c91f63f07c04258c77e677274b)), closes [#108](https://github.com/PunGrumpy/logixlysia/issues/108)
+- preserve existing state when initializing logixlysia store ([484840e](https://github.com/PunGrumpy/logixlysia/commit/484840eab642c1c91f63f07c04258c77e677274b)), closes [#108](https://github.com/PunGrumpy/logixlysia/issues/108)
 
 ## [5.1.0](https://github.com/PunGrumpy/logixlysia/compare/v5.0.0...v5.1.0) (2025-06-24)
 
-
 ### Features
 
-* **linter:** add Ultracite cursor rules for improved accessibility and code quality ([94602aa](https://github.com/PunGrumpy/logixlysia/commit/94602aa3e733c22b849c19e1afd474a500dbbff1))
-* **logging:** add custom log methods and context support ([7c0c0b9](https://github.com/PunGrumpy/logixlysia/commit/7c0c0b995775ea058853b872d7860b4f789cdb45)), closes [#94](https://github.com/PunGrumpy/logixlysia/issues/94)
-* **tests:** add comprehensive tests for route logger functionality ([3ed0670](https://github.com/PunGrumpy/logixlysia/commit/3ed0670fe6cfae1717e4cdc0c882943f827fad96))
-
+- **linter:** add Ultracite cursor rules for improved accessibility and code quality ([94602aa](https://github.com/PunGrumpy/logixlysia/commit/94602aa3e733c22b849c19e1afd474a500dbbff1))
+- **logging:** add custom log methods and context support ([7c0c0b9](https://github.com/PunGrumpy/logixlysia/commit/7c0c0b995775ea058853b872d7860b4f789cdb45)), closes [#94](https://github.com/PunGrumpy/logixlysia/issues/94)
+- **tests:** add comprehensive tests for route logger functionality ([3ed0670](https://github.com/PunGrumpy/logixlysia/commit/3ed0670fe6cfae1717e4cdc0c882943f827fad96))
 
 ### Bug Fixes
 
-* **logging:** improve context serialization in log messages ([ac74afc](https://github.com/PunGrumpy/logixlysia/commit/ac74afc8b10b4b0e3d34144dcb7053da52653738))
-* **logging:** prevent duplicate logging when using custom logs ([358f319](https://github.com/PunGrumpy/logixlysia/commit/358f319419e78bc1a206535506ddd6b84d312bfe))
-* **logging:** set hasCustomLog to false in logixlysia function ([807d0ec](https://github.com/PunGrumpy/logixlysia/commit/807d0ec09df051ad2a5b9cd5f0d85026424ad06f))
+- **logging:** improve context serialization in log messages ([ac74afc](https://github.com/PunGrumpy/logixlysia/commit/ac74afc8b10b4b0e3d34144dcb7053da52653738))
+- **logging:** prevent duplicate logging when using custom logs ([358f319](https://github.com/PunGrumpy/logixlysia/commit/358f319419e78bc1a206535506ddd6b84d312bfe))
+- **logging:** set hasCustomLog to false in logixlysia function ([807d0ec](https://github.com/PunGrumpy/logixlysia/commit/807d0ec09df051ad2a5b9cd5f0d85026424ad06f))
 
 ## [5.0.0](https://github.com/PunGrumpy/logixlysia/compare/logixlysia-v4.2.7...logixlysia-v5.0.0) (2025-05-13)
 
 ### Features
 
-* add custom logger support ([9ca6874](https://github.com/PunGrumpy/logixlysia/commit/9ca68744da198f02ee601f9facb3ad8ffbbc19f9)), closes [#93](https://github.com/PunGrumpy/logixlysia/issues/93)
+- add custom logger support ([9ca6874](https://github.com/PunGrumpy/logixlysia/commit/9ca68744da198f02ee601f9facb3ad8ffbbc19f9)), closes [#93](https://github.com/PunGrumpy/logixlysia/issues/93)
 
 ### Bug Fixes
 
-* improve server configuration defaults ([91bceb7](https://github.com/PunGrumpy/logixlysia/commit/91bceb797e38b902edb6d36b79399e05a8332e04)), closes [#96](https://github.com/PunGrumpy/logixlysia/issues/96)
+- improve server configuration defaults ([91bceb7](https://github.com/PunGrumpy/logixlysia/commit/91bceb797e38b902edb6d36b79399e05a8332e04)), closes [#96](https://github.com/PunGrumpy/logixlysia/issues/96)
 
 ## [4.2.2](https://github.com/PunGrumpy/logixlysia/compare/v4.2.1...v4.2.2) (2025-04-14)
 
-
 ### Bug Fixes
 
-* **package:** remove unused devDependencies for cleaner setup ([7dab60f](https://github.com/PunGrumpy/logixlysia/commit/7dab60fcbccac59f8ac092ab4024c6ca249d00c2))
+- **package:** remove unused devDependencies for cleaner setup ([7dab60f](https://github.com/PunGrumpy/logixlysia/commit/7dab60fcbccac59f8ac092ab4024c6ca249d00c2))
 
 ## [4.2.1](https://github.com/PunGrumpy/logixlysia/compare/v4.2.0...v4.2.1) (2025-04-13)
 
-
 ### Bug Fixes
 
-* **ci:** replace lint step with Reviewdog integration for enhanced linting feedback ([81cd883](https://github.com/PunGrumpy/logixlysia/commit/81cd883b29723ffe640cc99dff9716a1613989ef))
+- **ci:** replace lint step with Reviewdog integration for enhanced linting feedback ([81cd883](https://github.com/PunGrumpy/logixlysia/commit/81cd883b29723ffe640cc99dff9716a1613989ef))
 
 ## [4.2.0](https://github.com/PunGrumpy/logixlysia/compare/v4.1.2...v4.2.0) (2025-04-13)
 
-
 ### Features
 
-* **docs:** add screenshot to documentation introduction ([800bb17](https://github.com/PunGrumpy/logixlysia/commit/800bb17dcfda88699cd7a0a2dc2e199e5704ce61))
-* **website:** add new components and integrate react-fast-marquee ([6332f62](https://github.com/PunGrumpy/logixlysia/commit/6332f622c22fccf4cbadfb2a0099b9fac723f61a))
-* **website:** add Open Graph image for enhanced social sharing ([de35d41](https://github.com/PunGrumpy/logixlysia/commit/de35d413bf6a10b06933eb2619d3cb6459618c3e))
-* **website:** add transparent mode to navigation title ([9c01757](https://github.com/PunGrumpy/logixlysia/commit/9c01757f8808b5792b792fc1ed56e5b6e26603d2))
-* **website:** add website documentation ([82e281c](https://github.com/PunGrumpy/logixlysia/commit/82e281cd5c08fa948ecf103eb70f218e61029142))
-* **website:** enhance logging features and update documentation ([fa7ea45](https://github.com/PunGrumpy/logixlysia/commit/fa7ea45ae8c535a22b52e94a46df5931009e013f))
-* **website:** initialize new documentation website with Fumadocs ([c864d9f](https://github.com/PunGrumpy/logixlysia/commit/c864d9f00ea6d0250f2db8b20a994975da18185e))
-* **website:** integrate GitHub info component into layout ([5cd282c](https://github.com/PunGrumpy/logixlysia/commit/5cd282c072e56d90a7554a78dad1f27e8eb13400))
-
+- **docs:** add screenshot to documentation introduction ([800bb17](https://github.com/PunGrumpy/logixlysia/commit/800bb17dcfda88699cd7a0a2dc2e199e5704ce61))
+- **website:** add new components and integrate react-fast-marquee ([6332f62](https://github.com/PunGrumpy/logixlysia/commit/6332f622c22fccf4cbadfb2a0099b9fac723f61a))
+- **website:** add Open Graph image for enhanced social sharing ([de35d41](https://github.com/PunGrumpy/logixlysia/commit/de35d413bf6a10b06933eb2619d3cb6459618c3e))
+- **website:** add transparent mode to navigation title ([9c01757](https://github.com/PunGrumpy/logixlysia/commit/9c01757f8808b5792b792fc1ed56e5b6e26603d2))
+- **website:** add website documentation ([82e281c](https://github.com/PunGrumpy/logixlysia/commit/82e281cd5c08fa948ecf103eb70f218e61029142))
+- **website:** enhance logging features and update documentation ([fa7ea45](https://github.com/PunGrumpy/logixlysia/commit/fa7ea45ae8c535a22b52e94a46df5931009e013f))
+- **website:** initialize new documentation website with Fumadocs ([c864d9f](https://github.com/PunGrumpy/logixlysia/commit/c864d9f00ea6d0250f2db8b20a994975da18185e))
+- **website:** integrate GitHub info component into layout ([5cd282c](https://github.com/PunGrumpy/logixlysia/commit/5cd282c072e56d90a7554a78dad1f27e8eb13400))
 
 ### Bug Fixes
 
-* **docs:** correct license information in documentation ([e64f156](https://github.com/PunGrumpy/logixlysia/commit/e64f1565a2100a08ee324ddf68769726dcc6d9ff))
-* **docs:** update file logging examples for clarity and consistency ([1d8653f](https://github.com/PunGrumpy/logixlysia/commit/1d8653f5aa97f8b6d829a10c0a510fc5a5b7dcae))
-* **docs:** update help section for user support ([84e5052](https://github.com/PunGrumpy/logixlysia/commit/84e5052ddf4ef8e636d68be113d866df2d13fd09))
-* **playground:** correct class name syntax for overflow visibility ([25ed919](https://github.com/PunGrumpy/logixlysia/commit/25ed919c1592129d8495afbc2927befb0c431fa0))
-* **website:** adjust z-index for background image and hero component ([af593a7](https://github.com/PunGrumpy/logixlysia/commit/af593a709d625df06f2f0e7ecff55764be46cdd5))
-* **website:** adjust z-index for hero component to improve visibility ([4cc144e](https://github.com/PunGrumpy/logixlysia/commit/4cc144e50c5e0e869e62c3821edd2216acf4cacd))
-* **website:** simplify sidebar configuration in layout component ([dc7e479](https://github.com/PunGrumpy/logixlysia/commit/dc7e47962085c4922dcfaad83e1ce0e38dcfeff0))
-* **website:** update logo assets and adjust class names ([18c8c57](https://github.com/PunGrumpy/logixlysia/commit/18c8c57a2337f3242e77eb0234afee487039f554))
-* **website:** update sidebar configuration to include collapsible property ([2d27ee3](https://github.com/PunGrumpy/logixlysia/commit/2d27ee31b3eeb79505a70dee2fef214a45fb1a9e))
+- **docs:** correct license information in documentation ([e64f156](https://github.com/PunGrumpy/logixlysia/commit/e64f1565a2100a08ee324ddf68769726dcc6d9ff))
+- **docs:** update file logging examples for clarity and consistency ([1d8653f](https://github.com/PunGrumpy/logixlysia/commit/1d8653f5aa97f8b6d829a10c0a510fc5a5b7dcae))
+- **docs:** update help section for user support ([84e5052](https://github.com/PunGrumpy/logixlysia/commit/84e5052ddf4ef8e636d68be113d866df2d13fd09))
+- **playground:** correct class name syntax for overflow visibility ([25ed919](https://github.com/PunGrumpy/logixlysia/commit/25ed919c1592129d8495afbc2927befb0c431fa0))
+- **website:** adjust z-index for background image and hero component ([af593a7](https://github.com/PunGrumpy/logixlysia/commit/af593a709d625df06f2f0e7ecff55764be46cdd5))
+- **website:** adjust z-index for hero component to improve visibility ([4cc144e](https://github.com/PunGrumpy/logixlysia/commit/4cc144e50c5e0e869e62c3821edd2216acf4cacd))
+- **website:** simplify sidebar configuration in layout component ([dc7e479](https://github.com/PunGrumpy/logixlysia/commit/dc7e47962085c4922dcfaad83e1ce0e38dcfeff0))
+- **website:** update logo assets and adjust class names ([18c8c57](https://github.com/PunGrumpy/logixlysia/commit/18c8c57a2337f3242e77eb0234afee487039f554))
+- **website:** update sidebar configuration to include collapsible property ([2d27ee3](https://github.com/PunGrumpy/logixlysia/commit/2d27ee31b3eeb79505a70dee2fef214a45fb1a9e))
 
 ## [4.1.2](https://github.com/PunGrumpy/logixlysia/compare/v4.1.1...v4.1.2) (2025-02-24)
 
-
 ### Bug Fixes
 
-* **logixlysia:** ensure message is a string in response headers ([2f9eeee](https://github.com/PunGrumpy/logixlysia/commit/2f9eeeeb1ec1ab7454e6633c28aa112963f54ed6)), closes [#74](https://github.com/PunGrumpy/logixlysia/issues/74)
+- **logixlysia:** ensure message is a string in response headers ([2f9eeee](https://github.com/PunGrumpy/logixlysia/commit/2f9eeeeb1ec1ab7454e6633c28aa112963f54ed6)), closes [#74](https://github.com/PunGrumpy/logixlysia/issues/74)
 
 ## [4.1.1](https://github.com/PunGrumpy/logixlysia/compare/v4.1.0...v4.1.1) (2025-01-31)
 
-
 ### Bug Fixes
 
-* **package:** wrong place @elysiajs/swagger and move to devDependencies ([a5e1a96](https://github.com/PunGrumpy/logixlysia/commit/a5e1a96606f53883a50331a94c1ba844dff67dc3))
+- **package:** wrong place @elysiajs/swagger and move to devDependencies ([a5e1a96](https://github.com/PunGrumpy/logixlysia/commit/a5e1a96606f53883a50331a94c1ba844dff67dc3))
 
 ## [4.1.0](https://github.com/PunGrumpy/logixlysia/compare/v4.0.0...v4.1.0) (2025-01-31)
 
-
 ### Features
 
-* **logging:** add status string parsing and error handling ([32800ac](https://github.com/PunGrumpy/logixlysia/commit/32800acb0fbfdf957e2975b5773b0a350e3af0d8)), closes [#71](https://github.com/PunGrumpy/logixlysia/issues/71)
+- **logging:** add status string parsing and error handling ([32800ac](https://github.com/PunGrumpy/logixlysia/commit/32800acb0fbfdf957e2975b5773b0a350e3af0d8)), closes [#71](https://github.com/PunGrumpy/logixlysia/issues/71)
 
 ## [4.0.0](https://github.com/PunGrumpy/logixlysia/compare/v3.7.0...v4.0.0) (2024-10-28)
 
-
 ### ⚠ BREAKING CHANGES
 
-* **timestamp:** The timestamp format in logs will now respect the new timestamp configuration options when provided
+- **timestamp:** The timestamp format in logs will now respect the new timestamp configuration options when provided
 
 ### Features
 
-* **timestamp:** add customize timestamp formatting ([5a4e2a5](https://github.com/PunGrumpy/logixlysia/commit/5a4e2a5230443761d8c2ca99d9ebc586ff26a8c0)), closes [#69](https://github.com/PunGrumpy/logixlysia/issues/69)
+- **timestamp:** add customize timestamp formatting ([5a4e2a5](https://github.com/PunGrumpy/logixlysia/commit/5a4e2a5230443761d8c2ca99d9ebc586ff26a8c0)), closes [#69](https://github.com/PunGrumpy/logixlysia/issues/69)
 
 ## [3.7.0](https://github.com/PunGrumpy/logixlysia/compare/v3.6.2...v3.7.0) (2024-09-26)
 
-
 ### Features
 
-* **optional:** add startup message config ([#66](https://github.com/PunGrumpy/logixlysia/pull/66)) ([c7a76db](https://github.com/PunGrumpy/logixlysia/commit/c7a76dbc0f30f4c9c607b52dedc49979e26b67ec)) by [@n0ky4](https://github.com/n0ky4)
+- **optional:** add startup message config ([#66](https://github.com/PunGrumpy/logixlysia/pull/66)) ([c7a76db](https://github.com/PunGrumpy/logixlysia/commit/c7a76dbc0f30f4c9c607b52dedc49979e26b67ec)) by [@n0ky4](https://github.com/n0ky4)
 
 ## [3.6.2](https://github.com/PunGrumpy/logixlysia/compare/v3.6.1...v3.6.2) (2024-09-18)
 
-
 ### Bug Fixes
 
-* **logtofile:** store error to log file ([1bb2d07](https://github.com/PunGrumpy/logixlysia/commit/1bb2d07ae0c815742a9eb7c930ac8487ac287b2c)), closes [#63](https://github.com/PunGrumpy/logixlysia/issues/63)
+- **logtofile:** store error to log file ([1bb2d07](https://github.com/PunGrumpy/logixlysia/commit/1bb2d07ae0c815742a9eb7c930ac8487ac287b2c)), closes [#63](https://github.com/PunGrumpy/logixlysia/issues/63)
 
 ## [3.6.1](https://github.com/PunGrumpy/logixlysia/compare/v3.6.0...v3.6.1) (2024-08-21)
 
-
 ### Performance Improvements
 
-* **logger:** improve performance and fix TypeScript errors ([d3ed751](https://github.com/PunGrumpy/logixlysia/commit/d3ed751041443b9bd2ce53350994e1443df40971))
+- **logger:** improve performance and fix TypeScript errors ([d3ed751](https://github.com/PunGrumpy/logixlysia/commit/d3ed751041443b9bd2ce53350994e1443df40971))
 
 ## [3.6.0](https://github.com/PunGrumpy/logixlysia/compare/v3.5.0...v3.6.0) (2024-07-24)
 
-
 ### Features
 
-* **custom-log:** add unix epoch timestamp option on `customLogFormat` configuration ([58d3e5b](https://github.com/PunGrumpy/logixlysia/commit/58d3e5b89bfef86aed1f5daa70d9a39982750073)), closes [#56](https://github.com/PunGrumpy/logixlysia/issues/56)
-* **transports:** add custom tranporter support for flexible logging ([69e1b89](https://github.com/PunGrumpy/logixlysia/commit/69e1b8991d323d8463fb81cf5bf1b441f678318b)), closes [#51](https://github.com/PunGrumpy/logixlysia/issues/51)
+- **custom-log:** add unix epoch timestamp option on `customLogFormat` configuration ([58d3e5b](https://github.com/PunGrumpy/logixlysia/commit/58d3e5b89bfef86aed1f5daa70d9a39982750073)), closes [#56](https://github.com/PunGrumpy/logixlysia/issues/56)
+- **transports:** add custom tranporter support for flexible logging ([69e1b89](https://github.com/PunGrumpy/logixlysia/commit/69e1b8991d323d8463fb81cf5bf1b441f678318b)), closes [#51](https://github.com/PunGrumpy/logixlysia/issues/51)
 
 ## [3.5.0](https://github.com/PunGrumpy/logixlysia/compare/v3.4.0...v3.5.0) (2024-07-11)
 
-
 ### Features
 
-* **config:** add option to toggle server start banner display ([c975cd6](https://github.com/PunGrumpy/logixlysia/commit/c975cd6da94e39d055cdf7bc43cc1ed1eec4971e)), closes [#52](https://github.com/PunGrumpy/logixlysia/issues/52)
+- **config:** add option to toggle server start banner display ([c975cd6](https://github.com/PunGrumpy/logixlysia/commit/c975cd6da94e39d055cdf7bc43cc1ed1eec4971e)), closes [#52](https://github.com/PunGrumpy/logixlysia/issues/52)
 
 ## [3.4.0](https://github.com/PunGrumpy/logixlysia/compare/v3.3.2...v3.4.0) (2024-06-17)
 
-
 ### Features
 
-* **logger:** add file logging capability ([6d913a3](https://github.com/PunGrumpy/logixlysia/commit/6d913a3dcc6cbba40bcaa4b6c4c4a4b474a90969))
-
+- **logger:** add file logging capability ([6d913a3](https://github.com/PunGrumpy/logixlysia/commit/6d913a3dcc6cbba40bcaa4b6c4c4a4b474a90969))
 
 ### Bug Fixes
 
-* **logger:** remove ANSI color codes from log files ([df42315](https://github.com/PunGrumpy/logixlysia/commit/df423151399f9436121b0d5d4a9b0424befdc835))
+- **logger:** remove ANSI color codes from log files ([df42315](https://github.com/PunGrumpy/logixlysia/commit/df423151399f9436121b0d5d4a9b0424befdc835))
 
 ## [3.3.2](https://github.com/PunGrumpy/logixlysia/compare/v3.3.1...v3.3.2) (2024-06-06)
 
-
 ### Bug Fixes
 
-* **npm-ignore:** accidentally ignore `tsconfig.json` ([85997f7](https://github.com/PunGrumpy/logixlysia/commit/85997f7dd8bb22b4811a7555e0a56e0cfb3ee269))
+- **npm-ignore:** accidentally ignore `tsconfig.json` ([85997f7](https://github.com/PunGrumpy/logixlysia/commit/85997f7dd8bb22b4811a7555e0a56e0cfb3ee269))
 
 ## [3.3.1](https://github.com/PunGrumpy/logixlysia/compare/v3.3.0...v3.3.1) (2024-06-01)
 
-
 ### Bug Fixes
 
-* **deps:** move `ESLint` and related packages to dev dependencies ([98de50c](https://github.com/PunGrumpy/logixlysia/commit/98de50c6c3bffc5939963ebd04563204c7c70793)), closes [#46](https://github.com/PunGrumpy/logixlysia/issues/46)
+- **deps:** move `ESLint` and related packages to dev dependencies ([98de50c](https://github.com/PunGrumpy/logixlysia/commit/98de50c6c3bffc5939963ebd04563204c7c70793)), closes [#46](https://github.com/PunGrumpy/logixlysia/issues/46)
 
 ## [3.3.0](https://github.com/PunGrumpy/logixlysia/compare/v3.2.0...v3.3.0) (2024-05-22)
 
-
 ### Features
 
-* **color:** new color for methods (matching Postman color) ([0528886](https://github.com/PunGrumpy/logixlysia/commit/0528886ef9fdaa466e4b78b46fb09d31731b0520))
+- **color:** new color for methods (matching Postman color) ([0528886](https://github.com/PunGrumpy/logixlysia/commit/0528886ef9fdaa466e4b78b46fb09d31731b0520))
 
 ## [3.2.0](https://github.com/PunGrumpy/logixlysia/compare/v3.1.0...v3.2.0) (2024-05-07)
 
-
 ### Features
 
-* update logger function name for clarity ([9badffc](https://github.com/PunGrumpy/logixlysia/commit/9badffc286fc13feda9eeffd28881990ae437c9f))
+- update logger function name for clarity ([9badffc](https://github.com/PunGrumpy/logixlysia/commit/9badffc286fc13feda9eeffd28881990ae437c9f))
 
 ## [3.1.0](https://github.com/PunGrumpy/logixlysia/compare/v3.0.2...v3.1.0) (2024-04-09)
 
-
 ### Features
 
-* **logger:** add log filtering functional ([af7d9ec](https://github.com/PunGrumpy/logixlysia/commit/af7d9ec5b2bb5ff5942d1a586be23a9d23a2c1cf)), closes [#38](https://github.com/PunGrumpy/logixlysia/issues/38)
-
+- **logger:** add log filtering functional ([af7d9ec](https://github.com/PunGrumpy/logixlysia/commit/af7d9ec5b2bb5ff5942d1a586be23a9d23a2c1cf)), closes [#38](https://github.com/PunGrumpy/logixlysia/issues/38)
 
 ### Bug Fixes
 
-* CI/CD GitHub Actions ([3c40092](https://github.com/PunGrumpy/logixlysia/commit/3c40092bd0ac7bf8bd601a299453cf5080224234))
+- CI/CD GitHub Actions ([3c40092](https://github.com/PunGrumpy/logixlysia/commit/3c40092bd0ac7bf8bd601a299453cf5080224234))
 
 ## [3.0.2](https://github.com/PunGrumpy/logixlysia/compare/v3.0.1...v3.0.2) (2024-04-08)
 
-
 ### Bug Fixes
 
-* **logger:** add `config` property for logging configuration ([27d80eb](https://github.com/PunGrumpy/logixlysia/commit/27d80eb6b0c3a4a40a96738b235d9bc6b117c804))
+- **logger:** add `config` property for logging configuration ([27d80eb](https://github.com/PunGrumpy/logixlysia/commit/27d80eb6b0c3a4a40a96738b235d9bc6b117c804))
 
 ## [3.0.1](https://github.com/PunGrumpy/logixlysia/compare/v3.0.0...v3.0.1) (2024-04-08)
 
-
 ### Bug Fixes
 
-* **logger:** use correct status code in error log message ([a3ec49c](https://github.com/PunGrumpy/logixlysia/commit/a3ec49cd3fc1dc7f01a29b21e4de9cf543329c43)), closes [#33](https://github.com/PunGrumpy/logixlysia/issues/33)
+- **logger:** use correct status code in error log message ([a3ec49c](https://github.com/PunGrumpy/logixlysia/commit/a3ec49cd3fc1dc7f01a29b21e4de9cf543329c43)), closes [#33](https://github.com/PunGrumpy/logixlysia/issues/33)
 
 ## [3.0.0](https://github.com/PunGrumpy/logixlysia/compare/v2.3.1...v3.0.0) (2024-04-08)
 
-
 ### ⚠ BREAKING CHANGES
 
-* Added support for custom log format in the logger
-* Enhanced flexibility for define thier preferred log message structure
+- Added support for custom log format in the logger
+- Enhanced flexibility for define thier preferred log message structure
 
 ### Features
 
-* **options:** add support for custom log format ([acc9380](https://github.com/PunGrumpy/logixlysia/commit/acc9380ea25691e7d7fec175094cb6a9878b6c69))
+- **options:** add support for custom log format ([acc9380](https://github.com/PunGrumpy/logixlysia/commit/acc9380ea25691e7d7fec175094cb6a9878b6c69))
 
 ## [2.3.1](https://github.com/PunGrumpy/logixlysia/compare/v2.3.0...v2.3.1) (2024-04-07)
 
-
 ### Bug Fixes
 
-* **index:** remove duplicate logging when options IP enabled ([2e99bd6](https://github.com/PunGrumpy/logixlysia/commit/2e99bd628b7160fb43161ca08e49f711b74e8666))
+- **index:** remove duplicate logging when options IP enabled ([2e99bd6](https://github.com/PunGrumpy/logixlysia/commit/2e99bd628b7160fb43161ca08e49f711b74e8666))
 
 ## [2.3.0](https://github.com/PunGrumpy/logixlysia/compare/v2.2.3...v2.3.0) (2024-04-06)
 
-
 ### Features
 
-* **logger:** handle HTTP errors and log with appropriate status code ([276b3c4](https://github.com/PunGrumpy/logixlysia/commit/276b3c41334bcf1cefd032ae11f71fb8cda2bc9a)), closes [#24](https://github.com/PunGrumpy/logixlysia/issues/24)
+- **logger:** handle HTTP errors and log with appropriate status code ([276b3c4](https://github.com/PunGrumpy/logixlysia/commit/276b3c41334bcf1cefd032ae11f71fb8cda2bc9a)), closes [#24](https://github.com/PunGrumpy/logixlysia/issues/24)
 
 ## [2.2.3](https://github.com/PunGrumpy/logixlysia/compare/v2.2.2...v2.2.3) (2024-04-06)
 
-
 ### Bug Fixes
 
-* **error-log:** add global to `onError` ([e217baa](https://github.com/PunGrumpy/logixlysia/commit/e217baad9f72fa3e866f959f371768ed2ed22e33))
-* **ts2488:** that method return an iterator ([35da93f](https://github.com/PunGrumpy/logixlysia/commit/35da93f75e34ff212ddd31ff951425551f31c764))
+- **error-log:** add global to `onError` ([e217baa](https://github.com/PunGrumpy/logixlysia/commit/e217baad9f72fa3e866f959f371768ed2ed22e33))
+- **ts2488:** that method return an iterator ([35da93f](https://github.com/PunGrumpy/logixlysia/commit/35da93f75e34ff212ddd31ff951425551f31c764))
 
 ## [2.2.2](https://github.com/PunGrumpy/logixlysia/compare/v2.2.1...v2.2.2) (2024-04-06)
 
-
 ### Bug Fixes
 
-* **eslint:** change to use `eslint.config.cjs` instead `.eslintrc.cjs` ([506a33b](https://github.com/PunGrumpy/logixlysia/commit/506a33bc6540614a0b912ddedec109b2215affa3))
-* package.json to reduce vulnerabilities ([f768e88](https://github.com/PunGrumpy/logixlysia/commit/f768e88acd7d7c1faf32dab06a467c2cd6ba8f9c))
+- **eslint:** change to use `eslint.config.cjs` instead `.eslintrc.cjs` ([506a33b](https://github.com/PunGrumpy/logixlysia/commit/506a33bc6540614a0b912ddedec109b2215affa3))
+- package.json to reduce vulnerabilities ([f768e88](https://github.com/PunGrumpy/logixlysia/commit/f768e88acd7d7c1faf32dab06a467c2cd6ba8f9c))
 
 ## [2.2.1](https://github.com/PunGrumpy/logixlysia/compare/v2.2.0...v2.2.1) (2024-03-19)
 
-
 ### Bug Fixes
 
-* **index:** remove `onBeforeHandle` for avoid repeat logging ([4c6f0b9](https://github.com/PunGrumpy/logixlysia/commit/4c6f0b9912a4319ada15ad2a5110a9ed34f08a11))
-
+- **index:** remove `onBeforeHandle` for avoid repeat logging ([4c6f0b9](https://github.com/PunGrumpy/logixlysia/commit/4c6f0b9912a4319ada15ad2a5110a9ed34f08a11))
 
 ### Reverts
 
-* **deps:** new come back to old version ([361ac6b](https://github.com/PunGrumpy/logixlysia/commit/361ac6b2821ac897c1a4658cbfa1b5eb1a190804))
+- **deps:** new come back to old version ([361ac6b](https://github.com/PunGrumpy/logixlysia/commit/361ac6b2821ac897c1a4658cbfa1b5eb1a190804))
 
 ## [2.2.0](https://github.com/PunGrumpy/logixlysia/compare/v2.1.0...v2.2.0) (2024-03-19)
 
-
 ### Features
 
-* **options:** add show ip ([4e997c5](https://github.com/PunGrumpy/logixlysia/commit/4e997c557e9aef6046a93e0cab9fe11a87df3430))
-
+- **options:** add show ip ([4e997c5](https://github.com/PunGrumpy/logixlysia/commit/4e997c557e9aef6046a93e0cab9fe11a87df3430))
 
 ### Bug Fixes
 
-* **logger:** change to use array and push them ([3feefb7](https://github.com/PunGrumpy/logixlysia/commit/3feefb7a8dddc42c4eec54de40ab9dd8d5c70e70))
+- **logger:** change to use array and push them ([3feefb7](https://github.com/PunGrumpy/logixlysia/commit/3feefb7a8dddc42c4eec54de40ab9dd8d5c70e70))
 
 ## [2.1.0](https://github.com/PunGrumpy/logixlysia/compare/v2.0.2...v2.1.0) (2024-01-25)
 
-
 ### Features
 
-* **logger:** implement asynchronous logging functionality ([1017af0](https://github.com/PunGrumpy/logixlysia/commit/1017af0a28bd6121a85ec814a9177fd303c2572c))
+- **logger:** implement asynchronous logging functionality ([1017af0](https://github.com/PunGrumpy/logixlysia/commit/1017af0a28bd6121a85ec814a9177fd303c2572c))
 
 ## [2.0.2](https://github.com/PunGrumpy/logixlysia/compare/v2.0.1...v2.0.2) (2024-01-07)
 
-
 ### Bug Fixes
 
-* **logger:** change time from `iso` to `local` ([33ff28a](https://github.com/PunGrumpy/logixlysia/commit/33ff28a4a41db1dda7ca224e4807bd2451b95985))
+- **logger:** change time from `iso` to `local` ([33ff28a](https://github.com/PunGrumpy/logixlysia/commit/33ff28a4a41db1dda7ca224e4807bd2451b95985))
 
 ## [2.0.1](https://github.com/PunGrumpy/logixlysia/compare/v2.0.0...v2.0.1) (2024-01-03)
 
-
 ### Bug Fixes
 
-* **index:** elysia `0.8.8` doesn't contain `app` variable ([72f2314](https://github.com/PunGrumpy/logixlysia/commit/72f2314adf392b2e5387bb731f1417bf689e2dd9))
+- **index:** elysia `0.8.8` doesn't contain `app` variable ([72f2314](https://github.com/PunGrumpy/logixlysia/commit/72f2314adf392b2e5387bb731f1417bf689e2dd9))
 
 ## [2.0.0](https://github.com/PunGrumpy/logixlysia/compare/v1.0.0...v2.0.0) (2023-11-19)
 
-
 ### Features
 
-* **ci/cd:** separate deploy workflows from ci workflows ([e0344ae](https://github.com/PunGrumpy/logixlysia/commit/e0344ae32f711d140b1c914164e8eb7a57181558))
+- **ci/cd:** separate deploy workflows from ci workflows ([e0344ae](https://github.com/PunGrumpy/logixlysia/commit/e0344ae32f711d140b1c914164e8eb7a57181558))
 
 ## 1.0.0 (2023-11-18)
 
-
 ### Features
 
-* add example for test ([8f0f1ee](https://github.com/PunGrumpy/logixlysia/commit/8f0f1ee01de5e5c639687bf0971f0347c3516ed0))
-* add log on start ([f1adeb9](https://github.com/PunGrumpy/logixlysia/commit/f1adeb9c620b42a2639ea6f01fa3e0ebd583ee8f))
-* add logger format and enhance logging functionality ([c0887e8](https://github.com/PunGrumpy/logixlysia/commit/c0887e8eed6142a476d2fd7eb343ef6933e26d31))
-* add new style on logging ([f1d9583](https://github.com/PunGrumpy/logixlysia/commit/f1d95832eacd6528c23454b914c61e09b4c1b83a))
-* **ci:** add google automated workflows ([526e069](https://github.com/PunGrumpy/logixlysia/commit/526e0695029b0235a268445fd1c72b267c030c13))
-* setting environment ([6f5e553](https://github.com/PunGrumpy/logixlysia/commit/6f5e553744999c70de1d8fb1b42a5eb7b75d8798))
-
+- add example for test ([8f0f1ee](https://github.com/PunGrumpy/logixlysia/commit/8f0f1ee01de5e5c639687bf0971f0347c3516ed0))
+- add log on start ([f1adeb9](https://github.com/PunGrumpy/logixlysia/commit/f1adeb9c620b42a2639ea6f01fa3e0ebd583ee8f))
+- add logger format and enhance logging functionality ([c0887e8](https://github.com/PunGrumpy/logixlysia/commit/c0887e8eed6142a476d2fd7eb343ef6933e26d31))
+- add new style on logging ([f1d9583](https://github.com/PunGrumpy/logixlysia/commit/f1d95832eacd6528c23454b914c61e09b4c1b83a))
+- **ci:** add google automated workflows ([526e069](https://github.com/PunGrumpy/logixlysia/commit/526e0695029b0235a268445fd1c72b267c030c13))
+- setting environment ([6f5e553](https://github.com/PunGrumpy/logixlysia/commit/6f5e553744999c70de1d8fb1b42a5eb7b75d8798))
 
 ### Bug Fixes
 
-* change name ([ee0c164](https://github.com/PunGrumpy/logixlysia/commit/ee0c1645be16a582c4df03874fdf0712e27a9e6a))
-* change to use chalk instead piccolors ([b2fe4f5](https://github.com/PunGrumpy/logixlysia/commit/b2fe4f5a8dce51731e1729b9b0f2c7a15d280978))
-* **types:** add types ([38e1f63](https://github.com/PunGrumpy/logixlysia/commit/38e1f63b4b92f4829772d638d45d7bad8182dbdc))
-* update jsdocs and add new banner ([226c7eb](https://github.com/PunGrumpy/logixlysia/commit/226c7ebac504f661e58a9581c54e1937dfbea4a8))
-* **utils:** update jsdocs ([8cab996](https://github.com/PunGrumpy/logixlysia/commit/8cab996e757d997d3a05183e85d4bfe684fdb11d))
+- change name ([ee0c164](https://github.com/PunGrumpy/logixlysia/commit/ee0c1645be16a582c4df03874fdf0712e27a9e6a))
+- change to use chalk instead piccolors ([b2fe4f5](https://github.com/PunGrumpy/logixlysia/commit/b2fe4f5a8dce51731e1729b9b0f2c7a15d280978))
+- **types:** add types ([38e1f63](https://github.com/PunGrumpy/logixlysia/commit/38e1f63b4b92f4829772d638d45d7bad8182dbdc))
+- update jsdocs and add new banner ([226c7eb](https://github.com/PunGrumpy/logixlysia/commit/226c7ebac504f661e58a9581c54e1937dfbea4a8))
+- **utils:** update jsdocs ([8cab996](https://github.com/PunGrumpy/logixlysia/commit/8cab996e757d997d3a05183e85d4bfe684fdb11d))
