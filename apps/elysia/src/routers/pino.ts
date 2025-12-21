@@ -1,6 +1,6 @@
 import type { Logixlysia } from 'logixlysia'
 
-export const pinoRoute = <App extends Logixlysia>(app: App) =>
+export const pinoRouter = <App extends Logixlysia>(app: App) =>
   app.get(
     '/pino',
     ({ store }) => {

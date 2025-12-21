@@ -1,6 +1,6 @@
 import type { Logixlysia } from 'logixlysia'
 
-export const customRoute = <App extends Logixlysia>(app: App) =>
+export const customRouter = <App extends Logixlysia>(app: App) =>
   app.get(
     '/custom',
     ({ request, store }) => {

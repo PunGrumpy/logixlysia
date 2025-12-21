@@ -1,6 +1,6 @@
 import type { Logixlysia } from 'logixlysia'
 
-export const boomRoute = <App extends Logixlysia>(app: App) =>
+export const boomRouter = <App extends Logixlysia>(app: App) =>
   app.get(
     '/boom',
     () => {

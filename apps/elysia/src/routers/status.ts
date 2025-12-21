@@ -1,6 +1,6 @@
 import type { Logixlysia } from 'logixlysia'
 
-export const statusRoute = <App extends Logixlysia>(app: App) =>
+export const statusRouter = <App extends Logixlysia>(app: App) =>
   app.get(
     '/status/:code',
     ({ params, set }) => {
