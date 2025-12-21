@@ -7,5 +7,5 @@
   "access": "public",
   "baseBranch": "main",
   "updateInternalDependencies": "patch",
-  "ignore": ["docs", "elysia", "elysia-node"]
+  "ignore": ["docs", "elysia-example", "elysia-node-example"]
 }
