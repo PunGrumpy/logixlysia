@@ -12,7 +12,7 @@ export const app = new Elysia({
     swagger({
       documentation: {
         info: {
-          title: 'Elysia with Logixlysia',
+          title: 'Elysia Node with Logixlysia',
           version: packageJson.version
         }
       },
