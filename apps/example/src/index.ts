@@ -35,4 +35,4 @@ export const app = new Elysia({
   )
   .use(routes)
 
-app.listen(process.env.PORT ?? 3001)
+app.listen(3001)
