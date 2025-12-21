@@ -33,7 +33,7 @@ jobs:
       - name: 🔽 Install Dependencies
         run: bun install
       - name: 🧪 Test
-        run: bun run test:ci
+        run: bun run test
 
   build:
     name: 🏗️ Build
