@@ -1,6 +1,3 @@
 {
-  "title": "Logixlysia",
-  "description": "High-performance logging for Elysia.js",
-  "pages": ["(docs)", "features"],
-  "root": true
+  "pages": ["(docs)", "features", "integrations"]
 }

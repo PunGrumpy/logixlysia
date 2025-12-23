@@ -2,14 +2,16 @@
   "title": "Features",
   "description": "Features of Logixlysia",
   "pages": [
+    "---Configuration---",
     "startup",
     "formatting",
     "filtering",
-    "file-logging",
-    "log-rotation",
     "log-levels",
-    "pino-integration",
-    "transports"
+    "---Output---",
+    "file-logging",
+    "transports",
+    "---Management---",
+    "log-rotation"
   ],
   "root": true
 }

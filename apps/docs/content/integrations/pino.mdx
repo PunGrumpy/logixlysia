@@ -1,9 +1,9 @@
 ---
-title: Pino Integration
+title: Pino
 description: High-performance structured logging with Pino
 ---
 
-Logixlysia integrates [Pino](https://github.com/pinojs/pino), a high-performance JSON-first logging library, as its primary logging backend.
+Logixlysia can integrate with [Pino](https://github.com/pinojs/pino), a high-performance JSON-first logging library, as an optional logging backend.
 
 ## Why Pino?
 
@@ -14,7 +14,7 @@ Logixlysia integrates [Pino](https://github.com/pinojs/pino), a high-performance
 
 ## Basic Usage
 
-Pino is integrated automatically. Access it through the store:
+When Pino integration is enabled, access it through the store:
 
 ```ts
 app.get('/users/:id', ({ store, params }) => {
@@ -113,6 +113,63 @@ logixlysia({
   }
 })
 ```
+
+### Pino Transports
+
+Pino supports its own transport system for advanced logging destinations. You can configure Pino transports using the `transport` option:
+
+```ts
+logixlysia({
+  config: {
+    pino: {
+      transport: {
+        target: 'pino/file',
+        options: {
+          destination: './logs/pino-example.log'
+        }
+      }
+    }
+  }
+})
+```
+
+**Important:** Pino transports are **separate** from Logixlysia's transport system:
+
+- **Pino transports** (`pino.transport`) - Only affect logs written through `store.pino.info()`, `store.pino.error()`, etc.
+- **Logixlysia transports** (`config.transports`) - Only affect Logixlysia's internal HTTP request logging
+
+For example:
+
+```ts
+logixlysia({
+  config: {
+    // Pino transport - only for store.pino.* logs
+    pino: {
+      transport: {
+        target: 'pino/file',
+        options: {
+          destination: './logs/pino-example.log'
+        }
+      }
+    },
+    // Logixlysia transports - only for HTTP request logs
+    transports: [customTransport]
+  }
+})
+
+app.get('/example', ({ store }) => {
+  // This log goes to pino/file transport
+  store.pino.info({ feature: 'pino' }, 'pino log example')
+  
+  // HTTP request logs go to Logixlysia transports (if configured)
+  // or to console/file based on logixlysia config
+})
+```
+
+This separation allows you to:
+- Use Pino transports for structured application logs (`store.pino.*`)
+- Use Logixlysia transports for HTTP request/response logs
+- Configure different destinations for different log types
 
 ## Advanced Usage
 
