@@ -77,63 +77,59 @@ const StatCard = ({
   )
 }
 
-export const Stats = () => {
-  return (
-    <Section>
-      <div className="grid gap-16">
-        <div className="text-center">
-          <h2 className="mb-4 font-medium font-serif text-4xl md:text-5xl">
-            By The Numbers
-          </h2>
-          <p className="text-muted-foreground">
-            The metrics that tell our story
-          </p>
-        </div>
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          <StatCard
-            delay={0}
-            description="Total commits since launch"
-            icon={<IconGitCommit className="size-8" />}
-            title="Commits"
-            value="734"
-          />
-          <StatCard
-            delay={100}
-            description="Latest version released"
-            icon={<Icons.logo className="size-8" />}
-            title="Version"
-            value="6.0.1"
-          />
-          <StatCard
-            delay={200}
-            description="Years of development"
-            icon={<IconCalendar className="size-8" />}
-            title="Project Age"
-            value="2+"
-          />
-          <StatCard
-            delay={300}
-            description="Major releases in 2025"
-            icon={<IconGitBranch className="size-8" />}
-            title="Releases"
-            value="6"
-          />
-          <StatCard
-            delay={400}
-            description="Features and improvements"
-            icon={<IconCode className="size-8" />}
-            title="Updates"
-            value="50+"
-          />
-          <StatCard
-            delay={500}
-            description="Open source on GitHub"
-            icon={<IconBrandGithub className="size-8" />}
-            title="GitHub"
-            value="Active"
-          />
-        </div>
+export const Stats = () => (
+  <Section>
+    <div className="grid gap-16">
+      <div className="text-center">
+        <h2 className="mb-4 font-medium font-serif text-4xl md:text-5xl">
+          By The Numbers
+        </h2>
+        <p className="text-muted-foreground">The metrics that tell our story</p>
       </div>
-    </Section>
-  )
-}
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <StatCard
+          delay={0}
+          description="Total commits since launch"
+          icon={<IconGitCommit className="size-8" />}
+          title="Commits"
+          value="734"
+        />
+        <StatCard
+          delay={100}
+          description="Latest version released"
+          icon={<Icons.logo className="size-8" />}
+          title="Version"
+          value="6.0.1"
+        />
+        <StatCard
+          delay={200}
+          description="Years of development"
+          icon={<IconCalendar className="size-8" />}
+          title="Project Age"
+          value="2+"
+        />
+        <StatCard
+          delay={300}
+          description="Major releases in 2025"
+          icon={<IconGitBranch className="size-8" />}
+          title="Releases"
+          value="6"
+        />
+        <StatCard
+          delay={400}
+          description="Features and improvements"
+          icon={<IconCode className="size-8" />}
+          title="Updates"
+          value="50+"
+        />
+        <StatCard
+          delay={500}
+          description="Open source on GitHub"
+          icon={<IconBrandGithub className="size-8" />}
+          title="GitHub"
+          value="Active"
+        />
+      </div>
+    </div>
+  </Section>
+)
