@@ -82,7 +82,7 @@ export const Footer = () => (
 
         <div className="flex flex-wrap items-center gap-3">
           <Button
-            className="rounded-full px-6"
+            className="px-6"
             nativeButton={false}
             render={<Link href="/introduction" />}
             size="lg"
@@ -90,7 +90,7 @@ export const Footer = () => (
             Read docs
           </Button>
           <Button
-            className="rounded-full px-6"
+            className="px-6"
             nativeButton={false}
             render={
               <Link external href="https://github.com/PunGrumpy/logixlysia" />
