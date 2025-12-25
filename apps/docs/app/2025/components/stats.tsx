@@ -7,10 +7,10 @@ import {
   IconGitBranch,
   IconGitCommit
 } from '@tabler/icons-react'
-import { type ReactNode, useEffect, useRef, useState } from 'react'
+import { motion } from 'motion/react'
+import type { ReactNode } from 'react'
 import { Icons } from '@/components/icons'
 import { Card } from '@/components/ui/card'
-import { cn } from '@/lib/utils'
 import { Section } from './section'
 
 interface StatCardProps {
@@ -27,39 +27,14 @@ const StatCard = ({
   description,
   icon,
   delay = 0
-}: StatCardProps) => {
-  const [isVisible, setIsVisible] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry?.isIntersecting) {
-          setTimeout(() => {
-            setIsVisible(true)
-          }, delay)
-        }
-      },
-      { threshold: 0.1 }
-    )
-
-    if (ref.current) {
-      observer.observe(ref.current)
-    }
-
-    return () => {
-      observer.disconnect()
-    }
-  }, [delay])
-
-  return (
-    <Card
-      className={cn(
-        'group relative overflow-hidden bg-card/50 p-8 backdrop-blur-sm transition-all duration-700',
-        isVisible ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'
-      )}
-      ref={ref}
-    >
+}: StatCardProps) => (
+  <motion.div
+    initial={{ opacity: 0, y: 32 }}
+    transition={{ duration: 0.7, delay: delay / 1000 }}
+    viewport={{ once: true, amount: 0.1 }}
+    whileInView={{ opacity: 1, y: 0 }}
+  >
+    <Card className="group relative overflow-hidden bg-card/50 p-8 backdrop-blur-sm">
       <div className="absolute inset-0 bg-linear-to-br from-primary/5 to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
       <div className="relative z-10">
         {icon && <div className="mb-4 text-primary">{icon}</div>}
@@ -74,8 +49,8 @@ const StatCard = ({
         )}
       </div>
     </Card>
-  )
-}
+  </motion.div>
+)
 
 export const Stats = () => (
   <Section>
