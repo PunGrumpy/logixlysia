@@ -13,7 +13,7 @@ import {
 
 const COPY_TIMEOUT = 2000
 
-type InstallerProps = {
+interface InstallerProps {
   code: string
 }
 

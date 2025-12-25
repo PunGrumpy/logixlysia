@@ -4,7 +4,7 @@ import type { ReactNode } from 'react'
 import { Toaster } from '@/components/ui/sonner'
 import { fonts } from '@/lib/fonts'
 
-type LayoutProps = {
+interface LayoutProps {
   readonly children: ReactNode
 }
 

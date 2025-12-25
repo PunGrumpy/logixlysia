@@ -4,7 +4,7 @@ import type { LogLevel, Options, RequestInfo, StoreData } from '../interfaces'
 import { ensureDir } from './fs'
 import { performRotation, shouldRotate } from './rotation-manager'
 
-type LogToFileInput = {
+interface LogToFileInput {
   filePath: string
   level: LogLevel
   request: RequestInfo

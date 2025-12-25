@@ -59,7 +59,7 @@ const statusCode = (status: number) => {
 type LogType = keyof typeof logLevel
 type HttpMethod = keyof typeof httpMethod
 
-export type LogEntry = {
+export interface LogEntry {
   icon: string
   timestamp: string
   duration: string

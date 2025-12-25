@@ -5,7 +5,7 @@ import { useCopyButton } from 'fumadocs-ui/utils/use-copy-button'
 import { toast } from 'sonner'
 import { Button } from './ui/button'
 
-type CopyMarkdownProps = {
+interface CopyMarkdownProps {
   markdown: string
 }
 
