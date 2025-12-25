@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from 'react'
 import Marquee, { type MarqueeProps } from 'react-fast-marquee'
 
-// Modified version to better handle vertical scrolling
 export const MarqueeProvider = (props: MarqueeProps) => {
   const ref = useRef<HTMLDivElement>(null)
   const [dimensions, setDimensions] = useState<{
@@ -21,7 +20,6 @@ export const MarqueeProvider = (props: MarqueeProps) => {
       }
     }
 
-    // Set initial dimensions
     updateDimensions()
 
     // Create ResizeObserver to watch for size changes
@@ -37,7 +35,6 @@ export const MarqueeProvider = (props: MarqueeProps) => {
     }
   }, [])
 
-  // For vertical scrolling, we need to ensure we have the right style
   const style =
     props.direction === 'up' || props.direction === 'down'
       ? { height: dimensions.height, width: dimensions.width }
