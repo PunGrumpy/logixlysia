@@ -5,7 +5,7 @@ export const Section = ({
   children,
   className,
   ...props
-}: HTMLProps<HTMLDivElement>) => (
+}: HTMLProps<HTMLElement>) => (
   <section
     className={cn('container relative mx-auto px-4 md:px-8', className)}
     {...props}
