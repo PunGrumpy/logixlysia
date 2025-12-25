@@ -7,18 +7,18 @@ export type Pino = PinoLogger<never, boolean>
 
 export type LogLevel = 'DEBUG' | 'INFO' | 'WARNING' | 'ERROR'
 
-export type StoreData = {
+export interface StoreData {
   beforeTime: bigint
 }
 
-export type LogixlysiaStore = {
+export interface LogixlysiaStore {
   logger: Logger
   pino: Pino
   beforeTime?: bigint
   [key: string]: unknown
 }
 
-export type Transport = {
+export interface Transport {
   log: (
     level: LogLevel,
     message: string,
@@ -26,7 +26,7 @@ export type Transport = {
   ) => void | Promise<void>
 }
 
-export type LogRotationConfig = {
+export interface LogRotationConfig {
   /**
    * Max log file size before rotation, e.g. '10m', '5k', or a byte count.
    */
@@ -43,7 +43,7 @@ export type LogRotationConfig = {
   compression?: 'gzip'
 }
 
-export type Options = {
+export interface Options {
   config?: {
     showStartupMessage?: boolean
     startupMessageFormat?: 'simple' | 'banner'
@@ -76,7 +76,7 @@ export class HttpError extends Error {
   }
 }
 
-export type Logger = {
+export interface Logger {
   pino: Pino
   log: (
     level: LogLevel,
@@ -111,7 +111,7 @@ export type Logger = {
   ) => void
 }
 
-export type LogixlysiaContext = {
+export interface LogixlysiaContext {
   request: Request
   store: LogixlysiaStore
 }

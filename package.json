@@ -20,7 +20,7 @@
     "@changesets/cli": "^2.29.8",
     "turbo": "^2.7.2",
     "typescript": "5.9.3",
-    "ultracite": "6.4.3"
+    "ultracite": "6.5.0"
   },
   "engines": {
     "node": ">=24"

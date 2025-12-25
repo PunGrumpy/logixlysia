@@ -1,6 +1,6 @@
 import type { LogLevel, Options, RequestInfo, StoreData } from '../interfaces'
 
-type LogToTransportsInput = {
+interface LogToTransportsInput {
   level: LogLevel
   request: RequestInfo
   data: Record<string, unknown>

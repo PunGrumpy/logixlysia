@@ -20,7 +20,7 @@ import {
 } from '@/components/ai-elements/open-in-chat'
 import { Button } from './ui/button'
 
-type ViewOptionsProps = {
+interface ViewOptionsProps {
   markdownUrl: string
   githubUrl: string
 }

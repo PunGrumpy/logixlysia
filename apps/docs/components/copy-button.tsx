@@ -6,7 +6,7 @@ import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
-type CopyButtonProps = {
+interface CopyButtonProps {
   code: string
   className?: string
   name: string
