@@ -59,7 +59,6 @@ const MilestoneItem = ({
     )}
     style={{ transitionDelay: `${index * 100}ms` }}
   >
-    {/* Timeline dot */}
     <div className="relative z-10 grid grid-rows-[auto_1fr] items-start">
       <div className="relative">
         {index === milestones.length - 1 && (
@@ -78,7 +77,6 @@ const MilestoneItem = ({
       )}
     </div>
 
-    {/* Content card */}
     <div className="grid min-w-0 gap-2">
       <div className="font-medium text-primary text-xs uppercase tracking-wider">
         {milestone.month} 2025
