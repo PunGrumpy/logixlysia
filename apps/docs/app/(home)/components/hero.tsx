@@ -1,11 +1,31 @@
+import { IconArrowUpRight } from '@tabler/icons-react'
 import { Link } from 'fumadocs-core/framework'
 import { Installer } from '@/components/installer'
+import {
+  Announcement,
+  AnnouncementTag,
+  AnnouncementTitle
+} from '@/components/kibo-ui/announcement'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
 export const Hero = () => (
   <section className="flex flex-col justify-between gap-8">
     <div className="flex flex-col gap-4">
+      <Link href="/2025">
+        <Announcement className="min-h-8">
+          <AnnouncementTag className="bg-primary/10 text-primary">
+            Announcement
+          </AnnouncementTag>
+          <AnnouncementTitle>
+            Logixlysia 2025 Wrapped is now available!
+            <IconArrowUpRight
+              className="shrink-0 text-muted-foreground"
+              size={16}
+            />
+          </AnnouncementTitle>
+        </Announcement>
+      </Link>
       <h1
         className={cn(
           'flex flex-col',
