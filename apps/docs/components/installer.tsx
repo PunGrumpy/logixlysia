@@ -1,5 +1,6 @@
 'use client'
 
+import { track } from '@databuddy/sdk/react'
 import { IconCheck, IconCopy } from '@tabler/icons-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
@@ -23,6 +24,7 @@ export const Installer = ({ code }: InstallerProps) => {
   const handleCopy = () => {
     navigator.clipboard.writeText(code)
     toast.success('Copied to clipboard')
+    track('copy_to_clipboard', { code, name: 'installer' })
     setCopied(true)
 
     setTimeout(() => {

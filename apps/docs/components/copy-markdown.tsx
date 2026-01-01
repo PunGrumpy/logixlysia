@@ -1,5 +1,6 @@
 'use client'
 
+import { track } from '@databuddy/sdk/react'
 import { IconCheck, IconCopy } from '@tabler/icons-react'
 import { useCopyButton } from 'fumadocs-ui/utils/use-copy-button'
 import { toast } from 'sonner'
@@ -17,6 +18,7 @@ export const CopyMarkdown = ({ markdown }: CopyMarkdownProps) => {
           'text/plain': markdown
         })
       ])
+      track('copy_to_clipboard', { markdown, name: 'copy-markdown' })
     } catch (error) {
       toast.error('Failed to copy markdown', {
         description: error instanceof Error ? error.message : 'Unknown error'
