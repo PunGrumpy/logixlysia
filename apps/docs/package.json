@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@base-ui/react": "^1.0.0",
+    "@databuddy/sdk": "^2.3.21",
     "@t3-oss/env-nextjs": "^0.13.10",
     "@tabler/icons-react": "^3.36.0",
     "class-variance-authority": "^0.7.1",
