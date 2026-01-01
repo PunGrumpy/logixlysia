@@ -3,7 +3,6 @@
 import { track } from '@databuddy/sdk/react'
 import { IconCheck, IconCopy } from '@tabler/icons-react'
 import { useCopyButton } from 'fumadocs-ui/utils/use-copy-button'
-import { toast } from 'sonner'
 import { Button } from './ui/button'
 
 interface CopyMarkdownProps {
@@ -12,18 +11,8 @@ interface CopyMarkdownProps {
 
 export const CopyMarkdown = ({ markdown }: CopyMarkdownProps) => {
   const [checked, onClick] = useCopyButton(() => {
-    try {
-      navigator.clipboard.write([
-        new ClipboardItem({
-          'text/plain': markdown
-        })
-      ])
-      track('copy_to_clipboard', { markdown, name: 'copy-markdown' })
-    } catch (error) {
-      toast.error('Failed to copy markdown', {
-        description: error instanceof Error ? error.message : 'Unknown error'
-      })
-    }
+    track('copy_to_clipboard', { markdown, name: 'copy-markdown' })
+    navigator.clipboard.writeText(markdown)
   })
 
   const Icon = checked ? IconCheck : IconCopy
