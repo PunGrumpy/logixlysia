@@ -44,7 +44,7 @@
   },
   "devDependencies": {
     "@types/bun": "^1.3.5",
-    "bunup": "^0.16.11"
+    "bunup": "^0.16.17"
   },
   "peerDependencies": {
     "typescript": "^5.9.3"
