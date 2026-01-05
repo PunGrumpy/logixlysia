@@ -21,13 +21,10 @@ export const CopyMarkdown = ({ markdown }: CopyMarkdownProps) => {
     <Button
       className="cursor-pointer shadow-none"
       onClick={onClick}
-      render={
-        <span>
-          <Icon className="size-4" />
-          Copy Markdown
-        </span>
-      }
       variant="outline"
-    />
+    >
+      <Icon className="size-4" />
+      Copy Markdown
+    </Button>
   )
 }

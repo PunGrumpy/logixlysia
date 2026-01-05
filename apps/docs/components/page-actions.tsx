@@ -5,6 +5,7 @@ import {
   IconChevronDown,
   IconExternalLink
 } from '@tabler/icons-react'
+import Link from 'fumadocs-core/link'
 import {
   OpenIn,
   OpenInChatGPT,
@@ -35,16 +36,10 @@ export const ViewOptions = ({ markdownUrl, githubUrl }: ViewOptionsProps) => {
   return (
     <OpenIn query={query}>
       <OpenInTrigger>
-        <Button
-          className="shadow-none"
-          render={
-            <span>
-              Open
-              <IconChevronDown className="size-4 text-muted-foreground" />
-            </span>
-          }
-          variant="outline"
-        />
+        <Button className="shadow-none" variant="outline">
+          Open
+          <IconChevronDown className="size-4 text-muted-foreground" />
+        </Button>
       </OpenInTrigger>
       <OpenInContent>
         <OpenInChatGPT />
@@ -54,20 +49,13 @@ export const ViewOptions = ({ markdownUrl, githubUrl }: ViewOptionsProps) => {
         <OpenInv0 />
         <OpenInCursor />
         <OpenInSeparator />
-        <OpenInItem
-          render={
-            <a
-              className="flex items-center gap-2"
-              href={githubUrl}
-              rel="noopener"
-              target="_blank"
-            >
-              <IconBrandGithub className="size-4" />
-              <span className="flex-1">Open in GitHub</span>
-              <IconExternalLink className="size-4 shrink-0 text-muted-foreground" />
-            </a>
-          }
-        />
+        <OpenInItem asChild>
+          <Link external href={githubUrl}>
+            <IconBrandGithub className="size-4" />
+            <span className="flex-1">Open in GitHub</span>
+            <IconExternalLink className="size-4 shrink-0 text-muted-foreground" />
+          </Link>
+        </OpenInItem>
       </OpenInContent>
     </OpenIn>
   )

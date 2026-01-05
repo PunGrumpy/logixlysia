@@ -81,24 +81,13 @@ export const Footer = () => (
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
-          <Button
-            className="px-6"
-            nativeButton={false}
-            render={<Link href="/introduction" />}
-            size="lg"
-          >
-            Read docs
+          <Button asChild className="px-6" size="lg">
+            <Link href="/introduction">Read docs</Link>
           </Button>
-          <Button
-            className="px-6"
-            nativeButton={false}
-            render={
-              <Link external href="https://github.com/PunGrumpy/logixlysia" />
-            }
-            size="lg"
-            variant="outline"
-          >
-            Open GitHub
+          <Button asChild className="px-6" size="lg" variant="outline">
+            <Link external href="https://github.com/PunGrumpy/logixlysia">
+              Open GitHub
+            </Link>
           </Button>
         </div>
       </div>

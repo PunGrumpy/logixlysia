@@ -18,22 +18,11 @@ export const Cta = () => (
       </div>
 
       <div className="flex flex-wrap justify-center gap-4">
-        <Button
-          className="px-8"
-          nativeButton={false}
-          render={<Link href="/" />}
-          size="lg"
-        >
-          Get Started
+        <Button asChild className="px-8" size="lg">
+          <Link href="/">Get Started</Link>
         </Button>
-        <Button
-          className="px-8"
-          nativeButton={false}
-          render={<Link href="/introduction" />}
-          size="lg"
-          variant="outline"
-        >
-          View Documentation
+        <Button asChild className="px-8" size="lg" variant="outline">
+          <Link href="/introduction">View Documentation</Link>
         </Button>
       </div>
     </div>
