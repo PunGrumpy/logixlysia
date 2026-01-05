@@ -1,0 +1,3 @@
+[install]
+# Linker is used to link the dependencies to the root of the project
+linker = "hoisted"
