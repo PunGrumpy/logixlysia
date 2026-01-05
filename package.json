@@ -12,6 +12,7 @@
     "changeset:version": "changeset version",
     "changeset:publish": "bun build && changeset publish",
     "bump-deps": "bunx npm-check-updates --deep -u -x recharts -x react-resizable-panels && bun install",
+    "bump-ui": "cd apps/docs && bunx --bun shadcn add --all --overwrite && bunx --bun shadcn migrate --yes radix",
     "clean": "git clean -xdf .turbo node_modules",
     "typecheck": "turbo run typecheck"
   },
