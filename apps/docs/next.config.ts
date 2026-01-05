@@ -18,6 +18,10 @@ const config: NextConfig = {
         destination: '/llms.mdx/:path*'
       }
     ]
+  },
+
+  experimental: {
+    turbopackFileSystemCacheForDev: true
   }
 }
 
