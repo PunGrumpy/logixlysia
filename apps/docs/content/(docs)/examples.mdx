@@ -220,6 +220,26 @@ app.onError(({ code, error, store }) => {
 })
 ```
 
+### JSON Format for Error Logs
+
+```ts
+app.use(logixlysia({
+  config: {
+    customLogFormat: '{"level": "{level}", "message": "{message}", "method": "{method}", "pathname": "{pathname}", "status": "{status}"}'
+  }
+}))
+
+app.get('/error', () => {
+  throw new Error('Validation failed')
+})
+```
+
+Output for both regular requests and errors will be in JSON format:
+```json
+{"level": "INFO", "message": "", "method": "GET", "pathname": "/hello", "status": "200"}
+{"level": "ERROR", "message": "Validation failed", "method": "GET", "pathname": "/error", "status": "500"}
+```
+
 ## Custom Transports
 
 ### Elasticsearch Transport

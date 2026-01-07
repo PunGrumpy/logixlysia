@@ -68,10 +68,15 @@ logixlysia({
 })
 ```
 
+## Error Log Formatting
+
+The `customLogFormat` applies to both regular access logs and error logs. When an error occurs (like validation errors or exceptions), the same formatting rules apply, ensuring consistent log output across all log levels.
+
 ## Best Practices
 
 - Keep formats concise for readability
 - Include essential information only
 - Use consistent formatting across environments
 - Consider log parsing requirements when designing formats
+- Error logs will include the error message in the `{message}` placeholder
 
