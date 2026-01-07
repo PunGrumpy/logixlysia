@@ -1,1 +1,1 @@
-packages/cli/README.md
+packages/logixlysia/README.md
