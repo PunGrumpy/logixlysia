@@ -9,7 +9,5 @@ export const parseError = (error: unknown): string => {
     message = String(error)
   }
 
-  console.error(`Parsing error: ${message}`)
-
   return message
 }
