@@ -8,7 +8,8 @@
 
 ### Patch Changes
 
-- 43b2ef5: ### Added
+- 43b2ef5: 
+  ### Added
 
   - Add `logFilter` configuration option to filter logs by level
   - Add `LogFilter` interface with `level` property to specify allowed log levels
