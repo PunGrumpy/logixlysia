@@ -5,6 +5,8 @@ import type {
 
 export type Pino = PinoLogger<never, boolean>
 
+export type RequestInfo = Request
+
 export type LogLevel = 'DEBUG' | 'INFO' | 'WARNING' | 'ERROR'
 
 export interface StoreData {

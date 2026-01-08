@@ -255,6 +255,20 @@ Check:
 3. `useTransportsOnly` is not conflicting with other settings
 4. Check console for transport errors
 
+### customLogFormat is not working for error logs
+
+Ensure you're using Logixlysia v6.0.2 or later. Earlier versions had a bug where error logs ignored the `customLogFormat` configuration and used a hardcoded format instead. This has been fixed in version 6.0.2+.
+
+**Before (v6.0.1 and earlier):**
+```
+ERROR POST /api/users Validation failed
+```
+
+**After (v6.0.2+ with customLogFormat):**
+```json
+{"level": "ERROR", "message": "Validation failed", "method": "POST", "pathname": "/api/users", "status": "400"}
+```
+
 ## Migration
 
 ### How do I migrate from another logging library?
