@@ -1,7 +1,7 @@
 <div align="center">
   <h1><code>🦊</code> Logixlysia</h1>
   <strong>Logixlysia is a logging library for ElysiaJS</strong>
-  <img src="../../apps/docs/app/opengraph-image.png" alt="Logixlysia" width="100%" height="auto" />
+  <img src="https://github.com/PunGrumpy/logixlysia/blob/main/apps/docs/app/opengraph-image.png?raw=true" alt="Logixlysia" width="100%" height="auto" />
 </div>
 
 ## `📩` Installation
