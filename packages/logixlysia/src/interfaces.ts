@@ -45,6 +45,14 @@ export interface LogRotationConfig {
   compression?: 'gzip'
 }
 
+export interface LogFilter {
+  /**
+   * Array of log levels to allow. If specified, only logs with these levels will be processed.
+   * If not specified, all log levels will be allowed.
+   */
+  level?: LogLevel[]
+}
+
 export interface Options {
   config?: {
     showStartupMessage?: boolean
@@ -55,6 +63,9 @@ export interface Options {
       translateTime?: string
     }
     customLogFormat?: string
+
+    // Filtering
+    logFilter?: LogFilter
 
     // Outputs
     transports?: Transport[]

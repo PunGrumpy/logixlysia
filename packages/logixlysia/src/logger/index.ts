@@ -5,7 +5,8 @@ import type {
   Options,
   Pino,
   RequestInfo,
-  StoreData
+  StoreData,
+  LogFilter
 } from '../interfaces'
 import { logToTransports } from '../output'
 import { logToFile } from '../output/file'
@@ -41,12 +42,24 @@ export const createLogger = (options: Options = {}): Logger => {
     transport
   })
 
+  const shouldLog = (level: LogLevel, logFilter?: LogFilter): boolean => {
+    if (!logFilter?.level || logFilter.level.length === 0) {
+      return true
+    }
+    return logFilter.level.includes(level)
+  }
+
   const log = (
     level: LogLevel,
     request: RequestInfo,
     data: Record<string, unknown>,
     store: StoreData
   ): void => {
+    // Check if this log level should be filtered
+    if (!shouldLog(level, config?.logFilter)) {
+      return
+    }
+
     logToTransports({ level, request, data, store, options })
 
     const useTransportsOnly = config?.useTransportsOnly === true
