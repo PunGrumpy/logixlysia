@@ -1,5 +1,30 @@
 # Changelog
 
+## 6.1.0
+
+### Minor Changes
+
+- e58213b: Move `elysia` from dependencies to peerDependencies to follow best practices for Elysia plugins and avoid duplicate dependency installations.
+
+### Patch Changes
+
+- 43b2ef5: ### Added
+
+  - Add `logFilter` configuration option to filter logs by level
+  - Add `LogFilter` interface with `level` property to specify allowed log levels
+  - Implement filtering logic in logger to prevent processing of filtered log levels
+  - Add comprehensive tests for log filtering functionality
+
+  ### Fixed
+
+  - Fixed TypeScript error where `logFilter` property was missing in configuration type
+
+  ### Changed
+
+  - Updated TypeScript interfaces to support the new `logFilter` configuration option
+
+- f09e27e: Fix `customLogFormat` being ignored for error logs. Error logs now properly respect the `customLogFormat` configuration instead of using a hardcoded `console.error` format. Also adds missing `RequestInfo` type definition.
+
 ## 6.0.1
 
 ### Patch Changes
