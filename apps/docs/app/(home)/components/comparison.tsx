@@ -150,7 +150,7 @@ const features = [
       {
         text: 'Flexible ecosystem',
         icon: IconCheck,
-        color: 'text-emerald-500',
+        color: 'text-vesper-peppermint',
         caption:
           'You can integrate with many transports, formats, and processors.'
       },
