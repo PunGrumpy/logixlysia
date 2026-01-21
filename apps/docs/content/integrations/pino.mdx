@@ -14,7 +14,9 @@ Logixlysia can integrate with [Pino](https://github.com/pinojs/pino), a high-per
 
 ## Basic Usage
 
-When Pino integration is enabled, access it through the store:
+### In Elysia Routes
+
+Access Pino through the store in your route handlers:
 
 ```ts
 app.get('/users/:id', ({ store, params }) => {
@@ -28,6 +30,69 @@ app.get('/users/:id', ({ store, params }) => {
   return { user: 'data' }
 })
 ```
+
+### Outside Elysia Routes (Standalone)
+
+Use Pino in services, background jobs, or any code outside of HTTP request context:
+
+```ts
+// logger.ts
+import logixlysia from 'logixlysia'
+
+export const logixlysiaIns = logixlysia({
+  config: {
+    logFilePath: './logs/app.log',
+    pino: {
+      level: 'info',
+      base: { 
+        service: 'my-api',
+        version: '1.0.0'
+      }
+    }
+  }
+})
+
+// Export Pino instance for standalone use
+export const logger = logixlysiaIns.store.pino
+```
+
+```ts
+// services/order.service.ts
+import { logger } from '../logger'
+
+export class OrderService {
+  async processOrder(orderId: string) {
+    logger.info({ orderId }, 'Processing order')
+    
+    try {
+      // ... business logic
+      logger.info({ orderId }, 'Order processed successfully')
+    } catch (error) {
+      logger.error({ orderId, error }, 'Order processing failed')
+      throw error
+    }
+  }
+}
+```
+
+```ts
+// index.ts
+import { Elysia } from 'elysia'
+import { logixlysiaIns } from './logger'
+import { OrderService } from './services/order.service'
+
+const orderService = new OrderService()
+
+new Elysia()
+  .use(logixlysiaIns)
+  .post('/orders/:id/process', async ({ params }) => {
+    await orderService.processOrder(params.id)
+    return { success: true }
+  })
+  .listen(3000)
+```
+
+**Note:** When using Pino outside of routes, you won't have access to HTTP context (method, pathname, IP, etc.). For HTTP request logging, use `store.logger` inside route handlers.
 
 ## Configuration
 
@@ -271,11 +336,66 @@ logixlysia({
 ## Best Practices
 
 1. **Use Structured Logging** - Pass objects instead of string interpolation
+   ```ts
+   // ✅ Good
+   pino.info({ userId: 123, action: 'login' }, 'User logged in')
+   
+   // ❌ Avoid
+   pino.info(`User ${userId} logged in`)
+   ```
+
 2. **Create Child Loggers** - For scoped logging with context
+   ```ts
+   const requestLogger = pino.child({ requestId: generateId() })
+   ```
+
 3. **Log Performance Metrics** - Track important metrics
+   ```ts
+   pino.info({ duration: 150, operation: 'db_query' }, 'Query completed')
+   ```
+
 4. **Redact Sensitive Data** - Always redact sensitive information
+   ```ts
+   logixlysia({
+     config: {
+       pino: {
+         redact: ['password', 'token', 'apiKey']
+       }
+     }
+   })
+   ```
+
 5. **Use Appropriate Log Levels** - Follow log level guidelines
+   - `fatal` - Application is about to crash
+   - `error` - Error that needs attention
+   - `warn` - Warning but application continues
+   - `info` - General information (default)
+   - `debug` - Detailed debugging information
+   - `trace` - Very detailed debugging
+
 6. **Environment-based Configuration** - Configure differently per environment
+   ```ts
+   const isDev = process.env.NODE_ENV === 'development'
+   
+   logixlysia({
+     config: {
+       pino: {
+         level: isDev ? 'debug' : 'info',
+         prettyPrint: isDev
+       }
+     }
+   })
+   ```
+
+7. **Export Pino for Standalone Use** - Use in services, jobs, and utilities
+   ```ts
+   // logger.ts
+   export const logger = logixlysiaIns.store.pino
+   
+   // services/user.service.ts
+   import { logger } from '../logger'
+   logger.info({ userId }, 'User updated')
+   ```
 
 ## Additional Resources
 

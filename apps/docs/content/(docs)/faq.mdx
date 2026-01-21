@@ -141,6 +141,43 @@ app.get('/orders/:id', ({ store, params }) => {
 })
 ```
 
+### How do I use the logger outside of Elysia routes (in services, background jobs, etc.)?
+
+**Use `store.pino` directly** for logging outside of HTTP request context:
+
+```ts
+// logger.ts
+import logixlysia from 'logixlysia'
+
+export const logixlysiaIns = logixlysia({
+  config: {
+    logFilePath: './logs/app.log',
+    pino: {
+      level: 'info',
+      base: { service: 'my-api' }
+    }
+  }
+})
+
+// Export Pino for standalone use
+export const logger = logixlysiaIns.store.pino
+
+// services/user.service.ts
+import { logger } from '../logger'
+
+export class UserService {
+  async createUser(data: any) {
+    logger.info({ userId: data.id }, 'Creating user')
+    // ... business logic
+    logger.info({ userId: data.id }, 'User created successfully')
+  }
+}
+```
+
+**Why can't I use `store.logger` outside routes?**
+
+`store.logger` methods (`.info()`, `.debug()`, `.warn()`, `.error()`) require a `Request` object because they're designed specifically for HTTP request logging with context like method, pathname, IP, and duration. For general-purpose logging, use `store.pino` instead.
+
 ## File Logging
 
 ### How do I enable file logging?
