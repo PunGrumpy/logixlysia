@@ -1,6 +1,6 @@
 'use client'
 
-import { track } from '@databuddy/sdk/react'
+import { useOpenPanel } from '@openpanel/nextjs'
 import { IconCheck, IconCopy } from '@tabler/icons-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
@@ -19,6 +19,7 @@ interface InstallerProps {
 }
 
 export const Installer = ({ code }: InstallerProps) => {
+  const { track } = useOpenPanel()
   const [copied, setCopied] = useState(false)
 
   const handleCopy = () => {
