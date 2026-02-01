@@ -20,7 +20,7 @@
     "date-fns": "^4.1.0",
     "embla-carousel-react": "^8.6.0",
     "fumadocs-core": "16.4.2",
-    "fumadocs-mdx": "14.2.4",
+    "fumadocs-mdx": "14.2.6",
     "fumadocs-ui": "16.4.2",
     "input-otp": "^1.4.2",
     "motion": "^12.23.26",
