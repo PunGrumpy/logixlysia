@@ -44,10 +44,10 @@
   "devDependencies": {
     "@types/bun": "^1.3.5",
     "bunup": "^0.16.17",
-    "elysia": "^1.4.19"
+    "elysia": "^1.4.22"
   },
   "peerDependencies": {
-    "elysia": "^1.4.19",
+    "elysia": "^1.4.22",
     "typescript": "^5.9.3"
   }
 }
