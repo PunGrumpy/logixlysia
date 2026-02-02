@@ -68,7 +68,7 @@ type Options = {
     disableFileLogging?: boolean
     logFilePath?: string
     logRotation?: LogRotationConfig
-    pino?: PinoLoggerOptions & { prettyPrint?: boolean }
+    pino?: PinoLoggerOptions & { prettyPrint?: boolean | object }
   }
 }
 ```
