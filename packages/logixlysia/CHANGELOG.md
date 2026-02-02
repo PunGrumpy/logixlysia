@@ -1,5 +1,16 @@
 # Changelog
 
+## 6.2.0
+
+### Minor Changes
+
+- 2d90fd7: Enhance prettyPrint configuration support and documentation.
+
+### Patch Changes
+
+- 449cad5: Fix prettyPrint transport handling and align documentation types.
+- ecfb2e8: Publish only dist artifacts to npm.
+
 ## 6.1.0
 
 ### Minor Changes
@@ -8,7 +19,8 @@
 
 ### Patch Changes
 
-- 43b2ef5: 
+- 43b2ef5:
+
   ### Added
 
   - Add `logFilter` configuration option to filter logs by level
