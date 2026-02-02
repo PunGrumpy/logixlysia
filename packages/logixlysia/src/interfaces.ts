@@ -53,6 +53,15 @@ export interface LogFilter {
   level?: LogLevel[]
 }
 
+/**
+ * Configuration for pino-pretty transport output.
+ *
+ * - `true`: Enable pretty printing with default options
+ * - `false` or `undefined`: Disable pretty printing
+ * - Object: Enable with custom pino-pretty options (colorize, translateTime, messageKey, errorKey, etc.)
+ *
+ * @see https://github.com/pinojs/pino-pretty#options
+ */
 export type PrettyPrintConfig = boolean | Record<string, unknown>
 
 export interface Options {

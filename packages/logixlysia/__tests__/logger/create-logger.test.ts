@@ -103,10 +103,9 @@ describe('createLogger', () => {
       fakePino
     )
 
-    const options = captured.options as {
-      transport?: { target?: string }
-    }
-    expect(options.transport?.target).toBe('pino-pretty')
+    expect(captured.options).toMatchObject({
+      transport: { target: 'pino-pretty' }
+    })
   })
 
   test('prettyPrint options override defaults', () => {
@@ -129,9 +128,124 @@ describe('createLogger', () => {
       fakePino
     )
 
-    const options = captured.options as {
-      transport?: { options?: { colorize?: boolean } }
+    expect(captured.options).toMatchObject({
+      transport: { options: { colorize: false } }
+    })
+  })
+
+  test('prettyPrint does NOT configure transport when explicit transport exists', () => {
+    const captured: { options?: unknown } = {}
+    const fakePino = (options: unknown) => {
+      captured.options = options
+      return {} as unknown as Pino
     }
-    expect(options.transport?.options?.colorize).toBe(false)
+
+    const explicitTransport = { target: 'custom-transport' }
+
+    createLogger(
+      {
+        config: {
+          pino: {
+            prettyPrint: true,
+            transport: explicitTransport
+          }
+        }
+      },
+      fakePino
+    )
+
+    expect(captured.options).toMatchObject({
+      transport: { target: 'custom-transport' }
+    })
+    expect(captured.options).not.toMatchObject({
+      transport: { target: 'pino-pretty' }
+    })
+  })
+
+  test('prettyPrint uses messageKey override when provided', () => {
+    const captured: { options?: unknown } = {}
+    const fakePino = (options: unknown) => {
+      captured.options = options
+      return {} as unknown as Pino
+    }
+
+    createLogger(
+      {
+        config: {
+          pino: {
+            prettyPrint: {
+              messageKey: 'customMessage'
+            }
+          }
+        }
+      },
+      fakePino
+    )
+
+    expect(captured.options).toMatchObject({
+      transport: {
+        options: { messageKey: 'customMessage' }
+      }
+    })
+  })
+
+  test('prettyPrint uses errorKey override when provided', () => {
+    const captured: { options?: unknown } = {}
+    const fakePino = (options: unknown) => {
+      captured.options = options
+      return {} as unknown as Pino
+    }
+
+    createLogger(
+      {
+        config: {
+          pino: {
+            prettyPrint: {
+              errorKey: 'customError'
+            }
+          }
+        }
+      },
+      fakePino
+    )
+
+    expect(captured.options).toMatchObject({
+      transport: {
+        options: { errorKey: 'customError' }
+      }
+    })
+  })
+
+  test('prettyPrint merges with default translateTime from config', () => {
+    const captured: { options?: unknown } = {}
+    const fakePino = (options: unknown) => {
+      captured.options = options
+      return {} as unknown as Pino
+    }
+
+    createLogger(
+      {
+        config: {
+          timestamp: {
+            translateTime: 'yyyy-mm-dd HH:MM:ss'
+          },
+          pino: {
+            prettyPrint: {
+              colorize: true
+            }
+          }
+        }
+      },
+      fakePino
+    )
+
+    expect(captured.options).toMatchObject({
+      transport: {
+        options: {
+          translateTime: 'yyyy-mm-dd HH:MM:ss',
+          colorize: true
+        }
+      }
+    })
   })
 })
