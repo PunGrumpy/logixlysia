@@ -24,7 +24,7 @@ export const baseOptions = (): BaseLayoutProps => ({
     },
     {
       text: 'NPM',
-      url: 'https://www.npmjs.com/package/logixlysia',
+      url: 'https://www.npmx.dev/package/logixlysia',
       active: 'none'
     }
   ],
