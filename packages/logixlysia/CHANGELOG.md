@@ -4,7 +4,7 @@
 
 ### Minor Changes
 
-- 449cad5: Enhance prettyPrint configuration support and documentation.
+- 2d90fd7: Enhance prettyPrint configuration support and documentation.
 
 ### Patch Changes
 
