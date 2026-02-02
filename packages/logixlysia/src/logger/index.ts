@@ -1,12 +1,12 @@
 import pino from 'pino'
 import type {
+  LogFilter,
   Logger,
   LogLevel,
   Options,
   Pino,
   RequestInfo,
-  StoreData,
-  LogFilter
+  StoreData
 } from '../interfaces'
 import { logToTransports } from '../output'
 import { logToFile } from '../output/file'
@@ -33,12 +33,11 @@ export const createLogger = (
   const shouldPrettyPrint =
     enablePrettyPrint && pinoOptions.transport === undefined
 
-  const messageKeyOverride = (
-    prettyPrintOptions as { messageKey?: string } | undefined
-  )?.messageKey
-  const errorKeyOverride = (
-    prettyPrintOptions as { errorKey?: string } | undefined
-  )?.errorKey
+  const messageKey =
+    (prettyPrintOptions?.messageKey as string | undefined) ??
+    pinoOptions.messageKey
+  const errorKey =
+    (prettyPrintOptions?.errorKey as string | undefined) ?? pinoOptions.errorKey
 
   const transport = shouldPrettyPrint
     ? {
@@ -46,9 +45,9 @@ export const createLogger = (
         options: {
           colorize: process.stdout?.isTTY === true,
           translateTime: config?.timestamp?.translateTime,
-          ...(prettyPrintOptions ?? {}),
-          messageKey: messageKeyOverride ?? pinoOptions.messageKey,
-          errorKey: errorKeyOverride ?? pinoOptions.errorKey
+          ...prettyPrintOptions,
+          messageKey,
+          errorKey
         }
       }
     : pinoOptions.transport
@@ -56,8 +55,8 @@ export const createLogger = (
   const pinoLogger: Pino = pinoFactory({
     ...pinoOptions,
     level: pinoOptions.level ?? 'info',
-    messageKey: pinoOptions.messageKey,
-    errorKey: pinoOptions.errorKey,
+    messageKey,
+    errorKey,
     transport
   })
 
