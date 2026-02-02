@@ -1,5 +1,5 @@
 import { describe, expect, mock, test } from 'bun:test'
-import type { Options } from '../../src/interfaces'
+import type { Options, Pino } from '../../src/interfaces'
 import { createLogger } from '../../src/logger'
 import { spyConsole } from '../_helpers/console'
 import { createMockRequest } from '../_helpers/request'
@@ -83,5 +83,55 @@ describe('createLogger', () => {
     expect(levelValue).toBe('ERROR')
 
     await new Promise(resolve => setTimeout(resolve, 0))
+  })
+
+  test('prettyPrint true configures pino-pretty transport', () => {
+    const captured: { options?: unknown } = {}
+    const fakePino = (options: unknown) => {
+      captured.options = options
+      return {} as unknown as Pino
+    }
+
+    createLogger(
+      {
+        config: {
+          pino: {
+            prettyPrint: true
+          }
+        }
+      },
+      fakePino
+    )
+
+    const options = captured.options as {
+      transport?: { target?: string }
+    }
+    expect(options.transport?.target).toBe('pino-pretty')
+  })
+
+  test('prettyPrint options override defaults', () => {
+    const captured: { options?: unknown } = {}
+    const fakePino = (options: unknown) => {
+      captured.options = options
+      return {} as unknown as Pino
+    }
+
+    createLogger(
+      {
+        config: {
+          pino: {
+            prettyPrint: {
+              colorize: false
+            }
+          }
+        }
+      },
+      fakePino
+    )
+
+    const options = captured.options as {
+      transport?: { options?: { colorize?: boolean } }
+    }
+    expect(options.transport?.options?.colorize).toBe(false)
   })
 })

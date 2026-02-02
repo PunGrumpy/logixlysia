@@ -53,6 +53,8 @@ export interface LogFilter {
   level?: LogLevel[]
 }
 
+export type PrettyPrintConfig = boolean | Record<string, unknown>
+
 export interface Options {
   config?: {
     showStartupMessage?: boolean
@@ -76,7 +78,7 @@ export interface Options {
     logRotation?: LogRotationConfig
 
     // Pino
-    pino?: (PinoLoggerOptions & { prettyPrint?: boolean }) | undefined
+    pino?: (PinoLoggerOptions & { prettyPrint?: PrettyPrintConfig }) | undefined
   }
 }
 

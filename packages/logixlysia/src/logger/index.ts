@@ -13,28 +13,47 @@ import { logToFile } from '../output/file'
 import { formatLine } from './create-logger'
 import { handleHttpError } from './handle-http-error'
 
-export const createLogger = (options: Options = {}): Logger => {
+export const createLogger = (
+  options: Options = {},
+  pinoFactory: typeof pino = pino
+): Logger => {
   const config = options.config
 
   const pinoConfig = config?.pino
   const { prettyPrint, ...pinoOptions } = pinoConfig ?? {}
 
+  const prettyPrintOptions =
+    typeof prettyPrint === 'object' && prettyPrint !== null
+      ? (prettyPrint as Record<string, unknown>)
+      : undefined
+
+  const enablePrettyPrint =
+    prettyPrint === true || prettyPrintOptions !== undefined
+
   const shouldPrettyPrint =
-    prettyPrint === true && pinoOptions.transport === undefined
+    enablePrettyPrint && pinoOptions.transport === undefined
+
+  const messageKeyOverride = (
+    prettyPrintOptions as { messageKey?: string } | undefined
+  )?.messageKey
+  const errorKeyOverride = (
+    prettyPrintOptions as { errorKey?: string } | undefined
+  )?.errorKey
 
   const transport = shouldPrettyPrint
-    ? pino.transport({
+    ? {
         target: 'pino-pretty',
         options: {
           colorize: process.stdout?.isTTY === true,
           translateTime: config?.timestamp?.translateTime,
-          messageKey: pinoOptions.messageKey,
-          errorKey: pinoOptions.errorKey
+          ...(prettyPrintOptions ?? {}),
+          messageKey: messageKeyOverride ?? pinoOptions.messageKey,
+          errorKey: errorKeyOverride ?? pinoOptions.errorKey
         }
-      })
+      }
     : pinoOptions.transport
 
-  const pinoLogger: Pino = pino({
+  const pinoLogger: Pino = pinoFactory({
     ...pinoOptions,
     level: pinoOptions.level ?? 'info',
     messageKey: pinoOptions.messageKey,
