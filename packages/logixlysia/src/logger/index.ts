@@ -1,44 +1,62 @@
 import pino from 'pino'
 import type {
+  LogFilter,
   Logger,
   LogLevel,
   Options,
   Pino,
   RequestInfo,
-  StoreData,
-  LogFilter
+  StoreData
 } from '../interfaces'
 import { logToTransports } from '../output'
 import { logToFile } from '../output/file'
 import { formatLine } from './create-logger'
 import { handleHttpError } from './handle-http-error'
 
-export const createLogger = (options: Options = {}): Logger => {
+export const createLogger = (
+  options: Options = {},
+  pinoFactory: typeof pino = pino
+): Logger => {
   const config = options.config
 
   const pinoConfig = config?.pino
   const { prettyPrint, ...pinoOptions } = pinoConfig ?? {}
 
+  const prettyPrintOptions =
+    typeof prettyPrint === 'object' && prettyPrint !== null
+      ? (prettyPrint as Record<string, unknown>)
+      : undefined
+
+  const enablePrettyPrint =
+    prettyPrint === true || prettyPrintOptions !== undefined
+
   const shouldPrettyPrint =
-    prettyPrint === true && pinoOptions.transport === undefined
+    enablePrettyPrint && pinoOptions.transport === undefined
+
+  const messageKey =
+    (prettyPrintOptions?.messageKey as string | undefined) ??
+    pinoOptions.messageKey
+  const errorKey =
+    (prettyPrintOptions?.errorKey as string | undefined) ?? pinoOptions.errorKey
 
   const transport = shouldPrettyPrint
-    ? pino.transport({
+    ? {
         target: 'pino-pretty',
         options: {
           colorize: process.stdout?.isTTY === true,
           translateTime: config?.timestamp?.translateTime,
-          messageKey: pinoOptions.messageKey,
-          errorKey: pinoOptions.errorKey
+          ...prettyPrintOptions,
+          messageKey,
+          errorKey
         }
-      })
+      }
     : pinoOptions.transport
 
-  const pinoLogger: Pino = pino({
+  const pinoLogger: Pino = pinoFactory({
     ...pinoOptions,
     level: pinoOptions.level ?? 'info',
-    messageKey: pinoOptions.messageKey,
-    errorKey: pinoOptions.errorKey,
+    messageKey,
+    errorKey,
     transport
   })
 

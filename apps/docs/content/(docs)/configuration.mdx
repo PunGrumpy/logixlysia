@@ -246,7 +246,7 @@ compression: 'gzip'
 
 Pino logger configuration. Accepts all [Pino options](https://github.com/pinojs/pino/blob/master/docs/api.md#options).
 
-- **Type:** `PinoLoggerOptions & { prettyPrint?: boolean }`
+- **Type:** `PinoLoggerOptions & { prettyPrint?: boolean | object }`
 - **Default:** `undefined`
 
 ```ts
@@ -300,6 +300,21 @@ pino: {
   }
 }
 ```
+
+#### Common prettyPrint Options
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `colorize` | `boolean` | Enable colors in output |
+| `translateTime` | `string \| boolean` | Format timestamps |
+| `ignore` | `string` | Comma-separated keys to exclude |
+| `singleLine` | `boolean` | Print each log on one line |
+| `messageFormat` | `string` | Custom message format |
+| `levelFirst` | `boolean` | Show level before timestamp |
+| `messageKey` | `string` | Key containing log message |
+| `errorKey` | `string` | Key containing error info |
+
+See [pino-pretty documentation](https://github.com/pinojs/pino-pretty#options) for complete reference.
 
 #### `pino.redact`
 

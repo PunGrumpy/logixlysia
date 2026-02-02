@@ -1,5 +1,5 @@
 import { describe, expect, mock, test } from 'bun:test'
-import type { Options } from '../../src/interfaces'
+import type { Options, Pino } from '../../src/interfaces'
 import { createLogger } from '../../src/logger'
 import { spyConsole } from '../_helpers/console'
 import { createMockRequest } from '../_helpers/request'
@@ -83,5 +83,169 @@ describe('createLogger', () => {
     expect(levelValue).toBe('ERROR')
 
     await new Promise(resolve => setTimeout(resolve, 0))
+  })
+
+  test('prettyPrint true configures pino-pretty transport', () => {
+    const captured: { options?: unknown } = {}
+    const fakePino = (options: unknown) => {
+      captured.options = options
+      return {} as unknown as Pino
+    }
+
+    createLogger(
+      {
+        config: {
+          pino: {
+            prettyPrint: true
+          }
+        }
+      },
+      fakePino
+    )
+
+    expect(captured.options).toMatchObject({
+      transport: { target: 'pino-pretty' }
+    })
+  })
+
+  test('prettyPrint options override defaults', () => {
+    const captured: { options?: unknown } = {}
+    const fakePino = (options: unknown) => {
+      captured.options = options
+      return {} as unknown as Pino
+    }
+
+    createLogger(
+      {
+        config: {
+          pino: {
+            prettyPrint: {
+              colorize: false
+            }
+          }
+        }
+      },
+      fakePino
+    )
+
+    expect(captured.options).toMatchObject({
+      transport: { options: { colorize: false } }
+    })
+  })
+
+  test('prettyPrint does NOT configure transport when explicit transport exists', () => {
+    const captured: { options?: unknown } = {}
+    const fakePino = (options: unknown) => {
+      captured.options = options
+      return {} as unknown as Pino
+    }
+
+    const explicitTransport = { target: 'custom-transport' }
+
+    createLogger(
+      {
+        config: {
+          pino: {
+            prettyPrint: true,
+            transport: explicitTransport
+          }
+        }
+      },
+      fakePino
+    )
+
+    expect(captured.options).toMatchObject({
+      transport: { target: 'custom-transport' }
+    })
+    expect(captured.options).not.toMatchObject({
+      transport: { target: 'pino-pretty' }
+    })
+  })
+
+  test('prettyPrint uses messageKey override when provided', () => {
+    const captured: { options?: unknown } = {}
+    const fakePino = (options: unknown) => {
+      captured.options = options
+      return {} as unknown as Pino
+    }
+
+    createLogger(
+      {
+        config: {
+          pino: {
+            prettyPrint: {
+              messageKey: 'customMessage'
+            }
+          }
+        }
+      },
+      fakePino
+    )
+
+    expect(captured.options).toMatchObject({
+      transport: {
+        options: { messageKey: 'customMessage' }
+      }
+    })
+  })
+
+  test('prettyPrint uses errorKey override when provided', () => {
+    const captured: { options?: unknown } = {}
+    const fakePino = (options: unknown) => {
+      captured.options = options
+      return {} as unknown as Pino
+    }
+
+    createLogger(
+      {
+        config: {
+          pino: {
+            prettyPrint: {
+              errorKey: 'customError'
+            }
+          }
+        }
+      },
+      fakePino
+    )
+
+    expect(captured.options).toMatchObject({
+      transport: {
+        options: { errorKey: 'customError' }
+      }
+    })
+  })
+
+  test('prettyPrint merges with default translateTime from config', () => {
+    const captured: { options?: unknown } = {}
+    const fakePino = (options: unknown) => {
+      captured.options = options
+      return {} as unknown as Pino
+    }
+
+    createLogger(
+      {
+        config: {
+          timestamp: {
+            translateTime: 'yyyy-mm-dd HH:MM:ss'
+          },
+          pino: {
+            prettyPrint: {
+              colorize: true
+            }
+          }
+        }
+      },
+      fakePino
+    )
+
+    expect(captured.options).toMatchObject({
+      transport: {
+        options: {
+          translateTime: 'yyyy-mm-dd HH:MM:ss',
+          colorize: true
+        }
+      }
+    })
   })
 })
