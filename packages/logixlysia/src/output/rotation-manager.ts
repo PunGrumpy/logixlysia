@@ -6,6 +6,7 @@ import {
   getRotatedFiles,
   parseRetention,
   parseSize,
+  shouldRotateByInterval,
   shouldRotateBySize
 } from '../utils/rotation'
 
@@ -49,11 +50,18 @@ export const shouldRotate = async (
   filePath: string,
   config: LogRotationConfig
 ): Promise<boolean> => {
-  if (config.maxSize === undefined) {
-    return false
+  if (config.maxSize !== undefined) {
+    const maxSize = parseSize(config.maxSize)
+    if (await shouldRotateBySize(filePath, maxSize)) {
+      return true
+    }
   }
-  const maxSize = parseSize(config.maxSize)
-  return await shouldRotateBySize(filePath, maxSize)
+
+  if (config.interval !== undefined) {
+    return await shouldRotateByInterval(filePath, config.interval)
+  }
+
+  return false
 }
 
 const cleanupByCount = async (
