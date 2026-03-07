@@ -3,7 +3,8 @@ description: |
   Find critical bugs in the repository and create a pull request to fix them.
 
 on:
-  schedule: daily
+  schedule:
+    - cron: "0 0 1 * *"
   workflow_dispatch:
 
 engine:

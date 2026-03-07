@@ -23,13 +23,12 @@
 #
 # Find critical bugs in the repository and create a pull request to fix them.
 #
-# gh-aw-metadata: {"schema_version":"v2","frontmatter_hash":"7a52376b0b5b5f40822377f15afe9cbcca372aa83c5abcd7cabe5bc982015425","compiler_version":"v0.55.0","strict":true}
+# gh-aw-metadata: {"schema_version":"v2","frontmatter_hash":"f0b75d4e8c0238f1111e54b4806cc54501e63e861a555d3ea154ff933d17fab8","compiler_version":"v0.55.0","strict":true}
 
 name: "Daily Find Critical Bugs"
 "on":
   schedule:
-    - cron: "0 0 * * *"
-      # Friendly format: daily (scattered)
+    - cron: "0 0 1 * *"
   workflow_dispatch:
 
 permissions: {}
