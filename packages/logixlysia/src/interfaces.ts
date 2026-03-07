@@ -16,7 +16,8 @@ export interface StoreData {
 export interface LogixlysiaStore {
   logger: Logger
   pino: Pino
-  beforeTime?: bigint
+  /** High-resolution timestamp set in onRequest for duration calculation. Always initialized by the plugin. */
+  beforeTime: bigint
   [key: string]: unknown
 }
 

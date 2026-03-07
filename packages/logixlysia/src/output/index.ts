@@ -43,12 +43,9 @@ export const logToTransports = (
   for (const transport of transports) {
     try {
       const result = transport.log(level, message, meta)
-      if (
-        result &&
-        typeof (result as { catch?: unknown }).catch === 'function'
-      ) {
-        ;(result as Promise<void>).catch(() => {
-          // Ignore errors
+      if (result instanceof Promise) {
+        result.catch(() => {
+          // Transport errors must not crash application logging
         })
       }
     } catch {
