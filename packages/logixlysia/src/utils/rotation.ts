@@ -1,5 +1,5 @@
 import { promises as fs } from 'node:fs'
-import { basename, dirname } from 'node:path'
+import { basename, dirname, join } from 'node:path'
 
 const SIZE_REGEX = /^(\d+(?:\.\d+)?)(k|kb|m|mb|g|gb)$/i
 const INTERVAL_REGEX = /^(\d+)(h|d|w)$/i
@@ -7,10 +7,16 @@ const ROTATED_REGEX = /\.(\d{4}-\d{2}-\d{2}-\d{2}-\d{2}-\d{2})(?:\.gz)?$/
 
 export const parseSize = (value: number | string): number => {
   if (typeof value === 'number') {
+    if (value < 0 || !Number.isFinite(value)) {
+      throw new Error(`Invalid size: must be a non-negative number, got ${value}`)
+    }
     return value
   }
 
   const trimmed = value.trim()
+  if (trimmed === '') {
+    throw new Error('Invalid size format: empty string')
+  }
   const asNumber = Number(trimmed)
   if (Number.isFinite(asNumber)) {
     return asNumber
@@ -31,11 +37,19 @@ export const parseSize = (value: number | string): number => {
     base = 1024 * 1024 * 1024
   }
 
-  return Math.floor(amount * base)
+  const result = Math.floor(amount * base)
+  if (result < 0) {
+    throw new Error(`Invalid size format: result is negative (${value})`)
+  }
+  return result
 }
 
 export const parseInterval = (value: string): number => {
-  const match = value.trim().match(INTERVAL_REGEX)
+  const trimmed = value.trim()
+  if (trimmed === '') {
+    throw new Error('Invalid interval format: empty string')
+  }
+  const match = trimmed.match(INTERVAL_REGEX)
   if (!match) {
     throw new Error(`Invalid interval format: ${value}`)
   }
@@ -57,9 +71,18 @@ export const parseRetention = (
   value: number | string
 ): { type: 'count' | 'time'; value: number } => {
   if (typeof value === 'number') {
+    if (value < 0 || !Number.isFinite(value)) {
+      throw new Error(
+        `Invalid retention: must be a non-negative number, got ${value}`
+      )
+    }
     return { type: 'count', value }
   }
-  return { type: 'time', value: parseInterval(value) }
+  const trimmed = String(value).trim()
+  if (trimmed === '') {
+    throw new Error('Invalid retention format: empty string')
+  }
+  return { type: 'time', value: parseInterval(trimmed) }
 }
 
 export const shouldRotateBySize = async (
@@ -87,5 +110,5 @@ export const getRotatedFiles = async (filePath: string): Promise<string[]> => {
 
   return entries
     .filter(name => name.startsWith(`${base}.`) && ROTATED_REGEX.test(name))
-    .map(name => `${dir}/${name}`)
+    .map(name => join(dir, name))
 }
