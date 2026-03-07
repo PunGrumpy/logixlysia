@@ -41,7 +41,6 @@
         "recharts": "2.15.4",
         "sonner": "^2.0.7",
         "tailwind-merge": "^3.4.0",
-        "unicornstudio-react": "^2.0.1-1",
         "vaul": "^1.1.2",
         "zod": "^4.3.6",
       },
@@ -89,7 +88,7 @@
     },
     "packages/logixlysia": {
       "name": "logixlysia",
-      "version": "6.1.0",
+      "version": "6.2.0",
       "dependencies": {
         "chalk": "^5.6.2",
         "pino": "^10.3.0",
@@ -1472,8 +1471,6 @@
     "ultracite": ["ultracite@7.1.3", "", { "dependencies": { "@clack/prompts": "^0.11.0", "commander": "^14.0.2", "deepmerge": "^4.3.1", "glob": "^13.0.0", "jsonc-parser": "^3.3.1", "nypm": "^0.6.4" }, "peerDependencies": { "oxlint": "^1.0.0" }, "optionalPeers": ["oxlint"], "bin": { "ultracite": "dist/index.js" } }, "sha512-kIlI2cord5LNQ+CZDPa56Sw3YGCTGVO7DMYZJG/DkJd7jMuhGLAzedkAgleId3PTg/51FFcY8h0GgcTP7lhhkQ=="],
 
     "undici-types": ["undici-types@7.16.0", "", {}, "sha512-Zz+aZWSj8LE6zoxD+xrjh4VfkIG8Ya6LvYkZqtUQGJPZjYl53ypCaUwWqo7eI0x66KBGeRo+mlBEkMSeSZ38Nw=="],
-
-    "unicornstudio-react": ["unicornstudio-react@2.0.1-1", "", { "peerDependencies": { "react": ">=18.0.0", "react-dom": ">=18.0.0" } }, "sha512-+k2fskodRSLFGoq2Oj1YYbmweRb0sNl0sztq1yoJhNHfIKSINFy2q1nFIfzfVjx34NDnPckw1iIhwVk02DQUtw=="],
 
     "unified": ["unified@11.0.5", "", { "dependencies": { "@types/unist": "^3.0.0", "bail": "^2.0.0", "devlop": "^1.0.0", "extend": "^3.0.0", "is-plain-obj": "^4.0.0", "trough": "^2.0.0", "vfile": "^6.0.0" } }, "sha512-xKvGhPWw3k84Qjh8bI3ZeJjqnyadK+GEFtazSfZv/rKeTkTjOJho6mFqh2SM96iIcZokxiOpg78GazTSg8+KHA=="],
 
