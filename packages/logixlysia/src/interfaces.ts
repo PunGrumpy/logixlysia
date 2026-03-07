@@ -84,6 +84,11 @@ export interface Options {
     disableInternalLogger?: boolean
     disableFileLogging?: boolean
     logFilePath?: string
+    /**
+     * When true, log file write failures to console.error.
+     * When undefined, defaults to true in development (NODE_ENV !== 'production').
+     */
+    logFileErrors?: boolean
     logRotation?: LogRotationConfig
 
     // Pino

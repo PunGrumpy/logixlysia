@@ -87,9 +87,15 @@ export const createLogger = (
     if (!(useTransportsOnly || disableFileLogging)) {
       const filePath = config?.logFilePath
       if (filePath) {
+        const shouldLogFileErrors =
+          config?.logFileErrors === true ||
+          (config?.logFileErrors !== false &&
+            process.env.NODE_ENV !== 'production')
         logToFile({ filePath, level, request, data, store, options }).catch(
-          () => {
-            // Ignore errors
+          err => {
+            if (shouldLogFileErrors) {
+              console.error('[logixlysia] File logging failed:', err)
+            }
           }
         )
       }
