@@ -20,7 +20,8 @@ export const getRotatedFileName = (filePath: string, date: Date): string => {
   const HH = pad2(date.getHours())
   const MM = pad2(date.getMinutes())
   const ss = pad2(date.getSeconds())
-  return `${filePath}.${yyyy}-${mm}-${dd}-${HH}-${MM}-${ss}`
+  const SSS = String(date.getMilliseconds()).padStart(3, '0')
+  return `${filePath}.${yyyy}-${mm}-${dd}-${HH}-${MM}-${ss}-${SSS}`
 }
 
 export const rotateFile = async (filePath: string): Promise<string> => {
