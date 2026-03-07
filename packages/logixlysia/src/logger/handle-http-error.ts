@@ -19,6 +19,16 @@ export const handleHttpError = (
   options: Options
 ): void => {
   const config = options.config
+
+  const logFilter = config?.logFilter
+  if (
+    logFilter?.level &&
+    logFilter.level.length > 0 &&
+    !logFilter.level.includes('ERROR')
+  ) {
+    return
+  }
+
   const useTransportsOnly = config?.useTransportsOnly === true
   const disableInternalLogger = config?.disableInternalLogger === true
   const disableFileLogging = config?.disableFileLogging === true
