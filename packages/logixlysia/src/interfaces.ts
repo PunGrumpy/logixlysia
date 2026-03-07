@@ -17,7 +17,6 @@ export interface LogixlysiaStore {
   logger: Logger
   pino: Pino
   beforeTime?: bigint
-  [key: string]: unknown
 }
 
 export interface Transport {
