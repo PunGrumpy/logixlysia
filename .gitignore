@@ -106,6 +106,9 @@ web_modules/
 # Yarn Integrity file
 .yarn-integrity
 
+# npm (project uses bun)
+package-lock.json
+
 # dotenv environment variable files
 .env
 .env.development.local
