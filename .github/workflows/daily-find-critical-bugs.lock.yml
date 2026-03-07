@@ -23,7 +23,7 @@
 #
 # Find critical bugs in the repository and create a pull request to fix them.
 #
-# gh-aw-metadata: {"schema_version":"v2","frontmatter_hash":"8ceec3dec3dec32340d4700789c035a094fa6d253a3c6505f374cf91fa93f41d","compiler_version":"v0.55.0","strict":true}
+# gh-aw-metadata: {"schema_version":"v2","frontmatter_hash":"7a52376b0b5b5f40822377f15afe9cbcca372aa83c5abcd7cabe5bc982015425","compiler_version":"v0.55.0","strict":true}
 
 name: "Daily Find Critical Bugs"
 "on":
@@ -59,8 +59,8 @@ jobs:
         env:
           GH_AW_INFO_ENGINE_ID: "copilot"
           GH_AW_INFO_ENGINE_NAME: "GitHub Copilot CLI"
-          GH_AW_INFO_MODEL: ${{ vars.GH_AW_MODEL_AGENT_COPILOT || '' }}
-          GH_AW_INFO_VERSION: ""
+          GH_AW_INFO_MODEL: "claude-4-6-sonnet"
+          GH_AW_INFO_VERSION: "latest"
           GH_AW_INFO_AGENT_VERSION: "latest"
           GH_AW_INFO_CLI_VERSION: "v0.55.0"
           GH_AW_INFO_WORKFLOW_NAME: "Daily Find Critical Bugs"
@@ -776,7 +776,7 @@ jobs:
         env:
           COPILOT_AGENT_RUNNER_TYPE: STANDALONE
           COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
-          COPILOT_MODEL: ${{ vars.GH_AW_MODEL_AGENT_COPILOT || '' }}
+          COPILOT_MODEL: claude-4-6-sonnet
           GH_AW_MCP_CONFIG: /home/runner/.copilot/mcp-config.json
           GH_AW_PROMPT: /tmp/gh-aw/aw-prompts/prompt.txt
           GH_AW_SAFE_OUTPUTS: ${{ env.GH_AW_SAFE_OUTPUTS }}
@@ -1012,7 +1012,7 @@ jobs:
         env:
           COPILOT_AGENT_RUNNER_TYPE: STANDALONE
           COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
-          COPILOT_MODEL: ${{ vars.GH_AW_MODEL_DETECTION_COPILOT || '' }}
+          COPILOT_MODEL: claude-4-6-sonnet
           GH_AW_PROMPT: /tmp/gh-aw/aw-prompts/prompt.txt
           GITHUB_API_URL: ${{ github.api_url }}
           GITHUB_HEAD_REF: ${{ github.head_ref }}
@@ -1192,6 +1192,8 @@ jobs:
     env:
       GH_AW_CALLER_WORKFLOW_ID: "${{ github.repository }}/daily-find-critical-bugs"
       GH_AW_ENGINE_ID: "copilot"
+      GH_AW_ENGINE_MODEL: "claude-4-6-sonnet"
+      GH_AW_ENGINE_VERSION: "latest"
       GH_AW_WORKFLOW_ID: "daily-find-critical-bugs"
       GH_AW_WORKFLOW_NAME: "Daily Find Critical Bugs"
     outputs:

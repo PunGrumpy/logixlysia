@@ -6,6 +6,11 @@ on:
   schedule: daily
   workflow_dispatch:
 
+engine:
+  id: copilot
+  version: latest
+  model: claude-4-6-sonnet
+
 permissions:
   actions: read
   contents: read
