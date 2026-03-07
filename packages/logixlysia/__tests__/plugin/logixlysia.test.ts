@@ -209,11 +209,9 @@ describe('logixlysia plugin', () => {
       }
     }
 
-    const app = new Elysia()
-      .use(logixlysia(options))
-      .get('/boom', () => {
-        throw new Error('boom')
-      })
+    const app = new Elysia().use(logixlysia(options)).get('/boom', () => {
+      throw new Error('boom')
+    })
 
     await app.handle(new Request('http://localhost/boom'))
 
@@ -238,11 +236,9 @@ describe('logixlysia plugin', () => {
       }
     }
 
-    const app = new Elysia()
-      .use(logixlysia(options))
-      .get('/boom', () => {
-        throw new Error('boom')
-      })
+    const app = new Elysia().use(logixlysia(options)).get('/boom', () => {
+      throw new Error('boom')
+    })
 
     await app.handle(new Request('http://localhost/boom'))
 
