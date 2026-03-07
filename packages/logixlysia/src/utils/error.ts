@@ -1,13 +1,19 @@
+/**
+ * Safely extracts a human-readable message from an unknown error.
+ * Handles Error instances, objects with message property, and primitives.
+ * Ensures the result is always a string (handles non-string message values).
+ */
 export const parseError = (error: unknown): string => {
-  let message = 'An error occurred'
+  const fallback = 'An error occurred'
 
   if (error instanceof Error) {
-    message = error.message
-  } else if (error && typeof error === 'object' && 'message' in error) {
-    message = error.message as string
-  } else {
-    message = String(error)
+    return typeof error.message === 'string' ? error.message : fallback
   }
 
-  return message
+  if (error && typeof error === 'object' && 'message' in error) {
+    const msg = (error as { message?: unknown }).message
+    return typeof msg === 'string' ? msg : String(msg ?? fallback)
+  }
+
+  return String(error ?? fallback)
 }

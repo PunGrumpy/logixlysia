@@ -156,11 +156,14 @@ const getColoredPathname = (pathname: string, useColors: boolean): string => {
 }
 
 const getContextString = (value: unknown): string => {
-  if (typeof value === 'object' && value !== null) {
-    return JSON.stringify(value)
+  if (typeof value !== 'object' || value === null) {
+    return ''
   }
-
-  return ''
+  try {
+    return JSON.stringify(value)
+  } catch {
+    return '[Circular]'
+  }
 }
 
 export const formatLine = ({
@@ -193,7 +196,12 @@ export const formatLine = ({
       ? 0
       : Number(process.hrtime.bigint() - store.beforeTime) / 1_000_000
 
-  const pathname = new URL(request.url).pathname
+  let pathname = '/'
+  try {
+    pathname = new URL(request.url).pathname
+  } catch {
+    // Invalid URL; use fallback to avoid crashing the logger
+  }
   const statusValue = data.status
   const statusCode =
     statusValue === null || statusValue === undefined

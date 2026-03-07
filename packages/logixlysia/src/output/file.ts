@@ -68,7 +68,13 @@ export const logToFile = async (
       ? 0
       : Number(process.hrtime.bigint() - store.beforeTime) / 1_000_000
 
-  const line = `${level} ${durationMs.toFixed(2)}ms ${request.method} ${new URL(request.url).pathname} ${message}\n`
+  let pathname = '/'
+  try {
+    pathname = new URL(request.url).pathname
+  } catch {
+    // Invalid URL; use fallback to avoid crashing the logger
+  }
+  const line = `${level} ${durationMs.toFixed(2)}ms ${request.method} ${pathname} ${message}\n`
 
   await ensureDir(dirname(filePath))
   await appendFile(filePath, line, { encoding: 'utf-8' })
