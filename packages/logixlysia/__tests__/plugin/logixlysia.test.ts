@@ -191,4 +191,64 @@ describe('logixlysia plugin', () => {
     const [levelValue] = transport.mock.calls[0] ?? [undefined]
     expect(levelValue).toBe('INFO')
   })
+
+  test('logFilter suppresses HTTP error logs when ERROR level is excluded', async () => {
+    const transport = mock<
+      (lvl: unknown, msg: unknown, meta?: unknown) => void
+    >(() => {
+      /* noop */
+    })
+    const options: Options = {
+      config: {
+        logFilter: {
+          level: ['INFO', 'WARNING']
+        },
+        transports: [{ log: transport }],
+        disableInternalLogger: true,
+        disableFileLogging: true
+      }
+    }
+
+    const app = new Elysia()
+      .use(logixlysia(options))
+      .get('/boom', () => {
+        throw new Error('boom')
+      })
+
+    await app.handle(new Request('http://localhost/boom'))
+
+    // ERROR-level HTTP exceptions must be suppressed when filtered out
+    expect(transport).toHaveBeenCalledTimes(0)
+  })
+
+  test('logFilter allows HTTP error logs when ERROR level is included', async () => {
+    const transport = mock<
+      (lvl: unknown, msg: unknown, meta?: unknown) => void
+    >(() => {
+      /* noop */
+    })
+    const options: Options = {
+      config: {
+        logFilter: {
+          level: ['ERROR']
+        },
+        transports: [{ log: transport }],
+        disableInternalLogger: true,
+        disableFileLogging: true
+      }
+    }
+
+    const app = new Elysia()
+      .use(logixlysia(options))
+      .get('/boom', () => {
+        throw new Error('boom')
+      })
+
+    await app.handle(new Request('http://localhost/boom'))
+
+    // ERROR-level HTTP exceptions must be logged when ERROR is in the allowed levels
+    expect(transport).toHaveBeenCalledTimes(1)
+    const [levelValue] = transport.mock.calls[0] ?? [undefined]
+    expect(levelValue).toBe('ERROR')
+  })
 })
