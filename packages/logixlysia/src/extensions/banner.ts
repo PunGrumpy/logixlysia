@@ -1,4 +1,4 @@
-import elysiaPkg from 'elysia/package.json'
+import elysiaPkg from 'elysia/package.json' with { type: 'json' }
 
 const centerText = (text: string, width: number): string => {
   if (text.length >= width) {
