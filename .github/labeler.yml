@@ -8,7 +8,9 @@ docs:
   - changed-files:
       - any-glob-to-any-file: 'apps/docs/**/*'
   - changed-files:
-      - any-glob-to-any-file: '**/*.md'
+      - any-glob-to-any-file:
+          - '**/*.md'
+          - '!.changeset/*.md'
   - changed-files:
       - any-glob-to-any-file: '**/*.markdown'
   - changed-files:
@@ -16,15 +18,15 @@ docs:
 
 source:
   - changed-files:
-      - any-glob-to-any-file: '**/*.{js,jsx,ts,tsx}'
-      - any-glob-to-any-file: 'apps/**/*.{js,jsx,ts,tsx}'
-      - any-glob-to-any-file: 'packages/**/*.{js,jsx,ts,tsx}'
+      - any-glob-to-any-file: 'apps/**/src/**/*.{js,jsx,ts,tsx,mjs,cjs,mts,cts}'
+      - any-glob-to-any-file: 'apps/docs/{app,components,hooks,lib,providers,scripts}/**/*.{js,jsx,ts,tsx,mjs,cjs,mts,cts}'
+      - any-glob-to-any-file: 'packages/**/src/**/*.{js,jsx,ts,tsx,mjs,cjs,mts,cts}'
 
 test:
   - changed-files:
-      - any-glob-to-any-file: '**/__tests__/**/*.{js,jsx,ts,tsx}'
+      - any-glob-to-any-file: '**/__tests__/**/*.{js,jsx,ts,tsx,mjs,cjs,mts,cts}'
   - changed-files:
-      - any-glob-to-any-file: '**/*.{spec,test}.{js,jsx,ts,tsx}'
+      - any-glob-to-any-file: '**/*.{spec,test}.{js,jsx,ts,tsx,mjs,cjs,mts,cts}'
 
 lint:
   - changed-files:
@@ -40,15 +42,25 @@ changelog:
   - changed-files:
       - any-glob-to-any-file: '**/CHANGELOG.md'
 
+changeset:
+  - changed-files:
+      - any-glob-to-any-file:
+          - '.changeset/*.md'
+          - '!.changeset/README.md'
+
 config:
   - changed-files:
-      - any-glob-to-any-file: 'package.json'
+      - any-glob-to-any-file: '**/package.json'
   - changed-files:
       - any-glob-to-any-file: 'turbo.json'
   - changed-files:
-      - any-glob-to-any-file: 'tsconfig.json'
+      - any-glob-to-any-file: '**/tsconfig*.json'
   - changed-files:
       - any-glob-to-any-file: 'biome.jsonc'
+  - changed-files:
+      - any-glob-to-any-file: 'bun.lock'
+  - changed-files:
+      - any-glob-to-any-file: 'bunfig.toml'
 
 monorepo:
   - changed-files:
