@@ -261,6 +261,17 @@ File logging is recommended for production environments. Use log rotation to man
 
 ## Troubleshooting
 
+### IP logging shows empty or IP is not appearing
+
+The `{ip}` placeholder reads from `x-forwarded-for` (first IP in the list) or `x-real-ip` headers. These are set by reverse proxies and load balancers. When testing on localhost or over a LAN without a proxy, these headers are not set, so the IP field will be empty.
+
+**To test IP logging locally:**
+```bash
+curl -H 'x-real-ip: 1.2.3.4' http://localhost:3000/
+```
+
+In production behind nginx, Caddy, Cloudflare, or similar, the proxy typically sets these headers and IP logging works as expected.
+
 ### Logs are not appearing
 
 Check:

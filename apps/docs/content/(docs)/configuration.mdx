@@ -65,6 +65,12 @@ Include client IP address in logs.
 ip: true
 ```
 
+**How IP is resolved:** The client IP is read from HTTP headers in this order:
+1. `x-forwarded-for` — uses the first (leftmost) IP in the comma-separated list (the original client when behind proxies)
+2. `x-real-ip` — fallback when `x-forwarded-for` is not present
+
+These headers are typically set by reverse proxies (nginx, Caddy, Cloudflare, etc.) and load balancers. When testing locally (localhost or LAN) without a proxy, these headers are usually absent, so the `{ip}` placeholder will be empty. To test IP logging locally, you can pass a header manually, e.g. `curl -H 'x-real-ip: 1.2.3.4' http://localhost:3000/`.
+
 ## Timestamp Options
 
 ### `timestamp`
@@ -101,7 +107,7 @@ Available placeholders:
 - `{pathname}` - Request path
 - `{status}` - Response status
 - `{message}` - Custom message
-- `{ip}` - Client IP
+- `{ip}` - Client IP (from `x-forwarded-for` or `x-real-ip`; see `ip` option)
 - `{epoch}` - Unix timestamp
 
 ## Output Options

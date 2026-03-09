@@ -26,7 +26,7 @@ logixlysia({
 | `{pathname}` | Request path |
 | `{status}` | Response status code |
 | `{message}` | Custom message |
-| `{ip}` | Client IP address |
+| `{ip}` | Client IP address (from `x-forwarded-for` or `x-real-ip`; empty when testing locally without these headers) |
 | `{epoch}` | Unix timestamp |
 
 ## Examples
