@@ -1,5 +1,17 @@
 # Changelog
 
+## 6.2.1
+
+### Patch Changes
+
+- a58bb01: Fix WebSocket `ws.data` type inference when using logixlysia (closes #220)
+
+  The `LogixlysiaStore` index signature caused the combined store type to become `Record<string, unknown>`, overwriting the WebSocket context's `ws.data` type. Removed the index signature so `ws.data` preserves its proper type in WebSocket handlers.
+
+- 910f7fa: Fix Node.js v25+ compatibility for startup banner (closes #231)
+
+  The banner extension imported `elysia/package.json` without the required import attribute, causing `ERR_IMPORT_ATTRIBUTE_MISSING` when running on Node.js. Added `with { type: "json" }` to the import so the package works on both Bun and Node.js.
+
 ## 6.2.0
 
 ### Minor Changes
