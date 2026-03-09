@@ -9,6 +9,7 @@ website/
 .gitattributes
 .gitguardian.yml
 .gitignore
-biome.json
+.oxlintrc.json
+.oxfmtrc.jsonc
 bun.lockb
 tsconfig.tsbuildinfo
