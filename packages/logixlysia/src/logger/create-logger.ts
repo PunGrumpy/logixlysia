@@ -43,6 +43,7 @@ const formatTimestamp = (date: Date, pattern?: string): string => {
     .replaceAll('SSS', SSS)
 }
 
+/** Resolves client IP from x-forwarded-for (first IP) or x-real-ip. Empty when neither header is set (e.g. localhost). */
 const getIp = (request: RequestInfo): string => {
   const forwarded = request.headers.get('x-forwarded-for')
   if (forwarded) {
