@@ -40,6 +40,12 @@ changelog:
   - changed-files:
       - any-glob-to-any-file: '**/CHANGELOG.md'
 
+changeset:
+  - changed-files:
+      - any-glob-to-any-file:
+          - '.changeset/*.md'
+          - '!.changeset/README.md'
+
 config:
   - changed-files:
       - any-glob-to-any-file: 'package.json'
