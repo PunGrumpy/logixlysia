@@ -1,15 +1,15 @@
-import type { Logixlysia } from 'logixlysia'
+import type { Logixlysia } from "logixlysia";
 
 export const boomRouter = <App extends Logixlysia>(app: App) =>
   app.get(
-    '/boom',
+    "/boom",
     () => {
-      throw new Error('Boom!')
+      throw new Error("Boom!");
     },
     {
       detail: {
-        summary: 'Boom example',
-        tags: ['error']
-      }
+        summary: "Boom example",
+        tags: ["error"],
+      },
     }
-  )
+  );

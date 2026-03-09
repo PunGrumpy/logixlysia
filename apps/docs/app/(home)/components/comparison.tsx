@@ -2,182 +2,183 @@ import {
   IconCheck,
   IconInfoCircle,
   IconMinus,
-  IconTerminal2
-} from '@tabler/icons-react'
-import { Icons } from '@/components/icons'
+  IconTerminal2,
+} from "@tabler/icons-react";
+
+import { Icons } from "@/components/icons";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
-  CardTitle
-} from '@/components/ui/card'
+  CardTitle,
+} from "@/components/ui/card";
 import {
   Tooltip,
   TooltipContent,
-  TooltipTrigger
-} from '@/components/ui/tooltip'
-import { cn } from '@/lib/utils'
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 
 const features = [
   {
-    label: 'console.log',
-    description: 'Fast to start, but quickly becomes noisy at scale.',
     avatar: <IconTerminal2 className="size-6 text-muted-foreground" />,
+    description: "Fast to start, but quickly becomes noisy at scale.",
     items: [
       {
-        text: 'Zero setup',
+        caption: "You can log anywhere without installing anything.",
+        color: "text-vesper-peppermint",
         icon: IconCheck,
-        color: 'text-vesper-peppermint',
-        caption: 'You can log anywhere without installing anything.'
+        text: "Zero setup",
       },
       {
-        text: 'No request context by default',
-        icon: IconMinus,
-        color: 'text-muted-foreground',
         caption:
-          'You’ll usually have to manually add method/path/status/duration for each handler.'
+          "You’ll usually have to manually add method/path/status/duration for each handler.",
+        color: "text-muted-foreground",
+        icon: IconMinus,
+        text: "No request context by default",
       },
       {
-        text: 'Hard to keep consistent',
-        icon: IconMinus,
-        color: 'text-muted-foreground',
         caption:
-          'Message formats drift across teams and files, making logs harder to scan.'
+          "Message formats drift across teams and files, making logs harder to scan.",
+        color: "text-muted-foreground",
+        icon: IconMinus,
+        text: "Hard to keep consistent",
       },
       {
-        text: 'Limited filtering and structure',
-        icon: IconMinus,
-        color: 'text-muted-foreground',
         caption:
-          'Structured logs and levels help when you need filtering, dashboards, and alerting.'
-      }
-    ]
+          "Structured logs and levels help when you need filtering, dashboards, and alerting.",
+        color: "text-muted-foreground",
+        icon: IconMinus,
+        text: "Limited filtering and structure",
+      },
+    ],
+    label: "console.log",
   },
   {
-    label: 'Logixlysia',
-    description:
-      'Elysia-first logger—sensible defaults with deep configuration when you need it.',
     avatar: <Icons.logo className="size-6" />,
+    description:
+      "Elysia-first logger—sensible defaults with deep configuration when you need it.",
     items: [
       {
-        text: 'Zero setup',
+        caption: "You need to install the package and configure it.",
+        color: "text-muted-foreground",
         icon: IconMinus,
-        color: 'text-muted-foreground',
-        caption: 'You need to install the package and configure it.'
+        text: "Zero setup",
       },
       {
-        text: 'Elysia plugin integration',
-        icon: IconCheck,
-        color: 'text-vesper-peppermint',
         caption:
-          'Plug in once and get consistent request logs across the whole app.'
+          "Plug in once and get consistent request logs across the whole app.",
+        color: "text-vesper-peppermint",
+        icon: IconCheck,
+        text: "Elysia plugin integration",
       },
       {
-        text: 'Pino built-in (and exposed)',
-        icon: IconCheck,
-        color: 'text-vesper-peppermint',
         caption:
-          'Uses Pino under the hood and exposes it (e.g. `store.pino`) for advanced usage.'
+          "Uses Pino under the hood and exposes it (e.g. `store.pino`) for advanced usage.",
+        color: "text-vesper-peppermint",
+        icon: IconCheck,
+        text: "Pino built-in (and exposed)",
       },
       {
-        text: 'Request context included',
+        caption: "Capture method/path/status/duration, with optional IP.",
+        color: "text-vesper-peppermint",
         icon: IconCheck,
-        color: 'text-vesper-peppermint',
-        caption: 'Capture method/path/status/duration, with optional IP.'
+        text: "Request context included",
       },
       {
-        text: 'Custom log format + timestamps',
-        icon: IconCheck,
-        color: 'text-vesper-peppermint',
         caption:
-          'Customize message templates and timestamp translation for readable logs.'
+          "Customize message templates and timestamp translation for readable logs.",
+        color: "text-vesper-peppermint",
+        icon: IconCheck,
+        text: "Custom log format + timestamps",
       },
       {
-        text: 'Log filtering',
-        icon: IconCheck,
-        color: 'text-vesper-peppermint',
         caption:
-          'Filter logs by level, HTTP method, and status codes to reduce noise.'
+          "Filter logs by level, HTTP method, and status codes to reduce noise.",
+        color: "text-vesper-peppermint",
+        icon: IconCheck,
+        text: "Log filtering",
       },
       {
-        text: 'Transports',
-        icon: IconCheck,
-        color: 'text-vesper-peppermint',
         caption:
-          'Send logs to custom transports, or run in transport-only mode when needed.'
+          "Send logs to custom transports, or run in transport-only mode when needed.",
+        color: "text-vesper-peppermint",
+        icon: IconCheck,
+        text: "Transports",
       },
       {
-        text: 'File logging + rotation',
-        icon: IconCheck,
-        color: 'text-vesper-peppermint',
         caption:
-          'Write to a log file with rotation by size/time, retention, and optional gzip compression.'
+          "Write to a log file with rotation by size/time, retention, and optional gzip compression.",
+        color: "text-vesper-peppermint",
+        icon: IconCheck,
+        text: "File logging + rotation",
       },
       {
-        text: 'Custom log methods + context',
-        icon: IconCheck,
-        color: 'text-vesper-peppermint',
         caption:
-          'Use `info/warn/error/debug` with optional context and skip duplicate auto-logs.'
+          "Use `info/warn/error/debug` with optional context and skip duplicate auto-logs.",
+        color: "text-vesper-peppermint",
+        icon: IconCheck,
+        text: "Custom log methods + context",
       },
       {
-        text: 'Runtime controls',
-        icon: IconCheck,
-        color: 'text-vesper-peppermint',
         caption:
-          'Disable internal console logging, disable file logging, or use transports only.'
+          "Disable internal console logging, disable file logging, or use transports only.",
+        color: "text-vesper-peppermint",
+        icon: IconCheck,
+        text: "Runtime controls",
       },
       {
-        text: 'Startup banner',
-        icon: IconCheck,
-        color: 'text-vesper-peppermint',
         caption:
-          'Choose banner vs simple startup message, or disable startup logs entirely.'
-      }
-    ]
+          "Choose banner vs simple startup message, or disable startup logs entirely.",
+        color: "text-vesper-peppermint",
+        icon: IconCheck,
+        text: "Startup banner",
+      },
+    ],
+    label: "Logixlysia",
   },
   {
-    label: 'generic logger',
-    description:
-      'Great building blocks, but needs more wiring for Elysia apps.',
     avatar: (
       <div className="grid size-6 place-items-center rounded-full bg-foreground/5 ring-1 ring-foreground/10">
         <span className="text-muted-foreground text-xs">+</span>
       </div>
     ),
+    description:
+      "Great building blocks, but needs more wiring for Elysia apps.",
     items: [
       {
-        text: 'Flexible ecosystem',
+        caption:
+          "You can integrate with many transports, formats, and processors.",
+        color: "text-vesper-peppermint",
         icon: IconCheck,
-        color: 'text-vesper-peppermint',
-        caption:
-          'You can integrate with many transports, formats, and processors.'
+        text: "Flexible ecosystem",
       },
       {
-        text: 'More app wiring',
-        icon: IconMinus,
-        color: 'text-muted-foreground',
         caption:
-          'You’ll often have to build middleware hooks to capture request context consistently.'
+          "You’ll often have to build middleware hooks to capture request context consistently.",
+        color: "text-muted-foreground",
+        icon: IconMinus,
+        text: "More app wiring",
       },
       {
-        text: 'More configuration',
-        icon: IconMinus,
-        color: 'text-muted-foreground',
         caption:
-          'Different environments often need different output formats and transports.'
+          "Different environments often need different output formats and transports.",
+        color: "text-muted-foreground",
+        icon: IconMinus,
+        text: "More configuration",
       },
       {
-        text: 'Easy to drift',
-        icon: IconMinus,
-        color: 'text-muted-foreground',
         caption:
-          'Without conventions, teams can end up with multiple styles and duplicate logic.'
-      }
-    ]
-  }
-]
+          "Without conventions, teams can end up with multiple styles and duplicate logic.",
+        color: "text-muted-foreground",
+        icon: IconMinus,
+        text: "Easy to drift",
+      },
+    ],
+    label: "generic logger",
+  },
+];
 
 export const Comparison = () => (
   <section className="grid gap-12">
@@ -195,9 +196,9 @@ export const Comparison = () => (
       {features.map((feature, index) => (
         <Card
           className={cn(
-            'z-10 min-h-fit w-full flex-1 rounded-xl border p-12 shadow-xl',
-            'lg:last:rounded-l-none lg:first:rounded-r-none',
-            index === 1 && 'z-20 border-vesper-peppermint/50'
+            "z-10 min-h-fit w-full flex-1 rounded-xl border p-12 shadow-xl",
+            "lg:last:rounded-l-none lg:first:rounded-r-none",
+            index === 1 && "z-20 border-vesper-peppermint/50"
           )}
           key={feature.label}
         >
@@ -212,9 +213,9 @@ export const Comparison = () => (
           </CardHeader>
           <CardContent className="flex flex-col gap-6 p-0">
             <div className="flex flex-col gap-3">
-              {feature.items.map(item => (
+              {feature.items.map((item) => (
                 <div className="flex items-center gap-3" key={item.text}>
-                  <item.icon className={cn('size-5 shrink-0', item.color)} />
+                  <item.icon className={cn("size-5 shrink-0", item.color)} />
                   <div className="flex flex-1 items-center gap-4">
                     <span className="flex-1 font-medium text-sm">
                       {item.text}
@@ -234,4 +235,4 @@ export const Comparison = () => (
       ))}
     </div>
   </section>
-)
+);

@@ -13,8 +13,8 @@ All configuration options are passed through the `config` property:
 logixlysia({
   config: {
     // ... configuration options
-  }
-})
+  },
+});
 ```
 
 ## Startup Options
@@ -27,7 +27,7 @@ Whether to display the startup message when the server starts.
 - **Default:** `true`
 
 ```ts
-showStartupMessage: true
+showStartupMessage: true;
 ```
 
 ### `startupMessageFormat`
@@ -38,7 +38,7 @@ Format of the startup message.
 - **Default:** `'banner'`
 
 ```ts
-startupMessageFormat: 'simple' // or 'banner'
+startupMessageFormat: "simple"; // or 'banner'
 ```
 
 ## Display Options
@@ -51,7 +51,7 @@ Enable colored output in console logs.
 - **Default:** `true`
 
 ```ts
-useColors: true
+useColors: true;
 ```
 
 ### `ip`
@@ -62,10 +62,11 @@ Include client IP address in logs.
 - **Default:** `false`
 
 ```ts
-ip: true
+ip: true;
 ```
 
 **How IP is resolved:** The client IP is read from HTTP headers in this order:
+
 1. `x-forwarded-for` — uses the first (leftmost) IP in the comma-separated list (the original client when behind proxies)
 2. `x-real-ip` — fallback when `x-forwarded-for` is not present
 
@@ -82,7 +83,7 @@ Timestamp configuration.
 
 ```ts
 timestamp: {
-  translateTime: 'yyyy-mm-dd HH:MM:ss'
+  translateTime: "yyyy-mm-dd HH:MM:ss";
 }
 ```
 
@@ -96,10 +97,11 @@ Custom log message format using placeholders.
 - **Default:** `undefined`
 
 ```ts
-customLogFormat: '{now} {level} {duration}ms {method} {pathname} {status}'
+customLogFormat: "{now} {level} {duration}ms {method} {pathname} {status}";
 ```
 
 Available placeholders:
+
 - `{now}` - Current timestamp
 - `{level}` - Log level
 - `{duration}` - Request duration
@@ -124,9 +126,9 @@ transports: [
   {
     log: async (level, message, meta) => {
       // Custom transport logic
-    }
-  }
-]
+    },
+  },
+];
 ```
 
 ### `useTransportsOnly`
@@ -137,7 +139,7 @@ Use only transports, disable console and file logging.
 - **Default:** `false`
 
 ```ts
-useTransportsOnly: true
+useTransportsOnly: true;
 ```
 
 ### `disableInternalLogger`
@@ -148,7 +150,7 @@ Disable console logging.
 - **Default:** `false`
 
 ```ts
-disableInternalLogger: true
+disableInternalLogger: true;
 ```
 
 ### `disableFileLogging`
@@ -159,7 +161,7 @@ Disable file logging.
 - **Default:** `false`
 
 ```ts
-disableFileLogging: true
+disableFileLogging: true;
 ```
 
 ## File Logging Options
@@ -172,7 +174,7 @@ Path to the log file.
 - **Default:** `undefined`
 
 ```ts
-logFilePath: './logs/app.log'
+logFilePath: "./logs/app.log";
 ```
 
 ### `logRotation`
@@ -199,7 +201,7 @@ Maximum file size before rotation.
 - **Format:** `'1k'`, `'1m'`, `'1g'` or bytes
 
 ```ts
-maxSize: '10m'
+maxSize: "10m";
 ```
 
 #### `logRotation.interval`
@@ -210,7 +212,7 @@ Time interval for rotation.
 - **Format:** `'1h'`, `'1d'`, `'1w'`
 
 ```ts
-interval: '1d'
+interval: "1d";
 ```
 
 #### `logRotation.maxFiles`
@@ -221,7 +223,7 @@ Maximum number of files or retention period.
 - **Format:** Number or `'7d'`, `'30d'`
 
 ```ts
-maxFiles: '7d' // or 10
+maxFiles: "7d"; // or 10
 ```
 
 #### `logRotation.compress`
@@ -232,7 +234,7 @@ Enable compression for rotated logs.
 - **Default:** `false`
 
 ```ts
-compress: true
+compress: true;
 ```
 
 #### `logRotation.compression`
@@ -243,7 +245,7 @@ Compression algorithm.
 - **Default:** `'gzip'`
 
 ```ts
-compression: 'gzip'
+compression: "gzip";
 ```
 
 ## Pino Options
@@ -278,7 +280,7 @@ Minimum log level.
 
 ```ts
 pino: {
-  level: 'debug'
+  level: "debug";
 }
 ```
 
@@ -291,7 +293,7 @@ Enable pretty printing for development.
 
 ```ts
 pino: {
-  prettyPrint: true
+  prettyPrint: true;
 }
 ```
 
@@ -309,16 +311,16 @@ pino: {
 
 #### Common prettyPrint Options
 
-| Option | Type | Description |
-|--------|------|-------------|
-| `colorize` | `boolean` | Enable colors in output |
-| `translateTime` | `string \| boolean` | Format timestamps |
-| `ignore` | `string` | Comma-separated keys to exclude |
-| `singleLine` | `boolean` | Print each log on one line |
-| `messageFormat` | `string` | Custom message format |
-| `levelFirst` | `boolean` | Show level before timestamp |
-| `messageKey` | `string` | Key containing log message |
-| `errorKey` | `string` | Key containing error info |
+| Option          | Type                | Description                     |
+| --------------- | ------------------- | ------------------------------- |
+| `colorize`      | `boolean`           | Enable colors in output         |
+| `translateTime` | `string \| boolean` | Format timestamps               |
+| `ignore`        | `string`            | Comma-separated keys to exclude |
+| `singleLine`    | `boolean`           | Print each log on one line      |
+| `messageFormat` | `string`            | Custom message format           |
+| `levelFirst`    | `boolean`           | Show level before timestamp     |
+| `messageKey`    | `string`            | Key containing log message      |
+| `errorKey`      | `string`            | Key containing error info       |
 
 See [pino-pretty documentation](https://github.com/pinojs/pino-pretty#options) for complete reference.
 
@@ -331,7 +333,7 @@ Redact sensitive fields from logs.
 
 ```ts
 pino: {
-  redact: ['password', 'token', 'apiKey']
+  redact: ["password", "token", "apiKey"];
 }
 ```
 
@@ -370,44 +372,43 @@ logixlysia({
   config: {
     // Startup
     showStartupMessage: true,
-    startupMessageFormat: 'banner',
-    
+    startupMessageFormat: "banner",
+
     // Display
     useColors: true,
     ip: true,
-    
+
     // Formatting
     timestamp: {
-      translateTime: 'yyyy-mm-dd HH:MM:ss'
+      translateTime: "yyyy-mm-dd HH:MM:ss",
     },
-    customLogFormat: '{now} {level} {duration}ms {method} {pathname} {status}',
-    
+    customLogFormat: "{now} {level} {duration}ms {method} {pathname} {status}",
+
     // File Logging
-    logFilePath: './logs/app.log',
+    logFilePath: "./logs/app.log",
     logRotation: {
-      maxSize: '100m',
-      interval: '1d',
-      maxFiles: '30d',
-      compress: true
+      maxSize: "100m",
+      interval: "1d",
+      maxFiles: "30d",
+      compress: true,
     },
-    
+
     // Output Control
     disableInternalLogger: false,
     disableFileLogging: false,
     useTransportsOnly: false,
     transports: [],
-    
+
     // Pino
     pino: {
-      level: 'info',
+      level: "info",
       prettyPrint: false,
-      redact: ['password', 'token'],
+      redact: ["password", "token"],
       base: {
-        service: 'my-api',
-        version: '1.0.0'
-      }
-    }
-  }
-})
+        service: "my-api",
+        version: "1.0.0",
+      },
+    },
+  },
+});
 ```
-

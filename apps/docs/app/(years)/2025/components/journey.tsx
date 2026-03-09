@@ -1,60 +1,62 @@
-'use client'
+"use client";
 
-import { motion } from 'motion/react'
-import { cn } from '@/lib/utils'
-import { Section } from './section'
+import { motion } from "motion/react";
+
+import { cn } from "@/lib/utils";
+
+import { Section } from "./section";
 
 interface Milestone {
-  month: string
-  title: string
-  description: string
+  month: string;
+  title: string;
+  description: string;
 }
 
 const milestones: Milestone[] = [
   {
-    month: 'April',
-    title: 'Documentation Website Launch',
     description:
-      'Launched the new documentation website with Fumadocs, featuring interactive examples and comprehensive guides'
+      "Launched the new documentation website with Fumadocs, featuring interactive examples and comprehensive guides",
+    month: "April",
+    title: "Documentation Website Launch",
   },
   {
-    month: 'May',
-    title: 'Major Version 5.0',
     description:
-      'Released v5.0.0 with custom logger support, giving developers more flexibility in logging configuration'
+      "Released v5.0.0 with custom logger support, giving developers more flexibility in logging configuration",
+    month: "May",
+    title: "Major Version 5.0",
   },
   {
-    month: 'June',
-    title: 'Enhanced Logging Features',
     description:
-      'Added custom log methods and context support in v5.1.0, along with comprehensive test coverage'
+      "Added custom log methods and context support in v5.1.0, along with comprehensive test coverage",
+    month: "June",
+    title: "Enhanced Logging Features",
   },
   {
-    month: 'October',
-    title: 'Log Rotation Enhancements',
     description:
-      'Implemented complete log rotation with interval support and enhanced compression handling in v5.3.0'
+      "Implemented complete log rotation with interval support and enhanced compression handling in v5.3.0",
+    month: "October",
+    title: "Log Rotation Enhancements",
   },
   {
-    month: 'December',
-    title: 'Version 6.0 Release',
     description:
-      'Major update with breaking changes, setting the foundation for future improvements and features'
-  }
-]
+      "Major update with breaking changes, setting the foundation for future improvements and features",
+    month: "December",
+    title: "Version 6.0 Release",
+  },
+];
 
 const MilestoneItem = ({
   milestone,
-  index
+  index,
 }: {
-  milestone: Milestone
-  index: number
+  milestone: Milestone;
+  index: number;
 }) => (
   <motion.div
     className="grid grid-cols-[auto_1fr] items-start gap-6 md:gap-8"
     initial={{ opacity: 0, y: 16 }}
-    transition={{ duration: 0.7, delay: index * 0.1 }}
-    viewport={{ once: true, amount: 0.1 }}
+    transition={{ delay: index * 0.1, duration: 0.7 }}
+    viewport={{ amount: 0.1, once: true }}
     whileInView={{ opacity: 1, y: 0 }}
   >
     <div className="relative z-10 grid grid-rows-[auto_1fr] items-start">
@@ -64,9 +66,9 @@ const MilestoneItem = ({
         )}
         <div
           className={cn(
-            'size-2.5 rounded-full bg-primary',
+            "size-2.5 rounded-full bg-primary",
             index === milestones.length - 1 &&
-              'animate-pulse shadow-[0_0_12px_rgba(var(--primary),0.8)] ring-2 ring-primary/40'
+              "animate-pulse shadow-[0_0_12px_rgba(var(--primary),0.8)] ring-2 ring-primary/40"
           )}
         />
       </div>
@@ -87,7 +89,7 @@ const MilestoneItem = ({
       </p>
     </div>
   </motion.div>
-)
+);
 
 export const Journey = () => (
   <Section className="grid gap-12 md:gap-16">
@@ -111,4 +113,4 @@ export const Journey = () => (
       </div>
     </div>
   </Section>
-)
+);

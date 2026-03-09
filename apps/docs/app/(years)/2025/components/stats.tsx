@@ -1,24 +1,26 @@
-'use client'
+"use client";
 
 import {
   IconBrandGithub,
   IconCalendar,
   IconCode,
   IconGitBranch,
-  IconGitCommit
-} from '@tabler/icons-react'
-import { motion } from 'motion/react'
-import type { ReactNode } from 'react'
-import { Icons } from '@/components/icons'
-import { Card } from '@/components/ui/card'
-import { Section } from './section'
+  IconGitCommit,
+} from "@tabler/icons-react";
+import { motion } from "motion/react";
+import type { ReactNode } from "react";
+
+import { Icons } from "@/components/icons";
+import { Card } from "@/components/ui/card";
+
+import { Section } from "./section";
 
 interface StatCardProps {
-  title: string
-  value: string | number
-  description?: string
-  icon?: ReactNode
-  delay?: number
+  title: string;
+  value: string | number;
+  description?: string;
+  icon?: ReactNode;
+  delay?: number;
 }
 
 const StatCard = ({
@@ -26,12 +28,12 @@ const StatCard = ({
   value,
   description,
   icon,
-  delay = 0
+  delay = 0,
 }: StatCardProps) => (
   <motion.div
     initial={{ opacity: 0, y: 32 }}
-    transition={{ duration: 0.7, delay: delay / 1000 }}
-    viewport={{ once: true, amount: 0.1 }}
+    transition={{ delay: delay / 1000, duration: 0.7 }}
+    viewport={{ amount: 0.1, once: true }}
     whileInView={{ opacity: 1, y: 0 }}
   >
     <Card className="group relative overflow-hidden bg-card/50 p-8 backdrop-blur-sm">
@@ -50,7 +52,7 @@ const StatCard = ({
       </div>
     </Card>
   </motion.div>
-)
+);
 
 export const Stats = () => (
   <Section>
@@ -107,4 +109,4 @@ export const Stats = () => (
       </div>
     </div>
   </Section>
-)
+);

@@ -12,13 +12,13 @@ bun add logixlysia
 ## Basic Usage
 
 ```ts
-import { Elysia } from 'elysia'
-import logixlysia from 'logixlysia'
+import { Elysia } from "elysia";
+import logixlysia from "logixlysia";
 
 const app = new Elysia()
   .use(logixlysia())
-  .get('/', () => 'Hello World')
-  .listen(3000)
+  .get("/", () => "Hello World")
+  .listen(3000);
 ```
 
 ## Configuration
@@ -29,11 +29,11 @@ const app = new Elysia()
 logixlysia({
   config: {
     showStartupMessage: true,
-    startupMessageFormat: 'simple', // or 'banner'
+    startupMessageFormat: "simple", // or 'banner'
     ip: true,
-    logFilePath: './logs/app.log'
-  }
-})
+    logFilePath: "./logs/app.log",
+  },
+});
 ```
 
 ### Custom Log Format
@@ -43,24 +43,24 @@ Customize log messages using placeholders:
 ```ts
 logixlysia({
   config: {
-    customLogFormat: '{now} {level} {duration}ms {method} {pathname} {status}'
-  }
-})
+    customLogFormat: "{now} {level} {duration}ms {method} {pathname} {status}",
+  },
+});
 ```
 
 Available placeholders:
 
-| Placeholder | Description | Example |
-| ----------- | ----------- | ----------- |
-| `{now}` | Current timestamp | `2025-12-21 10:00:00` |
-| `{level}` | Log level (INFO, WARNING, ERROR) | `INFO` |
-| `{duration}` | Request duration in milliseconds | `100ms` |
-| `{method}` | HTTP method | `GET` |
-| `{pathname}` | Request path | `/users` |
-| `{status}` | Response status code | `200` |
-| `{message}` | Custom message | `User profile accessed` |
-| `{ip}` | Client IP address | `127.0.0.1` |
-| `{epoch}` | Unix timestamp | `1734729600` |
+| Placeholder  | Description                      | Example                 |
+| ------------ | -------------------------------- | ----------------------- |
+| `{now}`      | Current timestamp                | `2025-12-21 10:00:00`   |
+| `{level}`    | Log level (INFO, WARNING, ERROR) | `INFO`                  |
+| `{duration}` | Request duration in milliseconds | `100ms`                 |
+| `{method}`   | HTTP method                      | `GET`                   |
+| `{pathname}` | Request path                     | `/users`                |
+| `{status}`   | Response status code             | `200`                   |
+| `{message}`  | Custom message                   | `User profile accessed` |
+| `{ip}`       | Client IP address                | `127.0.0.1`             |
+| `{epoch}`    | Unix timestamp                   | `1734729600`            |
 
 ### Log Filtering
 
@@ -70,12 +70,12 @@ Filter logs by level, status, or method:
 logixlysia({
   config: {
     logFilter: {
-      level: ['ERROR', 'WARNING'],
+      level: ["ERROR", "WARNING"],
       status: [500, 404],
-      method: 'GET'
-    }
-  }
-})
+      method: "GET",
+    },
+  },
+});
 ```
 
 ## Pino Integration
@@ -83,16 +83,19 @@ logixlysia({
 Logixlysia is powered by Pino. Access the Pino instance directly:
 
 ```ts
-app.get('/users/:id', ({ store, params }) => {
-  const { pino } = store
-  
-  pino.info({
-    userId: params.id,
-    action: 'view_profile'
-  }, 'User profile accessed')
-  
-  return { user: 'data' }
-})
+app.get("/users/:id", ({ store, params }) => {
+  const { pino } = store;
+
+  pino.info(
+    {
+      userId: params.id,
+      action: "view_profile",
+    },
+    "User profile accessed"
+  );
+
+  return { user: "data" };
+});
 ```
 
 Configure Pino options:
@@ -101,13 +104,13 @@ Configure Pino options:
 logixlysia({
   config: {
     pino: {
-      level: 'debug',
+      level: "debug",
       prettyPrint: true,
-      redact: ['password', 'token'],
-      base: { service: 'my-api' }
-    }
-  }
-})
+      redact: ["password", "token"],
+      base: { service: "my-api" },
+    },
+  },
+});
 ```
 
 Learn more in the [Pino Integration](/integrations/pino) guide.
@@ -119,15 +122,15 @@ Save logs to files:
 ```ts
 logixlysia({
   config: {
-    logFilePath: './logs/app.log',
+    logFilePath: "./logs/app.log",
     logRotation: {
-      maxSize: '10m',
-      interval: '1d',
-      maxFiles: '7d',
-      compress: true
-    }
-  }
-})
+      maxSize: "10m",
+      interval: "1d",
+      maxFiles: "7d",
+      compress: true,
+    },
+  },
+});
 ```
 
 See [File Logging](/features/file-logging) and [Log Rotation](/features/log-rotation) for details.
@@ -141,17 +144,17 @@ logixlysia({
   config: {
     // Disable console output
     disableInternalLogger: false,
-    
+
     // Disable file output
     disableFileLogging: false,
-    
+
     // Use only transports (disable console and file)
     useTransportsOnly: false,
-    
+
     // Custom transports
-    transports: [customTransport]
-  }
-})
+    transports: [customTransport],
+  },
+});
 ```
 
 ## Error Handling
@@ -159,9 +162,9 @@ logixlysia({
 Logixlysia automatically captures and logs errors:
 
 ```ts
-app.get('/error', () => {
-  throw new Error('Something went wrong!')
-})
+app.get("/error", () => {
+  throw new Error("Something went wrong!");
+});
 ```
 
 Errors are automatically logged with stack traces and request details.
@@ -175,24 +178,24 @@ const app = new Elysia()
   .use(
     logixlysia({
       config: {
-        logFilePath: './logs/production.log',
+        logFilePath: "./logs/production.log",
         logRotation: {
-          maxSize: '100m',
-          interval: '1d',
-          maxFiles: '30d',
-          compress: true
+          maxSize: "100m",
+          interval: "1d",
+          maxFiles: "30d",
+          compress: true,
         },
         logFilter: {
-          level: ['ERROR', 'WARNING']
+          level: ["ERROR", "WARNING"],
         },
         pino: {
-          level: 'info',
-          redact: ['password', 'token', 'apiKey']
-        }
-      }
+          level: "info",
+          redact: ["password", "token", "apiKey"],
+        },
+      },
     })
   )
-  .listen(3000)
+  .listen(3000);
 ```
 
 ### Development Setup
@@ -203,13 +206,13 @@ const app = new Elysia()
     logixlysia({
       config: {
         showStartupMessage: true,
-        startupMessageFormat: 'banner',
+        startupMessageFormat: "banner",
         pino: {
-          level: 'debug',
-          prettyPrint: true
-        }
-      }
+          level: "debug",
+          prettyPrint: true,
+        },
+      },
     })
   )
-  .listen(3000)
+  .listen(3000);
 ```

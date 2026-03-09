@@ -1,32 +1,33 @@
-'use client'
+"use client";
 
 import {
   IconBattery,
   IconBrandGithub,
   IconClock,
-  IconHeartFilled
-} from '@tabler/icons-react'
-import Link from 'fumadocs-core/link'
-import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
+  IconHeartFilled,
+} from "@tabler/icons-react";
+import Link from "fumadocs-core/link";
+
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 
 const Actions = [
   {
+    description: "Sensible presets + deep configuration when you need it",
     icon: IconBattery,
-    title: 'Production-ready defaults',
-    description: 'Sensible presets + deep configuration when you need it'
+    title: "Production-ready defaults",
   },
   {
+    description: "MIT licensed—use it anywhere and contribute back",
     icon: IconBrandGithub,
-    title: 'Fully open-source',
-    description: 'MIT licensed—use it anywhere and contribute back'
+    title: "Fully open-source",
   },
   {
+    description: "Install once, plug in, and get consistent request logs",
     icon: IconClock,
-    title: 'Setup in minutes',
-    description: 'Install once, plug in, and get consistent request logs'
-  }
-]
+    title: "Setup in minutes",
+  },
+];
 
 export const Footer = () => (
   <footer className="grid gap-6 pb-20 sm:pb-28">
@@ -67,7 +68,7 @@ export const Footer = () => (
     <Card className="rounded-3xl p-8 sm:p-10">
       <div className="flex flex-col gap-8">
         <div className="grid gap-5">
-          {Actions.map(action => (
+          {Actions.map((action) => (
             <div className="flex items-start gap-3" key={action.title}>
               <action.icon className="mt-0.5 size-5 text-muted-foreground" />
               <div className="grid gap-0.5">
@@ -93,4 +94,4 @@ export const Footer = () => (
       </div>
     </Card>
   </footer>
-)
+);

@@ -1,8 +1,8 @@
-import { Cta } from './components/call-to-action'
-import { Features } from './components/features'
-import { Hero } from './components/hero'
-import { Journey } from './components/journey'
-import { Stats } from './components/stats'
+import { Cta } from "./components/call-to-action";
+import { Features } from "./components/features";
+import { Hero } from "./components/hero";
+import { Journey } from "./components/journey";
+import { Stats } from "./components/stats";
 
 const Wrapped2025Page = () => (
   <>
@@ -12,6 +12,6 @@ const Wrapped2025Page = () => (
     <Features />
     <Cta />
   </>
-)
+);
 
-export default Wrapped2025Page
+export default Wrapped2025Page;

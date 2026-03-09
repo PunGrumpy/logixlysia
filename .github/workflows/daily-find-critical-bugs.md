@@ -70,6 +70,7 @@ Inspect recent commits and identify critical correctness bugs that escaped revie
 ## Output
 
 If fixed, include:
+
 - Bug and impact
 - Root cause
 - Fix and validation performed

@@ -10,34 +10,35 @@ Customize log message formats using placeholders to match your logging needs.
 ```ts
 logixlysia({
   config: {
-    customLogFormat: '{now} {level} {duration}ms {method} {pathname} {status}'
-  }
-})
+    customLogFormat: "{now} {level} {duration}ms {method} {pathname} {status}",
+  },
+});
 ```
 
 ## Available Placeholders
 
-| Placeholder | Description |
-|-------------|-------------|
-| `{now}` | Current date and time |
-| `{level}` | Log level (INFO, WARNING, ERROR) |
-| `{duration}` | Request duration in milliseconds |
-| `{method}` | HTTP method |
-| `{pathname}` | Request path |
-| `{status}` | Response status code |
-| `{message}` | Custom message |
-| `{ip}` | Client IP address (from `x-forwarded-for` or `x-real-ip`; empty when testing locally without these headers) |
-| `{epoch}` | Unix timestamp |
+| Placeholder  | Description                                                                                                 |
+| ------------ | ----------------------------------------------------------------------------------------------------------- |
+| `{now}`      | Current date and time                                                                                       |
+| `{level}`    | Log level (INFO, WARNING, ERROR)                                                                            |
+| `{duration}` | Request duration in milliseconds                                                                            |
+| `{method}`   | HTTP method                                                                                                 |
+| `{pathname}` | Request path                                                                                                |
+| `{status}`   | Response status code                                                                                        |
+| `{message}`  | Custom message                                                                                              |
+| `{ip}`       | Client IP address (from `x-forwarded-for` or `x-real-ip`; empty when testing locally without these headers) |
+| `{epoch}`    | Unix timestamp                                                                                              |
 
 ## Examples
 
 ### Minimal Format
 
 ```ts
-customLogFormat: '{method} {pathname} {status}'
+customLogFormat: "{method} {pathname} {status}";
 ```
 
 Output:
+
 ```
 GET /api/users 200
 ```
@@ -45,10 +46,11 @@ GET /api/users 200
 ### Detailed Format
 
 ```ts
-customLogFormat: '🦊 {now} {level} {duration}ms {method} {pathname} {status} {ip}'
+customLogFormat: "🦊 {now} {level} {duration}ms {method} {pathname} {status} {ip}";
 ```
 
 Output:
+
 ```
 🦊 2025-04-13 15:00:19 INFO 123.45ms GET /api/users 200 192.168.1.1
 ```
@@ -60,12 +62,12 @@ Configure timestamp format separately:
 ```ts
 logixlysia({
   config: {
-    customLogFormat: '{now} {level} {method} {pathname}',
+    customLogFormat: "{now} {level} {method} {pathname}",
     timestamp: {
-      translateTime: 'yyyy-mm-dd HH:MM:ss'
-    }
-  }
-})
+      translateTime: "yyyy-mm-dd HH:MM:ss",
+    },
+  },
+});
 ```
 
 ## Error Log Formatting
@@ -79,4 +81,3 @@ The `customLogFormat` applies to both regular access logs and error logs. When a
 - Use consistent formatting across environments
 - Consider log parsing requirements when designing formats
 - Error logs will include the error message in the `{message}` placeholder
-

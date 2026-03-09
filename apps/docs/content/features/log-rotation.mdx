@@ -10,14 +10,14 @@ Automatically manage log file sizes, rotation intervals, compression, and retent
 ```ts
 logixlysia({
   config: {
-    logFilePath: './logs/app.log',
+    logFilePath: "./logs/app.log",
     logRotation: {
-      maxSize: '10m',    // Rotate when file reaches 10MB
-      maxFiles: '7d',    // Keep logs for 7 days
-      compress: true     // Compress rotated logs
-    }
-  }
-})
+      maxSize: "10m", // Rotate when file reaches 10MB
+      maxFiles: "7d", // Keep logs for 7 days
+      compress: true, // Compress rotated logs
+    },
+  },
+});
 ```
 
 ## Rotation Options
@@ -26,7 +26,7 @@ logixlysia({
 
 ```ts
 logRotation: {
-  maxSize: '10m'    // 10 megabytes
+  maxSize: "10m"; // 10 megabytes
 }
 ```
 
@@ -36,7 +36,7 @@ Supported formats: `'1k'`, `'1m'`, `'1g'` or bytes (number)
 
 ```ts
 logRotation: {
-  interval: '1d'    // Rotate daily
+  interval: "1d"; // Rotate daily
 }
 ```
 
@@ -46,7 +46,7 @@ Supported intervals: `'1h'`, `'1d'`, `'1w'` (or any number)
 
 ```ts
 logRotation: {
-  maxFiles: '7d'    // Keep logs for 7 days
+  maxFiles: "7d"; // Keep logs for 7 days
 }
 ```
 
@@ -54,7 +54,7 @@ Or keep a specific number of files:
 
 ```ts
 logRotation: {
-  maxFiles: 10      // Keep last 10 files
+  maxFiles: 10; // Keep last 10 files
 }
 ```
 
@@ -62,7 +62,7 @@ logRotation: {
 
 ```ts
 logRotation: {
-  compress: true    // Enable compression (gzip)
+  compress: true; // Enable compression (gzip)
 }
 ```
 
@@ -81,6 +81,7 @@ app.log.2025-10-10-14-30-45 → app.log.2025-10-10-14-30-45.gz
 ```
 
 Rotation occurs automatically when:
+
 - File size reaches `maxSize`
 - Time interval `interval` has elapsed
 

@@ -1,8 +1,10 @@
-'use client'
+"use client";
 
-import { Link } from 'fumadocs-core/framework'
-import { Button } from '@/components/ui/button'
-import { Section } from './section'
+import { Link } from "fumadocs-core/framework";
+
+import { Button } from "@/components/ui/button";
+
+import { Section } from "./section";
 
 export const Cta = () => (
   <Section>
@@ -27,4 +29,4 @@ export const Cta = () => (
       </div>
     </div>
   </Section>
-)
+);

@@ -1,11 +1,12 @@
-'use client'
+"use client";
 
 import {
   IconBrandGithub,
   IconChevronDown,
-  IconExternalLink
-} from '@tabler/icons-react'
-import Link from 'fumadocs-core/link'
+  IconExternalLink,
+} from "@tabler/icons-react";
+import Link from "fumadocs-core/link";
+
 import {
   OpenIn,
   OpenInChatGPT,
@@ -17,21 +18,22 @@ import {
   OpenInSeparator,
   OpenInT3,
   OpenInTrigger,
-  OpenInv0
-} from '@/components/ai-elements/open-in-chat'
-import { Button } from './ui/button'
+  OpenInv0,
+} from "@/components/ai-elements/open-in-chat";
+
+import { Button } from "./ui/button";
 
 interface ViewOptionsProps {
-  markdownUrl: string
-  githubUrl: string
+  markdownUrl: string;
+  githubUrl: string;
 }
 
 export const ViewOptions = ({ markdownUrl, githubUrl }: ViewOptionsProps) => {
   const fullMarkdownUrl =
-    typeof window === 'undefined'
+    typeof window === "undefined"
       ? markdownUrl
-      : new URL(markdownUrl, window.location.origin)
-  const query = `Read ${fullMarkdownUrl}, I want to ask questions about it.`
+      : new URL(markdownUrl, window.location.origin);
+  const query = `Read ${fullMarkdownUrl}, I want to ask questions about it.`;
 
   return (
     <OpenIn query={query}>
@@ -58,5 +60,5 @@ export const ViewOptions = ({ markdownUrl, githubUrl }: ViewOptionsProps) => {
         </OpenInItem>
       </OpenInContent>
     </OpenIn>
-  )
-}
+  );
+};

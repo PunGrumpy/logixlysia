@@ -1,26 +1,28 @@
-'use client'
+"use client";
 
-import { useEffect, useState } from 'react'
-import { Button } from '@/components/ui/button'
-import { Section } from './section'
+import { useEffect, useState } from "react";
+
+import { Button } from "@/components/ui/button";
+
+import { Section } from "./section";
 
 export const Hero = () => {
-  const [scrollY, setScrollY] = useState(0)
+  const [scrollY, setScrollY] = useState(0);
 
   useEffect(() => {
     const handleScroll = () => {
-      setScrollY(window.scrollY)
-    }
-    window.addEventListener('scroll', handleScroll)
-    return () => window.removeEventListener('scroll', handleScroll)
-  }, [])
+      setScrollY(window.scrollY);
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   return (
     <Section className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden">
       <div
         className="pointer-events-none absolute inset-0 opacity-30"
         style={{
-          background: `radial-gradient(circle at 50% ${50 + scrollY * 0.1}%, var(--primary) 0%, transparent 50%)`
+          background: `radial-gradient(circle at 50% ${50 + scrollY * 0.1}%, var(--primary) 0%, transparent 50%)`,
         }}
       />
 
@@ -42,9 +44,9 @@ export const Hero = () => {
           className="justify-self-center"
           onClick={() => {
             window.scrollTo({
-              behavior: 'smooth',
-              top: window.innerHeight
-            })
+              behavior: "smooth",
+              top: window.innerHeight,
+            });
           }}
           size="lg"
           variant="outline"
@@ -53,5 +55,5 @@ export const Hero = () => {
         </Button>
       </div>
     </Section>
-  )
-}
+  );
+};

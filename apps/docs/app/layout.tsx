@@ -1,12 +1,13 @@
-import './globals.css'
-import { RootProvider } from 'fumadocs-ui/provider/next'
-import type { ReactNode } from 'react'
-import { Toaster } from '@/components/ui/sonner'
-import { fonts } from '@/lib/fonts'
-import { AnalyticsProvider } from '@/providers/analytics'
+import "./globals.css";
+import { RootProvider } from "fumadocs-ui/provider/next";
+import type { ReactNode } from "react";
+
+import { Toaster } from "@/components/ui/sonner";
+import { fonts } from "@/lib/fonts";
+import { AnalyticsProvider } from "@/providers/analytics";
 
 interface LayoutProps {
-  readonly children: ReactNode
+  readonly children: ReactNode;
 }
 
 const Layout = ({ children }: LayoutProps) => (
@@ -16,7 +17,7 @@ const Layout = ({ children }: LayoutProps) => (
         <RootProvider
           theme={{
             defaultTheme: undefined,
-            enableSystem: true
+            enableSystem: true,
           }}
         >
           {children}
@@ -25,6 +26,6 @@ const Layout = ({ children }: LayoutProps) => (
       </AnalyticsProvider>
     </body>
   </html>
-)
+);
 
-export default Layout
+export default Layout;

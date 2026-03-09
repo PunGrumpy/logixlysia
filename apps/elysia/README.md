@@ -39,13 +39,14 @@ This example uses the following Logixlysia configuration:
 logixlysia({
   config: {
     timestamp: {
-      translateTime: 'yyyy-mm-dd HH:MM:ss'
+      translateTime: "yyyy-mm-dd HH:MM:ss",
     },
-    customLogFormat: '🦊 {now} {level} {duration} {method} {pathname} {status} {message} {ip} {context}',
-    logFilePath: './logs/example.log',
-    ip: true
-  }
-})
+    customLogFormat:
+      "🦊 {now} {level} {duration} {method} {pathname} {status} {message} {ip} {context}",
+    logFilePath: "./logs/example.log",
+    ip: true,
+  },
+});
 ```
 
 ## Example Endpoints
@@ -93,6 +94,7 @@ curl http://localhost:3001/boom
 ## Log Output
 
 Logs are written to:
+
 - **Console**: Formatted logs with emoji and colors
 - **File**: `./logs/example.log` (created automatically)
 
@@ -110,4 +112,3 @@ Logs are written to:
 - [Logixlysia Documentation](/)
 - [Elysia.js Documentation](https://elysiajs.com)
 - [Pino Documentation](https://github.com/pinojs/pino)
-

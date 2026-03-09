@@ -1,5 +1,6 @@
-import type { HTMLProps } from 'react'
-import { cn } from '@/lib/utils'
+import type { HTMLProps } from "react";
+
+import { cn } from "@/lib/utils";
 
 export const Section = ({
   children,
@@ -7,9 +8,9 @@ export const Section = ({
   ...props
 }: HTMLProps<HTMLElement>) => (
   <section
-    className={cn('container relative mx-auto px-4 md:px-8', className)}
+    className={cn("container relative mx-auto px-4 md:px-8", className)}
     {...props}
   >
     {children}
   </section>
-)
+);

@@ -1,16 +1,17 @@
-import { appendFile } from 'node:fs/promises'
-import { dirname } from 'node:path'
-import type { LogLevel, Options, RequestInfo, StoreData } from '../interfaces'
-import { ensureDir } from './fs'
-import { performRotation, shouldRotate } from './rotation-manager'
+import { appendFile } from "node:fs/promises";
+import { dirname } from "node:path";
+
+import type { LogLevel, Options, RequestInfo, StoreData } from "../interfaces";
+import { ensureDir } from "./fs";
+import { performRotation, shouldRotate } from "./rotation-manager";
 
 interface LogToFileInput {
-  filePath: string
-  level: LogLevel
-  request: RequestInfo
-  data: Record<string, unknown>
-  store: StoreData
-  options: Options
+  filePath: string;
+  level: LogLevel;
+  request: RequestInfo;
+  data: Record<string, unknown>;
+  store: StoreData;
+  options: Options;
 }
 
 export const logToFile = async (
@@ -22,11 +23,11 @@ export const logToFile = async (
         RequestInfo,
         Record<string, unknown>,
         StoreData,
-        Options
+        Options,
       ]
 ): Promise<void> => {
   const input: LogToFileInput =
-    typeof args[0] === 'string'
+    typeof args[0] === "string"
       ? (() => {
           const [
             filePathArg,
@@ -34,52 +35,52 @@ export const logToFile = async (
             requestArg,
             dataArg,
             storeArg,
-            optionsArg
+            optionsArg,
           ] = args as [
             string,
             LogLevel,
             RequestInfo,
             Record<string, unknown>,
             StoreData,
-            Options
-          ]
+            Options,
+          ];
           return {
+            data: dataArg,
             filePath: filePathArg,
             level: levelArg,
+            options: optionsArg,
             request: requestArg,
-            data: dataArg,
             store: storeArg,
-            options: optionsArg
-          }
+          };
         })()
-      : args[0]
+      : args[0];
 
-  const { filePath, level, request, data, store, options } = input
-  const config = options.config
-  const useTransportsOnly = config?.useTransportsOnly === true
-  const disableFileLogging = config?.disableFileLogging === true
+  const { filePath, level, request, data, store, options } = input;
+  const { config } = options;
+  const useTransportsOnly = config?.useTransportsOnly === true;
+  const disableFileLogging = config?.disableFileLogging === true;
   if (useTransportsOnly || disableFileLogging) {
-    return
+    return;
   }
 
-  const message = typeof data.message === 'string' ? data.message : ''
+  const message = typeof data.message === "string" ? data.message : "";
   const durationMs =
-    store.beforeTime === BigInt(0)
+    store.beforeTime === 0n
       ? 0
-      : Number(process.hrtime.bigint() - store.beforeTime) / 1_000_000
+      : Number(process.hrtime.bigint() - store.beforeTime) / 1_000_000;
 
-  const line = `${level} ${durationMs.toFixed(2)}ms ${request.method} ${new URL(request.url).pathname} ${message}\n`
+  const line = `${level} ${durationMs.toFixed(2)}ms ${request.method} ${new URL(request.url).pathname} ${message}\n`;
 
-  await ensureDir(dirname(filePath))
-  await appendFile(filePath, line, { encoding: 'utf-8' })
+  await ensureDir(dirname(filePath));
+  await appendFile(filePath, line, { encoding: "utf8" });
 
-  const rotation = config?.logRotation
+  const rotation = config?.logRotation;
   if (!rotation) {
-    return
+    return;
   }
 
-  const should = await shouldRotate(filePath, rotation)
+  const should = await shouldRotate(filePath, rotation);
   if (should) {
-    await performRotation(filePath, rotation)
+    await performRotation(filePath, rotation);
   }
-}
+};

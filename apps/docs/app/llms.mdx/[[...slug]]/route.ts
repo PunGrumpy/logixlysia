@@ -1,23 +1,25 @@
-import { notFound } from 'next/navigation'
-import { type NextRequest, NextResponse } from 'next/server'
-import { getLLMText, source } from '@/lib/source'
+import { notFound } from "next/navigation";
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 
-export const revalidate = false
+import { getLLMText, source } from "@/lib/source";
+
+export const revalidate = false;
 
 export const GET = async (
   _req: NextRequest,
-  { params }: RouteContext<'/llms.mdx/[[...slug]]'>
+  { params }: RouteContext<"/llms.mdx/[[...slug]]">
 ) => {
-  const { slug } = await params
-  const page = source.getPage(slug)
+  const { slug } = await params;
+  const page = source.getPage(slug);
 
   if (!page) {
-    notFound()
+    notFound();
   }
 
-  const text = await getLLMText(page)
+  const text = await getLLMText(page);
 
-  return new NextResponse(text)
-}
+  return new NextResponse(text);
+};
 
-export const generateStaticParams = () => source.generateParams()
+export const generateStaticParams = () => source.generateParams();

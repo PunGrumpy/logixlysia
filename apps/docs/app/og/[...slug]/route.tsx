@@ -1,8 +1,10 @@
-import { readFile } from 'node:fs/promises'
-import { join } from 'node:path'
-import { notFound } from 'next/navigation'
-import { ImageResponse } from 'next/og'
-import { source } from '@/lib/source'
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
+
+import { notFound } from "next/navigation";
+import { ImageResponse } from "next/og";
+
+import { source } from "@/lib/source";
 
 const Logo = () => (
   // biome-ignore lint/a11y/noSvgWithoutTitle: Title is not needed
@@ -50,28 +52,28 @@ const Logo = () => (
       fill="#212121"
     />
   </svg>
-)
+);
 
 export const GET = async (
   _req: Request,
-  { params }: RouteContext<'/og/[...slug]'>
+  { params }: RouteContext<"/og/[...slug]">
 ) => {
-  const { slug } = await params
-  const page = source.getPage(slug)
+  const { slug } = await params;
+  const page = source.getPage(slug);
 
   if (!page) {
-    notFound()
+    notFound();
   }
 
   const intrumentSerifRegular = await readFile(
-    join(process.cwd(), 'app/og/[...slug]/InstrumentSerif-Regular.ttf')
-  )
+    join(process.cwd(), "app/og/[...slug]/InstrumentSerif-Regular.ttf")
+  );
   const instrumentSerifItalic = await readFile(
-    join(process.cwd(), 'app/og/[...slug]/InstrumentSerif-Italic.ttf')
-  )
+    join(process.cwd(), "app/og/[...slug]/InstrumentSerif-Italic.ttf")
+  );
   const geistRegular = await readFile(
-    join(process.cwd(), 'app/og/[...slug]/Geist-Regular.ttf')
-  )
+    join(process.cwd(), "app/og/[...slug]/Geist-Regular.ttf")
+  );
 
   return new ImageResponse(
     <div tw="flex flex-col justify-between items-start w-full h-full bg-[#101010] p-12 text-white">
@@ -80,14 +82,14 @@ export const GET = async (
         <h1 tw="max-w-[48rem] text-[64px] leading-[69px] tracking-tighter m-0">
           {page.data.title} |&nbsp;
           <span
-            style={{ fontFamily: 'Instrument Serif', fontStyle: 'italic' }}
+            style={{ fontFamily: "Instrument Serif", fontStyle: "italic" }}
             tw="text-[#ffc799]"
           >
             Logixlysia
           </span>
         </h1>
         <p
-          style={{ fontFamily: 'Geist' }}
+          style={{ fontFamily: "Geist" }}
           tw="text-[24px] font-normal leading-normal tracking-tighter mt-4 mb-0 text-[#99ffe4]"
         >
           {page.data.description}
@@ -95,34 +97,34 @@ export const GET = async (
       </div>
     </div>,
     {
-      width: 1200,
-      height: 630,
       fonts: [
         {
-          name: 'Instrument Serif',
           data: intrumentSerifRegular,
-          style: 'normal',
-          weight: 400
+          name: "Instrument Serif",
+          style: "normal",
+          weight: 400,
         },
         {
-          name: 'Instrument Serif',
           data: instrumentSerifItalic,
-          style: 'italic',
-          weight: 400
+          name: "Instrument Serif",
+          style: "italic",
+          weight: 400,
         },
         {
-          name: 'Geist',
           data: geistRegular,
-          style: 'normal',
-          weight: 400
-        }
-      ]
+          name: "Geist",
+          style: "normal",
+          weight: 400,
+        },
+      ],
+      height: 630,
+      width: 1200,
     }
-  )
-}
+  );
+};
 
 export const generateStaticParams = () =>
-  source.generateParams().map(page => ({
+  source.generateParams().map((page) => ({
     ...page,
-    slug: [...page.slug, 'image.png']
-  }))
+    slug: [...page.slug, "image.png"],
+  }));

@@ -11,12 +11,12 @@ Filter logs based on level, status, or HTTP method using Logixlysia's flexible f
 logixlysia({
   config: {
     logFilter: {
-      level: ['ERROR', 'WARNING'],
+      level: ["ERROR", "WARNING"],
       status: [500, 404],
-      method: 'GET'
-    }
-  }
-})
+      method: "GET",
+    },
+  },
+});
 ```
 
 ## Filter Types
@@ -25,7 +25,7 @@ logixlysia({
 
 ```ts
 logFilter: {
-  level: ['ERROR', 'WARNING'] // Only log ERROR and WARNING messages
+  level: ["ERROR", "WARNING"]; // Only log ERROR and WARNING messages
 }
 ```
 
@@ -35,7 +35,7 @@ Available levels: `ERROR`, `WARNING`, `INFO`, `DEBUG`
 
 ```ts
 logFilter: {
-  status: [500, 404] // Only log 500 and 404 responses
+  status: [500, 404]; // Only log 500 and 404 responses
 }
 ```
 
@@ -43,7 +43,7 @@ logFilter: {
 
 ```ts
 logFilter: {
-  method: 'GET' // Only log GET requests
+  method: "GET"; // Only log GET requests
 }
 ```
 
@@ -51,7 +51,7 @@ Or multiple methods:
 
 ```ts
 logFilter: {
-  method: ['POST', 'PUT']
+  method: ["POST", "PUT"];
 }
 ```
 
@@ -68,9 +68,7 @@ logFilter: {
 ## Environment-Specific Filters
 
 ```ts
-logFilter: process.env.NODE_ENV === 'production' 
-  ? { level: ['ERROR'] }
-  : null // Log everything in development
+logFilter: process.env.NODE_ENV === "production" ? { level: ["ERROR"] } : null; // Log everything in development
 ```
 
 ## Best Practices

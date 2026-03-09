@@ -1,13 +1,14 @@
-import { IconArrowUpRight } from '@tabler/icons-react'
-import { Link } from 'fumadocs-core/framework'
-import { Installer } from '@/components/installer'
+import { IconArrowUpRight } from "@tabler/icons-react";
+import { Link } from "fumadocs-core/framework";
+
+import { Installer } from "@/components/installer";
 import {
   Announcement,
   AnnouncementTag,
-  AnnouncementTitle
-} from '@/components/kibo-ui/announcement'
-import { Button } from '@/components/ui/button'
-import { cn } from '@/lib/utils'
+  AnnouncementTitle,
+} from "@/components/kibo-ui/announcement";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 export const Hero = () => (
   <section className="flex flex-col justify-between gap-8">
@@ -28,18 +29,18 @@ export const Hero = () => (
       </Link>
       <h1
         className={cn(
-          'flex flex-col',
-          'text-balance font-medium font-serif text-4xl leading-none md:text-6xl',
-          'bg-linear-to-b from-foreground to-tertiary bg-clip-text text-transparent'
+          "flex flex-col",
+          "text-balance font-medium font-serif text-4xl leading-none md:text-6xl",
+          "bg-linear-to-b from-foreground to-tertiary bg-clip-text text-transparent"
         )}
       >
-        The logger for Elysia.js,{' '}
+        The logger for Elysia.js,{" "}
         <span className="italic">simple and easy to use</span> beautiful and
         powerful
       </h1>
 
       <p className="max-w-lg text-balance font-light text-muted-foreground">
-        Logixlysia is a logger for{' '}
+        Logixlysia is a logger for{" "}
         <Link
           className="underline"
           href="https://elysiajs.com/"
@@ -60,4 +61,4 @@ export const Hero = () => (
       </Button>
     </div>
   </section>
-)
+);

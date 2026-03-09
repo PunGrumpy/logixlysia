@@ -1,39 +1,40 @@
-'use client'
+"use client";
 
-import { useOpenPanel } from '@openpanel/nextjs'
-import { IconCheck, IconCopy } from '@tabler/icons-react'
-import { useState } from 'react'
-import { toast } from 'sonner'
+import { useOpenPanel } from "@openpanel/nextjs";
+import { IconCheck, IconCopy } from "@tabler/icons-react";
+import { useState } from "react";
+import { toast } from "sonner";
+
 import {
   InputGroup,
   InputGroupAddon,
   InputGroupButton,
   InputGroupInput,
-  InputGroupText
-} from '@/components/ui/input-group'
+  InputGroupText,
+} from "@/components/ui/input-group";
 
-const COPY_TIMEOUT = 2000
+const COPY_TIMEOUT = 2000;
 
 interface InstallerProps {
-  code: string
+  code: string;
 }
 
 export const Installer = ({ code }: InstallerProps) => {
-  const { track } = useOpenPanel()
-  const [copied, setCopied] = useState(false)
+  const { track } = useOpenPanel();
+  const [copied, setCopied] = useState(false);
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(code)
-    toast.success('Copied to clipboard')
-    track('copy_to_clipboard', { code, name: 'installer' })
-    setCopied(true)
+    navigator.clipboard.writeText(code);
+    toast.success("Copied to clipboard");
+    track("copy_to_clipboard", { code, name: "installer" });
+    setCopied(true);
 
     setTimeout(() => {
-      setCopied(false)
-    }, COPY_TIMEOUT)
-  }
+      setCopied(false);
+    }, COPY_TIMEOUT);
+  };
 
-  const Icon = copied ? IconCheck : IconCopy
+  const Icon = copied ? IconCheck : IconCopy;
 
   return (
     <InputGroup className="h-10 rounded-md bg-card font-mono shadow-none">
@@ -55,5 +56,5 @@ export const Installer = ({ code }: InstallerProps) => {
         </InputGroupButton>
       </InputGroupAddon>
     </InputGroup>
-  )
-}
+  );
+};

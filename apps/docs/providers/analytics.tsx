@@ -1,10 +1,10 @@
-import { OpenPanelComponent } from '@openpanel/nextjs'
+import { OpenPanelComponent } from "@openpanel/nextjs";
+import type { ReactNode } from "react";
 
-import type { ReactNode } from 'react'
-import { env } from '@/env'
+import { env } from "@/env";
 
 interface AnalyticsProviderProps {
-  children: ReactNode
+  children: ReactNode;
 }
 
 export const AnalyticsProvider = ({ children }: AnalyticsProviderProps) => (
@@ -12,11 +12,11 @@ export const AnalyticsProvider = ({ children }: AnalyticsProviderProps) => (
     {children}
     <OpenPanelComponent
       clientId={env.NEXT_PUBLIC_OPENPANEL_CLIENT_ID}
-      disabled={process.env.NODE_ENV !== 'production'}
+      disabled={process.env.NODE_ENV !== "production"}
       trackAttributes
       trackHashChanges
       trackOutgoingLinks
       trackScreenViews
     />
   </>
-)
+);

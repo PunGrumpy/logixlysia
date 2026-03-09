@@ -2,29 +2,29 @@ import {
   defineConfig,
   defineDocs,
   frontmatterSchema,
-  metaSchema
-} from 'fumadocs-mdx/config'
+  metaSchema,
+} from "fumadocs-mdx/config";
 
 export const docs = defineDocs({
-  dir: 'content',
+  dir: "content",
   docs: {
-    schema: frontmatterSchema,
     postprocess: {
-      includeProcessedMarkdown: true
-    }
+      includeProcessedMarkdown: true,
+    },
+    schema: frontmatterSchema,
   },
   meta: {
-    schema: metaSchema
-  }
-})
+    schema: metaSchema,
+  },
+});
 
 export default defineConfig({
   mdxOptions: {
     rehypeCodeOptions: {
       themes: {
-        light: 'github-light',
-        dark: 'vesper'
-      }
-    }
-  }
-})
+        dark: "vesper",
+        light: "github-light",
+      },
+    },
+  },
+});

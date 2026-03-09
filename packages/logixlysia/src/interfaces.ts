@@ -1,22 +1,22 @@
 import type {
   Logger as PinoLogger,
-  LoggerOptions as PinoLoggerOptions
-} from 'pino'
+  LoggerOptions as PinoLoggerOptions,
+} from "pino";
 
-export type Pino = PinoLogger<never, boolean>
+export type Pino = PinoLogger<never, boolean>;
 
-export type RequestInfo = Request
+export type RequestInfo = Request;
 
-export type LogLevel = 'DEBUG' | 'INFO' | 'WARNING' | 'ERROR'
+export type LogLevel = "DEBUG" | "INFO" | "WARNING" | "ERROR";
 
 export interface StoreData {
-  beforeTime: bigint
+  beforeTime: bigint;
 }
 
 export interface LogixlysiaStore {
-  logger: Logger
-  pino: Pino
-  beforeTime?: bigint
+  logger: Logger;
+  pino: Pino;
+  beforeTime?: bigint;
 }
 
 export interface Transport {
@@ -24,24 +24,24 @@ export interface Transport {
     level: LogLevel,
     message: string,
     meta?: Record<string, unknown>
-  ) => void | Promise<void>
+  ) => void | Promise<void>;
 }
 
 export interface LogRotationConfig {
   /**
    * Max log file size before rotation, e.g. '10m', '5k', or a byte count.
    */
-  maxSize?: string | number
+  maxSize?: string | number;
   /**
    * Keep at most N files or keep files for a duration like '7d'.
    */
-  maxFiles?: number | string
+  maxFiles?: number | string;
   /**
    * Rotate at a fixed interval, e.g. '1d', '12h'.
    */
-  interval?: string
-  compress?: boolean
-  compression?: 'gzip'
+  interval?: string;
+  compress?: boolean;
+  compression?: "gzip";
 }
 
 export interface LogFilter {
@@ -49,7 +49,7 @@ export interface LogFilter {
    * Array of log levels to allow. If specified, only logs with these levels will be processed.
    * If not specified, all log levels will be allowed.
    */
-  level?: LogLevel[]
+  level?: LogLevel[];
 }
 
 /**
@@ -61,80 +61,82 @@ export interface LogFilter {
  *
  * @see https://github.com/pinojs/pino-pretty#options
  */
-export type PrettyPrintConfig = boolean | Record<string, unknown>
+export type PrettyPrintConfig = boolean | Record<string, unknown>;
 
 export interface Options {
   config?: {
-    showStartupMessage?: boolean
-    startupMessageFormat?: 'simple' | 'banner'
-    useColors?: boolean
-    ip?: boolean
+    showStartupMessage?: boolean;
+    startupMessageFormat?: "simple" | "banner";
+    useColors?: boolean;
+    ip?: boolean;
     timestamp?: {
-      translateTime?: string
-    }
-    customLogFormat?: string
+      translateTime?: string;
+    };
+    customLogFormat?: string;
 
     // Filtering
-    logFilter?: LogFilter
+    logFilter?: LogFilter;
 
     // Outputs
-    transports?: Transport[]
-    useTransportsOnly?: boolean
-    disableInternalLogger?: boolean
-    disableFileLogging?: boolean
-    logFilePath?: string
-    logRotation?: LogRotationConfig
+    transports?: Transport[];
+    useTransportsOnly?: boolean;
+    disableInternalLogger?: boolean;
+    disableFileLogging?: boolean;
+    logFilePath?: string;
+    logRotation?: LogRotationConfig;
 
     // Pino
-    pino?: (PinoLoggerOptions & { prettyPrint?: PrettyPrintConfig }) | undefined
-  }
+    pino?:
+      | (PinoLoggerOptions & { prettyPrint?: PrettyPrintConfig })
+      | undefined;
+  };
 }
 
 export class HttpError extends Error {
-  readonly status: number
+  readonly status: number;
 
   constructor(status: number, message: string) {
-    super(message)
-    this.status = status
+    super(message);
+    this.status = status;
   }
 }
 
 export interface Logger {
-  pino: Pino
+  pino: Pino;
   log: (
     level: LogLevel,
     request: RequestInfo,
     data: Record<string, unknown>,
     store: StoreData
-  ) => void
+  ) => void;
   handleHttpError: (
     request: RequestInfo,
     error: unknown,
     store: StoreData
-  ) => void
+  ) => void;
   debug: (
     request: RequestInfo,
     message: string,
     context?: Record<string, unknown>
-  ) => void
+  ) => void;
   info: (
     request: RequestInfo,
     message: string,
     context?: Record<string, unknown>
-  ) => void
+  ) => void;
   warn: (
     request: RequestInfo,
     message: string,
     context?: Record<string, unknown>
-  ) => void
+  ) => void;
   error: (
     request: RequestInfo,
     message: string,
     context?: Record<string, unknown>
-  ) => void
+  ) => void;
 }
 
 export interface LogixlysiaContext {
-  request: Request
-  store: LogixlysiaStore
+  request: Request;
+  store: LogixlysiaStore;
 }

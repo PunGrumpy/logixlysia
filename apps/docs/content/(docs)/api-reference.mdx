@@ -10,7 +10,7 @@ description: Complete API reference for Logixlysia
 Main plugin function that adds logging capabilities to your Elysia application.
 
 ```ts
-function logixlysia(options?: Options): Logixlysia
+function logixlysia(options?: Options): Logixlysia;
 ```
 
 **Parameters:**
@@ -24,14 +24,15 @@ function logixlysia(options?: Options): Logixlysia
 **Example:**
 
 ```ts
-import logixlysia from 'logixlysia'
+import logixlysia from "logixlysia";
 
-const app = new Elysia()
-  .use(logixlysia({
+const app = new Elysia().use(
+  logixlysia({
     config: {
-      showStartupMessage: true
-    }
-  }))
+      showStartupMessage: true,
+    },
+  })
+);
 ```
 
 ## Types
@@ -42,9 +43,9 @@ Elysia instance type with Logixlysia store.
 
 ```ts
 type Logixlysia = Elysia<
-  'Logixlysia',
+  "Logixlysia",
   SingletonBase & { store: LogixlysiaStore }
->
+>;
 ```
 
 ### `Options`
@@ -54,23 +55,23 @@ Configuration options for Logixlysia.
 ```ts
 type Options = {
   config?: {
-    showStartupMessage?: boolean
-    startupMessageFormat?: 'simple' | 'banner'
-    useColors?: boolean
-    ip?: boolean
+    showStartupMessage?: boolean;
+    startupMessageFormat?: "simple" | "banner";
+    useColors?: boolean;
+    ip?: boolean;
     timestamp?: {
-      translateTime?: string
-    }
-    customLogFormat?: string
-    transports?: Transport[]
-    useTransportsOnly?: boolean
-    disableInternalLogger?: boolean
-    disableFileLogging?: boolean
-    logFilePath?: string
-    logRotation?: LogRotationConfig
-    pino?: PinoLoggerOptions & { prettyPrint?: boolean | object }
-  }
-}
+      translateTime?: string;
+    };
+    customLogFormat?: string;
+    transports?: Transport[];
+    useTransportsOnly?: boolean;
+    disableInternalLogger?: boolean;
+    disableFileLogging?: boolean;
+    logFilePath?: string;
+    logRotation?: LogRotationConfig;
+    pino?: PinoLoggerOptions & { prettyPrint?: boolean | object };
+  };
+};
 ```
 
 ### `LogixlysiaStore`
@@ -79,11 +80,11 @@ Store type available in Elysia context.
 
 ```ts
 type LogixlysiaStore = {
-  logger: Logger
-  pino: Pino
-  beforeTime?: bigint
-  [key: string]: unknown
-}
+  logger: Logger;
+  pino: Pino;
+  beforeTime?: bigint;
+  [key: string]: unknown;
+};
 ```
 
 **Properties:**
@@ -98,39 +99,39 @@ Logger interface with logging methods.
 
 ```ts
 type Logger = {
-  pino: Pino
+  pino: Pino;
   log: (
     level: LogLevel,
     request: RequestInfo,
     data: Record<string, unknown>,
     store: StoreData
-  ) => void
+  ) => void;
   handleHttpError: (
     request: RequestInfo,
     error: unknown,
     store: StoreData
-  ) => void
+  ) => void;
   debug: (
     request: RequestInfo,
     message: string,
     context?: Record<string, unknown>
-  ) => void
+  ) => void;
   info: (
     request: RequestInfo,
     message: string,
     context?: Record<string, unknown>
-  ) => void
+  ) => void;
   warn: (
     request: RequestInfo,
     message: string,
     context?: Record<string, unknown>
-  ) => void
+  ) => void;
   error: (
     request: RequestInfo,
     message: string,
     context?: Record<string, unknown>
-  ) => void
-}
+  ) => void;
+};
 ```
 
 ### `LogLevel`
@@ -138,7 +139,7 @@ type Logger = {
 Log level type.
 
 ```ts
-type LogLevel = 'DEBUG' | 'INFO' | 'WARNING' | 'ERROR'
+type LogLevel = "DEBUG" | "INFO" | "WARNING" | "ERROR";
 ```
 
 ### `Transport`
@@ -151,8 +152,8 @@ type Transport = {
     level: LogLevel,
     message: string,
     meta?: Record<string, unknown>
-  ) => void | Promise<void>
-}
+  ) => void | Promise<void>;
+};
 ```
 
 ### `LogRotationConfig`
@@ -161,12 +162,12 @@ Log rotation configuration.
 
 ```ts
 type LogRotationConfig = {
-  maxSize?: string | number
-  maxFiles?: number | string
-  interval?: string
-  compress?: boolean
-  compression?: 'gzip'
-}
+  maxSize?: string | number;
+  maxFiles?: number | string;
+  interval?: string;
+  compress?: boolean;
+  compression?: "gzip";
+};
 ```
 
 ### `Pino`
@@ -174,7 +175,7 @@ type LogRotationConfig = {
 Pino logger type.
 
 ```ts
-type Pino = PinoLogger<never, boolean>
+type Pino = PinoLogger<never, boolean>;
 ```
 
 ### `LogixlysiaContext`
@@ -183,9 +184,9 @@ Context type for request handlers.
 
 ```ts
 type LogixlysiaContext = {
-  request: Request
-  store: LogixlysiaStore
-}
+  request: Request;
+  store: LogixlysiaStore;
+};
 ```
 
 ## Classes
@@ -196,8 +197,8 @@ Custom HTTP error class.
 
 ```ts
 class HttpError extends Error {
-  readonly status: number
-  constructor(status: number, message: string)
+  readonly status: number;
+  constructor(status: number, message: string);
 }
 ```
 
@@ -208,7 +209,7 @@ class HttpError extends Error {
 **Example:**
 
 ```ts
-throw new HttpError(404, 'User not found')
+throw new HttpError(404, "User not found");
 ```
 
 ## Usage Examples
@@ -216,32 +217,31 @@ throw new HttpError(404, 'User not found')
 ### Accessing Logger in Route Handlers
 
 ```ts
-app.get('/users/:id', ({ store, params }) => {
-  const { logger, pino } = store
-  
+app.get("/users/:id", ({ store, params }) => {
+  const { logger, pino } = store;
+
   // Use logger helper methods
-  logger.info(request, 'User accessed', { userId: params.id })
-  
+  logger.info(request, "User accessed", { userId: params.id });
+
   // Or use Pino directly
-  pino.info({ userId: params.id }, 'User accessed')
-  
-  return { user: 'data' }
-})
+  pino.info({ userId: params.id }, "User accessed");
+
+  return { user: "data" };
+});
 ```
 
 ### Custom Logging
 
 ```ts
-app.post('/users', ({ store, body }) => {
-  const { logger } = store
-  
-  logger.debug(request, 'Creating user', { email: body.email })
-  
-  // ... create user logic
-  
-  logger.info(request, 'User created', { userId: newUser.id })
-  
-  return newUser
-})
-```
+app.post("/users", ({ store, body }) => {
+  const { logger } = store;
 
+  logger.debug(request, "Creating user", { email: body.email });
+
+  // ... create user logic
+
+  logger.info(request, "User created", { userId: newUser.id });
+
+  return newUser;
+});
+```

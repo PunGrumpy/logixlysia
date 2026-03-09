@@ -1,6 +1,6 @@
-import type { SVGProps } from 'react'
+import type { SVGProps } from "react";
 
-type SVGIconProps = SVGProps<SVGSVGElement>
+type SVGIconProps = SVGProps<SVGSVGElement>;
 
 export const Icons = {
   logo: (props: SVGIconProps) => (
@@ -48,5 +48,5 @@ export const Icons = {
         fill="#212121"
       />
     </svg>
-  )
-}
+  ),
+};

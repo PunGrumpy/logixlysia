@@ -24,20 +24,26 @@ Logixlysia supports three types of logging outputs:
 
 ```ts
 type Transport = {
-  log: (level: LogLevel, message: string, meta?: Record<string, unknown>) => void | Promise<void>
-}
+  log: (
+    level: LogLevel,
+    message: string,
+    meta?: Record<string, unknown>
+  ) => void | Promise<void>;
+};
 
 const consoleTransport: Transport = {
   log: (level, message, meta) => {
-    console.log(`[${level}] ${message}`, meta)
-  }
-}
+    console.log(`[${level}] ${message}`, meta);
+  },
+};
 
-app.use(logixlysia({
-  config: {
-    transports: [consoleTransport]
-  }
-}))
+app.use(
+  logixlysia({
+    config: {
+      transports: [consoleTransport],
+    },
+  })
+);
 ```
 
 ## External Services
@@ -48,21 +54,21 @@ app.use(logixlysia({
 const elasticsearchTransport = {
   log: async (level, message, meta) => {
     try {
-      await fetch('http://elasticsearch:9200/logs/_doc', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      await fetch("http://elasticsearch:9200/logs/_doc", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           level,
           message,
           ...meta,
-          timestamp: new Date().toISOString()
-        })
-      })
+          timestamp: new Date().toISOString(),
+        }),
+      });
     } catch (err) {
-      console.error('Elasticsearch transport error', err)
+      console.error("Elasticsearch transport error", err);
     }
-  }
-}
+  },
+};
 ```
 
 ### MongoDB
@@ -71,17 +77,17 @@ const elasticsearchTransport = {
 const mongodbTransport = {
   log: async (level, message, meta) => {
     try {
-      await db.collection('logs').insertOne({
+      await db.collection("logs").insertOne({
         level,
         message,
         ...meta,
-        timestamp: new Date()
-      })
+        timestamp: new Date(),
+      });
     } catch (err) {
-      console.error('MongoDB transport error', err)
+      console.error("MongoDB transport error", err);
     }
-  }
-}
+  },
+};
 ```
 
 ### Slack
@@ -89,51 +95,49 @@ const mongodbTransport = {
 ```ts
 const slackTransport = {
   log: async (level, message, meta) => {
-    if (level.toLowerCase() === 'error') {
-      const webhook = process.env.SLACK_WEBHOOK_URL
-      if (!webhook) return
-      
+    if (level.toLowerCase() === "error") {
+      const webhook = process.env.SLACK_WEBHOOK_URL;
+      if (!webhook) return;
+
       try {
         await fetch(webhook, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            text: `[${level}] ${message}\n${JSON.stringify(meta, null, 2)}`
-          })
-        })
+            text: `[${level}] ${message}\n${JSON.stringify(meta, null, 2)}`,
+          }),
+        });
       } catch (err) {
-        console.error('Slack transport error', err)
+        console.error("Slack transport error", err);
       }
     }
-  }
-}
+  },
+};
 ```
 
 ## Multiple Transports
 
 ```ts
-app.use(logixlysia({
-  config: {
-    transports: [
-      elasticsearchTransport,
-      slackTransport
-    ]
-  }
-}))
+app.use(
+  logixlysia({
+    config: {
+      transports: [elasticsearchTransport, slackTransport],
+    },
+  })
+);
 ```
 
 ## Transport-Only Logging
 
 ```ts
-app.use(logixlysia({
-  config: {
-    useTransportsOnly: true,
-    transports: [
-      elasticsearchTransport,
-      slackTransport
-    ]
-  }
-}))
+app.use(
+  logixlysia({
+    config: {
+      useTransportsOnly: true,
+      transports: [elasticsearchTransport, slackTransport],
+    },
+  })
+);
 ```
 
 ## Best Practices

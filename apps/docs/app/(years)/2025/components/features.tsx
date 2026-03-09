@@ -4,10 +4,12 @@ import {
   IconFilter,
   IconPalette,
   IconPlug,
-  IconRocket
-} from '@tabler/icons-react'
-import { Card } from '@/components/ui/card'
-import { Section } from './section'
+  IconRocket,
+} from "@tabler/icons-react";
+
+import { Card } from "@/components/ui/card";
+
+import { Section } from "./section";
 
 export const Features = () => (
   <Section className="grid gap-16">
@@ -23,39 +25,39 @@ export const Features = () => (
     <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
       {[
         {
-          title: 'File Logging',
-          description: 'Efficient file-based logging with automatic rotation',
-          icon: IconFileText
+          description: "Efficient file-based logging with automatic rotation",
+          icon: IconFileText,
+          title: "File Logging",
         },
         {
-          title: 'Custom Transports',
           description:
-            'Extensible transport system for any logging destination',
-          icon: IconPlug
+            "Extensible transport system for any logging destination",
+          icon: IconPlug,
+          title: "Custom Transports",
         },
         {
-          title: 'Smart Filtering',
           description:
-            'Powerful filtering capabilities for precise log control',
-          icon: IconFilter
+            "Powerful filtering capabilities for precise log control",
+          icon: IconFilter,
+          title: "Smart Filtering",
         },
         {
-          title: 'Beautiful Formatting',
-          description: 'Human-readable and machine-parseable output formats',
-          icon: IconPalette
+          description: "Human-readable and machine-parseable output formats",
+          icon: IconPalette,
+          title: "Beautiful Formatting",
         },
         {
-          title: 'Type Safety',
-          description: 'Full TypeScript support with excellent DX',
-          icon: IconCode
+          description: "Full TypeScript support with excellent DX",
+          icon: IconCode,
+          title: "Type Safety",
         },
         {
-          title: 'Performance',
-          description: 'Lightweight and fast, built for production',
-          icon: IconRocket
-        }
-      ].map(feature => {
-        const Icon = feature.icon
+          description: "Lightweight and fast, built for production",
+          icon: IconRocket,
+          title: "Performance",
+        },
+      ].map((feature) => {
+        const Icon = feature.icon;
         return (
           <Card
             className="group bg-card/50 p-6 transition-all duration-300 hover:border-primary/50 hover:shadow-lg"
@@ -73,8 +75,8 @@ export const Features = () => (
               </div>
             </div>
           </Card>
-        )
+        );
       })}
     </div>
   </Section>
-)
+);

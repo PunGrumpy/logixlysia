@@ -1,81 +1,80 @@
 enhancement:
   - head-branch:
-      ['^feature', 'feature', '^feat', 'feat', '^enhancement', 'enhancement']
+      ["^feature", "feature", "^feat", "feat", "^enhancement", "enhancement"]
 
 docs:
-  - head-branch:
-      ['^docs', 'docs']
+  - head-branch: ["^docs", "docs"]
   - changed-files:
-      - any-glob-to-any-file: 'apps/docs/**/*'
+      - any-glob-to-any-file: "apps/docs/**/*"
   - changed-files:
       - any-glob-to-any-file:
-          - '**/*.md'
-          - '!.changeset/*.md'
+          - "**/*.md"
+          - "!.changeset/*.md"
   - changed-files:
-      - any-glob-to-any-file: '**/*.markdown'
+      - any-glob-to-any-file: "**/*.markdown"
   - changed-files:
-      - any-glob-to-any-file: '**/*.mdx'
+      - any-glob-to-any-file: "**/*.mdx"
 
 source:
   - changed-files:
-      - any-glob-to-any-file: 'apps/**/src/**/*.{js,jsx,ts,tsx,mjs,cjs,mts,cts}'
-      - any-glob-to-any-file: 'apps/docs/{app,components,hooks,lib,providers,scripts}/**/*.{js,jsx,ts,tsx,mjs,cjs,mts,cts}'
-      - any-glob-to-any-file: 'packages/**/src/**/*.{js,jsx,ts,tsx,mjs,cjs,mts,cts}'
+      - any-glob-to-any-file: "apps/**/src/**/*.{js,jsx,ts,tsx,mjs,cjs,mts,cts}"
+      - any-glob-to-any-file: "apps/docs/{app,components,hooks,lib,providers,scripts}/**/*.{js,jsx,ts,tsx,mjs,cjs,mts,cts}"
+      - any-glob-to-any-file: "packages/**/src/**/*.{js,jsx,ts,tsx,mjs,cjs,mts,cts}"
 
 test:
   - changed-files:
-      - any-glob-to-any-file: '**/__tests__/**/*.{js,jsx,ts,tsx,mjs,cjs,mts,cts}'
+      - any-glob-to-any-file: "**/__tests__/**/*.{js,jsx,ts,tsx,mjs,cjs,mts,cts}"
   - changed-files:
-      - any-glob-to-any-file: '**/*.{spec,test}.{js,jsx,ts,tsx,mjs,cjs,mts,cts}'
+      - any-glob-to-any-file: "**/*.{spec,test}.{js,jsx,ts,tsx,mjs,cjs,mts,cts}"
 
 lint:
   - changed-files:
-      - any-glob-to-any-file: 'biome.jsonc'
+      - any-glob-to-any-file: "biome.jsonc"
   - changed-files:
-      - any-glob-to-any-file: '.ultracite/**/*'
+      - any-glob-to-any-file: ".ultracite/**/*"
 
 ci/cd:
   - changed-files:
-      - any-glob-to-any-file: '.github/workflows/**/*.{yml,yaml}'
+      - any-glob-to-any-file: ".github/workflows/**/*.{yml,yaml}"
 
 changelog:
   - changed-files:
-      - any-glob-to-any-file: '**/CHANGELOG.md'
+      - any-glob-to-any-file: "**/CHANGELOG.md"
 
 changeset:
   - changed-files:
       - any-glob-to-any-file:
-          - '.changeset/*.md'
-          - '!.changeset/README.md'
+          - ".changeset/*.md"
+          - "!.changeset/README.md"
 
 config:
   - changed-files:
-      - any-glob-to-any-file: '**/package.json'
+      - any-glob-to-any-file: "**/package.json"
   - changed-files:
-      - any-glob-to-any-file: 'turbo.json'
+      - any-glob-to-any-file: "turbo.json"
   - changed-files:
-      - any-glob-to-any-file: '**/tsconfig*.json'
+      - any-glob-to-any-file: "**/tsconfig*.json"
   - changed-files:
-      - any-glob-to-any-file: 'biome.jsonc'
+      - any-glob-to-any-file: "biome.jsonc"
   - changed-files:
-      - any-glob-to-any-file: 'bun.lock'
+      - any-glob-to-any-file: "bun.lock"
   - changed-files:
-      - any-glob-to-any-file: 'bunfig.toml'
+      - any-glob-to-any-file: "bunfig.toml"
 
 monorepo:
   - changed-files:
-      - any-glob-to-any-file: 'turbo.json'
+      - any-glob-to-any-file: "turbo.json"
   - changed-files:
-      - any-glob-to-any-file: 'package.json'
+      - any-glob-to-any-file: "package.json"
 
 ignore:
   - changed-files:
-      - any-glob-to-any-file: '**/node_modules/**'
+      - any-glob-to-any-file: "**/node_modules/**"
   - changed-files:
-      - any-glob-to-any-file: '**/dist/**'
+      - any-glob-to-any-file: "**/dist/**"
   - changed-files:
-      - any-glob-to-any-file: '**/build/**'
+      - any-glob-to-any-file: "**/build/**"
   - changed-files:
-      - any-glob-to-any-file: '**/coverage/**'
+      - any-glob-to-any-file: "**/coverage/**"
   - changed-files:
-      - any-glob-to-any-file: '**/.next/**'
+      - any-glob-to-any-file: "**/.next/**"

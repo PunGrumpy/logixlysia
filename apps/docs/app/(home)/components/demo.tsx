@@ -1,5 +1,6 @@
-import { DynamicCodeBlock } from 'fumadocs-ui/components/dynamic-codeblock'
-import { cn } from '@/lib/utils'
+import { DynamicCodeBlock } from "fumadocs-ui/components/dynamic-codeblock";
+
+import { cn } from "@/lib/utils";
 
 const code = `import { Elysia } from 'elysia'
 import logixlysia from 'logixlysia' // or import { logixlysia } from 'logixlysia'
@@ -25,14 +26,14 @@ const app = new Elysia({
         return { message: 'Welcome to Basic Elysia with Logixlysia' }
     })
         
-app.listen(3000)`
+app.listen(3000)`;
 
 export const Demo = () => (
   <div
     className={cn(
-      '[&>figure]:font-mono',
-      '[&>figure]:text-base',
-      '[&_pre]:p-4'
+      "[&>figure]:font-mono",
+      "[&>figure]:text-base",
+      "[&_pre]:p-4"
     )}
   >
     <DynamicCodeBlock
@@ -40,10 +41,10 @@ export const Demo = () => (
       lang="typescript"
       options={{
         themes: {
-          light: 'github-light',
-          dark: 'vesper'
-        }
+          dark: "vesper",
+          light: "github-light",
+        },
       }}
     />
   </div>
-)
+);

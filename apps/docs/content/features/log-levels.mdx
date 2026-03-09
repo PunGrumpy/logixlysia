@@ -23,10 +23,10 @@ When you set a log level, all higher levels will also be logged. For example, se
 logixlysia({
   config: {
     logFilter: {
-      level: 'ERROR'
-    }
-  }
-})
+      level: "ERROR",
+    },
+  },
+});
 ```
 
 ### Multiple Levels
@@ -35,10 +35,10 @@ logixlysia({
 logixlysia({
   config: {
     logFilter: {
-      level: ['INFO', 'ERROR']
-    }
-  }
-})
+      level: ["INFO", "ERROR"],
+    },
+  },
+});
 ```
 
 ### Environment-based
@@ -47,12 +47,13 @@ logixlysia({
 logixlysia({
   config: {
     logFilter: {
-      level: process.env.NODE_ENV === 'production' 
-        ? ['ERROR', 'WARNING']
-        : ['DEBUG', 'INFO', 'WARNING', 'ERROR']
-    }
-  }
-})
+      level:
+        process.env.NODE_ENV === "production"
+          ? ["ERROR", "WARNING"]
+          : ["DEBUG", "INFO", "WARNING", "ERROR"],
+    },
+  },
+});
 ```
 
 ## Pino Log Levels
@@ -63,10 +64,10 @@ When using Pino integration, you can also configure Pino's log levels:
 logixlysia({
   config: {
     pino: {
-      level: 'debug' // 'fatal', 'error', 'warn', 'info', 'debug', 'trace'
-    }
-  }
-})
+      level: "debug", // 'fatal', 'error', 'warn', 'info', 'debug', 'trace'
+    },
+  },
+});
 ```
 
 ## Best Practices
@@ -82,7 +83,7 @@ logixlysia({
 
 ```ts
 logFilter: {
-  level: ['DEBUG', 'INFO', 'WARNING', 'ERROR']
+  level: ["DEBUG", "INFO", "WARNING", "ERROR"];
 }
 ```
 
@@ -90,7 +91,7 @@ logFilter: {
 
 ```ts
 logFilter: {
-  level: ['WARNING', 'ERROR']
+  level: ["WARNING", "ERROR"];
 }
 ```
 
@@ -98,6 +99,6 @@ logFilter: {
 
 ```ts
 logFilter: {
-  level: ['ERROR']
+  level: ["ERROR"];
 }
 ```

@@ -66,6 +66,7 @@ We use [Changesets](https://github.com/changesets/changesets) to manage versions
 5. Commit the generated changeset file in `.changeset/` with your changes
 
 **When to create a changeset:**
+
 - Bug fixes
 - New features
 - Breaking changes
@@ -73,6 +74,7 @@ We use [Changesets](https://github.com/changesets/changesets) to manage versions
 - Documentation updates that affect usage
 
 **When NOT to create a changeset:**
+
 - Internal refactoring with no user-facing changes
 - Test updates
 - Build configuration changes
@@ -109,6 +111,7 @@ When making changes to the logger:
 ### Running Commands
 
 From the root directory:
+
 - `bun test` - Run all tests across all packages
 - `bun run build` - Build all packages
 - `bun lint` - Run linter on the codebase
@@ -117,6 +120,7 @@ From the root directory:
 - `bun typecheck` - Run TypeScript type checking
 
 From a specific package (e.g., `packages/cli`):
+
 - `bun test` - Run tests for that package only
 - `bun run build` - Build that package only
 - `bun dev` - Start development server for that package
