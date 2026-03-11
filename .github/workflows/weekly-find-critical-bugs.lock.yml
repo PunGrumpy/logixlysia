@@ -25,7 +25,7 @@
 #
 # gh-aw-metadata: {"schema_version":"v2","frontmatter_hash":"0678da73c2b221464718275f6a0d0717d9ed4ea75656415f86285014d93df095","compiler_version":"v0.55.0","strict":true}
 
-name: "Daily Find Critical Bugs"
+name: "Weekly Find Critical Bugs"
 "on":
   schedule:
     - cron: "0 0 * * 0"
@@ -37,7 +37,7 @@ permissions: {}
 concurrency:
   group: "gh-aw-${{ github.workflow }}"
 
-run-name: "Daily Find Critical Bugs"
+run-name: "Weekly Find Critical Bugs"
 
 jobs:
   activation:
@@ -63,7 +63,7 @@ jobs:
           GH_AW_INFO_VERSION: "latest"
           GH_AW_INFO_AGENT_VERSION: "latest"
           GH_AW_INFO_CLI_VERSION: "v0.55.0"
-          GH_AW_INFO_WORKFLOW_NAME: "Daily Find Critical Bugs"
+          GH_AW_INFO_WORKFLOW_NAME: "Weekly Find Critical Bugs"
           GH_AW_INFO_EXPERIMENTAL: "false"
           GH_AW_INFO_SUPPORTS_TOOLS_ALLOWLIST: "true"
           GH_AW_INFO_STAGED: "false"
@@ -95,7 +95,7 @@ jobs:
       - name: Check workflow file timestamps
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
         env:
-          GH_AW_WORKFLOW_FILE: "daily-find-critical-bugs.lock.yml"
+          GH_AW_WORKFLOW_FILE: "weekly-find-critical-bugs.lock.yml"
         with:
           script: |
             const { setupGlobals } = require('/opt/gh-aw/actions/setup_globals.cjs');
@@ -165,7 +165,7 @@ jobs:
           </system>
           GH_AW_PROMPT_EOF
           cat << 'GH_AW_PROMPT_EOF'
-          {{#runtime-import .github/workflows/daily-find-critical-bugs.md}}
+          {{#runtime-import .github/workflows/weekly-find-critical-bugs.md}}
           GH_AW_PROMPT_EOF
           } > "$GH_AW_PROMPT"
       - name: Interpolate variables and render templates
@@ -256,7 +256,7 @@ jobs:
       GH_AW_SAFE_OUTPUTS: /opt/gh-aw/safeoutputs/outputs.jsonl
       GH_AW_SAFE_OUTPUTS_CONFIG_PATH: /opt/gh-aw/safeoutputs/config.json
       GH_AW_SAFE_OUTPUTS_TOOLS_PATH: /opt/gh-aw/safeoutputs/tools.json
-      GH_AW_WORKFLOW_ID_SANITIZED: dailyfindcriticalbugs
+      GH_AW_WORKFLOW_ID_SANITIZED: weeklyfindcriticalbugs
     outputs:
       checkout_pr_success: ${{ steps.checkout-pr.outputs.checkout_pr_success || 'true' }}
       detection_conclusion: ${{ steps.detection_conclusion.outputs.conclusion }}
@@ -977,7 +977,7 @@ jobs:
         if: always() && steps.detection_guard.outputs.run_detection == 'true'
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
         env:
-          WORKFLOW_NAME: "Daily Find Critical Bugs"
+          WORKFLOW_NAME: "Weekly Find Critical Bugs"
           WORKFLOW_DESCRIPTION: "Find critical bugs in the repository and create a pull request to fix them."
           HAS_PATCH: ${{ steps.collect_output.outputs.has_patch }}
         with:
@@ -1072,7 +1072,7 @@ jobs:
       issues: write
       pull-requests: write
     concurrency:
-      group: "gh-aw-conclusion-daily-find-critical-bugs"
+      group: "gh-aw-conclusion-weekly-find-critical-bugs"
       cancel-in-progress: false
     outputs:
       noop_message: ${{ steps.noop.outputs.noop_message }}
@@ -1102,7 +1102,7 @@ jobs:
         env:
           GH_AW_AGENT_OUTPUT: ${{ env.GH_AW_AGENT_OUTPUT }}
           GH_AW_NOOP_MAX: "1"
-          GH_AW_WORKFLOW_NAME: "Daily Find Critical Bugs"
+          GH_AW_WORKFLOW_NAME: "Weekly Find Critical Bugs"
         with:
           github-token: ${{ secrets.GH_AW_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
           script: |
@@ -1115,7 +1115,7 @@ jobs:
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
         env:
           GH_AW_AGENT_OUTPUT: ${{ env.GH_AW_AGENT_OUTPUT }}
-          GH_AW_WORKFLOW_NAME: "Daily Find Critical Bugs"
+          GH_AW_WORKFLOW_NAME: "Weekly Find Critical Bugs"
         with:
           github-token: ${{ secrets.GH_AW_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
           script: |
@@ -1128,10 +1128,10 @@ jobs:
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
         env:
           GH_AW_AGENT_OUTPUT: ${{ env.GH_AW_AGENT_OUTPUT }}
-          GH_AW_WORKFLOW_NAME: "Daily Find Critical Bugs"
+          GH_AW_WORKFLOW_NAME: "Weekly Find Critical Bugs"
           GH_AW_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           GH_AW_AGENT_CONCLUSION: ${{ needs.agent.result }}
-          GH_AW_WORKFLOW_ID: "daily-find-critical-bugs"
+          GH_AW_WORKFLOW_ID: "weekly-find-critical-bugs"
           GH_AW_SECRET_VERIFICATION_RESULT: ${{ needs.activation.outputs.secret_verification_result }}
           GH_AW_CHECKOUT_PR_SUCCESS: ${{ needs.agent.outputs.checkout_pr_success }}
           GH_AW_INFERENCE_ACCESS_ERROR: ${{ needs.agent.outputs.inference_access_error }}
@@ -1151,7 +1151,7 @@ jobs:
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
         env:
           GH_AW_AGENT_OUTPUT: ${{ env.GH_AW_AGENT_OUTPUT }}
-          GH_AW_WORKFLOW_NAME: "Daily Find Critical Bugs"
+          GH_AW_WORKFLOW_NAME: "Weekly Find Critical Bugs"
           GH_AW_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           GH_AW_AGENT_CONCLUSION: ${{ needs.agent.result }}
           GH_AW_NOOP_MESSAGE: ${{ steps.noop.outputs.noop_message }}
@@ -1168,7 +1168,7 @@ jobs:
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
         env:
           GH_AW_AGENT_OUTPUT: ${{ env.GH_AW_AGENT_OUTPUT }}
-          GH_AW_WORKFLOW_NAME: "Daily Find Critical Bugs"
+          GH_AW_WORKFLOW_NAME: "Weekly Find Critical Bugs"
           GH_AW_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         with:
           github-token: ${{ secrets.GH_AW_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
@@ -1190,12 +1190,12 @@ jobs:
       pull-requests: write
     timeout-minutes: 15
     env:
-      GH_AW_CALLER_WORKFLOW_ID: "${{ github.repository }}/daily-find-critical-bugs"
+      GH_AW_CALLER_WORKFLOW_ID: "${{ github.repository }}/weekly-find-critical-bugs"
       GH_AW_ENGINE_ID: "copilot"
       GH_AW_ENGINE_MODEL: "claude-4-6-sonnet"
       GH_AW_ENGINE_VERSION: "latest"
-      GH_AW_WORKFLOW_ID: "daily-find-critical-bugs"
-      GH_AW_WORKFLOW_NAME: "Daily Find Critical Bugs"
+      GH_AW_WORKFLOW_ID: "weekly-find-critical-bugs"
+      GH_AW_WORKFLOW_NAME: "Weekly Find Critical Bugs"
     outputs:
       code_push_failure_count: ${{ steps.process_safe_outputs.outputs.code_push_failure_count }}
       code_push_failure_errors: ${{ steps.process_safe_outputs.outputs.code_push_failure_errors }}
@@ -1284,7 +1284,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions: {}
     env:
-      GH_AW_WORKFLOW_ID_SANITIZED: dailyfindcriticalbugs
+      GH_AW_WORKFLOW_ID_SANITIZED: weeklyfindcriticalbugs
     steps:
       - name: Setup Scripts
         uses: github/gh-aw/actions/setup@e211c855a20aa6cf9297b411466e1c382a8686db # v0.55.0
