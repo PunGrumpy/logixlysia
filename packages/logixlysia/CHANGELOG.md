@@ -1,5 +1,11 @@
 # Changelog
 
+## 6.2.2
+
+### Patch Changes
+
+- f87971e: Fix display banner when using node adapter
+
 ## 6.2.1
 
 ### Patch Changes
