@@ -8,6 +8,23 @@ export type Logixlysia = Elysia<
   SingletonBase & { store: LogixlysiaStore }
 >
 
+export type OnStartContext = {
+  server?: { port?: number; hostname?: string; protocol?: string | null }
+}
+
+export function createOnStartHandler(options: Options) {
+  return ({ server }: OnStartContext) => {
+    if (server) {
+      startServer(server, options)
+    } else {
+      // Node adapter fallback
+      const port = Number(process.env.PORT) || 3000
+      const hostname = process.env.HOST || 'localhost'
+      startServer({ port, hostname, protocol: 'http' }, options)
+    }
+  }
+}
+
 export const logixlysia = (options: Options = {}): Logixlysia => {
   const didCustomLog = new WeakSet<Request>()
   const baseLogger = createLogger(options)
@@ -61,16 +78,7 @@ export const logixlysia = (options: Options = {}): Logixlysia => {
       .state('logger', logger)
       .state('pino', logger.pino)
       .state('beforeTime', BigInt(0))
-      .onStart(({ server }) => {
-        if (server) {
-          startServer(server, options)
-        } else {
-          // Node adapter fallback
-          const port = Number(process.env.PORT) || 3000
-          const hostname = process.env.HOST || 'localhost'
-          startServer({ port, hostname, protocol: 'http' }, options)
-        }
-      })
+      .onStart(createOnStartHandler(options))
       .onRequest(({ store }) => {
         store.beforeTime = process.hrtime.bigint()
       })

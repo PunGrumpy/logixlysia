@@ -1,10 +1,48 @@
 import { describe, expect, mock, test } from 'bun:test'
 import { Elysia } from 'elysia'
 
-import { logixlysia } from '../../src'
+import { createOnStartHandler, logixlysia } from '../../src'
 import type { Options } from '../../src/interfaces'
+import { spyConsole } from '../_helpers/console'
 
 describe('logixlysia plugin', () => {
+  test('onStart when server is undefined uses process.env.HOST and process.env.PORT and emits startup banner', () => {
+    const originalHost = process.env.HOST
+    const originalPort = process.env.PORT
+
+    const testHost = 'testhost.example.com'
+    const testPort = '9999'
+    process.env.HOST = testHost
+    process.env.PORT = testPort
+
+    const { spies, restore: restoreConsole } = spyConsole(['log'])
+
+    try {
+      const options: Options = {}
+      const onStartHandler = createOnStartHandler(options)
+
+      // Simulate the onStart path when server is undefined (e.g. Node adapter)
+      onStartHandler({ server: undefined })
+
+      // startServer is called with { hostname, port, protocol: 'http' } and emits the banner
+      expect(spies.log).toHaveBeenCalled()
+      const output = String(spies.log.mock.calls[0]?.[0] ?? '')
+      expect(output).toContain('🦊 Elysia is running at')
+      expect(output).toContain(`http://${testHost}:${testPort}`)
+    } finally {
+      if (originalHost !== undefined) {
+        process.env.HOST = originalHost
+      } else {
+        delete process.env.HOST
+      }
+      if (originalPort !== undefined) {
+        process.env.PORT = originalPort
+      } else {
+        delete process.env.PORT
+      }
+      restoreConsole()
+    }
+  })
   test('auto-logs once when no custom log was emitted', async () => {
     const transport = mock<
       (lvl: unknown, msg: unknown, meta?: unknown) => void
