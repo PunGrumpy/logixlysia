@@ -8,6 +8,11 @@ on:
       - opened
       - synchronize
 
+engine:
+  id: copilot
+  version: latest
+  model: gpt-5.3-codex
+
 permissions:
   actions: read
   contents: read
