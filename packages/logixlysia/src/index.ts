@@ -64,6 +64,11 @@ export const logixlysia = (options: Options = {}): Logixlysia => {
       .onStart(({ server }) => {
         if (server) {
           startServer(server, options)
+        } else {
+          // Node adapter fallback
+          const port = Number(process.env.PORT) || 3000
+          const hostname = process.env.HOST || 'localhost'
+          startServer({ port, hostname, protocol: 'http' }, options)
         }
       })
       .onRequest(({ store }) => {
