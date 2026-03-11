@@ -78,7 +78,16 @@ export const logixlysia = (options: Options = {}): Logixlysia => {
       .state('logger', logger)
       .state('pino', logger.pino)
       .state('beforeTime', BigInt(0))
-      .onStart(createOnStartHandler(options))
+      .onStart(({ server }): void => {
+        if (server) {
+          startServer(server, options)
+        } else {
+          // Node adapter fallback
+          const port = Number(process.env.PORT) || 3000
+          const hostname = process.env.HOST || 'localhost'
+          startServer({ port, hostname, protocol: 'http' }, options)
+        }
+      })
       .onRequest(({ store }) => {
         store.beforeTime = process.hrtime.bigint()
       })
