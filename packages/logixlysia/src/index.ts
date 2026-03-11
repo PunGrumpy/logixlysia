@@ -8,23 +8,6 @@ export type Logixlysia = Elysia<
   SingletonBase & { store: LogixlysiaStore }
 >
 
-export type OnStartContext = {
-  server?: { port?: number; hostname?: string; protocol?: string | null }
-}
-
-export function createOnStartHandler(options: Options) {
-  return ({ server }: OnStartContext) => {
-    if (server) {
-      startServer(server, options)
-    } else {
-      // Node adapter fallback
-      const port = Number(process.env.PORT) || 3000
-      const hostname = process.env.HOST || 'localhost'
-      startServer({ port, hostname, protocol: 'http' }, options)
-    }
-  }
-}
-
 export const logixlysia = (options: Options = {}): Logixlysia => {
   const didCustomLog = new WeakSet<Request>()
   const baseLogger = createLogger(options)
