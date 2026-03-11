@@ -4,7 +4,7 @@ description: |
 
 on:
   schedule:
-    - cron: "0 0 1 * *"
+    - cron: "weekly on sunday"
   workflow_dispatch:
 
 engine:
@@ -73,3 +73,4 @@ If fixed, include:
 - Bug and impact
 - Root cause
 - Fix and validation performed
+- Changeset created if applicable (if not, mention why not)
