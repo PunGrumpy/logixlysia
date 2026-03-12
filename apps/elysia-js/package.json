@@ -1,0 +1,16 @@
+{
+  "name": "elysia-js-example",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "PORT=3003 node --watch src/index.js",
+    "start": "node src/index.js",
+    "clean": "git clean -xdf .turbo logs node_modules"
+  },
+  "dependencies": {
+    "@elysiajs/node": "^1.4.5",
+    "elysia": "^1.4.22",
+    "logixlysia": "*"
+  }
+}

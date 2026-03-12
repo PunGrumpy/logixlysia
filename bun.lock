@@ -70,6 +70,15 @@
         "typescript": "^5.9.3",
       },
     },
+    "apps/elysia-js": {
+      "name": "elysia-js-example",
+      "version": "0.0.0",
+      "dependencies": {
+        "@elysiajs/node": "^1.4.5",
+        "elysia": "^1.4.22",
+        "logixlysia": "*",
+      },
+    },
     "apps/elysia-node": {
       "name": "elysia-node-example",
       "version": "0.0.0",
@@ -88,7 +97,7 @@
     },
     "packages/logixlysia": {
       "name": "logixlysia",
-      "version": "6.2.1",
+      "version": "6.2.2",
       "dependencies": {
         "chalk": "^5.6.2",
         "pino": "^10.3.0",
@@ -865,6 +874,8 @@
     "elysia": ["elysia@1.4.22", "", { "dependencies": { "cookie": "^1.1.1", "exact-mirror": "^0.2.6", "fast-decode-uri-component": "^1.0.1", "memoirist": "^0.4.0" }, "peerDependencies": { "@sinclair/typebox": ">= 0.34.0 < 1", "@types/bun": ">= 1.2.0", "file-type": ">= 20.0.0", "openapi-types": ">= 12.0.0", "typescript": ">= 5.0.0" }, "optionalPeers": ["@types/bun", "typescript"] }, "sha512-Q90VCb1RVFxnFaRV0FDoSylESQQLWgLHFmWciQJdX9h3b2cSasji9KWEUvaJuy/L9ciAGg4RAhUVfsXHg5K2RQ=="],
 
     "elysia-example": ["elysia-example@workspace:apps/elysia"],
+
+    "elysia-js-example": ["elysia-js-example@workspace:apps/elysia-js"],
 
     "elysia-node-example": ["elysia-node-example@workspace:apps/elysia-node"],
 
