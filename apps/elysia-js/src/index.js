@@ -1,27 +1,26 @@
 import node from '@elysiajs/node'
-import { Elysia } from 'elysia'
-import { logixlysia } from 'logixlysia'
+import { swagger } from '@elysiajs/swagger'
+import { Elysia, env } from 'elysia'
+import packageJson from 'logixlysia/package.json' with { type: 'json' }
+import { routers } from './routers/index.js'
 
-const port = Number(process.env.PORT ?? 3003)
-
-new Elysia({
+export const app = new Elysia({
   name: 'Elysia Node (JS) with Logixlysia',
   adapter: node()
 })
   .use(
-    logixlysia({
-      config: {
-        ip: true,
-        timestamp: {
-          translateTime: 'yyyy-mm-dd HH:MM:ss'
-        },
-        customLogFormat:
-          '🦊 {now} {level} {duration} {method} {pathname} {status} {message} {ip} {context}',
-        logFilePath: './logs/example.log'
+    swagger({
+      documentation: {
+        info: {
+          title: 'Elysia Node (JS) with Logixlysia',
+          version: packageJson.version
+        }
+      },
+      scalarConfig: {
+        theme: 'saturn'
       }
     })
   )
-  .get('/', () => ({
-    message: 'Welcome to Elysia Node (JS) with Logixlysia'
-  }))
-  .listen({ port })
+  .use(routers)
+
+app.listen({ port: env.PORT })
