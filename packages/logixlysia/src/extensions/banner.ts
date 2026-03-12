@@ -20,8 +20,8 @@ const centerText = (text: string, width: number): string => {
 }
 
 export const renderBanner = (message: string): string => {
-  const version = elysiaPkg.version ?? 'unknown'
-  const versionLine = `Elysia v${version}`
+  const version = elysiaPkg.version
+  const versionLine = version ? `Elysia v${version}` : 'Elysia'
   const contentWidth = Math.max(message.length, versionLine.length)
   const innerWidth = contentWidth + 4 // 2 spaces padding on both sides
 
