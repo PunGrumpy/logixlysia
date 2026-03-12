@@ -1,4 +1,13 @@
-import elysiaPkg from 'elysia/package.json' with { type: 'json' }
+import { createRequire } from 'node:module'
+
+const elysiaPkg: { version?: string } = (() => {
+  try {
+    const require = createRequire(import.meta.url)
+    return require('elysia/package.json') as { version?: string }
+  } catch {
+    return {}
+  }
+})()
 
 const centerText = (text: string, width: number): string => {
   if (text.length >= width) {
@@ -11,7 +20,8 @@ const centerText = (text: string, width: number): string => {
 }
 
 export const renderBanner = (message: string): string => {
-  const versionLine = `Elysia v${elysiaPkg.version}`
+  const version = elysiaPkg.version ?? 'unknown'
+  const versionLine = `Elysia v${version}`
   const contentWidth = Math.max(message.length, versionLine.length)
   const innerWidth = contentWidth + 4 // 2 spaces padding on both sides
 
