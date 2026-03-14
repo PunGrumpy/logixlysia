@@ -1,5 +1,11 @@
 # Changelog
 
+## 6.2.3
+
+### Patch Changes
+
+- 0889128: Fix `ERR_IMPORT_ATTRIBUTE_MISSING` error on Node.js by avoiding ESM `package.json` import and using `createRequire(import.meta.url)` for startup banner JSON loading instead.
+
 ## 6.2.2
 
 ### Patch Changes
