@@ -249,3 +249,35 @@ describe('createLogger', () => {
     })
   })
 })
+
+  test('logs file logging errors to stderr when file write fails', async () => {
+    const { spies, restore } = spyConsole(['error'])
+
+    const options: Options = {
+      config: {
+        logFilePath: '/invalid/nonexistent/path/that/cannot/be/written.log',
+        disableInternalLogger: true
+      }
+    }
+
+    const logger = createLogger(options)
+    const request = createMockRequest('http://localhost/test')
+
+    logger.info(request, 'test message')
+
+    // Give the promise time to settle
+    await new Promise(resolve => setTimeout(resolve, 50))
+
+    // Should have logged the error to stderr
+    expect(spies.error).toHaveBeenCalled()
+    const errorCalls = spies.error.mock.calls
+    const hasFileLoggingError = errorCalls.some(
+      (call: any) =>
+        call &&
+        call[0] &&
+        String(call[0]).includes('[Logixlysia] Failed to write log to file')
+    )
+    expect(hasFileLoggingError).toBe(true)
+
+    restore()
+  })
