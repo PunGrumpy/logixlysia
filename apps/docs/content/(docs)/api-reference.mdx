@@ -41,18 +41,12 @@ const app = new Elysia()
 Elysia instance type with Logixlysia store.
 
 ```ts
-type Logixlysia = Elysia<
-  '',
-  {
-    decorator: Record<string, never>
-    store: LogixlysiaStore
-    derive: Record<string, never>
-    resolve: Record<string, never>
-  }
->
+import type { LogixlysiaSingleton } from 'logixlysia'
+
+type Logixlysia = Elysia<'', LogixlysiaSingleton>
 ```
 
-The plugin is typed with an explicit singleton (`Record<string, never>` for unused singleton slots and a closed `store`) so TypeScript can keep precise `Context` and WebSocket `ws.data` types when you compose routes after `.use(logixlysia())`.
+The plugin uses an explicit `LogixlysiaSingleton`: a closed `store` plus empty `decorator` / `derive` / `resolve` slots that avoid both `SingletonBase`’s wide `Record<string, unknown>` and `Record<string, never>` (the latter would intersect Elysia’s `Context` keys with `never`). That keeps `Context` and WebSocket `ws.data` precise after `.use(logixlysia())`.
 
 ### `Options`
 
