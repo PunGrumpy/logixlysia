@@ -1,4 +1,5 @@
 import { describe, expect, mock, test } from 'bun:test'
+import type pino from 'pino'
 import type { Options, Pino } from '../../src/interfaces'
 import { createLogger } from '../../src/logger'
 import { spyConsole } from '../_helpers/console'
@@ -100,7 +101,7 @@ describe('createLogger', () => {
           }
         }
       },
-      fakePino
+      fakePino as unknown as typeof pino
     )
 
     expect(captured.options).toMatchObject({
@@ -125,7 +126,7 @@ describe('createLogger', () => {
           }
         }
       },
-      fakePino
+      fakePino as unknown as typeof pino
     )
 
     expect(captured.options).toMatchObject({
@@ -151,7 +152,7 @@ describe('createLogger', () => {
           }
         }
       },
-      fakePino
+      fakePino as unknown as typeof pino
     )
 
     expect(captured.options).toMatchObject({
@@ -179,7 +180,7 @@ describe('createLogger', () => {
           }
         }
       },
-      fakePino
+      fakePino as unknown as typeof pino
     )
 
     expect(captured.options).toMatchObject({
@@ -206,7 +207,7 @@ describe('createLogger', () => {
           }
         }
       },
-      fakePino
+      fakePino as unknown as typeof pino
     )
 
     expect(captured.options).toMatchObject({
@@ -236,7 +237,7 @@ describe('createLogger', () => {
           }
         }
       },
-      fakePino
+      fakePino as unknown as typeof pino
     )
 
     expect(captured.options).toMatchObject({
