@@ -88,8 +88,11 @@ export const createLogger = (
       const filePath = config?.logFilePath
       if (filePath) {
         logToFile({ filePath, level, request, data, store, options }).catch(
-          () => {
-            // Ignore errors
+          (error: unknown) => {
+            console.error(
+              '[Logixlysia] Failed to write log to file:',
+              error instanceof Error ? error.message : String(error)
+            )
           }
         )
       }
