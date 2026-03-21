@@ -481,7 +481,17 @@ export const formatLine = (input: {
   data: Record<string, unknown>
   store: StoreData
   options: Options
-}): string => formatLogOutput(input).main
+}): string =>
+  formatLogOutput({
+    ...input,
+    options: {
+      ...input.options,
+      config: {
+        ...(input.options.config ?? {}),
+        showContextTree: false
+      }
+    }
+  }).main
 
 export const logWithPino = (
   logger: Pino,
