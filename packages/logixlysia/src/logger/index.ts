@@ -10,7 +10,7 @@ import type {
 } from '../interfaces'
 import { logToTransports } from '../output'
 import { logToFile } from '../output/file'
-import { formatLine } from './create-logger'
+import { formatLogOutput } from './create-logger'
 import { handleHttpError } from './handle-http-error'
 
 export const createLogger = (
@@ -99,7 +99,15 @@ export const createLogger = (
       return
     }
 
-    const message = formatLine({ level, request, data, store, options })
+    const { main, contextLines } = formatLogOutput({
+      level,
+      request,
+      data,
+      store,
+      options
+    })
+    const message =
+      contextLines.length > 0 ? `${main}\n${contextLines.join('\n')}` : main
 
     switch (level) {
       case 'DEBUG': {
