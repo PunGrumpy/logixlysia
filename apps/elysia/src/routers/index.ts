@@ -34,4 +34,26 @@ export const routers = new Elysia()
   .use(customRouter)
   .use(pinoRouter)
   .use(statusRouter)
+  .ws('/ws', {
+    detail: {
+      summary: 'WebSocket echo',
+      description:
+        'Connect with a WebSocket client to `ws://localhost:<PORT>/ws`. Incoming messages are echoed back. Open/close events are logged via Logixlysia.',
+      tags: ['websocket']
+    },
+    open(ws) {
+      ws.data.store.logger.info(ws.data.request, 'WebSocket opened', {
+        demo: 'echo'
+      })
+    },
+    message(ws, message) {
+      ws.send(message)
+    },
+    close(ws, code, reason) {
+      ws.data.store.logger.info(ws.data.request, 'WebSocket closed', {
+        code,
+        reason
+      })
+    }
+  })
   .use(boomRouter)
