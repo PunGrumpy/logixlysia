@@ -4,6 +4,15 @@ import { Elysia } from 'elysia'
 import { logixlysia } from '../../src'
 
 describe('logixlysia WebSocket typing (#220)', () => {
+  test('infers plugin store on ws.data when .ws follows .use(logixlysia()) on a bare Elysia', () => {
+    new Elysia().use(logixlysia()).ws('/', {
+      open(ws) {
+        expectTypeOf(ws.data.store.logger).toHaveProperty('log')
+        expectTypeOf(ws.data.store.pino).not.toBeUndefined()
+      }
+    })
+  })
+
   test('preserves parent store keys on ws.data after .use(logixlysia())', () => {
     new Elysia()
       .state('marker', 42 as const)
