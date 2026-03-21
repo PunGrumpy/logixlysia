@@ -9,11 +9,13 @@ export const routers = new Elysia()
   .use(
     logixlysia({
       config: {
+        service: 'elysia-demo',
         timestamp: {
-          translateTime: 'yyyy-mm-dd HH:MM:ss'
+          translateTime: 'HH:MM:ss.SSS'
         },
-        customLogFormat:
-          '🦊 {now} {level} {duration} {method} {pathname} {status} {message} {ip} {context}',
+        slowThreshold: 500,
+        verySlowThreshold: 1000,
+        showContextTree: true,
         logFilePath: './logs/example.log',
         ip: true
       }
