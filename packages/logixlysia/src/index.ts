@@ -4,14 +4,22 @@ import type { LogixlysiaStore, Options } from './interfaces'
 import { createLogger } from './logger'
 
 /**
+ * Empty singleton slots must not use `Record<string, never>`: intersecting that with Elysia's `Context`
+ * makes every key (including `store`) become `never` because each key is merged with `never`.
+ */
+export interface EmptyElysiaSlot {
+  readonly __logixlysiaEmpty?: never
+}
+
+/**
  * Explicit singleton without Elysia's `SingletonBase` `Record<string, unknown>` on decorator/derive/resolve so
  * merged `Context` and WebSocket `ws.data` keep precise keys after `.use(logixlysia())`.
  */
-interface LogixlysiaSingleton {
-  decorator: Record<string, never>
+export interface LogixlysiaSingleton {
+  decorator: EmptyElysiaSlot
   store: LogixlysiaStore
-  derive: Record<string, never>
-  resolve: Record<string, never>
+  derive: EmptyElysiaSlot
+  resolve: EmptyElysiaSlot
 }
 
 // Elysia's `SingletonBase.store` is `Record<string, unknown>`; `LogixlysiaStore` is intentionally closed (see #220).
