@@ -1,5 +1,12 @@
 # Changelog
 
+## 6.2.3
+
+### Patch Changes
+
+- afd4c83: Fix TypeScript inference for WebSocket `ws.data` and context `store` after `.use(logixlysia())` ([#220](https://github.com/PunGrumpy/logixlysia/issues/220)).
+- 0889128: Fix `ERR_IMPORT_ATTRIBUTE_MISSING` error on Node.js by avoiding ESM `package.json` import and using `createRequire(import.meta.url)` for startup banner JSON loading instead.
+
 ## 6.2.2
 
 ### Patch Changes
