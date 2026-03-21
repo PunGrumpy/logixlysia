@@ -42,10 +42,17 @@ Elysia instance type with Logixlysia store.
 
 ```ts
 type Logixlysia = Elysia<
-  'Logixlysia',
-  SingletonBase & { store: LogixlysiaStore }
+  '',
+  {
+    decorator: Record<string, never>
+    store: LogixlysiaStore
+    derive: Record<string, never>
+    resolve: Record<string, never>
+  }
 >
 ```
+
+The plugin is typed with an explicit singleton (`Record<string, never>` for unused singleton slots and a closed `store`) so TypeScript can keep precise `Context` and WebSocket `ws.data` types when you compose routes after `.use(logixlysia())`.
 
 ### `Options`
 
@@ -82,7 +89,6 @@ type LogixlysiaStore = {
   logger: Logger
   pino: Pino
   beforeTime?: bigint
-  [key: string]: unknown
 }
 ```
 
@@ -91,6 +97,8 @@ type LogixlysiaStore = {
 - `logger`: Logger instance with helper methods
 - `pino`: Direct Pino logger instance
 - `beforeTime`: Request start time (bigint)
+
+Keep `LogixlysiaStore` a closed object type (no index signature). That helps merged handler and WebSocket types stay accurate.
 
 ### `Logger`
 
