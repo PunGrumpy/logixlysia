@@ -1,5 +1,5 @@
 import type { Options } from '../interfaces'
-import { renderBanner } from './banner'
+import { getLogixlysiaVersionLine, renderBanner } from './banner'
 
 export const startServer = (
   server: { port?: number; hostname?: string; protocol?: string | null },
@@ -17,6 +17,7 @@ export const startServer = (
 
   const url = `${protocol}://${hostname}:${port}`
   const message = `🦊 Elysia is running at ${url}`
+  const urlDisplayLine = `🦊  ${url}`
 
   const format = options.config?.startupMessageFormat ?? 'banner'
   if (format === 'simple') {
@@ -24,5 +25,5 @@ export const startServer = (
     return
   }
 
-  console.log(renderBanner(message))
+  console.log(renderBanner(urlDisplayLine, getLogixlysiaVersionLine()))
 }
