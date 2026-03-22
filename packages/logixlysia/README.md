@@ -22,15 +22,17 @@ const app = new Elysia({
   .use(
     logixlysia({
       config: {
+        service: 'api-server',
         showStartupMessage: true,
-        startupMessageFormat: 'simple',
+        startupMessageFormat: 'banner',
+        showContextTree: true,
+        contextDepth: 2,
+        slowThreshold: 500,
+        verySlowThreshold: 1000,
         timestamp: {
           translateTime: 'yyyy-mm-dd HH:MM:ss.SSS'
         },
-        logFilePath: './logs/example.log',
-        ip: true,
-        customLogFormat:
-          '🦊 {now} {level} {duration} {method} {pathname} {status} {message} {ip}'
+        ip: true
         }
     }))
     .get('/', () => {
