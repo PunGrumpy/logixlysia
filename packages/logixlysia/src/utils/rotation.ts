@@ -1,5 +1,5 @@
 import { promises as fs } from 'node:fs'
-import { basename, dirname } from 'node:path'
+import { basename, dirname, join } from 'node:path'
 
 const SIZE_REGEX = /^(\d+(?:\.\d+)?)(k|kb|m|mb|g|gb)$/i
 const INTERVAL_REGEX = /^(\d+)(h|d|w)$/i
@@ -87,5 +87,5 @@ export const getRotatedFiles = async (filePath: string): Promise<string[]> => {
 
   return entries
     .filter(name => name.startsWith(`${base}.`) && ROTATED_REGEX.test(name))
-    .map(name => `${dir}/${name}`)
+    .map(name => join(dir, name))
 }

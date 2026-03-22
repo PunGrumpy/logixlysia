@@ -45,8 +45,9 @@ export const handleHttpError = (
     const filePath = config?.logFilePath
     if (filePath) {
       logToFile({ filePath, level, request, data, store, options }).catch(
-        () => {
-          // Ignore errors
+        (error) => {
+          // Log file write errors to console to prevent silent data loss
+          console.error('[logixlysia] Failed to write to log file:', error)
         }
       )
     }
