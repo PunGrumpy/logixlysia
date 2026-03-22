@@ -2,29 +2,30 @@ import { DynamicCodeBlock } from 'fumadocs-ui/components/dynamic-codeblock'
 import { cn } from '@/lib/utils'
 
 const code = `import { Elysia } from 'elysia'
-import logixlysia from 'logixlysia' // or import { logixlysia } from 'logixlysia'
+import logixlysia from 'logixlysia'
 
-const app = new Elysia({
-    name: "Elysia with Logixlysia"
-})
+const app = new Elysia({ name: 'Elysia with Logixlysia' })
   .use(
     logixlysia({
       config: {
+        service: 'api-server',
         showStartupMessage: true,
-        startupMessageFormat: 'simple',
+        startupMessageFormat: 'banner',
+        showContextTree: true,
+        contextDepth: 2,
+        slowThreshold: 500,
+        verySlowThreshold: 1000,
         timestamp: {
           translateTime: 'yyyy-mm-dd HH:MM:ss.SSS'
         },
-        logFilePath: './logs/example.log',
-        ip: true,
-        customLogFormat:
-          '🦊 {now} {level} {duration} {method} {pathname} {status} {message} {ip}'
-        }
-    }))
-    .get('/', () => {
+        ip: true
+      }
+    })
+  )
+  .get('/', () => {
         return { message: 'Welcome to Basic Elysia with Logixlysia' }
     })
-        
+
 app.listen(3000)`
 
 export const Demo = () => (

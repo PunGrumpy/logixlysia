@@ -74,6 +74,17 @@ export interface Options {
     }
     customLogFormat?: string
 
+    /** Service name shown in `{service}` token (e.g. evlog-style `[my-app]`). */
+    service?: string
+    /** Duration (ms) below this uses green; default 500. */
+    slowThreshold?: number
+    /** Duration (ms) at or above this uses red + `{speed}` badge; default 1000. */
+    verySlowThreshold?: number
+    /** Render `data.context` as tree lines under the main log line; default true. */
+    showContextTree?: boolean
+    /** How many object nesting levels to expand in the context tree; default 1. */
+    contextDepth?: number
+
     // Filtering
     logFilter?: LogFilter
 

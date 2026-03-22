@@ -16,7 +16,9 @@ describe('startServer', () => {
     expect(spies.log).toHaveBeenCalledTimes(1)
     const output = spies.log.mock.calls[0]?.[0]
     expect(String(output)).toContain('┌')
-    expect(String(output)).toContain('🦊 Elysia is running at')
+    expect(String(output)).toContain('🦊')
+    expect(String(output)).toContain('http://localhost:3000')
+    expect(String(output)).toContain('logixlysia v')
 
     restore()
   })

@@ -9,6 +9,15 @@ const elysiaPkg: { version?: string } = (() => {
   }
 })()
 
+const logixlysiaPkg: { version?: string } = (() => {
+  try {
+    const require = createRequire(import.meta.url)
+    return require('../../package.json') as { version?: string }
+  } catch {
+    return {}
+  }
+})()
+
 const centerText = (text: string, width: number): string => {
   if (text.length >= width) {
     return text.slice(0, width)
@@ -19,18 +28,65 @@ const centerText = (text: string, width: number): string => {
   return `${' '.repeat(left)}${text}${' '.repeat(right)}`
 }
 
-export const renderBanner = (message: string): string => {
+type RowSpec =
+  | { kind: 'empty' }
+  | { kind: 'center'; text: string }
+  | { kind: 'left'; text: string }
+
+/**
+ * Box banner: Elysia version (centered), URL line, optional logixlysia version line.
+ */
+export const renderBanner = (
+  urlDisplayLine: string,
+  logixlysiaLine: string | null
+): string => {
   const version = elysiaPkg.version
   const versionLine = version ? `Elysia v${version}` : 'Elysia'
-  const contentWidth = Math.max(message.length, versionLine.length)
-  const innerWidth = contentWidth + 4 // 2 spaces padding on both sides
+
+  const rows: RowSpec[] = [
+    { kind: 'empty' },
+    { kind: 'center', text: versionLine },
+    { kind: 'empty' },
+    { kind: 'left', text: urlDisplayLine }
+  ]
+  if (logixlysiaLine) {
+    rows.push({ kind: 'left', text: logixlysiaLine })
+  }
+  rows.push({ kind: 'empty' })
+
+  const contentWidth = Math.max(
+    versionLine.length,
+    urlDisplayLine.length,
+    ...(logixlysiaLine ? [logixlysiaLine.length] : [0])
+  )
+  const innerWidth = contentWidth + 4
 
   const top = `┌${'─'.repeat(innerWidth)}┐`
   const bot = `└${'─'.repeat(innerWidth)}┘`
-  const empty = `│${' '.repeat(innerWidth)}│`
+  const emptyRow = `│${' '.repeat(innerWidth)}│`
 
-  const versionRow = `│${centerText(versionLine, innerWidth)}│`
-  const messageRow = `│  ${message}${' '.repeat(Math.max(0, innerWidth - message.length - 4))}  │`
+  const out: string[] = [top]
+  for (const row of rows) {
+    if (row.kind === 'empty') {
+      out.push(emptyRow)
+      continue
+    }
+    if (row.kind === 'center') {
+      out.push(`│${centerText(row.text, innerWidth)}│`)
+      continue
+    }
+    const text = row.text
+    const padding = Math.max(0, innerWidth - text.length - 4)
+    out.push(`│  ${text}${' '.repeat(padding)}  │`)
+  }
+  out.push(bot)
+  return out.join('\n')
+}
 
-  return [top, empty, versionRow, empty, messageRow, empty, bot].join('\n')
+export const getLogixlysiaVersionLine = (): string | null => {
+  const v = logixlysiaPkg.version
+  if (!v) {
+    return null
+  }
+  return `     logixlysia v${v}`
 }

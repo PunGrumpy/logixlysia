@@ -53,12 +53,17 @@ Available placeholders:
 | Placeholder | Description | Example |
 | ----------- | ----------- | ----------- |
 | `{now}` | Current timestamp | `2025-12-21 10:00:00` |
-| `{level}` | Log level (INFO, WARNING, ERROR) | `INFO` |
-| `{duration}` | Request duration in milliseconds | `100ms` |
+| `{level}` | Log level (`DEBUG`, `INFO`, `WARNING`, `ERROR`) | `INFO` |
+| `{duration}` | Request duration (formatted) | `12ms`, `1.5s` |
 | `{method}` | HTTP method | `GET` |
-| `{pathname}` | Request path | `/users` |
+| `{pathname}` | Request path (same as `{path}`) | `/users` |
 | `{status}` | Response status code | `200` |
+| `{statusText}` | HTTP status text | `Not Found` |
 | `{message}` | Custom message | `User profile accessed` |
+| `{icon}` | Logixlysia fox `🦊` (level-colored chip when colors + TTY) | `🦊` |
+| `{speed}` | Slow-request badge when duration ≥ `verySlowThreshold` | ` ⚡ slow` |
+| `{service}` | Service prefix from `config.service` | `[my-api] ` |
+| `{context}` | Context JSON on main line when tree is off / empty | `{"id":1}` |
 | `{ip}` | Client IP address | `127.0.0.1` |
 | `{epoch}` | Unix timestamp | `1734729600` |
 

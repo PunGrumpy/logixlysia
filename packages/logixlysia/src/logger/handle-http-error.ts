@@ -2,7 +2,7 @@ import type { LogLevel, Options, RequestInfo, StoreData } from '../interfaces'
 import { logToTransports } from '../output'
 import { logToFile } from '../output/file'
 import { parseError } from '../utils/error'
-import { formatLine } from './create-logger'
+import { formatLogOutput } from './create-logger'
 
 const isErrorWithStatus = (
   value: unknown
@@ -56,6 +56,14 @@ export const handleHttpError = (
     return
   }
 
-  const formattedMessage = formatLine({ level, request, data, store, options })
+  const { main, contextLines } = formatLogOutput({
+    level,
+    request,
+    data,
+    store,
+    options
+  })
+  const formattedMessage =
+    contextLines.length > 0 ? `${main}\n${contextLines.join('\n')}` : main
   console.error(formattedMessage)
 }
