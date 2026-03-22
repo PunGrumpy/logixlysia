@@ -62,6 +62,73 @@ export const parseRetention = (
   return { type: 'time', value: parseInterval(value) }
 }
 
+// Matches the local-time timestamp embedded in rotated filenames by getRotatedFileName.
+const ROTATED_TS_REGEX =
+  /\.(\d{4})-(\d{2})-(\d{2})-(\d{2})-(\d{2})-(\d{2})(?:\.gz)?$/
+
+export const parseRotatedTimestamp = (filePath: string): number | null => {
+  const match = filePath.match(ROTATED_TS_REGEX)
+  if (!match) {
+    return null
+  }
+  const [, yyyy, mm, dd, HH, MM, ss] = match
+  return new Date(
+    Number(yyyy),
+    Number(mm) - 1,
+    Number(dd),
+    Number(HH),
+    Number(MM),
+    Number(ss)
+  ).getTime()
+}
+
+export const shouldRotateByInterval = async (
+  filePath: string,
+  interval: string
+): Promise<boolean> => {
+  const intervalMs = parseInterval(interval)
+  const rotated = await getRotatedFiles(filePath)
+
+  let lastRotationTime: number
+
+  if (rotated.length > 0) {
+    // Derive last rotation time from the timestamp embedded in the filenames —
+    // this is more reliable than filesystem mtime because it never changes after
+    // the file is created.
+    let newest = 0
+    for (const f of rotated) {
+      const ts = parseRotatedTimestamp(f)
+      if (ts !== null && ts > newest) {
+        newest = ts
+      }
+    }
+
+    if (newest > 0) {
+      lastRotationTime = newest
+    } else {
+      // Filename parsing failed — fall back to the most recent mtime.
+      const stats = await Promise.all(
+        rotated.map(async p => ({ path: p, stat: await fs.stat(p) }))
+      )
+      lastRotationTime = Math.max(...stats.map(s => s.stat.mtimeMs))
+    }
+  } else {
+    // No previous rotations yet — use the current log file's mtime as a proxy
+    // for when logging started.  An empty or missing file is not worth rotating.
+    try {
+      const stat = await fs.stat(filePath)
+      if (stat.size === 0) {
+        return false
+      }
+      lastRotationTime = stat.mtimeMs
+    } catch {
+      return false
+    }
+  }
+
+  return Date.now() - lastRotationTime > intervalMs
+}
+
 export const shouldRotateBySize = async (
   filePath: string,
   maxSizeBytes: number
