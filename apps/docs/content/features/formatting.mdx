@@ -5,6 +5,8 @@ description: Create custom log message formats
 
 Customize log message formats using placeholders to match your logging needs.
 
+If you omit `customLogFormat`, Logixlysia uses a built-in default that includes the fox `{icon}`, optional `{service}` prefix, colored method and duration, `{speed}` for slow requests, and other common fields.
+
 ## Basic Usage
 
 ```ts
@@ -20,12 +22,17 @@ logixlysia({
 | Placeholder | Description |
 |-------------|-------------|
 | `{now}` | Current date and time |
-| `{level}` | Log level (INFO, WARNING, ERROR) |
-| `{duration}` | Request duration in milliseconds |
-| `{method}` | HTTP method |
-| `{pathname}` | Request path |
+| `{level}` | Log level (`DEBUG`, `INFO`, `WARNING`, `ERROR`); with colors, level-colored background chip |
+| `{duration}` | Request duration (e.g. `12ms`, `1.5s`); with colors, green / yellow / red based on `slowThreshold` and `verySlowThreshold` |
+| `{method}` | HTTP method (padded in the default format) |
+| `{pathname}` | Request path (alias: `{path}`) |
 | `{status}` | Response status code |
+| `{statusText}` | Status text from Node’s `http.STATUS_CODES` (e.g. `Not Found` for 404) |
 | `{message}` | Custom message |
+| `{icon}` | Logixlysia fox `🦊`; plain emoji when `useColors` is off or output is not a TTY; with colors on a TTY, a **level-colored background** around the fox (green INFO, yellow WARNING, red ERROR, blue DEBUG) |
+| `{speed}` | When duration ≥ `verySlowThreshold`, appends ` ⚡ slow` (yellow with colors) |
+| `{service}` | From `config.service`, rendered as `[name] ` (dim with colors); empty if unset |
+| `{context}` | JSON string of `data.context` when the context tree is off or context is empty; omitted on the main line when the context tree is shown (see below) |
 | `{ip}` | Client IP address (from `x-forwarded-for` or `x-real-ip`; empty when testing locally without these headers) |
 | `{epoch}` | Unix timestamp |
 
@@ -42,16 +49,34 @@ Output:
 GET /api/users 200
 ```
 
-### Detailed Format
+### Branded line with `{icon}` and `{service}`
+
+Use `{icon}` for the Logixlysia fox (level styling applies when colors and a TTY are available). Pair with `service` in config:
 
 ```ts
-customLogFormat: '🦊 {now} {level} {duration}ms {method} {pathname} {status} {ip}'
+logixlysia({
+  config: {
+    service: 'my-api',
+    customLogFormat: '{now} {service}{icon} {method} {pathname} {status} {duration} {message}{speed}'
+  }
+})
 ```
 
-Output:
+With `useColors: false` or non-TTY output, a line can look like:
+
 ```
-🦊 2025-04-13 15:00:19 INFO 123.45ms GET /api/users 200 192.168.1.1
+2025-04-13T15:00:19.123Z [my-api]🦊 GET     /api/users 200 12ms User viewed profile
 ```
+
+On a color terminal, the fox appears inside a colored chip by level, and slow requests append `⚡ slow` via `{speed}` when duration ≥ `verySlowThreshold` (default `1000`).
+
+### Status text
+
+```ts
+customLogFormat: '{method} {pathname} {status} {statusText}'
+```
+
+Example values: `404 Not Found`, `500 Internal Server Error`.
 
 ### Timestamp Format
 
@@ -67,6 +92,32 @@ logixlysia({
   }
 })
 ```
+
+## Context tree
+
+When `showContextTree` is `true` (default), object `context` passed to `logger.info` / `warn` / `error` / `debug` is printed **under** the main line as tree branches, instead of being inlined into `{context}` on that line.
+
+- Each row is two spaces, `├─` or `└─`, the key (cyan when colors are on), two spaces, then the value.
+- For `ERROR` logs, an `error` row is appended when an error object is present (parsed message).
+- Set `contextDepth` (default `1`) to flatten nested objects into dotted keys (e.g. `user.id`) up to that depth.
+
+```ts
+logixlysia({
+  config: {
+    showContextTree: true,
+    contextDepth: 2
+  }
+})
+```
+
+Example (no ANSI colors), after a main line like `… GET /orders 500 3ms Checkout failed`:
+
+```
+  ├─ orderId  ord_123
+  └─ error  Card declined
+```
+
+Set `showContextTree: false` to disable the tree and put stringified context back on the main line via `{context}` when you include that token.
 
 ## Error Log Formatting
 

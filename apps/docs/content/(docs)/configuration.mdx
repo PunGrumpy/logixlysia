@@ -99,16 +99,77 @@ Custom log message format using placeholders.
 customLogFormat: '{now} {level} {duration}ms {method} {pathname} {status}'
 ```
 
+When `customLogFormat` is omitted, Logixlysia uses a built-in default that includes `{now}`, `{service}`, `{icon}`, `{method}`, `{pathname}`, `{status}`, `{duration}`, `{message}`, and `{speed}`.
+
 Available placeholders:
 - `{now}` - Current timestamp
 - `{level}` - Log level
-- `{duration}` - Request duration
+- `{duration}` - Request duration (formatted, e.g. `12ms`, `1.5s`)
 - `{method}` - HTTP method
 - `{pathname}` - Request path
-- `{status}` - Response status
+- `{status}` - Response status code
+- `{statusText}` - HTTP status text from Node’s `http.STATUS_CODES` (e.g. `Not Found` for 404)
 - `{message}` - Custom message
+- `{icon}` - Logixlysia fox (`🦊`); with colors enabled, a level-colored background chip around the emoji
+- `{speed}` - When duration is at or above `verySlowThreshold`, appends `⚡ slow` (yellow when colors are on)
+- `{service}` - Service label from the `service` config option, shown as `[name] ` (dim when colors are on); empty if unset
 - `{ip}` - Client IP (from `x-forwarded-for` or `x-real-ip`; see `ip` option)
 - `{epoch}` - Unix timestamp
+
+### `service`
+
+Service name used by the `{service}` placeholder (evlog-style `[my-app]` prefix).
+
+- **Type:** `string`
+- **Default:** `undefined` (no prefix)
+
+```ts
+service: 'my-api'
+```
+
+### `slowThreshold`
+
+Duration threshold (ms) for **green** duration text when colors are enabled. Between this value and `verySlowThreshold`, duration is **yellow**.
+
+- **Type:** `number`
+- **Default:** `500`
+
+```ts
+slowThreshold: 500
+```
+
+### `verySlowThreshold`
+
+Duration threshold (ms) at or above which duration is **red** (bold when colors are on) and the `{speed}` token adds `⚡ slow`.
+
+- **Type:** `number`
+- **Default:** `1000`
+
+```ts
+verySlowThreshold: 1000
+```
+
+### `showContextTree`
+
+When `true`, structured `context` passed to logger helpers is printed as **tree lines** under the main log line instead of being crammed into `{message}` on the same line.
+
+- **Type:** `boolean`
+- **Default:** `true`
+
+```ts
+showContextTree: true
+```
+
+### `contextDepth`
+
+How many levels of nested objects to expand in the context tree.
+
+- **Type:** `number`
+- **Default:** `1`
+
+```ts
+contextDepth: 2
+```
 
 ## Output Options
 

@@ -63,6 +63,11 @@ type Options = {
       translateTime?: string
     }
     customLogFormat?: string
+    service?: string
+    slowThreshold?: number
+    verySlowThreshold?: number
+    showContextTree?: boolean
+    contextDepth?: number
     transports?: Transport[]
     useTransportsOnly?: boolean
     disableInternalLogger?: boolean
