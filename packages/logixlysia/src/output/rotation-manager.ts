@@ -39,10 +39,19 @@ export const rotateFile = async (filePath: string): Promise<string> => {
 }
 
 export const compressFile = async (filePath: string): Promise<void> => {
-  const content = await fs.readFile(filePath)
-  const compressed = await gzipAsync(content)
-  await fs.writeFile(`${filePath}.gz`, compressed)
-  await fs.rm(filePath, { force: true })
+  try {
+    const content = await fs.readFile(filePath)
+    const compressed = await gzipAsync(content)
+    await fs.writeFile(`${filePath}.gz`, compressed)
+    await fs.rm(filePath, { force: true })
+  } catch (error) {
+    // Log compression errors but don't crash - the uncompressed file will remain
+    console.error(
+      `[logixlysia] Failed to compress log file ${filePath}:`,
+      error
+    )
+    throw error // Re-throw to let caller decide how to handle
+  }
 }
 
 export const shouldRotate = async (
@@ -65,9 +74,17 @@ const cleanupByCount = async (
     return
   }
 
-  const stats = await Promise.all(
+  // Use Promise.allSettled to handle files that may have been deleted concurrently
+  const statsResults = await Promise.allSettled(
     rotated.map(async p => ({ path: p, stat: await fs.stat(p) }))
   )
+  
+  // Filter out failed stat operations (files may have been deleted)
+  const stats = statsResults
+    .filter((result): result is PromiseFulfilledResult<{ path: string; stat: any }> => 
+      result.status === 'fulfilled'
+    )
+    .map(result => result.value)
 
   stats.sort((a, b) => b.stat.mtimeMs - a.stat.mtimeMs)
   const toDelete = stats.slice(maxFiles)
@@ -84,9 +101,18 @@ const cleanupByTime = async (
   }
 
   const now = Date.now()
-  const stats = await Promise.all(
+  
+  // Use Promise.allSettled to handle files that may have been deleted concurrently
+  const statsResults = await Promise.allSettled(
     rotated.map(async p => ({ path: p, stat: await fs.stat(p) }))
   )
+  
+  // Filter out failed stat operations (files may have been deleted)
+  const stats = statsResults
+    .filter((result): result is PromiseFulfilledResult<{ path: string; stat: any }> => 
+      result.status === 'fulfilled'
+    )
+    .map(result => result.value)
 
   const toDelete = stats.filter(({ stat }) => now - stat.mtimeMs > maxAgeMs)
   await Promise.all(toDelete.map(({ path }) => fs.rm(path, { force: true })))
@@ -105,16 +131,32 @@ export const performRotation = async (
   if (shouldCompress) {
     const algo = config.compression ?? 'gzip'
     if (algo === 'gzip') {
-      await compressFile(rotated)
+      try {
+        await compressFile(rotated)
+      } catch (error) {
+        // Compression failed but rotation succeeded - log and continue
+        console.error(
+          `[logixlysia] Compression failed for ${rotated}, keeping uncompressed file:`,
+          error
+        )
+      }
     }
   }
 
   if (config.maxFiles !== undefined) {
     const retention = parseRetention(config.maxFiles)
-    if (retention.type === 'count') {
-      await cleanupByCount(filePath, retention.value)
-    } else {
-      await cleanupByTime(filePath, retention.value)
+    try {
+      if (retention.type === 'count') {
+        await cleanupByCount(filePath, retention.value)
+      } else {
+        await cleanupByTime(filePath, retention.value)
+      }
+    } catch (error) {
+      // Cleanup failed but rotation succeeded - log and continue
+      console.error(
+        `[logixlysia] Cleanup failed for ${filePath}:`,
+        error
+      )
     }
   }
 

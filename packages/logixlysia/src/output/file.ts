@@ -1,8 +1,32 @@
 import { appendFile } from 'node:fs/promises'
-import { dirname } from 'node:path'
+import { dirname, resolve, normalize } from 'node:path'
 import type { LogLevel, Options, RequestInfo, StoreData } from '../interfaces'
 import { ensureDir } from './fs'
 import { performRotation, shouldRotate } from './rotation-manager'
+
+/**
+ * Validates that a file path doesn't contain path traversal attempts
+ * and is an absolute path or safe relative path
+ */
+const validateLogFilePath = (filePath: string): void => {
+  const normalized = normalize(filePath)
+  const resolved = resolve(normalized)
+  
+  // Check for path traversal attempts
+  if (normalized.includes('..')) {
+    throw new Error(
+      `[logixlysia] Invalid log file path: path traversal not allowed (${filePath})`
+    )
+  }
+  
+  // Warn if the resolved path goes outside the current working directory
+  // This is a soft check - we allow it but log a warning
+  if (!resolved.startsWith(process.cwd()) && !normalized.startsWith('/')) {
+    console.warn(
+      `[logixlysia] Warning: Log file path '${filePath}' resolves outside working directory. Use absolute paths for clarity.`
+    )
+  }
+}
 
 interface LogToFileInput {
   filePath: string
@@ -55,6 +79,10 @@ export const logToFile = async (
       : args[0]
 
   const { filePath, level, request, data, store, options } = input
+  
+  // Validate file path to prevent path traversal attacks
+  validateLogFilePath(filePath)
+  
   const config = options.config
   const useTransportsOnly = config?.useTransportsOnly === true
   const disableFileLogging = config?.disableFileLogging === true
