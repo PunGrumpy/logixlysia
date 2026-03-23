@@ -14,11 +14,11 @@ import { Card } from '@/components/ui/card'
 import { Section } from './section'
 
 interface StatCardProps {
-  title: string
-  value: string | number
+  delay?: number
   description?: string
   icon?: ReactNode
-  delay?: number
+  title: string
+  value: string | number
 }
 
 const StatCard = ({

@@ -2,6 +2,7 @@ import './globals.css'
 import { RootProvider } from 'fumadocs-ui/provider/next'
 import type { ReactNode } from 'react'
 import { Toaster } from '@/components/ui/sonner'
+import { TooltipProvider } from '@/components/ui/tooltip'
 import { fonts } from '@/lib/fonts'
 import { AnalyticsProvider } from '@/providers/analytics'
 
@@ -19,7 +20,7 @@ const Layout = ({ children }: LayoutProps) => (
             enableSystem: true
           }}
         >
-          {children}
+          <TooltipProvider>{children}</TooltipProvider>
         </RootProvider>
         <Toaster />
       </AnalyticsProvider>

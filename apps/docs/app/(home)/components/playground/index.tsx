@@ -55,15 +55,15 @@ export interface ContextLine {
 }
 
 export interface LogEntry {
-  timestamp: string
+  contextLines: ContextLine[]
   durationMs: number
+  message: string
   method: HttpMethod
   pathname: string
-  status: number
-  type: LogType
   service: string
-  message: string
-  contextLines: ContextLine[]
+  status: number
+  timestamp: string
+  type: LogType
 }
 
 const SLOW_MS = 500
@@ -413,7 +413,7 @@ const ContextTree = ({ lines }: { lines: ContextLine[] }) => {
         return (
           <div
             className="whitespace-pre-wrap font-mono text-[10px] leading-snug sm:text-xs"
-            key={`${line.key}-${line.value}-${i}`}
+            key={`${line.key}-${line.value}-${line.key}`}
           >
             <span className="text-muted-foreground/80">{`  ${branch} `}</span>
             <span className="text-cyan-400">{line.key}</span>
@@ -508,10 +508,10 @@ const Output = () => {
   return (
     <code className="flex animate-marquee-vertical flex-col will-change-transform">
       <div className="flex flex-col">
-        {repeatedLogs.flatMap((logList, repeatIndex) =>
-          logList.map((log, logIndex) => (
+        {repeatedLogs.flatMap(logList =>
+          logList.map(log => (
             <LogBlock
-              key={`${repeatIndex}-${logIndex}-${log.method}-${log.pathname}-${log.status}-${log.type}-${log.timestamp}-${log.durationMs}`}
+              key={`${log.method}-${log.pathname}-${log.status}-${log.type}-${log.timestamp}-${log.durationMs}`}
               log={log}
             />
           ))

@@ -17,9 +17,9 @@ export interface EmptyElysiaSlot {
  */
 export interface LogixlysiaSingleton {
   decorator: EmptyElysiaSlot
-  store: LogixlysiaStore
   derive: EmptyElysiaSlot
   resolve: EmptyElysiaSlot
+  store: LogixlysiaStore
 }
 
 // Elysia's `SingletonBase.store` is `Record<string, unknown>`; `LogixlysiaStore` is intentionally closed (see #220).

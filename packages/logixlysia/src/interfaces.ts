@@ -14,9 +14,9 @@ export interface StoreData {
 }
 
 export interface LogixlysiaStore {
+  beforeTime?: bigint
   logger: Logger
   pino: Pino
-  beforeTime?: bigint
 }
 
 export interface Transport {
@@ -28,20 +28,20 @@ export interface Transport {
 }
 
 export interface LogRotationConfig {
+  compress?: boolean
+  compression?: 'gzip'
   /**
-   * Max log file size before rotation, e.g. '10m', '5k', or a byte count.
+   * Rotate at a fixed interval, e.g. '1d', '12h'.
    */
-  maxSize?: string | number
+  interval?: string
   /**
    * Keep at most N files or keep files for a duration like '7d'.
    */
   maxFiles?: number | string
   /**
-   * Rotate at a fixed interval, e.g. '1d', '12h'.
+   * Max log file size before rotation, e.g. '10m', '5k', or a byte count.
    */
-  interval?: string
-  compress?: boolean
-  compression?: 'gzip'
+  maxSize?: string | number
 }
 
 export interface LogFilter {
@@ -111,34 +111,34 @@ export class HttpError extends Error {
 }
 
 export interface Logger {
-  pino: Pino
-  log: (
-    level: LogLevel,
+  debug: (
     request: RequestInfo,
-    data: Record<string, unknown>,
-    store: StoreData
+    message: string,
+    context?: Record<string, unknown>
+  ) => void
+  error: (
+    request: RequestInfo,
+    message: string,
+    context?: Record<string, unknown>
   ) => void
   handleHttpError: (
     request: RequestInfo,
     error: unknown,
     store: StoreData
   ) => void
-  debug: (
-    request: RequestInfo,
-    message: string,
-    context?: Record<string, unknown>
-  ) => void
   info: (
     request: RequestInfo,
     message: string,
     context?: Record<string, unknown>
   ) => void
-  warn: (
+  log: (
+    level: LogLevel,
     request: RequestInfo,
-    message: string,
-    context?: Record<string, unknown>
+    data: Record<string, unknown>,
+    store: StoreData
   ) => void
-  error: (
+  pino: Pino
+  warn: (
     request: RequestInfo,
     message: string,
     context?: Record<string, unknown>

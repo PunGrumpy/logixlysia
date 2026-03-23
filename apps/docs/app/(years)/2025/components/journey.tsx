@@ -5,9 +5,9 @@ import { cn } from '@/lib/utils'
 import { Section } from './section'
 
 interface Milestone {
+  description: string
   month: string
   title: string
-  description: string
 }
 
 const milestones: Milestone[] = [

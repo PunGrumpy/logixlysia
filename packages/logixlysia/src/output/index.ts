@@ -1,11 +1,11 @@
 import type { LogLevel, Options, RequestInfo, StoreData } from '../interfaces'
 
 interface LogToTransportsInput {
-  level: LogLevel
-  request: RequestInfo
   data: Record<string, unknown>
-  store: StoreData
+  level: LogLevel
   options: Options
+  request: RequestInfo
+  store: StoreData
 }
 
 export const logToTransports = (

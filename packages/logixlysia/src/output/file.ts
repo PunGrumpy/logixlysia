@@ -5,12 +5,12 @@ import { ensureDir } from './fs'
 import { performRotation, shouldRotate } from './rotation-manager'
 
 interface LogToFileInput {
+  data: Record<string, unknown>
   filePath: string
   level: LogLevel
-  request: RequestInfo
-  data: Record<string, unknown>
-  store: StoreData
   options: Options
+  request: RequestInfo
+  store: StoreData
 }
 
 export const logToFile = async (

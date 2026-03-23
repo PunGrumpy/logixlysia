@@ -21,8 +21,8 @@ const DEFAULT_LOG_FORMAT =
   '{now} {service}{icon} {method} {pathname} {status} {duration} {message}{speed}'
 
 export interface FormattedLogOutput {
-  main: string
   contextLines: string[]
+  main: string
 }
 
 const shouldUseColors = (options: Options): boolean => {

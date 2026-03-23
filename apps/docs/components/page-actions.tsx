@@ -22,8 +22,8 @@ import {
 import { Button } from './ui/button'
 
 interface ViewOptionsProps {
-  markdownUrl: string
   githubUrl: string
+  markdownUrl: string
 }
 
 export const ViewOptions = ({ markdownUrl, githubUrl }: ViewOptionsProps) => {
