@@ -118,7 +118,9 @@ const ChangelogPage = async () => {
         </div>
       </main>
     )
-  } catch {
+  } catch (error) {
+    console.error('Failed to load changelog releases', error)
+
     return (
       <main className="container max-w-4xl py-10 md:py-16">
         <h1 className="font-light font-serif text-4xl md:text-5xl">
