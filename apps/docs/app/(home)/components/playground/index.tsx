@@ -533,11 +533,11 @@ export const Playground = () => (
     <div className="size-full px-3 pt-6 pb-3 sm:px-12 sm:pt-12 sm:pb-6 md:px-16">
       <div
         className={cn(
-          'overflow-hidden rounded-lg border border-white/10 bg-zinc-950/90 shadow-[0_0_0_1px_rgba(255,255,255,0.04)_inset] backdrop-blur-md',
+          'overflow-hidden rounded-lg bg-background/60 shadow-[0_0_0_1px_rgba(255,255,255,0.04)_inset] backdrop-blur-md',
           'sm:rounded-xl'
         )}
       >
-        <div className="flex items-center gap-2 border-white/10 border-b bg-black/40 px-3 py-2 sm:px-4">
+        <div className="flex items-center gap-2 border border-b bg-background/40 px-3 py-2 sm:px-4">
           <span aria-hidden className="size-2.5 rounded-full bg-red-500/90" />
           <span
             aria-hidden
