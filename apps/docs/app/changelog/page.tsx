@@ -1,6 +1,7 @@
 import { Link } from 'fumadocs-core/framework'
 import type { Metadata } from 'next'
 import { createMetadata } from '@/lib/metadata'
+import { ReleaseMarkdown } from './release-markdown'
 
 const repositoryOwner = process.env.GITHUB_REPO_OWNER ?? 'PunGrumpy'
 const repositoryName = process.env.GITHUB_REPO_NAME ?? 'logixlysia'
@@ -101,9 +102,9 @@ const ChangelogPage = async () => {
                 Released on {formatReleaseDate(release.published_at)}
               </p>
 
-              <pre className="overflow-x-auto whitespace-pre-wrap rounded bg-muted/50 p-4 text-sm">
+              <ReleaseMarkdown>
                 {release.body?.trim() || 'No changelog notes provided.'}
-              </pre>
+              </ReleaseMarkdown>
 
               <Link
                 className="inline-flex text-sm underline underline-offset-4"
