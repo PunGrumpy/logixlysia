@@ -500,21 +500,26 @@ const Output = () => {
 
   const repeatedLogs = useMemo(() => {
     if (seed === null) {
-      return Array.from({ length: LOG_REPEAT_COUNT }, () => logs)
+      return Array.from({ length: LOG_REPEAT_COUNT }, (_, listIndex) =>
+        logs.map((log, logIndex) => ({
+          ...log,
+          renderId: `static-${listIndex}-${logIndex}-${log.timestamp}`
+        }))
+      )
     }
-    return createRepeatedRandomLogs(seed)
+    return createRepeatedRandomLogs(seed).map((logList, listIndex) =>
+      logList.map((log, logIndex) => ({
+        ...log,
+        renderId: `seed-${seed}-${listIndex}-${logIndex}-${log.timestamp}`
+      }))
+    )
   }, [seed])
 
   return (
     <code className="flex animate-marquee-vertical flex-col will-change-transform">
       <div className="flex flex-col">
         {repeatedLogs.flatMap(logList =>
-          logList.map(log => (
-            <LogBlock
-              key={`${log.method}-${log.pathname}-${log.status}-${log.type}-${log.timestamp}-${log.durationMs}`}
-              log={log}
-            />
-          ))
+          logList.map(log => <LogBlock key={log.renderId} log={log} />)
         )}
       </div>
     </code>
