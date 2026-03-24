@@ -23,6 +23,11 @@ export const baseOptions = (): BaseLayoutProps => ({
       active: 'nested-url'
     },
     {
+      text: 'Changelog',
+      url: '/changelog',
+      active: 'url'
+    },
+    {
       text: 'NPM',
       url: 'https://www.npmx.dev/package/logixlysia',
       active: 'none'
