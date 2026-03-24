@@ -67,7 +67,7 @@ const ChangelogPage = async () => {
     const releases = await getReleases()
 
     return (
-      <main className="container max-w-4xl py-10 md:py-16">
+      <main className="container max-w-4xl px-4 py-10 md:py-16">
         <div className="space-y-2">
           <h1 className="font-light font-serif text-4xl md:text-5xl">
             Changelog
@@ -123,7 +123,7 @@ const ChangelogPage = async () => {
     console.error('Failed to load changelog releases', error)
 
     return (
-      <main className="container max-w-4xl py-10 md:py-16">
+      <main className="container max-w-4xl px-4 py-10 md:py-16">
         <h1 className="font-light font-serif text-4xl md:text-5xl">
           Changelog
         </h1>
