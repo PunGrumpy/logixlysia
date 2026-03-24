@@ -1,4 +1,5 @@
 import './globals.css'
+import 'streamdown/styles.css'
 import { RootProvider } from 'fumadocs-ui/provider/next'
 import type { ReactNode } from 'react'
 import { Toaster } from '@/components/ui/sonner'
