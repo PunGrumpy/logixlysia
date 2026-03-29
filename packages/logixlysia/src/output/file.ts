@@ -7,23 +7,24 @@ import { performRotation, shouldRotate } from './rotation-manager'
 // Per-file mutex to prevent race conditions during rotation
 const fileLocks = new Map<string, Promise<void>>()
 
-const acquireLock = (filePath: string): Promise<void> => {
-  const existing = fileLocks.get(filePath)
-  if (existing) {
-    // Chain on existing lock
-    return existing
-  }
-  // Create resolved promise as initial lock
-  const lock = Promise.resolve()
-  fileLocks.set(filePath, lock)
-  return lock
-}
+const acquireLock = (filePath: string): Promise<() => void> => {
+  const prior = fileLocks.get(filePath) ?? Promise.resolve()
 
-const releaseLock = (filePath: string, lockPromise: Promise<void>): void => {
-  // Only delete if this is still the current lock
-  if (fileLocks.get(filePath) === lockPromise) {
-    fileLocks.delete(filePath)
-  }
+  let resolveLock: () => void
+  const newLock = new Promise<void>((resolve) => {
+    resolveLock = resolve
+  })
+  fileLocks.set(filePath, newLock)
+
+  return prior.then(() => {
+    // Critical section can now proceed
+    return () => {
+      resolveLock!()
+      if (fileLocks.get(filePath) === newLock) {
+        fileLocks.delete(filePath)
+      }
+    }
+  })
 }
 
 interface LogToFileInput {
@@ -102,19 +103,9 @@ export const logToFile = async (
   const line = `${level} ${durationMs.toFixed(2)}ms ${request.method} ${pathname} ${message}\n`
 
   // Acquire lock before any file operations to prevent race conditions
-  const previousLock = acquireLock(filePath)
-  
-  // Create a new lock promise for this operation
-  let resolveLock: () => void
-  const currentLock = new Promise<void>((resolve) => {
-    resolveLock = resolve
-  })
-  fileLocks.set(filePath, currentLock)
+  const releaseLock = await acquireLock(filePath)
 
   try {
-    // Wait for previous operation to complete
-    await previousLock
-
     try {
       await ensureDir(dirname(filePath))
       await appendFile(filePath, line, { encoding: 'utf-8' })
@@ -140,7 +131,6 @@ export const logToFile = async (
     }
   } finally {
     // Release lock
-    resolveLock!()
-    releaseLock(filePath, currentLock)
+    releaseLock()
   }
 }
