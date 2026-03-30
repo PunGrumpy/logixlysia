@@ -57,9 +57,22 @@ export const rotateFile = async (filePath: string): Promise<string> => {
     return ''
   }
 
-  const rotated = getRotatedFileName(filePath, new Date())
-  await fs.rename(filePath, rotated)
-  return rotated
+  const baseRotated = getRotatedFileName(filePath, new Date())
+  let rotated = baseRotated
+
+  for (let attempt = 1; attempt <= 1000; attempt++) {
+    try {
+      await fs.rename(filePath, rotated)
+      return rotated
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'EEXIST') {
+        throw error
+      }
+      rotated = `${baseRotated}-${attempt}`
+    }
+  }
+
+  throw new Error(`[logixlysia] Could not rotate file ${filePath}: unique name resolution failed`)
 }
 
 export const compressFile = async (filePath: string): Promise<void> => {

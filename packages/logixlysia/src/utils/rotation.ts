@@ -4,7 +4,7 @@ import { basename, dirname } from 'node:path'
 const SIZE_REGEX = /^(\d+(?:\.\d+)?)(k|kb|m|mb|g|gb)$/i
 const INTERVAL_REGEX = /^(\d+)(h|d|w)$/i
 const ROTATED_REGEX =
-  /\.(\d{4}-\d{2}-\d{2}-\d{2}-\d{2}-\d{2}(?:-\d{3})?)(?:\.gz)?$/
+  /\.(\d{4}-\d{2}-\d{2}-\d{2}-\d{2}-\d{2}(?:-\d{3})?(?:-\d+)?)(?:\.gz)?$/
 
 export const parseSize = (value: number | string): number => {
   if (typeof value === 'number') {
