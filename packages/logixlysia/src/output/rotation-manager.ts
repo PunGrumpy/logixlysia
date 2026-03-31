@@ -14,24 +14,24 @@ const gzipAsync = promisify(gzip)
 // Compression lock to prevent concurrent compression of the same file
 const compressionLocks = new Map<string, Promise<void>>()
 
-const acquireCompressionLock = async (filePath: string): Promise<() => void> => {
-  const existing = compressionLocks.get(filePath)
-  if (existing) {
-    await existing
-  }
-  
-  let releaseLock: () => void
-  const lock = new Promise<void>((resolve) => {
-    releaseLock = resolve
+const acquireCompressionLock = (filePath: string): Promise<() => void> => {
+  const prior = compressionLocks.get(filePath) ?? Promise.resolve()
+
+  let resolveLock: () => void
+  const newLock = new Promise<void>((resolve) => {
+    resolveLock = resolve
   })
-  compressionLocks.set(filePath, lock)
-  
-  return () => {
-    releaseLock!()
-    if (compressionLocks.get(filePath) === lock) {
-      compressionLocks.delete(filePath)
+  compressionLocks.set(filePath, newLock)
+
+  return prior.then(() => {
+    // Critical section can now proceed
+    return () => {
+      resolveLock!()
+      if (compressionLocks.get(filePath) === newLock) {
+        compressionLocks.delete(filePath)
+      }
     }
-  }
+  })
 }
 
 const pad2 = (value: number): string => String(value).padStart(2, '0')
