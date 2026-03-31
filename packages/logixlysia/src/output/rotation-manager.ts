@@ -11,6 +11,29 @@ import {
 
 const gzipAsync = promisify(gzip)
 
+// Compression lock to prevent concurrent compression of the same file
+const compressionLocks = new Map<string, Promise<void>>()
+
+const acquireCompressionLock = (filePath: string): Promise<() => void> => {
+  const prior = compressionLocks.get(filePath) ?? Promise.resolve()
+
+  let resolveLock: () => void
+  const newLock = new Promise<void>((resolve) => {
+    resolveLock = resolve
+  })
+  compressionLocks.set(filePath, newLock)
+
+  return prior.then(() => {
+    // Critical section can now proceed
+    return () => {
+      resolveLock!()
+      if (compressionLocks.get(filePath) === newLock) {
+        compressionLocks.delete(filePath)
+      }
+    }
+  })
+}
+
 const pad2 = (value: number): string => String(value).padStart(2, '0')
 
 export const getRotatedFileName = (filePath: string, date: Date): string => {
@@ -20,7 +43,8 @@ export const getRotatedFileName = (filePath: string, date: Date): string => {
   const HH = pad2(date.getHours())
   const MM = pad2(date.getMinutes())
   const ss = pad2(date.getSeconds())
-  return `${filePath}.${yyyy}-${mm}-${dd}-${HH}-${MM}-${ss}`
+  const SSS = String(date.getMilliseconds()).padStart(3, '0')
+  return `${filePath}.${yyyy}-${mm}-${dd}-${HH}-${MM}-${ss}-${SSS}`
 }
 
 export const rotateFile = async (filePath: string): Promise<string> => {
@@ -33,16 +57,33 @@ export const rotateFile = async (filePath: string): Promise<string> => {
     return ''
   }
 
-  const rotated = getRotatedFileName(filePath, new Date())
+  const baseRotated = getRotatedFileName(filePath, new Date())
+  const rotated = `${baseRotated}-${process.hrtime.bigint()}`
   await fs.rename(filePath, rotated)
   return rotated
 }
 
 export const compressFile = async (filePath: string): Promise<void> => {
-  const content = await fs.readFile(filePath)
-  const compressed = await gzipAsync(content)
-  await fs.writeFile(`${filePath}.gz`, compressed)
-  await fs.rm(filePath, { force: true })
+  const release = await acquireCompressionLock(filePath)
+  try {
+    // Check if file still exists (might have been compressed by another process)
+    try {
+      await fs.access(filePath)
+    } catch {
+      // File doesn't exist, already compressed or deleted
+      return
+    }
+    
+    const content = await fs.readFile(filePath)
+    const compressed = await gzipAsync(content)
+    await fs.writeFile(`${filePath}.gz`, compressed)
+    await fs.rm(filePath, { force: true })
+  } catch (error) {
+    console.error(`[logixlysia] Failed to compress file ${filePath}:`, error)
+    throw error
+  } finally {
+    release()
+  }
 }
 
 export const shouldRotate = async (
@@ -65,13 +106,36 @@ const cleanupByCount = async (
     return
   }
 
-  const stats = await Promise.all(
+  // Use Promise.allSettled to handle individual file stat failures gracefully
+  const statsResults = await Promise.allSettled(
     rotated.map(async p => ({ path: p, stat: await fs.stat(p) }))
   )
 
+  // Extract successful stats, ignore files that were deleted concurrently
+  const stats = statsResults
+    .filter((result): result is PromiseFulfilledResult<{ path: string; stat: import('node:fs').Stats }> => 
+      result.status === 'fulfilled'
+    )
+    .map(result => result.value)
+
+  if (stats.length <= maxFiles) {
+    return
+  }
+
   stats.sort((a, b) => b.stat.mtimeMs - a.stat.mtimeMs)
   const toDelete = stats.slice(maxFiles)
-  await Promise.all(toDelete.map(({ path }) => fs.rm(path, { force: true })))
+  
+  // Delete files individually, continuing even if some fail
+  const deleteResults = await Promise.allSettled(
+    toDelete.map(({ path }) => fs.rm(path, { force: true }))
+  )
+  
+  // Log failures but don't crash
+  deleteResults.forEach((result, idx) => {
+    if (result.status === 'rejected') {
+      console.error(`[logixlysia] Failed to delete rotated log ${toDelete[idx].path}:`, result.reason)
+    }
+  })
 }
 
 const cleanupByTime = async (
@@ -84,12 +148,32 @@ const cleanupByTime = async (
   }
 
   const now = Date.now()
-  const stats = await Promise.all(
+  
+  // Use Promise.allSettled to handle individual file stat failures gracefully
+  const statsResults = await Promise.allSettled(
     rotated.map(async p => ({ path: p, stat: await fs.stat(p) }))
   )
 
+  // Extract successful stats
+  const stats = statsResults
+    .filter((result): result is PromiseFulfilledResult<{ path: string; stat: import('node:fs').Stats }> => 
+      result.status === 'fulfilled'
+    )
+    .map(result => result.value)
+
   const toDelete = stats.filter(({ stat }) => now - stat.mtimeMs > maxAgeMs)
-  await Promise.all(toDelete.map(({ path }) => fs.rm(path, { force: true })))
+  
+  // Delete files individually, continuing even if some fail
+  const deleteResults = await Promise.allSettled(
+    toDelete.map(({ path }) => fs.rm(path, { force: true }))
+  )
+  
+  // Log failures but don't crash
+  deleteResults.forEach((result, idx) => {
+    if (result.status === 'rejected') {
+      console.error(`[logixlysia] Failed to delete old log ${toDelete[idx].path}:`, result.reason)
+    }
+  })
 }
 
 export const performRotation = async (
