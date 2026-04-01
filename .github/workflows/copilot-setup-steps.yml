@@ -15,6 +15,6 @@ jobs:
       - name: 🛫 Checkout Code
         uses: actions/checkout@v6
       - name: 🔄 Install gh-aw extension
-        uses: github/gh-aw/actions/setup-cli@e211c855a20aa6cf9297b411466e1c382a8686db # v0.55.0
+        uses: github/gh-aw/actions/setup-cli@b5a9fb08751b738a86b3b605ff1fdf34956adbf4 # v0.65.4
         with:
           version: v0.55.0
