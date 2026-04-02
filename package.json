@@ -17,7 +17,7 @@
     "typecheck": "turbo run typecheck"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.4.8",
+    "@biomejs/biome": "2.4.10",
     "@changesets/cli": "^2.30.0",
     "turbo": "^2.9.3",
     "typescript": "6.0.2",
