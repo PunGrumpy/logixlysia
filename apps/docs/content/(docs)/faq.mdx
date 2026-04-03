@@ -97,7 +97,7 @@ logixlysia({
 ### How do I access the logger in route handlers?
 
 ```ts
-app.get('/users/:id', ({ store }) => {
+app.get('/users/:id', ({ store, request }) => {
   const { logger, pino } = store
   
   // Use logger helper
@@ -113,7 +113,7 @@ app.get('/users/:id', ({ store }) => {
 ### How do I log custom messages?
 
 ```ts
-app.post('/users', ({ store, body }) => {
+app.post('/users', ({ store, body, request }) => {
   const { logger } = store
   
   logger.info(request, 'Creating user', {
