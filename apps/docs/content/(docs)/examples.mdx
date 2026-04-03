@@ -116,7 +116,7 @@ const app = new Elysia()
 ### Structured Logging with Context
 
 ```ts
-app.get('/users/:id', ({ store, params }) => {
+app.get('/users/:id', ({ store, params, request }) => {
   const { logger, pino } = store
   
   // Using logger helper

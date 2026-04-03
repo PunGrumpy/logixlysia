@@ -223,7 +223,7 @@ throw new HttpError(404, 'User not found')
 ### Accessing Logger in Route Handlers
 
 ```ts
-app.get('/users/:id', ({ store, params }) => {
+app.get('/users/:id', ({ store, params, request }) => {
   const { logger, pino } = store
   
   // Use logger helper methods
@@ -239,7 +239,7 @@ app.get('/users/:id', ({ store, params }) => {
 ### Custom Logging
 
 ```ts
-app.post('/users', ({ store, body }) => {
+app.post('/users', ({ store, body, request }) => {
   const { logger } = store
   
   logger.debug(request, 'Creating user', { email: body.email })
