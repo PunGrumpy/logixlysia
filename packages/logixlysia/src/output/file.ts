@@ -14,9 +14,11 @@ const acquireLock = (filePath: string): Promise<() => void> => {
   const newLock = new Promise<void>((resolve) => {
     resolveLock = resolve
   })
-  fileLocks.set(filePath, newLock)
 
   return prior.then(() => {
+    // Only set the lock after acquiring the prior lock to prevent race conditions
+    fileLocks.set(filePath, newLock)
+    
     // Critical section can now proceed
     return () => {
       resolveLock!()
