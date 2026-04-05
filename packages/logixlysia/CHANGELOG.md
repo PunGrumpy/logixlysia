@@ -1,5 +1,12 @@
 # Changelog
 
+## 6.3.1
+
+### Patch Changes
+
+- 070d0be: Fix log rotation reliability and safety issues by serializing concurrent file operations, making cleanup resilient to partial failures, improving file-operation error visibility, hardening URL parsing/compression paths, and preventing rotated filename collisions under high concurrency.
+- c6b87cd: Fix a race condition in file and compression lock acquisition to ensure concurrent writes and rotations are serialized correctly.
+
 ## 6.3.0
 
 ### Minor Changes
