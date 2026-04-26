@@ -143,6 +143,19 @@ describe('redactRequest', () => {
     expect(out.url).not.toContain(sampleJwt)
   })
 
+  test('redacts IPv4 in URL host without breaking Request() (no bracket placeholder in host)', () => {
+    const req = new Request('http://192.168.1.1:3000/api')
+    expect(() => redactRequest(req)).not.toThrow()
+    const out = redactRequest(req)
+    expect(out.url).toBe('http://redacted:3000/api')
+    expect(() => new Request(out.url)).not.toThrow()
+  })
+
+  test('redacts 127.0.0.1 host safely', () => {
+    const out = redactRequest(new Request('http://127.0.0.1:8080/'))
+    expect(out.url).toBe('http://redacted:8080/')
+  })
+
   test('redacts sensitive header values', () => {
     const req = new Request('http://localhost/', {
       headers: { authorization: `Bearer ${sampleJwt}` }

@@ -10,6 +10,34 @@ const PAN_MAX_LEN = 19
 const REDACTED_TEXT = '[REDACTED]'
 const CIRCULAR_REF = '[Circular]'
 
+/**
+ * Host and userinfo cannot contain `[REDACTED]` — `[` begins an IPv6 literal in URLs and breaks parsing.
+ */
+const URL_SAFE_REDACT = 'redacted'
+
+const redactUrlAuthoritySegment = (value: string): string =>
+  redactString(value).replaceAll(REDACTED_TEXT, URL_SAFE_REDACT)
+
+/** Apply PII redaction to a request URL while keeping the result parseable by the URL/Request constructors. */
+const redactRequestUrl = (urlString: string): string => {
+  try {
+    const u = new URL(urlString)
+    if (u.username !== '') {
+      u.username = redactUrlAuthoritySegment(u.username)
+    }
+    if (u.password !== '') {
+      u.password = redactUrlAuthoritySegment(u.password)
+    }
+    u.hostname = redactUrlAuthoritySegment(u.hostname)
+    u.pathname = redactString(u.pathname)
+    u.search = redactString(u.search)
+    u.hash = redactString(u.hash)
+    return u.toString()
+  } catch {
+    return redactString(urlString).replaceAll(REDACTED_TEXT, URL_SAFE_REDACT)
+  }
+}
+
 /** Luhn checksum; `digits` must contain only `0-9` and length in PAN range. */
 const passesLuhn = (digits: string): boolean => {
   if (digits.length < PAN_MIN_LEN || digits.length > PAN_MAX_LEN) {
@@ -170,7 +198,7 @@ export const redact = <T>(value: T): T => redactInner(value, new WeakSet())
  * Preserves body and signal so the original request is still usable.
  */
 export const redactRequest = (request: Request): Request => {
-  const redactedUrl = redactString(request.url)
+  const redactedUrl = redactRequestUrl(request.url)
   const nextHeaders = new Headers()
   let headersChanged = false
 
