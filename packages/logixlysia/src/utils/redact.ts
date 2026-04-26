@@ -37,8 +37,10 @@ export const redact = <T>(value: T): T => {
   if (value instanceof Error) {
     const originalError = value
     const redactedMessage = redactString(originalError.message)
-    const newError = new Error(redactedMessage)
+    const proto = Object.getPrototypeOf(originalError) as object
+    const newError = Object.create(proto) as Error & Record<string, unknown>
 
+    newError.message = redactedMessage
     newError.name = originalError.name
 
     if (originalError.stack !== undefined) {
@@ -46,11 +48,10 @@ export const redact = <T>(value: T): T => {
     }
 
     const errorRecord = originalError as unknown as Record<string, unknown>
-    const newErrorRecord = newError as unknown as Record<string, unknown>
 
     for (const key of Object.keys(errorRecord)) {
       if (key !== 'message' && key !== 'name' && key !== 'stack') {
-        newErrorRecord[key] = redact(errorRecord[key])
+        newError[key] = redact(errorRecord[key])
       }
     }
 
@@ -116,4 +117,3 @@ export const redactRequest = (request: Request): Request => {
 
   return new Request(redactedUrl, init)
 }
-

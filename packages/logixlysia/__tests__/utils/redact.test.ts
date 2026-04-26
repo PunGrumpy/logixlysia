@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test'
+import { HttpError } from '../../src/interfaces'
 import { redact, redactRequest, redactString } from '../../src/utils/redact'
 
 describe('redactString', () => {
@@ -59,6 +60,29 @@ describe('redact', () => {
     const err = new Error('Failed for test@example.com')
     const result = redact(err) as Error
     expect(result.message).toBe('Failed for [REDACTED]')
+  })
+
+  test('preserves HttpError subclass and status', () => {
+    const err = new HttpError(404, 'Not found: test@example.com')
+    const result = redact(err)
+    expect(result).toBeInstanceOf(HttpError)
+    expect((result as HttpError).status).toBe(404)
+    expect(result.message).toBe('Not found: [REDACTED]')
+  })
+
+  test('preserves custom Error subclasses', () => {
+    class CustomErr extends Error {
+      readonly code: string
+      constructor(message: string, code: string) {
+        super(message)
+        this.code = code
+      }
+    }
+    const err = new CustomErr('x@test.com', 'E1')
+    const result = redact(err)
+    expect(result).toBeInstanceOf(CustomErr)
+    expect((result as CustomErr).code).toBe('E1')
+    expect(result.message).toBe('[REDACTED]')
   })
 })
 
