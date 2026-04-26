@@ -1,17 +1,62 @@
 const EMAIL_REGEX = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g
 const IPV4_REGEX = /\b(?:\d{1,3}\.){3}\d{1,3}\b/g
-const CREDIT_CARD_REGEX = /\b(?:\d[ -]*?){13,16}\b/g
+/** Digit runs that may be formatted PANs (spaces/dashes); validated with Luhn before redacting. */
+const CREDIT_CARD_CANDIDATE_REGEX = /\b(?:\d[ -]*?){13,19}\b/g
 const JWT_REGEX = /eyJ[a-zA-Z0-9_-]+\.eyJ[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+/g
+
+const PAN_MIN_LEN = 13
+const PAN_MAX_LEN = 19
 
 const REDACTED_TEXT = '[REDACTED]'
 const CIRCULAR_REF = '[Circular]'
+
+/** Luhn checksum; `digits` must contain only `0-9` and length in PAN range. */
+const passesLuhn = (digits: string): boolean => {
+  if (digits.length < PAN_MIN_LEN || digits.length > PAN_MAX_LEN) {
+    return false
+  }
+
+  let sum = 0
+  let alternate = false
+
+  for (let i = digits.length - 1; i >= 0; i--) {
+    const code = digits.charCodeAt(i)
+    if (code < 48 || code > 57) {
+      return false
+    }
+    let n = code - 48
+    if (alternate) {
+      n *= 2
+      if (n > 9) {
+        n -= 9
+      }
+    }
+    sum += n
+    alternate = !alternate
+  }
+
+  return sum % 10 === 0
+}
+
+const redactCreditCardCandidates = (text: string): string =>
+  text.replace(CREDIT_CARD_CANDIDATE_REGEX, match => {
+    const digits = match.replace(/\D/g, '')
+    if (
+      digits.length >= PAN_MIN_LEN &&
+      digits.length <= PAN_MAX_LEN &&
+      passesLuhn(digits)
+    ) {
+      return REDACTED_TEXT
+    }
+    return match
+  })
 
 export const redactString = (text: string): string => {
   let result = text
 
   result = result.replace(EMAIL_REGEX, REDACTED_TEXT)
   result = result.replace(IPV4_REGEX, REDACTED_TEXT)
-  result = result.replace(CREDIT_CARD_REGEX, REDACTED_TEXT)
+  result = redactCreditCardCandidates(result)
   result = result.replace(JWT_REGEX, REDACTED_TEXT)
 
   return result

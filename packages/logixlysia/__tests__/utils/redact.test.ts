@@ -14,8 +14,16 @@ describe('redactString', () => {
     expect(redactString('IP is 192.168.1.1')).toBe('IP is [REDACTED]')
   })
 
-  test('redacts credit cards', () => {
-    expect(redactString('Card: 1234-5678-9012-3456')).toBe('Card: [REDACTED]')
+  test('redacts Luhn-valid PANs only', () => {
+    expect(redactString('Card: 4111 1111 1111 1111')).toBe('Card: [REDACTED]')
+    expect(redactString('Card: 1234-5678-9012-3456')).toBe(
+      'Card: 1234-5678-9012-3456'
+    )
+  })
+
+  test('does not redact millisecond timestamps as card numbers', () => {
+    expect(redactString('ts: 1735689600000')).toBe('ts: 1735689600000')
+    expect(redactString('ts: 1777123456789')).toBe('ts: 1777123456789')
   })
 
   test('redacts JWTs', () => {

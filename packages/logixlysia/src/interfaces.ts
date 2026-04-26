@@ -98,7 +98,7 @@ export interface Options {
 
     /**
      * Automatically redact sensitive information (PII) from logs.
-     * Masks emails, IP addresses, credit cards, and JWTs in strings and deeply nested objects.
+     * Masks emails, IP addresses, Luhn-valid payment card numbers, and JWTs in strings and deeply nested objects.
      */
     autoRedact?: boolean
 
