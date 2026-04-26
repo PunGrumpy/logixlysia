@@ -1,5 +1,6 @@
 import Elysia from 'elysia'
 import { logixlysia } from 'logixlysia'
+import { autoRedactRouter } from './auto-redact'
 import { boomRouter } from './boom'
 import { customRouter } from './custom'
 import { pinoRouter } from './pino'
@@ -17,7 +18,8 @@ export const routers = new Elysia()
         verySlowThreshold: 1000,
         showContextTree: true,
         logFilePath: './logs/example.log',
-        ip: true
+        ip: true,
+        autoRedact: true
       }
     })
   )
@@ -36,6 +38,7 @@ export const routers = new Elysia()
   .use(customRouter)
   .use(pinoRouter)
   .use(statusRouter)
+  .use(autoRedactRouter)
   .ws('/ws', {
     detail: {
       summary: 'WebSocket echo',
