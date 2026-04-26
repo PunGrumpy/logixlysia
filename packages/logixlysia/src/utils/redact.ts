@@ -4,6 +4,7 @@ const CREDIT_CARD_REGEX = /\b(?:\d[ -]*?){13,16}\b/g
 const JWT_REGEX = /eyJ[a-zA-Z0-9_-]+\.eyJ[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+/g
 
 const REDACTED_TEXT = '[REDACTED]'
+const CIRCULAR_REF = '[Circular]'
 
 export const redactString = (text: string): string => {
   let result = text
@@ -16,7 +17,68 @@ export const redactString = (text: string): string => {
   return result
 }
 
-export const redact = <T>(value: T): T => {
+const redactErrorClone = (
+  originalError: Error,
+  inProgress: WeakSet<object>
+): Error & Record<string, unknown> => {
+  const redactedMessage = redactString(originalError.message)
+  const proto = Object.getPrototypeOf(originalError) as object
+  const newError = Object.create(proto) as Error & Record<string, unknown>
+
+  newError.message = redactedMessage
+  newError.name = originalError.name
+
+  if (originalError.stack !== undefined) {
+    newError.stack = redactString(originalError.stack)
+  }
+
+  const errorRecord = originalError as unknown as Record<string, unknown>
+
+  for (const key of Object.keys(errorRecord)) {
+    if (key !== 'message' && key !== 'name' && key !== 'stack') {
+      newError[key] = redactInner(errorRecord[key], inProgress)
+    }
+  }
+
+  return newError
+}
+
+const redactArrayItems = (
+  value: unknown[],
+  inProgress: WeakSet<object>
+): unknown[] => {
+  const redactedArray: unknown[] = Array.from({ length: value.length })
+  for (let i = 0; i < value.length; i++) {
+    redactedArray[i] = redactInner(value[i], inProgress)
+  }
+  return redactedArray
+}
+
+const redactRecordEntries = (
+  recordValue: Record<string, unknown>,
+  inProgress: WeakSet<object>
+): Record<string, unknown> => {
+  const redactedRecord: Record<string, unknown> = {}
+  for (const key of Object.keys(recordValue)) {
+    redactedRecord[key] = redactInner(recordValue[key], inProgress)
+  }
+  return redactedRecord
+}
+
+const withReentrancyGuard = <T>(
+  obj: object,
+  inProgress: WeakSet<object>,
+  run: () => T
+): T => {
+  inProgress.add(obj)
+  try {
+    return run()
+  } finally {
+    inProgress.delete(obj)
+  }
+}
+
+const redactInner = <T>(value: T, inProgress: WeakSet<object>): T => {
   if (value === null || value === undefined) {
     return value
   }
@@ -34,49 +96,29 @@ export const redact = <T>(value: T): T => {
     return new Date(value.getTime()) as unknown as T
   }
 
+  const obj = value as object
+  if (inProgress.has(obj)) {
+    return CIRCULAR_REF as unknown as T
+  }
+
   if (value instanceof Error) {
-    const originalError = value
-    const redactedMessage = redactString(originalError.message)
-    const proto = Object.getPrototypeOf(originalError) as object
-    const newError = Object.create(proto) as Error & Record<string, unknown>
-
-    newError.message = redactedMessage
-    newError.name = originalError.name
-
-    if (originalError.stack !== undefined) {
-      newError.stack = redactString(originalError.stack)
-    }
-
-    const errorRecord = originalError as unknown as Record<string, unknown>
-
-    for (const key of Object.keys(errorRecord)) {
-      if (key !== 'message' && key !== 'name' && key !== 'stack') {
-        newError[key] = redact(errorRecord[key])
-      }
-    }
-
-    return newError as unknown as T
+    return withReentrancyGuard(obj, inProgress, () =>
+      redactErrorClone(value, inProgress)
+    ) as unknown as T
   }
 
   if (Array.isArray(value)) {
-    const redactedArray = Array.from({ length: value.length })
-
-    for (let i = 0; i < value.length; i++) {
-      redactedArray[i] = redact(value[i])
-    }
-
-    return redactedArray as unknown as T
+    return withReentrancyGuard(obj, inProgress, () =>
+      redactArrayItems(value, inProgress)
+    ) as unknown as T
   }
 
-  const recordValue = value as Record<string, unknown>
-  const redactedRecord: Record<string, unknown> = {}
-
-  for (const key of Object.keys(recordValue)) {
-    redactedRecord[key] = redact(recordValue[key])
-  }
-
-  return redactedRecord as unknown as T
+  return withReentrancyGuard(obj, inProgress, () =>
+    redactRecordEntries(value as Record<string, unknown>, inProgress)
+  ) as unknown as T
 }
+
+export const redact = <T>(value: T): T => redactInner(value, new WeakSet())
 
 /**
  * Clone request URL and headers for logging with the same string redaction as {@link redact}.

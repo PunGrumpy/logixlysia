@@ -84,6 +84,42 @@ describe('redact', () => {
     expect((result as CustomErr).code).toBe('E1')
     expect(result.message).toBe('[REDACTED]')
   })
+
+  test('replaces circular object references without stack overflow', () => {
+    const root: Record<string, unknown> = { id: 1 }
+    root.self = root
+    const result = redact(root) as Record<string, unknown>
+    expect(result.id).toBe(1)
+    expect(result.self).toBe('[Circular]')
+  })
+
+  test('replaces circular array references', () => {
+    const arr: unknown[] = []
+    arr.push(arr)
+    const result = redact(arr) as unknown[]
+    expect(result[0]).toBe('[Circular]')
+  })
+
+  test('redacts Error with circular custom property', () => {
+    const err = new Error('e@test.com')
+    const errRecord = err as Error & Record<string, unknown>
+    errRecord.loop = err
+    const result = redact(err) as Error & Record<string, unknown>
+    expect(result.message).toBe('[REDACTED]')
+    expect(result.loop).toBe('[Circular]')
+  })
+
+  test('redacts shared non-cyclic references twice (DAG)', () => {
+    const shared = { email: 'shared@example.com' }
+    const root = { a: shared, b: shared }
+    const result = redact(root) as {
+      a: { email: string }
+      b: { email: string }
+    }
+    expect(result.a.email).toBe('[REDACTED]')
+    expect(result.b.email).toBe('[REDACTED]')
+    expect(result.a).not.toBe(result.b)
+  })
 })
 
 const sampleJwt =
