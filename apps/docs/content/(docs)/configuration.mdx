@@ -71,6 +71,17 @@ ip: true
 
 These headers are typically set by reverse proxies (nginx, Caddy, Cloudflare, etc.) and load balancers. When testing locally (localhost or LAN) without a proxy, these headers are usually absent, so the `{ip}` placeholder will be empty. To test IP logging locally, you can pass a header manually, e.g. `curl -H 'x-real-ip: 1.2.3.4' http://localhost:3000/`.
 
+### `autoRedact`
+
+Automatically redacts sensitive PII (emails, IPs, credit cards, JWTs) from log messages, context objects, and errors before they are outputted.
+
+- **Type:** `boolean`
+- **Default:** `false`
+
+```ts
+autoRedact: true
+```
+
 ## Timestamp Options
 
 ### `timestamp`
@@ -436,6 +447,7 @@ logixlysia({
     // Display
     useColors: true,
     ip: true,
+    autoRedact: false,
     
     // Formatting
     timestamp: {
