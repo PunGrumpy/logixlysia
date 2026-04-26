@@ -31,7 +31,7 @@ logixlysia({
     showStartupMessage: true,
     startupMessageFormat: 'simple', // or 'banner'
     ip: true,
-    autoRedact: true,
+    autoRedact: false, // Set to true to auto-redact sensitive PII (emails, IPs, credit cards, JWTs)
     logFilePath: './logs/app.log'
   }
 })
