@@ -76,3 +76,44 @@ export const redact = <T>(value: T): T => {
 
   return redactedRecord as unknown as T
 }
+
+/**
+ * Clone request URL and headers for logging with the same string redaction as {@link redact}.
+ * Preserves body and signal so the original request is still usable.
+ */
+export const redactRequest = (request: Request): Request => {
+  const redactedUrl = redactString(request.url)
+  const nextHeaders = new Headers()
+  let headersChanged = false
+
+  for (const [name, value] of request.headers.entries()) {
+    const redacted = redactString(value)
+    if (redacted !== value) {
+      headersChanged = true
+    }
+    nextHeaders.set(name, redacted)
+  }
+
+  const redactedMethod = redactString(request.method)
+  const urlChanged = redactedUrl !== request.url
+  const methodChanged = redactedMethod !== request.method
+
+  if (!(urlChanged || headersChanged || methodChanged)) {
+    return request
+  }
+
+  const init: RequestInit & { duplex?: 'half' } = {
+    method: redactedMethod,
+    headers: nextHeaders,
+    redirect: request.redirect,
+    signal: request.signal
+  }
+
+  if (request.body !== null) {
+    init.body = request.body
+    init.duplex = 'half'
+  }
+
+  return new Request(redactedUrl, init)
+}
+

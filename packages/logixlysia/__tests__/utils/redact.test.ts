@@ -1,9 +1,11 @@
 import { describe, expect, test } from 'bun:test'
-import { redact, redactString } from '../../src/utils/redact'
+import { redact, redactRequest, redactString } from '../../src/utils/redact'
 
 describe('redactString', () => {
   test('redacts emails', () => {
-    expect(redactString('My email is test@example.com')).toBe('My email is [REDACTED]')
+    expect(redactString('My email is test@example.com')).toBe(
+      'My email is [REDACTED]'
+    )
     expect(redactString('test@example.com')).toBe('[REDACTED]')
   })
 
@@ -16,7 +18,11 @@ describe('redactString', () => {
   })
 
   test('redacts JWTs', () => {
-    expect(redactString('Token: eyJhbGciOiJIUzI1NiIsInR5cCI.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c')).toBe('Token: [REDACTED]')
+    expect(
+      redactString(
+        'Token: eyJhbGciOiJIUzI1NiIsInR5cCI.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c'
+      )
+    ).toBe('Token: [REDACTED]')
   })
 })
 
@@ -30,7 +36,7 @@ describe('redact', () => {
       message: 'Hello'
     }
     const result = redact(original)
-    
+
     expect(result).toEqual({
       user: {
         email: '[REDACTED]',
@@ -38,7 +44,7 @@ describe('redact', () => {
       },
       message: 'Hello'
     })
-    
+
     // Original should not be mutated
     expect(original.user.email).toBe('test@example.com')
   })
@@ -53,5 +59,32 @@ describe('redact', () => {
     const err = new Error('Failed for test@example.com')
     const result = redact(err) as Error
     expect(result.message).toBe('Failed for [REDACTED]')
+  })
+})
+
+const sampleJwt =
+  'eyJhbGciOiJIUzI1NiIsInR5cCI.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c'
+
+describe('redactRequest', () => {
+  test('redacts JWT in URL and returns new Request when changed', () => {
+    const url = `http://localhost/api?token=${sampleJwt}`
+    const req = new Request(url)
+    const out = redactRequest(req)
+    expect(out).not.toBe(req)
+    expect(out.url).toContain('[REDACTED]')
+    expect(out.url).not.toContain(sampleJwt)
+  })
+
+  test('redacts sensitive header values', () => {
+    const req = new Request('http://localhost/', {
+      headers: { authorization: `Bearer ${sampleJwt}` }
+    })
+    const out = redactRequest(req)
+    expect(out.headers.get('authorization')).toBe('Bearer [REDACTED]')
+  })
+
+  test('returns same request when nothing would change', () => {
+    const req = new Request('http://localhost/plain')
+    expect(redactRequest(req)).toBe(req)
   })
 })

@@ -2,8 +2,8 @@ import type { LogLevel, Options, RequestInfo, StoreData } from '../interfaces'
 import { logToTransports } from '../output'
 import { logToFile } from '../output/file'
 import { parseError } from '../utils/error'
+import { redact, redactRequest } from '../utils/redact'
 import { formatLogOutput } from './create-logger'
-import { redact } from '../utils/redact'
 
 const isErrorWithStatus = (
   value: unknown
@@ -40,8 +40,10 @@ export const handleHttpError = (
   const level: LogLevel = 'ERROR'
   const data: Record<string, unknown> = { status, message, error }
   const logData = config?.autoRedact === true ? redact(data) : data
+  const logRequest =
+    config?.autoRedact === true ? redactRequest(request) : request
 
-  logToTransports({ level, request, data: logData, store, options })
+  logToTransports({ level, request: logRequest, data: logData, store, options })
 
   if (!(useTransportsOnly || disableFileLogging)) {
     const filePath = config?.logFilePath
@@ -49,7 +51,7 @@ export const handleHttpError = (
       logToFile({
         filePath,
         level,
-        request,
+        request: logRequest,
         data: logData,
         store,
         options
@@ -65,12 +67,12 @@ export const handleHttpError = (
 
   const { main, contextLines } = formatLogOutput({
     level,
-    request,
+    request: logRequest,
     data: logData,
     store,
     options
   })
-  
+
   const formattedMessage =
     contextLines.length > 0 ? `${main}\n${contextLines.join('\n')}` : main
   console.error(formattedMessage)
