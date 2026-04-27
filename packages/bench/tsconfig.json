@@ -1,0 +1,9 @@
+{
+  "extends": "../typescript-config/base.json",
+  "compilerOptions": {
+    "paths": {
+      "logixlysia": ["../logixlysia/src"]
+    }
+  },
+  "include": ["**/*.ts"]
+}

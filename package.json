@@ -4,6 +4,7 @@
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev",
+    "bench": "turbo run bench",
     "test": "turbo test",
     "test:coverage": "turbo test:coverage",
     "lint": "ultracite check",

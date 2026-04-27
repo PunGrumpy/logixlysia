@@ -16,6 +16,9 @@
     "test": {
       "dependsOn": ["^test"]
     },
+    "bench": {
+      "dependsOn": ["^build"]
+    },
     "test:coverage": {
       "dependsOn": ["^test:coverage"]
     },
