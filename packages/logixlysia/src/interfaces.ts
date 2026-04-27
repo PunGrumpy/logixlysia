@@ -96,6 +96,12 @@ export interface Options {
     logFilePath?: string
     logRotation?: LogRotationConfig
 
+    /**
+     * Automatically redact sensitive information (PII) from logs.
+     * Masks emails, IP addresses, Luhn-valid payment card numbers, and JWTs in strings and deeply nested objects.
+     */
+    autoRedact?: boolean
+
     // Pino
     pino?: (PinoLoggerOptions & { prettyPrint?: PrettyPrintConfig }) | undefined
   }

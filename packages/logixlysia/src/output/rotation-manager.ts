@@ -18,14 +18,14 @@ const acquireCompressionLock = (filePath: string): Promise<() => void> => {
   const prior = compressionLocks.get(filePath) ?? Promise.resolve()
 
   let resolveLock: () => void
-  const newLock = new Promise<void>((resolve) => {
+  const newLock = new Promise<void>(resolve => {
     resolveLock = resolve
   })
 
   return prior.then(() => {
     // Only set the lock after acquiring the prior lock to prevent race conditions
     compressionLocks.set(filePath, newLock)
-    
+
     // Critical section can now proceed
     return () => {
       resolveLock!()
@@ -75,7 +75,7 @@ export const compressFile = async (filePath: string): Promise<void> => {
       // File doesn't exist, already compressed or deleted
       return
     }
-    
+
     const content = await fs.readFile(filePath)
     const compressed = await gzipAsync(content)
     await fs.writeFile(`${filePath}.gz`, compressed)
@@ -115,8 +115,13 @@ const cleanupByCount = async (
 
   // Extract successful stats, ignore files that were deleted concurrently
   const stats = statsResults
-    .filter((result): result is PromiseFulfilledResult<{ path: string; stat: import('node:fs').Stats }> => 
-      result.status === 'fulfilled'
+    .filter(
+      (
+        result
+      ): result is PromiseFulfilledResult<{
+        path: string
+        stat: import('node:fs').Stats
+      }> => result.status === 'fulfilled'
     )
     .map(result => result.value)
 
@@ -126,16 +131,19 @@ const cleanupByCount = async (
 
   stats.sort((a, b) => b.stat.mtimeMs - a.stat.mtimeMs)
   const toDelete = stats.slice(maxFiles)
-  
+
   // Delete files individually, continuing even if some fail
   const deleteResults = await Promise.allSettled(
     toDelete.map(({ path }) => fs.rm(path, { force: true }))
   )
-  
+
   // Log failures but don't crash
   deleteResults.forEach((result, idx) => {
     if (result.status === 'rejected') {
-      console.error(`[logixlysia] Failed to delete rotated log ${toDelete[idx].path}:`, result.reason)
+      console.error(
+        `[logixlysia] Failed to delete rotated log ${toDelete[idx].path}:`,
+        result.reason
+      )
     }
   })
 }
@@ -150,7 +158,7 @@ const cleanupByTime = async (
   }
 
   const now = Date.now()
-  
+
   // Use Promise.allSettled to handle individual file stat failures gracefully
   const statsResults = await Promise.allSettled(
     rotated.map(async p => ({ path: p, stat: await fs.stat(p) }))
@@ -158,22 +166,30 @@ const cleanupByTime = async (
 
   // Extract successful stats
   const stats = statsResults
-    .filter((result): result is PromiseFulfilledResult<{ path: string; stat: import('node:fs').Stats }> => 
-      result.status === 'fulfilled'
+    .filter(
+      (
+        result
+      ): result is PromiseFulfilledResult<{
+        path: string
+        stat: import('node:fs').Stats
+      }> => result.status === 'fulfilled'
     )
     .map(result => result.value)
 
   const toDelete = stats.filter(({ stat }) => now - stat.mtimeMs > maxAgeMs)
-  
+
   // Delete files individually, continuing even if some fail
   const deleteResults = await Promise.allSettled(
     toDelete.map(({ path }) => fs.rm(path, { force: true }))
   )
-  
+
   // Log failures but don't crash
   deleteResults.forEach((result, idx) => {
     if (result.status === 'rejected') {
-      console.error(`[logixlysia] Failed to delete old log ${toDelete[idx].path}:`, result.reason)
+      console.error(
+        `[logixlysia] Failed to delete old log ${toDelete[idx].path}:`,
+        result.reason
+      )
     }
   })
 }

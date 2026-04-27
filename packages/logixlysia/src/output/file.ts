@@ -11,14 +11,14 @@ const acquireLock = (filePath: string): Promise<() => void> => {
   const prior = fileLocks.get(filePath) ?? Promise.resolve()
 
   let resolveLock: () => void
-  const newLock = new Promise<void>((resolve) => {
+  const newLock = new Promise<void>(resolve => {
     resolveLock = resolve
   })
 
   return prior.then(() => {
     // Only set the lock after acquiring the prior lock to prevent race conditions
     fileLocks.set(filePath, newLock)
-    
+
     // Critical section can now proceed
     return () => {
       resolveLock!()
@@ -113,7 +113,10 @@ export const logToFile = async (
       await appendFile(filePath, line, { encoding: 'utf-8' })
     } catch (error) {
       // Log file write errors to stderr so they're not completely silent
-      console.error(`[logixlysia] Failed to write to log file ${filePath}:`, error)
+      console.error(
+        `[logixlysia] Failed to write to log file ${filePath}:`,
+        error
+      )
       throw error
     }
 
@@ -128,7 +131,10 @@ export const logToFile = async (
         await performRotation(filePath, rotation)
       } catch (error) {
         // Log rotation errors but don't crash - log entry was already written
-        console.error(`[logixlysia] Failed to rotate log file ${filePath}:`, error)
+        console.error(
+          `[logixlysia] Failed to rotate log file ${filePath}:`,
+          error
+        )
       }
     }
   } finally {

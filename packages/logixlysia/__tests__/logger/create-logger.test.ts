@@ -59,6 +59,42 @@ describe('createLogger', () => {
     await new Promise(resolve => setTimeout(resolve, 0))
   })
 
+  test('autoRedact redacts request URL in transport meta', async () => {
+    const transport = mock<
+      (lvl: unknown, msg: unknown, meta?: unknown) => void
+    >(() => {
+      /* noop */
+    })
+    const sampleJwt =
+      'eyJhbGciOiJIUzI1NiIsInR5cCI.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c'
+    const options: Options = {
+      config: {
+        transports: [{ log: transport }],
+        disableInternalLogger: true,
+        disableFileLogging: true,
+        autoRedact: true
+      }
+    }
+
+    const logger = createLogger(options)
+    const request = createMockRequest(
+      `http://localhost/test?token=${sampleJwt}`
+    )
+
+    logger.info(request, 'hello')
+
+    expect(transport).toHaveBeenCalledTimes(1)
+    const meta = transport.mock.calls[0]?.[2] as
+      | Record<string, unknown>
+      | undefined
+    const reqMeta = meta?.request as { url?: string } | undefined
+    expect(reqMeta?.url).toContain('[REDACTED]')
+    expect(reqMeta?.url).not.toContain(sampleJwt)
+
+    await new Promise(resolve => setTimeout(resolve, 0))
+  })
+
+
   test('handleHttpError emits transport error log', async () => {
     const transport = mock<
       (lvl: unknown, msg: unknown, meta?: unknown) => void

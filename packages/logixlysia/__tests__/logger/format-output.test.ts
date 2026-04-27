@@ -5,6 +5,7 @@ import {
   formatDuration,
   formatLogOutput
 } from '../../src/logger/create-logger'
+import { redactRequest } from '../../src/utils/redact'
 import { createMockRequest } from '../_helpers/request'
 
 describe('formatDuration', () => {
@@ -134,6 +135,36 @@ describe('formatLogOutput', () => {
     expect(out.main).toContain('Not Found')
     expect(out.main).toContain('/not-found')
   })
+
+  test('redacted request masks email in pathname and IP in {ip} token', () => {
+    const request = createMockRequest(
+      'http://localhost/user/test@example.com/x',
+      {
+        headers: { 'x-forwarded-for': '192.168.1.1' }
+      }
+    )
+    const redacted = redactRequest(request)
+    const store = { beforeTime: BigInt(0) }
+    const out = formatLogOutput({
+      level: 'INFO',
+      request: redacted,
+      data: { status: 200 },
+      store,
+      options: baseOptions({
+        config: {
+          useColors: false,
+          ip: true,
+          customLogFormat: '{pathname} {ip}'
+        }
+      })
+    })
+
+    expect(out.main).toContain('/user/[REDACTED]/x')
+    expect(out.main).not.toContain('test@example.com')
+    expect(out.main).toContain('[REDACTED]')
+    expect(out.main).not.toContain('192.168.1.1')
+  })
+
 
   test('speed token appears when duration exceeds verySlowThreshold', () => {
     const request = createMockRequest('http://localhost/slow')

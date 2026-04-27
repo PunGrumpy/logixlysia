@@ -10,6 +10,7 @@ import type {
 } from '../interfaces'
 import { logToTransports } from '../output'
 import { logToFile } from '../output/file'
+import { redact, redactRequest } from '../utils/redact'
 import { formatLogOutput } from './create-logger'
 import { handleHttpError } from './handle-http-error'
 
@@ -78,7 +79,17 @@ export const createLogger = (
       return
     }
 
-    logToTransports({ level, request, data, store, options })
+    const logData = config?.autoRedact === true ? redact(data) : data
+    const logRequest =
+      config?.autoRedact === true ? redactRequest(request) : request
+
+    logToTransports({
+      level,
+      request: logRequest,
+      data: logData,
+      store,
+      options
+    })
 
     const useTransportsOnly = config?.useTransportsOnly === true
     const disableInternalLogger = config?.disableInternalLogger === true
@@ -87,11 +98,16 @@ export const createLogger = (
     if (!(useTransportsOnly || disableFileLogging)) {
       const filePath = config?.logFilePath
       if (filePath) {
-        logToFile({ filePath, level, request, data, store, options }).catch(
-          () => {
-            // Ignore errors
-          }
-        )
+        logToFile({
+          filePath,
+          level,
+          request: logRequest,
+          data: logData,
+          store,
+          options
+        }).catch(() => {
+          // Ignore errors
+        })
       }
     }
 
@@ -101,8 +117,8 @@ export const createLogger = (
 
     const { main, contextLines } = formatLogOutput({
       level,
-      request,
-      data,
+      request: logRequest,
+      data: logData,
       store,
       options
     })
