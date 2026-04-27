@@ -165,7 +165,6 @@ describe('formatLogOutput', () => {
     expect(out.main).not.toContain('192.168.1.1')
   })
 
-
   test('speed token appears when duration exceeds verySlowThreshold', () => {
     const request = createMockRequest('http://localhost/slow')
     const store = {

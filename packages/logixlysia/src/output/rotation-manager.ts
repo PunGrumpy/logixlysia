@@ -28,7 +28,7 @@ const acquireCompressionLock = (filePath: string): Promise<() => void> => {
 
     // Critical section can now proceed
     return () => {
-      resolveLock!()
+      resolveLock?.()
       if (compressionLocks.get(filePath) === newLock) {
         compressionLocks.delete(filePath)
       }

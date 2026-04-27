@@ -21,7 +21,7 @@ const acquireLock = (filePath: string): Promise<() => void> => {
 
     // Critical section can now proceed
     return () => {
-      resolveLock!()
+      resolveLock?.()
       if (fileLocks.get(filePath) === newLock) {
         fileLocks.delete(filePath)
       }

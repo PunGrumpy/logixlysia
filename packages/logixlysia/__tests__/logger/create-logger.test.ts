@@ -94,7 +94,6 @@ describe('createLogger', () => {
     await new Promise(resolve => setTimeout(resolve, 0))
   })
 
-
   test('handleHttpError emits transport error log', async () => {
     const transport = mock<
       (lvl: unknown, msg: unknown, meta?: unknown) => void

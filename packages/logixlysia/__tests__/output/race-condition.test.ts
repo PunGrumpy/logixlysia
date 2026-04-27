@@ -6,6 +6,8 @@ import { logToFile } from '../../src/output/file'
 import { createMockRequest } from '../_helpers/request'
 import { createTempDir, removeTempDir } from '../_helpers/tmp'
 
+const MESSAGE_REGEX = /message-(\d+)/
+
 describe('logToFile race condition', () => {
   test('handles concurrent writes during rotation without data loss', async () => {
     const dir = await createTempDir()
@@ -49,7 +51,7 @@ describe('logToFile race condition', () => {
 
         // Extract message numbers from each line
         for (const line of lines) {
-          const match = line.match(/message-(\d+)/)
+          const match = line.match(MESSAGE_REGEX)
           if (match) {
             allMessages.add(match[1])
           }
