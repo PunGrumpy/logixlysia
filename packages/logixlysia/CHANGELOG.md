@@ -1,5 +1,11 @@
 # Changelog
 
+## 6.3.2
+
+### Patch Changes
+
+- 85691b3: Add `autoRedact` configuration option to automatically scrub sensitive PII (emails, IPs, credit cards, JWTs) from log messages, context objects, and errors before they are outputted.
+
 ## 6.3.1
 
 ### Patch Changes
