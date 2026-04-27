@@ -26,6 +26,7 @@ jobs:
         with:
           node-version: "24"
           registry-url: "https://registry.npmjs.org"
+          cache-dependency-path: "package.json"
       - name: 🔄️ Update npm
         run: npm install -g npm@latest
       - name: 🍞 Setup Bun
