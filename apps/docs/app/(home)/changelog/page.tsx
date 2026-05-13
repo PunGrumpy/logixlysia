@@ -6,6 +6,11 @@ import { ReleaseMarkdown } from './release-markdown'
 const repositoryOwner = process.env.GITHUB_REPO_OWNER ?? 'PunGrumpy'
 const repositoryName = process.env.GITHUB_REPO_NAME ?? 'logixlysia'
 const releasesPerPage = 10
+const releaseDateFormatter = new Intl.DateTimeFormat('en-US', {
+  year: 'numeric',
+  month: 'short',
+  day: '2-digit'
+})
 
 interface GitHubRelease {
   body: string | null
@@ -50,11 +55,7 @@ const formatReleaseDate = (date: string | null) => {
     return 'Unknown date'
   }
 
-  return new Intl.DateTimeFormat('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: '2-digit'
-  }).format(new Date(date))
+  return releaseDateFormatter.format(new Date(date))
 }
 
 export const metadata: Metadata = createMetadata(

@@ -1,6 +1,6 @@
 'use client'
 
-import { motion } from 'motion/react'
+import { domAnimation, LazyMotion, m, useReducedMotion } from 'motion/react'
 import { cn } from '@/lib/utils'
 import { Section } from './section'
 
@@ -45,17 +45,23 @@ const milestones: Milestone[] = [
 
 const MilestoneItem = ({
   milestone,
-  index
+  index,
+  reduceMotion
 }: {
   milestone: Milestone
   index: number
+  reduceMotion: boolean
 }) => (
-  <motion.div
+  <m.div
     className="grid grid-cols-[auto_1fr] items-start gap-6 md:gap-8"
-    initial={{ opacity: 0, y: 16 }}
-    transition={{ duration: 0.7, delay: index * 0.1 }}
-    viewport={{ once: true, amount: 0.1 }}
-    whileInView={{ opacity: 1, y: 0 }}
+    {...(reduceMotion
+      ? {}
+      : {
+          initial: { opacity: 0, y: 16 },
+          transition: { duration: 0.7, delay: index * 0.1 },
+          viewport: { once: true, amount: 0.1 },
+          whileInView: { opacity: 1, y: 0 }
+        })}
   >
     <div className="relative z-10 grid grid-rows-[auto_1fr] items-start">
       <div className="relative">
@@ -86,29 +92,36 @@ const MilestoneItem = ({
         {milestone.description}
       </p>
     </div>
-  </motion.div>
+  </m.div>
 )
 
-export const Journey = () => (
-  <Section className="grid gap-12 md:gap-16">
-    <div className="grid gap-4 text-center">
-      <h2 className="font-medium font-serif text-3xl text-foreground md:text-5xl">
-        The Journey
-      </h2>
-      <p className="text-muted-foreground text-sm md:text-base">
-        Key milestones from 2025
-      </p>
-    </div>
-    <div className="mx-auto max-w-2xl">
-      <div className="grid gap-12 md:gap-16">
-        {milestones.map((milestone, index) => (
-          <MilestoneItem
-            index={index}
-            key={milestone.month}
-            milestone={milestone}
-          />
-        ))}
-      </div>
-    </div>
-  </Section>
-)
+export const Journey = () => {
+  const reduceMotion = useReducedMotion()
+
+  return (
+    <LazyMotion features={domAnimation}>
+      <Section className="grid gap-12 md:gap-16">
+        <div className="grid gap-4 text-center">
+          <h2 className="font-medium font-serif text-3xl text-foreground md:text-5xl">
+            The Journey
+          </h2>
+          <p className="text-muted-foreground text-sm md:text-base">
+            Key milestones from 2025
+          </p>
+        </div>
+        <div className="mx-auto max-w-2xl">
+          <div className="grid gap-12 md:gap-16">
+            {milestones.map((milestone, index) => (
+              <MilestoneItem
+                index={index}
+                key={milestone.month}
+                milestone={milestone}
+                reduceMotion={reduceMotion}
+              />
+            ))}
+          </div>
+        </div>
+      </Section>
+    </LazyMotion>
+  )
+}

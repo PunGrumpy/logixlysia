@@ -7,7 +7,7 @@ import {
   IconGitBranch,
   IconGitCommit
 } from '@tabler/icons-react'
-import { motion } from 'motion/react'
+import { domAnimation, LazyMotion, m, useReducedMotion } from 'motion/react'
 import type { ReactNode } from 'react'
 import { Icons } from '@/components/icons'
 import { Card } from '@/components/ui/card'
@@ -17,6 +17,7 @@ interface StatCardProps {
   delay?: number
   description?: string
   icon?: ReactNode
+  reduceMotion: boolean
   title: string
   value: string | number
 }
@@ -26,13 +27,18 @@ const StatCard = ({
   value,
   description,
   icon,
+  reduceMotion,
   delay = 0
 }: StatCardProps) => (
-  <motion.div
-    initial={{ opacity: 0, y: 32 }}
-    transition={{ duration: 0.7, delay: delay / 1000 }}
-    viewport={{ once: true, amount: 0.1 }}
-    whileInView={{ opacity: 1, y: 0 }}
+  <m.div
+    {...(reduceMotion
+      ? {}
+      : {
+          initial: { opacity: 0, y: 32 },
+          transition: { duration: 0.7, delay: delay / 1000 },
+          viewport: { once: true, amount: 0.1 },
+          whileInView: { opacity: 1, y: 0 }
+        })}
   >
     <Card className="group relative overflow-hidden bg-card/50 p-8 backdrop-blur-sm">
       <div className="absolute inset-0 bg-linear-to-br from-primary/5 to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
@@ -49,62 +55,74 @@ const StatCard = ({
         )}
       </div>
     </Card>
-  </motion.div>
+  </m.div>
 )
 
-export const Stats = () => (
-  <Section>
-    <div className="grid gap-16">
-      <div className="text-center">
-        <h2 className="mb-4 font-medium font-serif text-4xl md:text-5xl">
-          By The Numbers
-        </h2>
-        <p className="text-muted-foreground">The metrics that tell our story</p>
-      </div>
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        <StatCard
-          delay={0}
-          description="Total commits since launch"
-          icon={<IconGitCommit className="size-8" />}
-          title="Commits"
-          value="734"
-        />
-        <StatCard
-          delay={100}
-          description="Latest version released"
-          icon={<Icons.logo className="size-8" />}
-          title="Version"
-          value="6.0.1"
-        />
-        <StatCard
-          delay={200}
-          description="Years of development"
-          icon={<IconCalendar className="size-8" />}
-          title="Project Age"
-          value="2+"
-        />
-        <StatCard
-          delay={300}
-          description="Major releases in 2025"
-          icon={<IconGitBranch className="size-8" />}
-          title="Releases"
-          value="6"
-        />
-        <StatCard
-          delay={400}
-          description="Features and improvements"
-          icon={<IconCode className="size-8" />}
-          title="Updates"
-          value="50+"
-        />
-        <StatCard
-          delay={500}
-          description="Open source on GitHub"
-          icon={<IconBrandGithub className="size-8" />}
-          title="GitHub"
-          value="Active"
-        />
-      </div>
-    </div>
-  </Section>
-)
+export const Stats = () => {
+  const reduceMotion = useReducedMotion()
+
+  return (
+    <LazyMotion features={domAnimation}>
+      <Section>
+        <div className="grid gap-16">
+          <div className="text-center">
+            <h2 className="mb-4 font-medium font-serif text-4xl md:text-5xl">
+              By The Numbers
+            </h2>
+            <p className="text-muted-foreground">The metrics that tell our story</p>
+          </div>
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            <StatCard
+              delay={0}
+              description="Total commits since launch"
+              icon={<IconGitCommit className="size-8" />}
+              reduceMotion={reduceMotion}
+              title="Commits"
+              value="734"
+            />
+            <StatCard
+              delay={100}
+              description="Latest version released"
+              icon={<Icons.logo className="size-8" />}
+              reduceMotion={reduceMotion}
+              title="Version"
+              value="6.0.1"
+            />
+            <StatCard
+              delay={200}
+              description="Years of development"
+              icon={<IconCalendar className="size-8" />}
+              reduceMotion={reduceMotion}
+              title="Project Age"
+              value="2+"
+            />
+            <StatCard
+              delay={300}
+              description="Major releases in 2025"
+              icon={<IconGitBranch className="size-8" />}
+              reduceMotion={reduceMotion}
+              title="Releases"
+              value="6"
+            />
+            <StatCard
+              delay={400}
+              description="Features and improvements"
+              icon={<IconCode className="size-8" />}
+              reduceMotion={reduceMotion}
+              title="Updates"
+              value="50+"
+            />
+            <StatCard
+              delay={500}
+              description="Open source on GitHub"
+              icon={<IconBrandGithub className="size-8" />}
+              reduceMotion={reduceMotion}
+              title="GitHub"
+              value="Active"
+            />
+          </div>
+        </div>
+      </Section>
+    </LazyMotion>
+  )
+}

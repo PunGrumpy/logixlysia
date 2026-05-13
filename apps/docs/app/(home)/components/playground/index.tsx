@@ -1,6 +1,5 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
 import { cn } from '@/lib/utils'
 import { Background } from './background'
 
@@ -68,6 +67,8 @@ export interface LogEntry {
 
 const SLOW_MS = 500
 const VERY_SLOW_MS = 1000
+const PLAYGROUND_NOW = Date.parse('2025-04-13T18:12:30.000Z')
+const PLAYGROUND_SEED = 20_250_413
 
 const TIMESTAMP_PARTS = /\s+/
 
@@ -255,15 +256,6 @@ const createRng = (seed: number) => {
   }
 }
 
-const getSeed = () => {
-  if (typeof crypto !== 'undefined' && 'getRandomValues' in crypto) {
-    const buf = new Uint32Array(1)
-    crypto.getRandomValues(buf)
-    return Number(buf[0] ?? Date.now())
-  }
-  return Date.now()
-}
-
 const rngInt = (rng: () => number, min: number, max: number) => {
   const a = Math.ceil(min)
   const b = Math.floor(max)
@@ -373,9 +365,8 @@ const createRandomLog = (rng: () => number, now: number): LogEntry => {
   }
 }
 
-const createRepeatedRandomLogs = (seed: number) => {
+const createRepeatedRandomLogs = (seed: number, now: number = PLAYGROUND_NOW) => {
   const rng = createRng(seed)
-  const now = Date.now()
 
   return Array.from({ length: LOG_REPEAT_COUNT }, () =>
     Array.from({ length: logs.length }, () => createRandomLog(rng, now))
@@ -413,7 +404,7 @@ const ContextTree = ({ lines }: { lines: ContextLine[] }) => {
         return (
           <div
             className="whitespace-pre-wrap font-mono text-[10px] leading-snug sm:text-xs"
-            key={`${line.key}-${line.value}-${line.key}`}
+            key={`${line.key}-${line.value}-${i}`}
           >
             <span className="text-muted-foreground/80">{`  ${branch} `}</span>
             <span className="text-cyan-400">{line.key}</span>
@@ -492,28 +483,13 @@ const TerminalCursor = () => (
 )
 
 const Output = () => {
-  const [seed, setSeed] = useState<number | null>(null)
-
-  useEffect(() => {
-    setSeed(getSeed())
-  }, [])
-
-  const repeatedLogs = useMemo(() => {
-    if (seed === null) {
-      return Array.from({ length: LOG_REPEAT_COUNT }, (_, listIndex) =>
-        logs.map((log, logIndex) => ({
-          ...log,
-          renderId: `static-${listIndex}-${logIndex}-${log.timestamp}`
-        }))
-      )
-    }
-    return createRepeatedRandomLogs(seed).map((logList, listIndex) =>
+  const repeatedLogs = createRepeatedRandomLogs(PLAYGROUND_SEED).map(
+    (logList, listIndex) =>
       logList.map((log, logIndex) => ({
         ...log,
-        renderId: `seed-${seed}-${listIndex}-${logIndex}-${log.timestamp}`
+        renderId: `seed-${PLAYGROUND_SEED}-${listIndex}-${logIndex}-${log.timestamp}`
       }))
-    )
-  }, [seed])
+  )
 
   return (
     <code className="flex animate-marquee-vertical flex-col will-change-transform">
@@ -545,7 +521,7 @@ export const Playground = () => (
           />
           <span aria-hidden className="size-2.5 rounded-full bg-green-500/90" />
           <span className="ml-2 font-mono text-[10px] text-muted-foreground sm:text-xs">
-            logixlysia — request logs
+            logixlysia · request logs
           </span>
         </div>
         <article

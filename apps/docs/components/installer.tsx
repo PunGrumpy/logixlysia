@@ -2,7 +2,7 @@
 
 import { useOpenPanel } from '@openpanel/nextjs'
 import { IconCheck, IconCopy } from '@tabler/icons-react'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import {
   InputGroup,
@@ -21,16 +21,34 @@ interface InstallerProps {
 export const Installer = ({ code }: InstallerProps) => {
   const { track } = useOpenPanel()
   const [copied, setCopied] = useState(false)
+  const resetTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(code)
-    toast.success('Copied to clipboard')
-    track('copy_to_clipboard', { code, name: 'installer' })
-    setCopied(true)
+  useEffect(
+    () => () => {
+      if (resetTimeoutRef.current !== null) {
+        clearTimeout(resetTimeoutRef.current)
+      }
+    },
+    []
+  )
 
-    setTimeout(() => {
-      setCopied(false)
-    }, COPY_TIMEOUT)
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(code)
+      toast.success('Copied to clipboard')
+      track('copy_to_clipboard', { code, name: 'installer' })
+      setCopied(true)
+
+      if (resetTimeoutRef.current !== null) {
+        clearTimeout(resetTimeoutRef.current)
+      }
+
+      resetTimeoutRef.current = setTimeout(() => {
+        setCopied(false)
+      }, COPY_TIMEOUT)
+    } catch {
+      toast.error('Failed to copy to clipboard')
+    }
   }
 
   const Icon = copied ? IconCheck : IconCopy

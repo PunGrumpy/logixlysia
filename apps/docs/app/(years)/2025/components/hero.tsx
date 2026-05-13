@@ -11,7 +11,8 @@ export const Hero = () => {
     const handleScroll = () => {
       setScrollY(window.scrollY)
     }
-    window.addEventListener('scroll', handleScroll)
+
+    window.addEventListener('scroll', handleScroll, { passive: true })
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
@@ -41,8 +42,11 @@ export const Hero = () => {
         <Button
           className="justify-self-center"
           onClick={() => {
+            const prefersReducedMotion = window.matchMedia(
+              '(prefers-reduced-motion: reduce)'
+            ).matches
             window.scrollTo({
-              behavior: 'smooth',
+              behavior: prefersReducedMotion ? 'auto' : 'smooth',
               top: window.innerHeight
             })
           }}

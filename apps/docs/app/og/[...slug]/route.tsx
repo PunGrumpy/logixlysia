@@ -63,15 +63,12 @@ export const GET = async (
     notFound()
   }
 
-  const intrumentSerifRegular = await readFile(
-    join(process.cwd(), 'app/og/[...slug]/InstrumentSerif-Regular.ttf')
-  )
-  const instrumentSerifItalic = await readFile(
-    join(process.cwd(), 'app/og/[...slug]/InstrumentSerif-Italic.ttf')
-  )
-  const geistRegular = await readFile(
-    join(process.cwd(), 'app/og/[...slug]/Geist-Regular.ttf')
-  )
+  const [instrumentSerifRegular, instrumentSerifItalic, geistRegular] =
+    await Promise.all([
+      readFile(join(process.cwd(), 'app/og/[...slug]/InstrumentSerif-Regular.ttf')),
+      readFile(join(process.cwd(), 'app/og/[...slug]/InstrumentSerif-Italic.ttf')),
+      readFile(join(process.cwd(), 'app/og/[...slug]/Geist-Regular.ttf'))
+    ])
 
   return new ImageResponse(
     <div tw="flex flex-col justify-between items-start w-full h-full bg-[#101010] p-12 text-white">
@@ -100,7 +97,7 @@ export const GET = async (
       fonts: [
         {
           name: 'Instrument Serif',
-          data: intrumentSerifRegular,
+          data: instrumentSerifRegular,
           style: 'normal',
           weight: 400
         },
