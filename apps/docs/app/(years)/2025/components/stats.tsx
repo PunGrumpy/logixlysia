@@ -59,7 +59,7 @@ const StatCard = ({
 )
 
 export const Stats = () => {
-  const reduceMotion = useReducedMotion()
+  const reduceMotion = useReducedMotion() ?? false
 
   return (
     <LazyMotion features={domAnimation}>
