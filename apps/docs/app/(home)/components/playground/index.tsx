@@ -143,8 +143,8 @@ export const logs: LogEntry[] = [
     service: DEMO_SERVICE,
     message: 'Hello from custom logger',
     contextLines: [
-      { key: 'feature', value: 'custom-route-log' },
-      { key: 'userId', value: '123' }
+      createContextLine({ key: 'feature', value: 'custom-route-log' }),
+      createContextLine({ key: 'userId', value: '123' })
     ]
   },
   {
@@ -179,9 +179,9 @@ export const logs: LogEntry[] = [
     service: DEMO_SERVICE,
     message: 'Boom!',
     contextLines: [
-      { key: 'feature', value: 'custom-route-log' },
-      { key: 'userId', value: '123' },
-      { key: 'error', value: 'Boom!' }
+      createContextLine({ key: 'feature', value: 'custom-route-log' }),
+      createContextLine({ key: 'userId', value: '123' }),
+      createContextLine({ key: 'error', value: 'Boom!' })
     ]
   },
   {
@@ -194,8 +194,8 @@ export const logs: LogEntry[] = [
     service: DEMO_SERVICE,
     message: 'User signup',
     contextLines: [
-      { key: 'email', value: 'ada@example.com' },
-      { key: 'feature', value: 'signup-flow' }
+      createContextLine({ key: 'email', value: 'ada@example.com' }),
+      createContextLine({ key: 'feature', value: 'signup-flow' })
     ]
   },
   {
@@ -207,7 +207,7 @@ export const logs: LogEntry[] = [
     type: 'ERROR',
     service: DEMO_SERVICE,
     message: 'Payment failed',
-    contextLines: [{ key: 'error', value: 'upstream timeout' }]
+    contextLines: [createContextLine({ key: 'error', value: 'upstream timeout' })]
   }
 ]
 
