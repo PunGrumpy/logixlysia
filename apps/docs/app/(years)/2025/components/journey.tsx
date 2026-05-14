@@ -96,7 +96,7 @@ const MilestoneItem = ({
 )
 
 export const Journey = () => {
-  const reduceMotion = useReducedMotion()
+  const reduceMotion = useReducedMotion() ?? false
 
   return (
     <LazyMotion features={domAnimation}>
