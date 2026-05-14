@@ -69,6 +69,7 @@ export interface LogEntry {
 const SLOW_MS = 500
 const VERY_SLOW_MS = 1000
 const PLAYGROUND_NOW = Date.parse('2025-04-13T18:12:30.000Z')
+// Seed reflects the PLAYGROUND_NOW date (2025-04-13) for deterministic logs.
 const PLAYGROUND_SEED = 20_250_413
 let contextLineId = 0
 

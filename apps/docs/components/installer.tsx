@@ -21,12 +21,12 @@ interface InstallerProps {
 export const Installer = ({ code }: InstallerProps) => {
   const { track } = useOpenPanel()
   const [copied, setCopied] = useState(false)
-  const resetTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const copyResetTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(
     () => () => {
-      if (resetTimeoutRef.current !== null) {
-        clearTimeout(resetTimeoutRef.current)
+      if (copyResetTimeoutRef.current !== null) {
+        clearTimeout(copyResetTimeoutRef.current)
       }
     },
     []
@@ -39,11 +39,11 @@ export const Installer = ({ code }: InstallerProps) => {
       track('copy_to_clipboard', { code, name: 'installer' })
       setCopied(true)
 
-      if (resetTimeoutRef.current !== null) {
-        clearTimeout(resetTimeoutRef.current)
+      if (copyResetTimeoutRef.current !== null) {
+        clearTimeout(copyResetTimeoutRef.current)
       }
 
-      resetTimeoutRef.current = setTimeout(() => {
+      copyResetTimeoutRef.current = setTimeout(() => {
         setCopied(false)
       }, COPY_TIMEOUT)
     } catch {

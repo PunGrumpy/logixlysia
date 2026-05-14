@@ -2,9 +2,10 @@ import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { notFound } from 'next/navigation'
 import { ImageResponse } from 'next/og'
+import type { CSSProperties } from 'react'
 import { source } from '@/lib/source'
 
-const ogContainerStyle = {
+const ogContainerStyle: CSSProperties = {
   display: 'flex',
   flexDirection: 'column',
   justifyContent: 'space-between',
@@ -16,12 +17,12 @@ const ogContainerStyle = {
   color: '#fff'
 }
 
-const ogBodyStyle = {
+const ogBodyStyle: CSSProperties = {
   display: 'flex',
   flexDirection: 'column'
 }
 
-const ogTitleStyle = {
+const ogTitleStyle: CSSProperties = {
   maxWidth: 768,
   fontSize: 64,
   lineHeight: '69px',
@@ -29,13 +30,13 @@ const ogTitleStyle = {
   margin: 0
 }
 
-const ogAccentStyle = {
+const ogAccentStyle: CSSProperties = {
   fontFamily: 'Instrument Serif',
   fontStyle: 'italic',
   color: '#ffc799'
 }
 
-const ogDescriptionStyle = {
+const ogDescriptionStyle: CSSProperties = {
   fontFamily: 'Geist',
   fontSize: 24,
   fontWeight: 400,
