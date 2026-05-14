@@ -51,8 +51,6 @@ export const Installer = ({ code }: InstallerProps) => {
     }
   }
 
-  const Icon = copied ? IconCheck : IconCopy
-
   return (
     <InputGroup className="h-10 rounded-md bg-card font-mono shadow-none">
       <InputGroupAddon>
@@ -69,7 +67,11 @@ export const Installer = ({ code }: InstallerProps) => {
           size="icon-sm"
           title="Copy"
         >
-          <Icon className="size-3.5" size={14} />
+          {copied ? (
+            <IconCheck className="size-3.5" size={14} />
+          ) : (
+            <IconCopy className="size-3.5" size={14} />
+          )}
         </InputGroupButton>
       </InputGroupAddon>
     </InputGroup>

@@ -49,6 +49,7 @@ type LogType = 'INFO' | 'WARNING' | 'ERROR'
 type HttpMethod = keyof typeof httpMethod
 
 export interface ContextLine {
+  id: string
   key: string
   value: string
 }
@@ -69,6 +70,12 @@ const SLOW_MS = 500
 const VERY_SLOW_MS = 1000
 const PLAYGROUND_NOW = Date.parse('2025-04-13T18:12:30.000Z')
 const PLAYGROUND_SEED = 20_250_413
+let contextLineId = 0
+
+const createContextLine = (line: Omit<ContextLine, 'id'>): ContextLine => ({
+  id: `context-${contextLineId++}`,
+  ...line
+})
 
 const TIMESTAMP_PARTS = /\s+/
 
@@ -310,22 +317,28 @@ const buildRandomContext = (
   const lines: ContextLine[] = []
 
   if (rng() > 0.45) {
-    lines.push({
-      key: 'requestId',
-      value: `req_${rngInt(rng, 10_000, 99_999)}`
-    })
+    lines.push(
+      createContextLine({
+        key: 'requestId',
+        value: `req_${rngInt(rng, 10_000, 99_999)}`
+      })
+    )
   }
 
   if (type === 'ERROR' || status >= 500) {
     if (rng() > 0.25) {
-      lines.push({ key: 'error', value: rngChoice(rng, ERROR_MESSAGES) })
+      lines.push(
+        createContextLine({ key: 'error', value: rngChoice(rng, ERROR_MESSAGES) })
+      )
     }
   } else if (rng() > 0.5) {
-    lines.push({ key: 'userId', value: String(rngInt(rng, 1, 99_999)) })
+    lines.push(
+      createContextLine({ key: 'userId', value: String(rngInt(rng, 1, 99_999)) })
+    )
   }
 
   if (lines.length === 0 && rng() > 0.4) {
-    lines.push({ key: 'feature', value: 'demo-playground' })
+    lines.push(createContextLine({ key: 'feature', value: 'demo-playground' }))
   }
 
   return lines
@@ -404,7 +417,7 @@ const ContextTree = ({ lines }: { lines: ContextLine[] }) => {
         return (
           <div
             className="whitespace-pre-wrap font-mono text-[10px] leading-snug sm:text-xs"
-            key={`${line.key}-${line.value}-${i}`}
+            key={line.id}
           >
             <span className="text-muted-foreground/80">{`  ${branch} `}</span>
             <span className="text-cyan-400">{line.key}</span>
