@@ -19,7 +19,7 @@ const Actions = [
   {
     icon: IconBrandGithub,
     title: 'Fully open-source',
-    description: 'MIT licensed—use it anywhere and contribute back'
+    description: 'MIT licensed, use it anywhere and contribute back'
   },
   {
     icon: IconClock,
@@ -39,7 +39,7 @@ export const Footer = () => (
               Made Possible by You
             </h3>
             <p className="text-muted-foreground text-sm">
-              Logixlysia is open-source and community-driven—issues, PRs, and
+              Logixlysia is open-source and community-driven; issues, PRs, and
               feedback keep it sharp
             </p>
           </div>

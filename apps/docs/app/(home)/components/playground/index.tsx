@@ -1,6 +1,5 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
 import { cn } from '@/lib/utils'
 import { Background } from './background'
 
@@ -50,6 +49,7 @@ type LogType = 'INFO' | 'WARNING' | 'ERROR'
 type HttpMethod = keyof typeof httpMethod
 
 export interface ContextLine {
+  id: string
   key: string
   value: string
 }
@@ -68,6 +68,15 @@ export interface LogEntry {
 
 const SLOW_MS = 500
 const VERY_SLOW_MS = 1000
+const PLAYGROUND_NOW = Date.parse('2025-04-13T18:12:30.000Z')
+// Seed reflects the PLAYGROUND_NOW date (2025-04-13) for deterministic logs.
+const PLAYGROUND_SEED = 20_250_413
+let contextLineId = 0
+
+const createContextLine = (line: Omit<ContextLine, 'id'>): ContextLine => ({
+  id: `context-${contextLineId++}`,
+  ...line
+})
 
 const TIMESTAMP_PARTS = /\s+/
 
@@ -134,8 +143,8 @@ export const logs: LogEntry[] = [
     service: DEMO_SERVICE,
     message: 'Hello from custom logger',
     contextLines: [
-      { key: 'feature', value: 'custom-route-log' },
-      { key: 'userId', value: '123' }
+      createContextLine({ key: 'feature', value: 'custom-route-log' }),
+      createContextLine({ key: 'userId', value: '123' })
     ]
   },
   {
@@ -170,9 +179,9 @@ export const logs: LogEntry[] = [
     service: DEMO_SERVICE,
     message: 'Boom!',
     contextLines: [
-      { key: 'feature', value: 'custom-route-log' },
-      { key: 'userId', value: '123' },
-      { key: 'error', value: 'Boom!' }
+      createContextLine({ key: 'feature', value: 'custom-route-log' }),
+      createContextLine({ key: 'userId', value: '123' }),
+      createContextLine({ key: 'error', value: 'Boom!' })
     ]
   },
   {
@@ -185,8 +194,8 @@ export const logs: LogEntry[] = [
     service: DEMO_SERVICE,
     message: 'User signup',
     contextLines: [
-      { key: 'email', value: 'ada@example.com' },
-      { key: 'feature', value: 'signup-flow' }
+      createContextLine({ key: 'email', value: 'ada@example.com' }),
+      createContextLine({ key: 'feature', value: 'signup-flow' })
     ]
   },
   {
@@ -198,7 +207,7 @@ export const logs: LogEntry[] = [
     type: 'ERROR',
     service: DEMO_SERVICE,
     message: 'Payment failed',
-    contextLines: [{ key: 'error', value: 'upstream timeout' }]
+    contextLines: [createContextLine({ key: 'error', value: 'upstream timeout' })]
   }
 ]
 
@@ -255,15 +264,6 @@ const createRng = (seed: number) => {
   }
 }
 
-const getSeed = () => {
-  if (typeof crypto !== 'undefined' && 'getRandomValues' in crypto) {
-    const buf = new Uint32Array(1)
-    crypto.getRandomValues(buf)
-    return Number(buf[0] ?? Date.now())
-  }
-  return Date.now()
-}
-
 const rngInt = (rng: () => number, min: number, max: number) => {
   const a = Math.ceil(min)
   const b = Math.floor(max)
@@ -318,22 +318,28 @@ const buildRandomContext = (
   const lines: ContextLine[] = []
 
   if (rng() > 0.45) {
-    lines.push({
-      key: 'requestId',
-      value: `req_${rngInt(rng, 10_000, 99_999)}`
-    })
+    lines.push(
+      createContextLine({
+        key: 'requestId',
+        value: `req_${rngInt(rng, 10_000, 99_999)}`
+      })
+    )
   }
 
   if (type === 'ERROR' || status >= 500) {
     if (rng() > 0.25) {
-      lines.push({ key: 'error', value: rngChoice(rng, ERROR_MESSAGES) })
+      lines.push(
+        createContextLine({ key: 'error', value: rngChoice(rng, ERROR_MESSAGES) })
+      )
     }
   } else if (rng() > 0.5) {
-    lines.push({ key: 'userId', value: String(rngInt(rng, 1, 99_999)) })
+    lines.push(
+      createContextLine({ key: 'userId', value: String(rngInt(rng, 1, 99_999)) })
+    )
   }
 
   if (lines.length === 0 && rng() > 0.4) {
-    lines.push({ key: 'feature', value: 'demo-playground' })
+    lines.push(createContextLine({ key: 'feature', value: 'demo-playground' }))
   }
 
   return lines
@@ -373,9 +379,8 @@ const createRandomLog = (rng: () => number, now: number): LogEntry => {
   }
 }
 
-const createRepeatedRandomLogs = (seed: number) => {
+const createRepeatedRandomLogs = (seed: number, now: number = PLAYGROUND_NOW) => {
   const rng = createRng(seed)
-  const now = Date.now()
 
   return Array.from({ length: LOG_REPEAT_COUNT }, () =>
     Array.from({ length: logs.length }, () => createRandomLog(rng, now))
@@ -413,7 +418,7 @@ const ContextTree = ({ lines }: { lines: ContextLine[] }) => {
         return (
           <div
             className="whitespace-pre-wrap font-mono text-[10px] leading-snug sm:text-xs"
-            key={`${line.key}-${line.value}-${line.key}`}
+            key={line.id}
           >
             <span className="text-muted-foreground/80">{`  ${branch} `}</span>
             <span className="text-cyan-400">{line.key}</span>
@@ -492,28 +497,13 @@ const TerminalCursor = () => (
 )
 
 const Output = () => {
-  const [seed, setSeed] = useState<number | null>(null)
-
-  useEffect(() => {
-    setSeed(getSeed())
-  }, [])
-
-  const repeatedLogs = useMemo(() => {
-    if (seed === null) {
-      return Array.from({ length: LOG_REPEAT_COUNT }, (_, listIndex) =>
-        logs.map((log, logIndex) => ({
-          ...log,
-          renderId: `static-${listIndex}-${logIndex}-${log.timestamp}`
-        }))
-      )
-    }
-    return createRepeatedRandomLogs(seed).map((logList, listIndex) =>
+  const repeatedLogs = createRepeatedRandomLogs(PLAYGROUND_SEED).map(
+    (logList, listIndex) =>
       logList.map((log, logIndex) => ({
         ...log,
-        renderId: `seed-${seed}-${listIndex}-${logIndex}-${log.timestamp}`
+        renderId: `seed-${PLAYGROUND_SEED}-${listIndex}-${logIndex}-${log.timestamp}`
       }))
-    )
-  }, [seed])
+  )
 
   return (
     <code className="flex animate-marquee-vertical flex-col will-change-transform">
@@ -545,7 +535,7 @@ export const Playground = () => (
           />
           <span aria-hidden className="size-2.5 rounded-full bg-green-500/90" />
           <span className="ml-2 font-mono text-[10px] text-muted-foreground sm:text-xs">
-            logixlysia — request logs
+            logixlysia · request logs
           </span>
         </div>
         <article

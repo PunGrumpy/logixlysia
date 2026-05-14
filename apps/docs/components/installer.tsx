@@ -2,7 +2,7 @@
 
 import { useOpenPanel } from '@openpanel/nextjs'
 import { IconCheck, IconCopy } from '@tabler/icons-react'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import {
   InputGroup,
@@ -21,19 +21,35 @@ interface InstallerProps {
 export const Installer = ({ code }: InstallerProps) => {
   const { track } = useOpenPanel()
   const [copied, setCopied] = useState(false)
+  const copyResetTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(code)
-    toast.success('Copied to clipboard')
-    track('copy_to_clipboard', { code, name: 'installer' })
-    setCopied(true)
+  useEffect(
+    () => () => {
+      if (copyResetTimeoutRef.current !== null) {
+        clearTimeout(copyResetTimeoutRef.current)
+      }
+    },
+    []
+  )
 
-    setTimeout(() => {
-      setCopied(false)
-    }, COPY_TIMEOUT)
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(code)
+      toast.success('Copied to clipboard')
+      track('copy_to_clipboard', { code, name: 'installer' })
+      setCopied(true)
+
+      if (copyResetTimeoutRef.current !== null) {
+        clearTimeout(copyResetTimeoutRef.current)
+      }
+
+      copyResetTimeoutRef.current = setTimeout(() => {
+        setCopied(false)
+      }, COPY_TIMEOUT)
+    } catch {
+      toast.error('Failed to copy to clipboard')
+    }
   }
-
-  const Icon = copied ? IconCheck : IconCopy
 
   return (
     <InputGroup className="h-10 rounded-md bg-card font-mono shadow-none">
@@ -51,7 +67,11 @@ export const Installer = ({ code }: InstallerProps) => {
           size="icon-sm"
           title="Copy"
         >
-          <Icon className="size-3.5" size={14} />
+          {copied ? (
+            <IconCheck className="size-3.5" size={14} />
+          ) : (
+            <IconCopy className="size-3.5" size={14} />
+          )}
         </InputGroupButton>
       </InputGroupAddon>
     </InputGroup>
