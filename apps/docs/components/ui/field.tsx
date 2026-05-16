@@ -1,6 +1,6 @@
 "use client"
 
-import { memo, useMemo } from "react"
+import { useMemo } from "react"
 import { cva, type VariantProps } from "class-variance-authority"
 
 import { cn } from "@/lib/utils"
@@ -120,7 +120,7 @@ function FieldTitle({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="field-label"
       className={cn(
-        "flex w-fit items-center gap-2 text-sm leading-snug font-medium group-data-[disabled=true]/field:opacity-50",
+        "flex w-fit items-center gap-2 text-sm font-medium group-data-[disabled=true]/field:opacity-50",
         className
       )}
       {...props}
@@ -173,29 +173,6 @@ function FieldSeparator({
   )
 }
 
-type FieldErrorListProps = {
-  errors: Array<{ message?: string } | undefined>
-}
-
-const FieldErrorList = memo(function FieldErrorList({ errors }: FieldErrorListProps) {
-  const uniqueErrors = [
-    ...new Map(errors.map((error) => [error?.message, error])).values(),
-  ]
-
-  if (uniqueErrors.length === 1) {
-    return <>{uniqueErrors[0]?.message}</>
-  }
-
-  return (
-    <ul className="ml-4 flex list-disc flex-col gap-1">
-      {uniqueErrors.map(
-        (error) =>
-          error?.message && <li key={error.message}>{error.message}</li>
-      )}
-    </ul>
-  )
-})
-
 function FieldError({
   className,
   children,
@@ -204,13 +181,32 @@ function FieldError({
 }: React.ComponentProps<"div"> & {
   errors?: Array<{ message?: string } | undefined>
 }) {
-  const hasRenderableErrors = errors?.some(e => !!e?.message)
+  const content = useMemo(() => {
+    if (children) {
+      return children
+    }
 
-  if (!children && !hasRenderableErrors) {
-    return null
-  }
+    if (!errors?.length) {
+      return null
+    }
 
-  const content = children ?? (hasRenderableErrors ? <FieldErrorList errors={errors} /> : null)
+    const uniqueErrors = [
+      ...new Map(errors.map((error) => [error?.message, error])).values(),
+    ]
+
+    if (uniqueErrors?.length == 1) {
+      return uniqueErrors[0]?.message
+    }
+
+    return (
+      <ul className="ml-4 flex list-disc flex-col gap-1">
+        {uniqueErrors.map(
+          (error, index) =>
+            error?.message && <li key={index}>{error.message}</li>
+        )}
+      </ul>
+    )
+  }, [children, errors])
 
   if (!content) {
     return null
