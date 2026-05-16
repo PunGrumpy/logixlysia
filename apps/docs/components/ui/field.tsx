@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo } from "react"
+import { memo, useMemo } from "react"
 import { cva, type VariantProps } from "class-variance-authority"
 
 import { cn } from "@/lib/utils"
@@ -173,6 +173,29 @@ function FieldSeparator({
   )
 }
 
+type FieldErrorListProps = {
+  errors: Array<{ message?: string } | undefined>
+}
+
+const FieldErrorList = memo(function FieldErrorList({ errors }: FieldErrorListProps) {
+  const uniqueErrors = [
+    ...new Map(errors.map((error) => [error?.message, error])).values(),
+  ]
+
+  if (uniqueErrors.length === 1) {
+    return <>{uniqueErrors[0]?.message}</>
+  }
+
+  return (
+    <ul className="ml-4 flex list-disc flex-col gap-1">
+      {uniqueErrors.map(
+        (error) =>
+          error?.message && <li key={error.message}>{error.message}</li>
+      )}
+    </ul>
+  )
+})
+
 function FieldError({
   className,
   children,
@@ -181,32 +204,13 @@ function FieldError({
 }: React.ComponentProps<"div"> & {
   errors?: Array<{ message?: string } | undefined>
 }) {
-  const content = useMemo(() => {
-    if (children) {
-      return children
-    }
+  const hasErrors = errors?.length
 
-    if (!errors?.length) {
-      return null
-    }
+  if (!children && !hasErrors) {
+    return null
+  }
 
-    const uniqueErrors = [
-      ...new Map(errors.map((error) => [error?.message, error])).values(),
-    ]
-
-    if (uniqueErrors?.length == 1) {
-      return uniqueErrors[0]?.message
-    }
-
-    return (
-      <ul className="ml-4 flex list-disc flex-col gap-1">
-        {uniqueErrors.map(
-          (error, index) =>
-            error?.message && <li key={index}>{error.message}</li>
-        )}
-      </ul>
-    )
-  }, [children, errors])
+  const content = children ?? (errors ? <FieldErrorList errors={errors} /> : null)
 
   if (!content) {
     return null
