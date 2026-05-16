@@ -204,13 +204,13 @@ function FieldError({
 }: React.ComponentProps<"div"> & {
   errors?: Array<{ message?: string } | undefined>
 }) {
-  const hasErrors = errors?.length
+  const hasRenderableErrors = errors?.some(e => !!e?.message)
 
-  if (!children && !hasErrors) {
+  if (!children && !hasRenderableErrors) {
     return null
   }
 
-  const content = children ?? (errors ? <FieldErrorList errors={errors} /> : null)
+  const content = children ?? (hasRenderableErrors ? <FieldErrorList errors={errors} /> : null)
 
   if (!content) {
     return null
