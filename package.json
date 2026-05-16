@@ -18,11 +18,11 @@
     "typecheck": "turbo run typecheck"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.4.10",
-    "@changesets/cli": "^2.30.0",
-    "turbo": "^2.9.12",
+    "@biomejs/biome": "2.4.15",
+    "@changesets/cli": "^2.31.0",
+    "turbo": "^2.9.14",
     "typescript": "6.0.3",
-    "ultracite": "7.4.2"
+    "ultracite": "7.7.0"
   },
   "engines": {
     "node": ">=24"

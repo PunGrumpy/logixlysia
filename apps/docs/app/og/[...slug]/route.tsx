@@ -108,8 +108,12 @@ export const GET = async (
 
   const [instrumentSerifRegular, instrumentSerifItalic, geistRegular] =
     await Promise.all([
-      readFile(join(process.cwd(), 'app/og/[...slug]/InstrumentSerif-Regular.ttf')),
-      readFile(join(process.cwd(), 'app/og/[...slug]/InstrumentSerif-Italic.ttf')),
+      readFile(
+        join(process.cwd(), 'app/og/[...slug]/InstrumentSerif-Regular.ttf')
+      ),
+      readFile(
+        join(process.cwd(), 'app/og/[...slug]/InstrumentSerif-Italic.ttf')
+      ),
       readFile(join(process.cwd(), 'app/og/[...slug]/Geist-Regular.ttf'))
     ])
 
@@ -119,13 +123,9 @@ export const GET = async (
       <div style={ogBodyStyle}>
         <h1 style={ogTitleStyle}>
           {page.data.title} |&nbsp;
-          <span style={ogAccentStyle}>
-            Logixlysia
-          </span>
+          <span style={ogAccentStyle}>Logixlysia</span>
         </h1>
-        <p style={ogDescriptionStyle}>
-          {page.data.description}
-        </p>
+        <p style={ogDescriptionStyle}>{page.data.description}</p>
       </div>
     </div>,
     {

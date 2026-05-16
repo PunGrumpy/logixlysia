@@ -69,7 +69,9 @@ export const Stats = () => {
             <h2 className="mb-4 font-medium font-serif text-4xl md:text-5xl">
               By The Numbers
             </h2>
-            <p className="text-muted-foreground">The metrics that tell our story</p>
+            <p className="text-muted-foreground">
+              The metrics that tell our story
+            </p>
           </div>
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             <StatCard
