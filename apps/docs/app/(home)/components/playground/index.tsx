@@ -207,7 +207,9 @@ export const logs: LogEntry[] = [
     type: 'ERROR',
     service: DEMO_SERVICE,
     message: 'Payment failed',
-    contextLines: [createContextLine({ key: 'error', value: 'upstream timeout' })]
+    contextLines: [
+      createContextLine({ key: 'error', value: 'upstream timeout' })
+    ]
   }
 ]
 
@@ -329,12 +331,18 @@ const buildRandomContext = (
   if (type === 'ERROR' || status >= 500) {
     if (rng() > 0.25) {
       lines.push(
-        createContextLine({ key: 'error', value: rngChoice(rng, ERROR_MESSAGES) })
+        createContextLine({
+          key: 'error',
+          value: rngChoice(rng, ERROR_MESSAGES)
+        })
       )
     }
   } else if (rng() > 0.5) {
     lines.push(
-      createContextLine({ key: 'userId', value: String(rngInt(rng, 1, 99_999)) })
+      createContextLine({
+        key: 'userId',
+        value: String(rngInt(rng, 1, 99_999))
+      })
     )
   }
 
@@ -379,7 +387,10 @@ const createRandomLog = (rng: () => number, now: number): LogEntry => {
   }
 }
 
-const createRepeatedRandomLogs = (seed: number, now: number = PLAYGROUND_NOW) => {
+const createRepeatedRandomLogs = (
+  seed: number,
+  now: number = PLAYGROUND_NOW
+) => {
   const rng = createRng(seed)
 
   return Array.from({ length: LOG_REPEAT_COUNT }, () =>
