@@ -57,4 +57,28 @@ describe('logToFile', () => {
       await removeTempDir(dir)
     }
   })
+
+  test('includes query parameters when enabled', async () => {
+    const dir = await createTempDir()
+    try {
+      const filePath = join(dir, 'logs', 'query.log')
+      const options: Options = {
+        config: { logQueryParams: true }
+      }
+
+      await logToFile({
+        filePath,
+        level: 'INFO',
+        request: createMockRequest('http://localhost/api/test?user=123'),
+        data: { message: 'msg' },
+        store: { beforeTime: BigInt(0) },
+        options
+      })
+
+      const content = await fs.readFile(filePath, 'utf-8')
+      expect(content).toContain('/api/test?user=123')
+    } finally {
+      await removeTempDir(dir)
+    }
+  })
 })

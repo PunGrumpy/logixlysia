@@ -99,6 +99,40 @@ describe('formatLogOutput', () => {
     expect(out.main).toContain('{"a":1}')
   })
 
+  test('includes query params in pathname when logQueryParams is true', () => {
+    const request = createMockRequest('http://localhost/api/hello?foo=bar&baz=123')
+    const store = { beforeTime: BigInt(0) }
+    const out = formatLogOutput({
+      level: 'INFO',
+      request,
+      data: { status: 200 },
+      store,
+      options: baseOptions({
+        config: { logQueryParams: true }
+      })
+    })
+
+    expect(out.main).toContain('/api/hello?foo=bar&baz=123')
+  })
+
+  test('supports explicit {query} token', () => {
+    const request = createMockRequest('http://localhost/api/hello?a=b')
+    const store = { beforeTime: BigInt(0) }
+    const out = formatLogOutput({
+      level: 'INFO',
+      request,
+      data: { status: 200 },
+      store,
+      options: baseOptions({
+        config: {
+          customLogFormat: '{pathname} > {query}'
+        }
+      })
+    })
+
+    expect(out.main).toBe('/api/hello > ?a=b')
+  })
+
   test('includes service token when configured', () => {
     const request = createMockRequest('http://localhost/')
     const store = { beforeTime: BigInt(0) }

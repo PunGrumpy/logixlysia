@@ -85,6 +85,9 @@ export interface Options {
     /** How many object nesting levels to expand in the context tree; default 1. */
     contextDepth?: number
 
+    /** Include query parameters in the logged URL path; default false. */
+    logQueryParams?: boolean
+
     // Filtering
     logFilter?: LogFilter
 

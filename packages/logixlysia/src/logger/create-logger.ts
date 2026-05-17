@@ -21,7 +21,7 @@ const DEFAULT_LOG_FORMAT =
   '{now} {service}{icon} {method} {pathname} {status} {duration} {message}{speed}'
 
 const LOG_FORMAT_REGEX =
-  /\{(now|epoch|level|icon|duration|method|pathname|path|status|statusText|message|ip|context|service|speed)\}/g
+  /\{(now|epoch|level|icon|duration|method|pathname|path|query|status|statusText|message|ip|context|service|speed)\}/g
 
 export interface FormattedLogOutput {
   contextLines: string[]
@@ -421,7 +421,9 @@ export const formatLogOutput = ({
       ? 0
       : Number(process.hrtime.bigint() - store.beforeTime) / 1_000_000
 
-  const pathname = new URL(request.url).pathname
+  const { pathname: rawPathname, search } = new URL(request.url)
+  const query = search
+  const pathname = config?.logQueryParams ? `${rawPathname}${query}` : rawPathname
   const statusValue = data.status
   const statusCode =
     statusValue === null || statusValue === undefined
@@ -464,6 +466,7 @@ export const formatLogOutput = ({
     '{method}': coloredMethod,
     '{pathname}': coloredPathname,
     '{path}': coloredPathname,
+    '{query}': query,
     '{status}': coloredStatus,
     '{statusText}': statusText,
     '{message}': message,
