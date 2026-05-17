@@ -421,7 +421,16 @@ export const formatLogOutput = ({
       ? 0
       : Number(process.hrtime.bigint() - store.beforeTime) / 1_000_000
 
-  const { pathname: rawPathname, search } = new URL(request.url)
+  let rawPathname: string
+  let search: string
+  try {
+    const url = new URL(request.url)
+    rawPathname = url.pathname
+    search = url.search
+  } catch {
+    rawPathname = request.url || '/'
+    search = ''
+  }
   const query = search
   const pathname = config?.logQueryParams ? `${rawPathname}${query}` : rawPathname
   const statusValue = data.status
