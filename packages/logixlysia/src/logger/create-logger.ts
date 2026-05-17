@@ -20,6 +20,9 @@ const METHOD_PAD = 7
 const DEFAULT_LOG_FORMAT =
   '{now} {service}{icon} {method} {pathname} {status} {duration} {message}{speed}'
 
+const LOG_FORMAT_REGEX =
+  /\{(now|epoch|level|icon|duration|method|pathname|path|status|statusText|message|ip|context|service|speed)\}/g
+
 export interface FormattedLogOutput {
   contextLines: string[]
   main: string
@@ -451,9 +454,6 @@ export const formatLogOutput = ({
   const icon = getLevelIcon(level, useColors)
   const statusText = getStatusText(statusCode)
   const serviceToken = getServiceToken(options, useColors)
-
-  const LOG_FORMAT_REGEX =
-    /\{(now|epoch|level|icon|duration|method|pathname|path|status|statusText|message|ip|context|service|speed)\}/g
 
   const tokenMap: Record<string, string> = {
     '{now}': timestamp,
