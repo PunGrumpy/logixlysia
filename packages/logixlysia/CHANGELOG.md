@@ -1,5 +1,18 @@
 # Changelog
 
+## 6.4.0
+
+### Minor Changes
+
+- e285af6: Added `logQueryParams` configuration option and `{query}` token to allow including request query strings in the logs.
+
+### Patch Changes
+
+- 712b2ba: - Optimized log formatting performance by replacing multiple `.replaceAll()` calls with a single-pass regex replacement in `formatLogOutput` and `formatTimestamp`.
+  - Optimized `getIp` string slicing to reduce array allocations.
+  - Fixed a bug where padded HTTP methods (e.g., `GET`) lost their color formatting.
+  - Added early bailout logic to bypass allocations and system calls when logging is effectively disabled, significantly improving disabled-state benchmark performance.
+
 ## 6.3.2
 
 ### Patch Changes
