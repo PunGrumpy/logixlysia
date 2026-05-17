@@ -25,7 +25,8 @@ logixlysia({
 | `{level}` | Log level (`DEBUG`, `INFO`, `WARNING`, `ERROR`); with colors, level-colored background chip |
 | `{duration}` | Request duration (e.g. `12ms`, `1.5s`); with colors, green / yellow / red based on `slowThreshold` and `verySlowThreshold` |
 | `{method}` | HTTP method (padded in the default format) |
-| `{pathname}` | Request path (alias: `{path}`) |
+| `{pathname}` | Request path (alias: `{path}`); includes query string if `logQueryParams` is enabled |
+| `{query}` | Raw query string (e.g. `?id=123`) |
 | `{status}` | Response status code |
 | `{statusText}` | Status text from Node’s `http.STATUS_CODES` (e.g. `Not Found` for 404) |
 | `{message}` | Custom message |

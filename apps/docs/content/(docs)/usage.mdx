@@ -32,6 +32,7 @@ logixlysia({
     startupMessageFormat: 'simple', // or 'banner'
     ip: true,
     autoRedact: false, // Set to true to auto-redact sensitive PII (emails, IPs, credit cards, JWTs)
+    logQueryParams: true,
     logFilePath: './logs/app.log'
   }
 })
@@ -44,7 +45,7 @@ Customize log messages using placeholders:
 ```ts
 logixlysia({
   config: {
-    customLogFormat: '{now} {level} {duration}ms {method} {pathname} {status}'
+    customLogFormat: '{now} {level} {duration}ms {method} {pathname}{query} {status}'
   }
 })
 ```
@@ -57,7 +58,8 @@ Available placeholders:
 | `{level}` | Log level (`DEBUG`, `INFO`, `WARNING`, `ERROR`) | `INFO` |
 | `{duration}` | Request duration (formatted) | `12ms`, `1.5s` |
 | `{method}` | HTTP method | `GET` |
-| `{pathname}` | Request path (same as `{path}`) | `/users` |
+| `{pathname}` | Request path (alias: `{path}`); includes query if `logQueryParams: true` | `/users` |
+| `{query}` | Raw query string | `?id=123` |
 | `{status}` | Response status code | `200` |
 | `{statusText}` | HTTP status text | `Not Found` |
 | `{message}` | Custom message | `User profile accessed` |

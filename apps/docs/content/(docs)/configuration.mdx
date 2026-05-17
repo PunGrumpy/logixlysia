@@ -82,6 +82,17 @@ Automatically redacts sensitive PII (emails, IPs, credit cards, JWTs) from log m
 autoRedact: true
 ```
 
+### `logQueryParams`
+
+Include query parameters in the logged URL path.
+
+- **Type:** `boolean`
+- **Default:** `false`
+
+```ts
+logQueryParams: true
+```
+
 ## Timestamp Options
 
 ### `timestamp`
@@ -448,6 +459,7 @@ logixlysia({
     useColors: true,
     ip: true,
     autoRedact: false,
+    logQueryParams: false,
     
     // Formatting
     timestamp: {
