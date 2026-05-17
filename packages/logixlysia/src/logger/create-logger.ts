@@ -20,6 +20,9 @@ const METHOD_PAD = 7
 const DEFAULT_LOG_FORMAT =
   '{now} {service}{icon} {method} {pathname} {status} {duration} {message}{speed}'
 
+const LOG_FORMAT_REGEX =
+  /\{(now|epoch|level|icon|duration|method|pathname|path|status|statusText|message|ip|context|service|speed)\}/g
+
 export interface FormattedLogOutput {
   contextLines: string[]
   main: string
@@ -452,22 +455,25 @@ export const formatLogOutput = ({
   const statusText = getStatusText(statusCode)
   const serviceToken = getServiceToken(options, useColors)
 
-  const main = format
-    .replaceAll('{now}', timestamp)
-    .replaceAll('{epoch}', epoch)
-    .replaceAll('{level}', coloredLevel)
-    .replaceAll('{icon}', icon)
-    .replaceAll('{duration}', coloredDuration)
-    .replaceAll('{method}', coloredMethod)
-    .replaceAll('{pathname}', coloredPathname)
-    .replaceAll('{path}', coloredPathname)
-    .replaceAll('{status}', coloredStatus)
-    .replaceAll('{statusText}', statusText)
-    .replaceAll('{message}', message)
-    .replaceAll('{ip}', ip)
-    .replaceAll('{context}', ctxString)
-    .replaceAll('{service}', serviceToken)
-    .replaceAll('{speed}', speedToken)
+  const tokenMap: Record<string, string> = {
+    '{now}': timestamp,
+    '{epoch}': epoch,
+    '{level}': coloredLevel,
+    '{icon}': icon,
+    '{duration}': coloredDuration,
+    '{method}': coloredMethod,
+    '{pathname}': coloredPathname,
+    '{path}': coloredPathname,
+    '{status}': coloredStatus,
+    '{statusText}': statusText,
+    '{message}': message,
+    '{ip}': ip,
+    '{context}': ctxString,
+    '{service}': serviceToken,
+    '{speed}': speedToken
+  }
+
+  const main = format.replace(LOG_FORMAT_REGEX, match => tokenMap[match] ?? match)
 
   const contextLines = buildContextTreeLines(level, data, options)
 

@@ -68,14 +68,22 @@ export const createLogger = (
     return logFilter.level.includes(level)
   }
 
+  const useTransportsOnly = config?.useTransportsOnly === true
+  const disableInternalLogger = config?.disableInternalLogger === true
+  const disableFileLogging = config?.disableFileLogging === true
+
+  const hasTransports = (config?.transports?.length ?? 0) > 0
+  const hasFileLogging = !useTransportsOnly && !disableFileLogging && !!config?.logFilePath
+  const hasInternalLogger = !useTransportsOnly && !disableInternalLogger
+  const isEffectivelyDisabled = !hasTransports && !hasFileLogging && !hasInternalLogger
+
   const log = (
     level: LogLevel,
     request: RequestInfo,
     data: Record<string, unknown>,
     store: StoreData
   ): void => {
-    // Check if this log level should be filtered
-    if (!shouldLog(level, config?.logFilter)) {
+    if (isEffectivelyDisabled || !shouldLog(level, config?.logFilter)) {
       return
     }
 
@@ -83,19 +91,17 @@ export const createLogger = (
     const logRequest =
       config?.autoRedact === true ? redactRequest(request) : request
 
-    logToTransports({
-      level,
-      request: logRequest,
-      data: logData,
-      store,
-      options
-    })
+    if (hasTransports) {
+      logToTransports({
+        level,
+        request: logRequest,
+        data: logData,
+        store,
+        options
+      })
+    }
 
-    const useTransportsOnly = config?.useTransportsOnly === true
-    const disableInternalLogger = config?.disableInternalLogger === true
-    const disableFileLogging = config?.disableFileLogging === true
-
-    if (!(useTransportsOnly || disableFileLogging)) {
+    if (hasFileLogging) {
       const filePath = config?.logFilePath
       if (filePath) {
         logToFile({
@@ -111,7 +117,7 @@ export const createLogger = (
       }
     }
 
-    if (useTransportsOnly || disableInternalLogger) {
+    if (!hasInternalLogger) {
       return
     }
 
@@ -155,6 +161,9 @@ export const createLogger = (
     message: string,
     context?: Record<string, unknown>
   ): void => {
+    if (isEffectivelyDisabled || !shouldLog(level, config?.logFilter)) {
+      return
+    }
     const store: StoreData = { beforeTime: process.hrtime.bigint() }
     log(level, request, { message, context }, store)
   }
