@@ -96,7 +96,8 @@ export const logToFile = async (
   // Safely parse URL to avoid crashes on malformed URLs
   let pathname = '/'
   try {
-    pathname = new URL(request.url).pathname
+    const { pathname: rawPathname, search } = new URL(request.url)
+    pathname = config?.logQueryParams ? `${rawPathname}${search}` : rawPathname
   } catch {
     // Fallback to raw URL if parsing fails
     pathname = request.url
