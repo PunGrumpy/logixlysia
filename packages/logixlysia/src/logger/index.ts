@@ -73,9 +73,14 @@ export const createLogger = (
   const disableFileLogging = config?.disableFileLogging === true
 
   const hasTransports = (config?.transports?.length ?? 0) > 0
-  const hasFileLogging = !useTransportsOnly && !disableFileLogging && !!config?.logFilePath
-  const hasInternalLogger = !useTransportsOnly && !disableInternalLogger
-  const isEffectivelyDisabled = !hasTransports && !hasFileLogging && !hasInternalLogger
+  const hasFileLogging =
+    !(useTransportsOnly || disableFileLogging) && !!config?.logFilePath
+  const hasInternalLogger = !(useTransportsOnly || disableInternalLogger)
+  const isEffectivelyDisabled = !(
+    hasTransports ||
+    hasFileLogging ||
+    hasInternalLogger
+  )
 
   const log = (
     level: LogLevel,

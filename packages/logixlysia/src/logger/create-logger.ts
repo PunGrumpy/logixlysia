@@ -432,7 +432,9 @@ export const formatLogOutput = ({
     search = ''
   }
   const query = search
-  const pathname = config?.logQueryParams ? `${rawPathname}${query}` : rawPathname
+  const pathname = config?.logQueryParams
+    ? `${rawPathname}${query}`
+    : rawPathname
   const statusValue = data.status
   const statusCode =
     statusValue === null || statusValue === undefined
@@ -485,7 +487,10 @@ export const formatLogOutput = ({
     '{speed}': speedToken
   }
 
-  const main = format.replace(LOG_FORMAT_REGEX, match => tokenMap[match] ?? match)
+  const main = format.replace(
+    LOG_FORMAT_REGEX,
+    match => tokenMap[match] ?? match
+  )
 
   const contextLines = buildContextTreeLines(level, data, options)
 

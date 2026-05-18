@@ -100,7 +100,9 @@ describe('formatLogOutput', () => {
   })
 
   test('includes query params in pathname when logQueryParams is true', () => {
-    const request = createMockRequest('http://localhost/api/hello?foo=bar&baz=123')
+    const request = createMockRequest(
+      'http://localhost/api/hello?foo=bar&baz=123'
+    )
     const store = { beforeTime: BigInt(0) }
     const out = formatLogOutput({
       level: 'INFO',
