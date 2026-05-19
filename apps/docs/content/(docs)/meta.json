@@ -3,6 +3,8 @@
   "description": "Documentation for Logixlysia",
   "pages": [
     "introduction",
+    "comparison",
+    "migration-from-evlog",
     "examples",
     "faq",
     "contributing",
