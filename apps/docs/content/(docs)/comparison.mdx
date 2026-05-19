@@ -1,0 +1,40 @@
+---
+title: Comparison
+description: How Logixlysia compares to evlog and other Elysia loggers
+---
+
+## Feature matrix
+
+| Capability | Logixlysia | [evlog](https://evlog.dev) | [@bogeychan/elysia-logger](https://github.com/bogeychan/elysia-logger) |
+| ---------- | ---------- | -------------------------- | ----------------------------------------------------------------------- |
+| Elysia plugin | Yes | Yes (`evlog/elysia`) | Yes |
+| Pino-backed | Yes | Optional drains | Yes |
+| Request context accumulation | `mergeContext` | `log.set()` | Manual |
+| Single access log per request | Auto | `log.emit()` | Auto |
+| File rotation | Yes | Via drains | Limited |
+| `autoRedact` PII | Yes | Varies | Manual |
+| WebSocket lifecycle logs | `wrapWs` | Manual | Manual |
+| OTel trace correlation | `logixlysia/otel` | Built-in integrations | Manual |
+| AI usage on access log | `logixlysia/ai` | `evlog/ai` | Manual |
+| Presets (`dev` / `prod`) | Yes | N/A | N/A |
+
+## When to choose Logixlysia
+
+- You want **Pino** performance with Elysia-native `store.logger` ergonomics.
+- You need **file logging and rotation** without wiring a separate drain.
+- You prefer **incremental context** (`mergeContext`) plus automatic access logs instead of migrating to a wide-event-only API.
+
+## When to consider evlog
+
+- You want a **unified wide-event pipeline** across many frameworks with managed drains (Axiom, etc.).
+- You rely heavily on **`evlog/ai`** and **`evlog` auth** integrations out of the box.
+
+## Benchmarks
+
+Run the monorepo benchmark package:
+
+```bash
+bun run bench
+```
+
+The `Elysia plugin request path` suite compares full `handle()` overhead for Logixlysia, evlog, and elysia-logger. Results vary by machine—use them for regression tracking, not absolute rankings.
