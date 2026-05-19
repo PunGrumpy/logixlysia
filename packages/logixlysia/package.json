@@ -12,7 +12,12 @@
     "./otel": {
       "types": "./dist/otel.d.ts",
       "import": "./dist/otel.js"
-    }
+    },
+    "./ai": {
+      "types": "./dist/ai.d.ts",
+      "import": "./dist/ai.js"
+    },
+    "./package.json": "./package.json"
   },
   "files": [
     "dist",
@@ -57,11 +62,15 @@
   },
   "peerDependencies": {
     "@opentelemetry/api": "^1.9.0",
+    "ai": "^6.0.0",
     "elysia": "^1.4.28",
     "typescript": "^6.0.2"
   },
   "peerDependenciesMeta": {
     "@opentelemetry/api": {
+      "optional": true
+    },
+    "ai": {
       "optional": true
     }
   }
