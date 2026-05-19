@@ -63,6 +63,8 @@ export interface LogFilter {
  */
 export type PrettyPrintConfig = boolean | Record<string, unknown>
 
+export type LogPreset = 'dev' | 'prod' | 'json'
+
 export interface Options {
   config?: {
     showStartupMessage?: boolean
@@ -108,6 +110,11 @@ export interface Options {
     // Pino
     pino?: (PinoLoggerOptions & { prettyPrint?: PrettyPrintConfig }) | undefined
   }
+  /**
+   * Opinionated defaults for common environments.
+   * Explicit `config` fields override preset values.
+   */
+  preset?: LogPreset
 }
 
 export class HttpError extends Error {

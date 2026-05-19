@@ -34,6 +34,16 @@ Accumulate fields during a request; they are merged into the automatic access lo
 
 See [Request context](/features/request-context) for details.
 
+## Presets
+
+```ts
+logixlysia({ preset: 'dev' })   // pretty console + banner
+logixlysia({ preset: 'prod' })  // JSON logs + autoRedact
+logixlysia({ preset: 'json' })  // minimal JSON console
+```
+
+Explicit `config` overrides preset defaults. Details: [Presets](/features/presets).
+
 ## Configuration
 
 ### Basic Options

@@ -4,6 +4,7 @@
   "pages": [
     "---Configuration---",
     "startup",
+    "presets",
     "request-context",
     "formatting",
     "filtering",

@@ -11,11 +11,14 @@ All configuration options are passed through the `config` property:
 
 ```ts
 logixlysia({
+  preset: 'prod', // optional: 'dev' | 'prod' | 'json'
   config: {
-    // ... configuration options
+    // ... configuration options (override preset)
   }
 })
 ```
+
+See [Presets](/features/presets) for defaults per environment.
 
 ## Startup Options
 
