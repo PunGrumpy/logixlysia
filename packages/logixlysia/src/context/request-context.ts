@@ -27,7 +27,8 @@ export const createRequestContextStore = (): RequestContextStore => {
       Object.assign(bag, partial)
     },
     getContext(key) {
-      return bags.get(key) ?? {}
+      const bag = bags.get(key)
+      return bag ? { ...bag } : {}
     },
     clearContext(key) {
       bags.delete(key)
