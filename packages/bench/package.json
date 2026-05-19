@@ -10,6 +10,7 @@
   "dependencies": {
     "@bogeychan/elysia-logger": "^0.1.10",
     "consola": "^3.4.2",
+    "elysia": "^1.4.28",
     "evlog": "^2.17.0",
     "logixlysia": "workspace:*",
     "pino": "^10.3.1",
