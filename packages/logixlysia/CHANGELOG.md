@@ -1,5 +1,13 @@
 # Changelog
 
+## 6.5.0
+
+### Minor Changes
+
+- 981de26: Add `preset` option (`dev`, `prod`, `json`) with `resolveOptions` for opinionated environment defaults.
+- d576f99: Add request-scoped context accumulation via `mergeContext` and `getContext`, merged into automatic access logs. Export `createLogger` and `createPluginLogger` for advanced setups.
+- cbe9d2c: Add `wrapWs` for WebSocket open, message, and close lifecycle logging with request context support.
+
 ## 6.4.0
 
 ### Minor Changes
@@ -8,7 +16,7 @@
 
 ### Patch Changes
 
-- 712b2ba: 
+- 712b2ba:
   - Optimized log formatting performance by replacing multiple `.replaceAll()` calls with a single-pass regex replacement in `formatLogOutput` and `formatTimestamp`.
   - Optimized `getIp` string slicing to reduce array allocations.
   - Fixed a bug where padded HTTP methods (e.g., `GET`) lost their color formatting.
