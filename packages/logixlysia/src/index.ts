@@ -4,6 +4,7 @@ import { createRequestContextStore } from './context/request-context'
 import { startServer } from './extensions'
 import type { LogixlysiaStore, Options } from './interfaces'
 import { createPluginLogger } from './logger'
+import { createWsHandlerWrapper } from './websocket/wrap-ws'
 
 /**
  * Empty singleton slots must not use `Record<string, never>`: intersecting that with Elysia's `Context`
@@ -28,11 +29,16 @@ export interface LogixlysiaSingleton {
 // @ts-expect-error — closed store is correct at runtime and for merged `ws.data` inference.
 export type Logixlysia = Elysia<'', LogixlysiaSingleton>
 
-export const logixlysia = (rawOptions: Options = {}): Logixlysia => {
+export type LogixlysiaPlugin = Logixlysia & {
+  wrapWs: ReturnType<typeof createWsHandlerWrapper>
+}
+
+export const logixlysia = (rawOptions: Options = {}): LogixlysiaPlugin => {
   const options = resolveOptions(rawOptions)
   const didCustomLog = new WeakSet<Request>()
   const contextStore = createRequestContextStore()
   const baseLogger = createPluginLogger(options, contextStore)
+  const wrapWs = createWsHandlerWrapper(options, baseLogger, contextStore)
   const logger = {
     ...baseLogger,
     debug: (
@@ -78,7 +84,7 @@ export const logixlysia = (rawOptions: Options = {}): Logixlysia => {
     }
   })
 
-  return app
+  const plugin = app
     .state('logger', logger)
     .state('pino', logger.pino)
     .state('beforeTime', BigInt(0))
@@ -127,6 +133,8 @@ export const logixlysia = (rawOptions: Options = {}): Logixlysia => {
       }
     })
     .as('scoped') as Logixlysia
+
+  return Object.assign(plugin, { wrapWs }) as LogixlysiaPlugin
 }
 
 // biome-ignore lint/performance/noBarrelFile: public package entry re-exports
@@ -143,5 +151,7 @@ export type {
   Transport
 } from './interfaces'
 export { createLogger, createPluginLogger } from './logger'
+export type { WsHandlerHooks } from './websocket/wrap-ws'
+export { createWsHandlerWrapper } from './websocket/wrap-ws'
 
 export default logixlysia

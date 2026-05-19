@@ -6,6 +6,7 @@
     "startup",
     "presets",
     "request-context",
+    "websocket",
     "formatting",
     "filtering",
     "log-levels",
