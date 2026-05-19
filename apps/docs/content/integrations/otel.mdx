@@ -1,0 +1,28 @@
+---
+title: OpenTelemetry
+description: Correlate logs with active trace and span IDs
+---
+
+Install the optional peer dependency:
+
+```bash
+bun add @opentelemetry/api
+```
+
+Import from the `logixlysia/otel` subpath:
+
+```ts
+import logixlysia from 'logixlysia'
+import { injectTraceContext } from 'logixlysia/otel'
+
+const plugin = logixlysia()
+
+const app = new Elysia()
+  .use(plugin)
+  .onRequest(({ request, store }) => {
+    injectTraceContext(store.logger, request)
+  })
+  .get('/', () => 'ok')
+```
+
+When an active span exists, `trace_id` and `span_id` are merged into the request context bag and appear on the access log. Logixlysia does not start an OpenTelemetry SDK—you bring your own tracer provider and instrumentation.
