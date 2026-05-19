@@ -1,0 +1,33 @@
+---
+title: Request context
+description: Accumulate request-scoped fields into a single access log line
+---
+
+Logixlysia can accumulate context during a request and merge it into the automatic access log—similar to evlog wide events, without replacing your existing `logger.info()` API.
+
+## Basic usage
+
+```ts
+import { Elysia } from 'elysia'
+import logixlysia from 'logixlysia'
+
+const app = new Elysia()
+  .use(logixlysia())
+  .get('/checkout', ({ request, store }) => {
+    store.logger.mergeContext(request, { userId: 'usr_123' })
+    store.logger.mergeContext(request, { cartTotal: 9999 })
+    return { ok: true }
+  })
+```
+
+The final `INFO` access log includes a `context` object with `userId` and `cartTotal` (and renders as a context tree when `showContextTree` is enabled).
+
+## Precedence
+
+When you call `logger.info(request, message, { ...explicit })`, keys in the explicit context **override** accumulated values. Non-colliding keys from both sources are kept.
+
+## Reading context
+
+```ts
+const ctx = store.logger.getContext(request)
+```

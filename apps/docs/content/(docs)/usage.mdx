@@ -21,6 +21,19 @@ const app = new Elysia()
   .listen(3000)
 ```
 
+## Request context
+
+Accumulate fields during a request; they are merged into the automatic access log:
+
+```ts
+.get('/users/:id', ({ request, store, params }) => {
+  store.logger.mergeContext(request, { userId: params.id })
+  return { ok: true }
+})
+```
+
+See [Request context](/features/request-context) for details.
+
 ## Configuration
 
 ### Basic Options

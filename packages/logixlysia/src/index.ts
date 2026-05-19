@@ -1,7 +1,8 @@
 import { Elysia } from 'elysia'
+import { createRequestContextStore } from './context/request-context'
 import { startServer } from './extensions'
 import type { LogixlysiaStore, Options } from './interfaces'
-import { createLogger } from './logger'
+import { createPluginLogger } from './logger'
 
 /**
  * Empty singleton slots must not use `Record<string, never>`: intersecting that with Elysia's `Context`
@@ -28,7 +29,8 @@ export type Logixlysia = Elysia<'', LogixlysiaSingleton>
 
 export const logixlysia = (options: Options = {}): Logixlysia => {
   const didCustomLog = new WeakSet<Request>()
-  const baseLogger = createLogger(options)
+  const contextStore = createRequestContextStore()
+  const baseLogger = createPluginLogger(options, contextStore)
   const logger = {
     ...baseLogger,
     debug: (
@@ -74,25 +76,24 @@ export const logixlysia = (options: Options = {}): Logixlysia => {
     }
   })
 
-  return (
-    app
-      .state('logger', logger)
-      .state('pino', logger.pino)
-      .state('beforeTime', BigInt(0))
-      .onStart(({ server }): void => {
-        if (server) {
-          startServer(server, options)
-        } else {
-          // Node adapter fallback
-          const port = Number(process.env.PORT) || 3000
-          const hostname = process.env.HOST || 'localhost'
-          startServer({ port, hostname, protocol: 'http' }, options)
-        }
-      })
-      .onRequest(({ store }) => {
-        store.beforeTime = process.hrtime.bigint()
-      })
-      .onAfterHandle(({ request, set, store }) => {
+  return app
+    .state('logger', logger)
+    .state('pino', logger.pino)
+    .state('beforeTime', BigInt(0))
+    .onStart(({ server }): void => {
+      if (server) {
+        startServer(server, options)
+      } else {
+        const port = Number(process.env.PORT) || 3000
+        const hostname = process.env.HOST || 'localhost'
+        startServer({ port, hostname, protocol: 'http' }, options)
+      }
+    })
+    .onRequest(({ store }) => {
+      store.beforeTime = process.hrtime.bigint()
+    })
+    .onAfterHandle(({ request, set, store }) => {
+      try {
         if (didCustomLog.has(request)) {
           return
         }
@@ -105,14 +106,25 @@ export const logixlysia = (options: Options = {}): Logixlysia => {
           level = 'WARNING'
         }
 
-        logger.log(level, request, { status }, store)
-      })
-      .onError(({ request, error, store }) => {
+        const accumulated = contextStore.getContext(request)
+        const data: Record<string, unknown> = { status }
+        if (Object.keys(accumulated).length > 0) {
+          data.context = { ...accumulated }
+        }
+
+        logger.log(level, request, data, store)
+      } finally {
+        contextStore.clearContext(request)
+      }
+    })
+    .onError(({ request, error, store }) => {
+      try {
         logger.handleHttpError(request, error, store)
-      })
-      // Ensure plugin lifecycle hooks (onRequest/onAfterHandle/onError) apply to the parent app.
-      .as('scoped') as Logixlysia
-  )
+      } finally {
+        contextStore.clearContext(request)
+      }
+    })
+    .as('scoped') as Logixlysia
 }
 
 export type {
@@ -125,5 +137,6 @@ export type {
   StoreData,
   Transport
 } from './interfaces'
+export { createLogger, createPluginLogger } from './logger'
 
 export default logixlysia

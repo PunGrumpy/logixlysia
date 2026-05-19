@@ -1,3 +1,7 @@
+import {
+  mergeLogDataContext,
+  type RequestContextStore
+} from '../context/request-context'
 import type { LogLevel, Options, RequestInfo, StoreData } from '../interfaces'
 import { logToTransports } from '../output'
 import { logToFile } from '../output/file'
@@ -17,7 +21,8 @@ export const handleHttpError = (
   request: RequestInfo,
   error: unknown,
   store: StoreData,
-  options: Options
+  options: Options,
+  contextStore?: RequestContextStore
 ): void => {
   const config = options.config
 
@@ -39,7 +44,11 @@ export const handleHttpError = (
 
   const level: LogLevel = 'ERROR'
   const data: Record<string, unknown> = { status, message, error }
-  const logData = config?.autoRedact === true ? redact(data) : data
+  const dataWithContext = contextStore
+    ? mergeLogDataContext(data, contextStore.getContext(request))
+    : data
+  const logData =
+    config?.autoRedact === true ? redact(dataWithContext) : dataWithContext
   const logRequest =
     config?.autoRedact === true ? redactRequest(request) : request
 
