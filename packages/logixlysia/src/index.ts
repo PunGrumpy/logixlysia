@@ -93,30 +93,36 @@ export const logixlysia = (options: Options = {}): Logixlysia => {
       store.beforeTime = process.hrtime.bigint()
     })
     .onAfterHandle(({ request, set, store }) => {
-      if (didCustomLog.has(request)) {
-        return
-      }
+      try {
+        if (didCustomLog.has(request)) {
+          return
+        }
 
-      const status = typeof set.status === 'number' ? set.status : 200
-      let level: 'INFO' | 'WARNING' | 'ERROR' = 'INFO'
-      if (status >= 500) {
-        level = 'ERROR'
-      } else if (status >= 400) {
-        level = 'WARNING'
-      }
+        const status = typeof set.status === 'number' ? set.status : 200
+        let level: 'INFO' | 'WARNING' | 'ERROR' = 'INFO'
+        if (status >= 500) {
+          level = 'ERROR'
+        } else if (status >= 400) {
+          level = 'WARNING'
+        }
 
-      const accumulated = contextStore.getContext(request)
-      const data: Record<string, unknown> = { status }
-      if (Object.keys(accumulated).length > 0) {
-        data.context = { ...accumulated }
-      }
+        const accumulated = contextStore.getContext(request)
+        const data: Record<string, unknown> = { status }
+        if (Object.keys(accumulated).length > 0) {
+          data.context = { ...accumulated }
+        }
 
-      logger.log(level, request, data, store)
-      contextStore.clearContext(request)
+        logger.log(level, request, data, store)
+      } finally {
+        contextStore.clearContext(request)
+      }
     })
     .onError(({ request, error, store }) => {
-      logger.handleHttpError(request, error, store)
-      contextStore.clearContext(request)
+      try {
+        logger.handleHttpError(request, error, store)
+      } finally {
+        contextStore.clearContext(request)
+      }
     })
     .as('scoped') as Logixlysia
 }

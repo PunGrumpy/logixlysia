@@ -1,4 +1,4 @@
-export type ContextKey = Request | object
+export type ContextKey = Request
 
 export interface RequestContextStore {
   clearContext: (key: ContextKey) => void
