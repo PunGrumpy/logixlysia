@@ -4,6 +4,16 @@
   "description": "🦊 Logixlysia is a logger for Elysia",
   "type": "module",
   "main": "dist/index.js",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./otel": {
+      "types": "./dist/otel.d.ts",
+      "import": "./dist/otel.js"
+    }
+  },
   "files": [
     "dist",
     "README.md"
@@ -46,7 +56,13 @@
     "elysia": "^1.4.28"
   },
   "peerDependencies": {
+    "@opentelemetry/api": "^1.9.0",
     "elysia": "^1.4.28",
     "typescript": "^6.0.2"
+  },
+  "peerDependenciesMeta": {
+    "@opentelemetry/api": {
+      "optional": true
+    }
   }
 }
