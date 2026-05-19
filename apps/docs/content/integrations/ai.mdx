@@ -1,0 +1,31 @@
+---
+title: AI SDK metrics
+description: Attach LLM usage metrics to request logs
+---
+
+Import from the `logixlysia/ai` subpath (no required peer dependency):
+
+```ts
+import logixlysia from 'logixlysia'
+import { mergeAIMetrics } from 'logixlysia/ai'
+
+const plugin = logixlysia()
+
+const app = new Elysia()
+  .use(plugin)
+  .post('/chat', async ({ request, store }) => {
+    // After your AI SDK call:
+    mergeAIMetrics(store.logger, request, {
+      model: 'claude-sonnet',
+      provider: 'anthropic',
+      inputTokens: 1200,
+      outputTokens: 400,
+      totalTokens: 1600,
+      msToFinish: 2300
+    })
+
+    return { ok: true }
+  })
+```
+
+The final access log `context.ai` object mirrors evlog’s wide-event `ai` field for easier migration.
