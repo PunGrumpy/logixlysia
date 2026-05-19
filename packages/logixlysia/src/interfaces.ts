@@ -130,6 +130,7 @@ export interface Logger {
     message: string,
     context?: Record<string, unknown>
   ) => void
+  getContext: (key: RequestInfo | object) => Readonly<Record<string, unknown>>
   handleHttpError: (
     request: RequestInfo,
     error: unknown,
@@ -145,6 +146,10 @@ export interface Logger {
     request: RequestInfo,
     data: Record<string, unknown>,
     store: StoreData
+  ) => void
+  mergeContext: (
+    key: RequestInfo | object,
+    partial: Record<string, unknown>
   ) => void
   pino: Pino
   warn: (

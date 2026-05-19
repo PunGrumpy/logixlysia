@@ -1,4 +1,9 @@
 import pino from 'pino'
+import {
+  createRequestContextStore,
+  mergeLogDataContext,
+  type RequestContextStore
+} from '../context/request-context'
 import type {
   LogFilter,
   Logger,
@@ -16,8 +21,10 @@ import { handleHttpError } from './handle-http-error'
 
 export const createLogger = (
   options: Options = {},
-  pinoFactory: typeof pino = pino
+  pinoFactory: typeof pino = pino,
+  externalContextStore?: RequestContextStore
 ): Logger => {
+  const contextStore = externalContextStore ?? createRequestContextStore()
   const config = options.config
 
   const pinoConfig = config?.pino
@@ -92,7 +99,12 @@ export const createLogger = (
       return
     }
 
-    const logData = config?.autoRedact === true ? redact(data) : data
+    const dataWithContext = mergeLogDataContext(
+      data,
+      contextStore.getContext(request)
+    )
+    const logData =
+      config?.autoRedact === true ? redact(dataWithContext) : dataWithContext
     const logRequest =
       config?.autoRedact === true ? redactRequest(request) : request
 
@@ -117,7 +129,7 @@ export const createLogger = (
           store,
           options
         }).catch(() => {
-          // Ignore errors
+          /* Ignore errors */
         })
       }
     }
@@ -175,9 +187,13 @@ export const createLogger = (
 
   return {
     pino: pinoLogger,
+    mergeContext: (request, partial) => {
+      contextStore.mergeContext(request, partial)
+    },
+    getContext: request => contextStore.getContext(request),
     log,
     handleHttpError: (request, error, store) => {
-      handleHttpError(request, error, store, options)
+      handleHttpError(request, error, store, options, contextStore)
     },
     debug: (request, message, context) => {
       logWithContext('DEBUG', request, message, context)
@@ -193,3 +209,9 @@ export const createLogger = (
     }
   }
 }
+
+/** Plugin entry: shares one request-context store across the Elysia lifecycle. */
+export const createPluginLogger = (
+  options: Options,
+  contextStore: RequestContextStore
+): Logger => createLogger(options, pino, contextStore)

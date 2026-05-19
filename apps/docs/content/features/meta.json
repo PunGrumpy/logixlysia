@@ -4,6 +4,7 @@
   "pages": [
     "---Configuration---",
     "startup",
+    "request-context",
     "formatting",
     "filtering",
     "log-levels",
