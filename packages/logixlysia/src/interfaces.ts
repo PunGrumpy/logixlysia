@@ -90,6 +90,9 @@ export interface Options {
     /** Include query parameters in the logged URL path; default false. */
     logQueryParams?: boolean
 
+    /** Skip automatic WebSocket lifecycle logs from `wrapWs`; default false. */
+    disableWebSocketLogging?: boolean
+
     // Filtering
     logFilter?: LogFilter
 

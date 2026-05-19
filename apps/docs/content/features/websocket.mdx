@@ -1,0 +1,61 @@
+---
+title: WebSocket logging
+description: Log WebSocket open, message, and close events
+---
+
+Use `wrapWs` on the plugin instance to add lifecycle logs for WebSocket routes:
+
+```ts
+import { Elysia } from 'elysia'
+import logixlysia from 'logixlysia'
+
+const plugin = logixlysia({
+  config: {
+    service: 'chat'
+  }
+})
+
+const app = new Elysia()
+  .use(plugin)
+  .ws(
+    '/chat',
+    plugin.wrapWs({
+      open(ws) {
+        ws.send('connected')
+      },
+      message(ws, message) {
+        ws.send(message)
+      },
+      close(ws) {
+        console.log('bye', ws.id)
+      }
+    })
+  )
+```
+
+Each lifecycle event logs with HTTP method `WS`, the route path, duration, and optional `wsId` in context.
+
+## Request context on WebSockets
+
+Accumulate context with the WebSocket instance as the key:
+
+```ts
+.ws(
+  '/chat',
+  plugin.wrapWs({
+    message(ws, payload) {
+      ws.data.store.logger.mergeContext(ws, { lastPayloadType: typeof payload })
+    }
+  })
+)
+```
+
+## Disable WebSocket logs
+
+```ts
+logixlysia({
+  config: {
+    disableWebSocketLogging: true
+  }
+})
+```
