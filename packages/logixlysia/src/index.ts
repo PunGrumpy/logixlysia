@@ -1,4 +1,5 @@
 import { Elysia } from 'elysia'
+import { resolveOptions } from './config/resolve-options'
 import { createRequestContextStore } from './context/request-context'
 import { startServer } from './extensions'
 import type { LogixlysiaStore, Options } from './interfaces'
@@ -27,7 +28,8 @@ export interface LogixlysiaSingleton {
 // @ts-expect-error — closed store is correct at runtime and for merged `ws.data` inference.
 export type Logixlysia = Elysia<'', LogixlysiaSingleton>
 
-export const logixlysia = (options: Options = {}): Logixlysia => {
+export const logixlysia = (rawOptions: Options = {}): Logixlysia => {
+  const options = resolveOptions(rawOptions)
   const didCustomLog = new WeakSet<Request>()
   const contextStore = createRequestContextStore()
   const baseLogger = createPluginLogger(options, contextStore)
@@ -127,11 +129,14 @@ export const logixlysia = (options: Options = {}): Logixlysia => {
     .as('scoped') as Logixlysia
 }
 
+// biome-ignore lint/performance/noBarrelFile: public package entry re-exports
+export { resolveOptions } from './config/resolve-options'
 export type {
   Logger,
   LogixlysiaContext,
   LogixlysiaStore,
   LogLevel,
+  LogPreset,
   Options,
   Pino,
   StoreData,
