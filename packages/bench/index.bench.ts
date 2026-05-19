@@ -1,7 +1,12 @@
-import { createPinoLogger as createBogeychan } from '@bogeychan/elysia-logger'
+import {
+  logger as bogeychanLogger,
+  createPinoLogger as createBogeychan
+} from '@bogeychan/elysia-logger'
 import { consola } from 'consola'
+import { Elysia } from 'elysia'
 import { createLogger as createEvlog } from 'evlog'
-import { createLogger } from 'logixlysia/src/logger/index.js'
+import { evlog } from 'evlog/elysia'
+import logixlysia, { createLogger } from 'logixlysia'
 import pino from 'pino'
 import { bench, describe } from 'vitest'
 import winston from 'winston'
@@ -145,5 +150,47 @@ describe('Deep Nested Log', () => {
 
   bench('bogeychan', () => {
     bc.info(deepData, 'Deep nested')
+  })
+})
+
+const silentLogixConfig = {
+  disableInternalLogger: true,
+  disableFileLogging: true,
+  pino: { enabled: false }
+} as const
+
+const logixlysiaApp = new Elysia()
+  .use(logixlysia({ config: silentLogixConfig }))
+  .get('/', () => 'ok')
+
+const evlogApp = new Elysia()
+  .use(
+    evlog({
+      drain: () => {
+        /* benchmark noop */
+      }
+    })
+  )
+  .get('/', () => 'ok')
+
+const bogeychanApp = new Elysia()
+  .use(
+    bogeychanLogger({
+      enabled: false
+    })
+  )
+  .get('/', () => 'ok')
+
+describe('Elysia plugin request path', () => {
+  bench('logixlysia', async () => {
+    await logixlysiaApp.handle(new Request('http://localhost/'))
+  })
+
+  bench('evlog', async () => {
+    await evlogApp.handle(new Request('http://localhost/'))
+  })
+
+  bench('bogeychan', async () => {
+    await bogeychanApp.handle(new Request('http://localhost/'))
   })
 })
