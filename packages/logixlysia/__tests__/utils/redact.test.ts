@@ -10,6 +10,14 @@ describe('redactString', () => {
     expect(redactString('test@example.com')).toBe('[REDACTED]')
   })
 
+  test('redacts email in long percent run without hanging', () => {
+    const input = `${'%'.repeat(50_000)}@example.com`
+    const start = performance.now()
+    const result = redactString(input)
+    expect(performance.now() - start).toBeLessThan(500)
+    expect(result.endsWith('[REDACTED]')).toBe(true)
+  })
+
   test('redacts IPs', () => {
     expect(redactString('IP is 192.168.1.1')).toBe('IP is [REDACTED]')
   })

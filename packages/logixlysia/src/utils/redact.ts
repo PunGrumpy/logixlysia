@@ -1,4 +1,6 @@
-const EMAIL_REGEX = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g
+// Local part ≤64, domain ≤253, TLD 2–63 (RFC 5321 / 1035-ish limits; bounded to avoid ReDoS)
+const EMAIL_REGEX =
+  /[a-zA-Z0-9._%+-]{1,64}@[a-zA-Z0-9.-]{1,253}\.[a-zA-Z]{2,63}/g
 const IPV4_REGEX = /\b(?:\d{1,3}\.){3}\d{1,3}\b/g
 /** Digit runs that may be formatted PANs (spaces/dashes); validated with Luhn before redacting. */
 const CREDIT_CARD_CANDIDATE_REGEX = /\b(?:\d[ -]*?){13,19}\b/g
