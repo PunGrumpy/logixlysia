@@ -1,28 +1,43 @@
 import Elysia from 'elysia'
 import { logixlysia } from 'logixlysia'
+import { aiMetricsRouter } from './ai-metrics'
 import { autoRedactRouter } from './auto-redact'
 import { boomRouter } from './boom'
 import { customRouter } from './custom'
+import { otelRouter } from './otel'
 import { pinoRouter } from './pino'
+import { requestContextRouter } from './request-context'
 import { statusRouter } from './status'
 
-export const routers = new Elysia()
-  .use(
-    logixlysia({
-      config: {
-        service: 'elysia-demo',
-        timestamp: {
-          translateTime: 'HH:MM:ss.SSS'
-        },
-        slowThreshold: 500,
-        verySlowThreshold: 1000,
-        showContextTree: true,
-        logFilePath: './logs/example.log',
-        ip: true,
-        autoRedact: true
+type DemoWs = {
+  data: {
+    store: {
+      logger: {
+        mergeContext: (key: unknown, partial: Record<string, unknown>) => void
       }
-    })
-  )
+    }
+  }
+  send: (payload: unknown) => void
+  id?: string
+}
+
+export const logging = logixlysia({
+  preset: 'dev',
+  config: {
+    service: 'elysia-demo',
+    timestamp: {
+      translateTime: 'HH:MM:ss.SSS'
+    },
+    slowThreshold: 500,
+    verySlowThreshold: 1000,
+    logFilePath: './logs/example.log',
+    ip: true,
+    autoRedact: true
+  }
+})
+
+export const routers = new Elysia()
+  .use(logging)
   .get(
     '/',
     () => ({
@@ -36,29 +51,30 @@ export const routers = new Elysia()
     }
   )
   .use(customRouter)
+  .use(requestContextRouter)
+  .use(aiMetricsRouter)
+  .use(otelRouter)
   .use(pinoRouter)
   .use(statusRouter)
   .use(autoRedactRouter)
   .ws('/ws', {
     detail: {
-      summary: 'WebSocket echo',
+      summary: 'WebSocket echo (wrapWs)',
       description:
-        'Connect with a WebSocket client to `ws://localhost:<PORT>/ws`. Incoming messages are echoed back. Open/close events are logged via Logixlysia.',
+        'Lifecycle logs via `plugin.wrapWs`. Connect to `ws://localhost:<PORT>/ws`. Messages are echoed back.',
       tags: ['websocket']
     },
-    open(ws) {
-      ws.data.store.logger.info(ws.data.request, 'WebSocket opened', {
-        demo: 'echo'
-      })
-    },
-    message(ws, message) {
-      ws.send(message)
-    },
-    close(ws, code, reason) {
-      ws.data.store.logger.info(ws.data.request, 'WebSocket closed', {
-        code,
-        reason
-      })
-    }
+    ...logging.wrapWs('/ws', {
+      open(ws) {
+        const socket = ws as unknown as DemoWs
+        socket.data.store.logger.mergeContext(ws, { room: 'lobby' })
+      },
+      message(ws, message: unknown) {
+        ;(ws as unknown as DemoWs).send(message)
+      },
+      close() {
+        /* wrapWs logs close automatically */
+      }
+    })
   })
   .use(boomRouter)
