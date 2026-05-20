@@ -1,0 +1,84 @@
+---
+title: Migrating from evlog
+description: Map evlog wide events to Logixlysia request context and access logs
+---
+
+## Plugin setup
+
+**evlog**
+
+```ts
+import { evlog } from 'evlog/elysia'
+
+new Elysia().use(evlog({ drain: myDrain }))
+```
+
+**Logixlysia**
+
+```ts
+import logixlysia from 'logixlysia'
+
+new Elysia().use(logixlysia({ preset: 'prod' }))
+```
+
+## Context accumulation
+
+| evlog | Logixlysia |
+| ----- | ---------- |
+| `log.set({ userId: 'x' })` | `store.logger.mergeContext(request, { userId: 'x' })` |
+| `log.set({ cart: { total: 99 } })` | `store.logger.mergeContext(request, { cart: { total: 99 } })` |
+| `useLogger()` | `store.logger` in handlers |
+
+## Emitting the request log
+
+evlog:
+
+```ts
+log.emit({ status: 200 })
+```
+
+Logixlysia emits the access log automatically in `onAfterHandle`. Use a custom log only when you need to skip the default line:
+
+```ts
+store.logger.info(request, 'handled manually')
+```
+
+## AI metrics
+
+**evlog** — automatic via `evlog/ai`.
+
+**Logixlysia**
+
+```ts
+import { mergeAIMetrics } from 'logixlysia/ai'
+
+mergeAIMetrics(store.logger, request, {
+  model: 'claude-sonnet',
+  inputTokens: 100,
+  outputTokens: 50,
+  totalTokens: 150
+})
+```
+
+## Tracing
+
+Use `injectTraceContext` from `logixlysia/otel` in `onRequest` (see [OpenTelemetry](/integrations/otel)).
+
+## Drains vs transports
+
+evlog **drains** map to Logixlysia **transports**:
+
+```ts
+logixlysia({
+  config: {
+    transports: [
+      {
+        log: (level, message, meta) => {
+          myDrain.write({ level, message, ...meta })
+        }
+      }
+    ],
+    useTransportsOnly: true
+  }
+})
+```
