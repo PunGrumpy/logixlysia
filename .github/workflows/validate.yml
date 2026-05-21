@@ -62,3 +62,52 @@ jobs:
         env:
           CI: true
         run: ${{ matrix.command }}
+
+  demo-smoke:
+    name: Playground smoke
+    runs-on: ubuntu-latest
+    needs:
+      - code-quality
+    steps:
+      - name: 🛫 Checkout Code
+        uses: actions/checkout@v6
+      - name: 🍞 Setup Bun
+        uses: oven-sh/setup-bun@v2
+      - name: 🌵 Cache Bun
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.bun/install/cache
+            **/node_modules
+          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+      - name: 🔽 Install Dependencies
+        run: bun install
+      - name: 🦊 Build Logixlysia
+        run: bun run build --filter logixlysia
+      - name: 🚀 Start playground
+        working-directory: apps/elysia
+        env:
+          PORT: '3001'
+        run: |
+          bun run src/index.ts &
+          echo $! > /tmp/elysia-demo.pid
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:3001/ >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "Playground failed to start"
+          exit 1
+      - name: 🧪 Smoke demo routes
+        run: |
+          curl -sf http://localhost:3001/checkout
+          curl -sf -X POST http://localhost:3001/chat
+      - name: 🛑 Stop playground
+        if: always()
+        run: |
+          if [ -f /tmp/elysia-demo.pid ]; then
+            kill "$(cat /tmp/elysia-demo.pid)" 2>/dev/null || true
+          fi
