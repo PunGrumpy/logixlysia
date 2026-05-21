@@ -6,6 +6,16 @@ on:
       - main
   workflow_dispatch:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+  actions: read
+
 jobs:
   security:
     permissions:
@@ -14,11 +24,23 @@ jobs:
       security-events: write
     uses: ./.github/workflows/security.yml
 
-  test:
-    name: 🧪 Test
-    runs-on: ubuntu-latest
+  code-quality:
     needs:
       - security
+    name: ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Lint
+            command: bun run lint
+          - name: Format
+            command: bun run format
+          - name: Typecheck
+            command: bun run typecheck
+          - name: Test
+            command: bun run test
     steps:
       - name: 🛫 Checkout Code
         uses: actions/checkout@v6
@@ -28,34 +50,15 @@ jobs:
         id: bun-cache
         uses: actions/cache@v5
         with:
-          path: ~/.bun/install/cache
+          path: |
+            ~/.bun/install/cache
+            **/node_modules
           key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
       - name: 🔽 Install Dependencies
         run: bun install
-      - name: 🧪 Test
-        run: bun run test
-      - name: 🔎 Typecheck
-        run: bun run typecheck
-      - name: 🧹 Lint
-        run: bun run lint
-
-  build:
-    name: 🏗️ Build
-    runs-on: ubuntu-latest
-    needs:
-      - test
-    steps:
-      - name: 🔔 Checkout
-        uses: actions/checkout@v6
-      - name: 🍞 Setup Bun
-        uses: oven-sh/setup-bun@v2
-      - name: 🌵 Cache Bun
-        id: bun-cache
-        uses: actions/cache@v5
-        with:
-          path: ~/.bun/install/cache
-          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}
-      - name: 🔽 Install Dependencies
-        run: bun install
-      - name: 🦊 Build Logixlysia
-        run: bun run build --filter logixlysia
+      - name: 🔍 Run ${{ matrix.name }}
+        env:
+          CI: true
+        run: ${{ matrix.command }}
