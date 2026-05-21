@@ -1,4 +1,5 @@
-export type ContextKey = Request
+/** HTTP `Request` or WebSocket instance for accumulated context. */
+export type ContextKey = Request | object
 
 export interface RequestContextStore {
   clearContext: (key: ContextKey) => void

@@ -27,13 +27,13 @@ describe('wrapWs', () => {
     const ws = { id: 'ws-1' }
 
     const hooks = wrapWs('/chat', {
-      open() {
+      open(_ws) {
         /* noop */
       },
-      message() {
+      message(_ws, _message) {
         /* noop */
       },
-      close() {
+      close(_ws) {
         /* noop */
       }
     })
