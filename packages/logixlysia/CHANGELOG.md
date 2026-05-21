@@ -1,5 +1,21 @@
 # Changelog
 
+## 6.5.0
+
+### Minor Changes
+
+- 88ecd4c: Add `logixlysia/ai` subpath with `mergeAIMetrics` for LLM usage fields on access logs.
+- 23f4b42: Add `logixlysia/otel` subpath with `injectTraceContext` for optional OpenTelemetry span correlation.
+- 981de26: Add `preset` option (`dev`, `prod`, `json`) with `resolveOptions` for opinionated environment defaults.
+- d576f99: Add request-scoped context accumulation via `mergeContext` and `getContext`, merged into automatic access logs. Export `createLogger` and `createPluginLogger` for advanced setups.
+- cbe9d2c: Add `wrapWs` for WebSocket open, message, and close lifecycle logging with request context support.
+
+### Patch Changes
+
+- d3d15b4: Add `default` export conditions for Node and tsx resolution of `logixlysia`, `logixlysia/otel`, and `logixlysia/ai`.
+
+  Allow `Request` or WebSocket objects as keys for `mergeContext` and `getContext`.
+
 ## 6.4.0
 
 ### Minor Changes
@@ -8,7 +24,7 @@
 
 ### Patch Changes
 
-- 712b2ba: 
+- 712b2ba:
   - Optimized log formatting performance by replacing multiple `.replaceAll()` calls with a single-pass regex replacement in `formatLogOutput` and `formatTimestamp`.
   - Optimized `getIp` string slicing to reduce array allocations.
   - Fixed a bug where padded HTTP methods (e.g., `GET`) lost their color formatting.
