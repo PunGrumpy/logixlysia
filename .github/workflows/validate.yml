@@ -1,10 +1,10 @@
 name: 🤖 Validate
 
 on:
-  pull_request:
+  push:
     branches:
       - main
-  workflow_dispatch:
+  pull_request:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
