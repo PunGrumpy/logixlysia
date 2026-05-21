@@ -9,7 +9,7 @@ import { pinoRouter } from './pino'
 import { requestContextRouter } from './request-context'
 import { statusRouter } from './status'
 
-type DemoWs = {
+interface DemoWs {
   data: {
     store: {
       logger: {
@@ -17,8 +17,8 @@ type DemoWs = {
       }
     }
   }
-  send: (payload: unknown) => void
   id?: string
+  send: (payload: unknown) => void
 }
 
 export const logging = logixlysia({
