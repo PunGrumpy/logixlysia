@@ -5,7 +5,7 @@ import { ReleaseMarkdown } from './release-markdown'
 
 const repositoryOwner = process.env.GITHUB_REPO_OWNER ?? 'PunGrumpy'
 const repositoryName = process.env.GITHUB_REPO_NAME ?? 'logixlysia'
-const releasesPerPage = 10
+const releasesPerPage = 20
 const releaseDateFormatter = new Intl.DateTimeFormat('en-US', {
   year: 'numeric',
   month: 'short',
@@ -70,51 +70,59 @@ const ChangelogPage = async () => {
     return (
       <main className="container max-w-4xl px-4 py-10 md:py-16">
         <div className="space-y-2">
-          <h1 className="font-light font-serif text-4xl md:text-5xl">
+          <h1 className="text-balance font-light font-serif text-4xl md:text-5xl">
             Changelog
           </h1>
-          <p className="text-muted-foreground">
+          <p className="text-pretty text-muted-foreground">
             Latest releases for {repositoryOwner}/{repositoryName}. Data
             refreshes automatically every hour.
           </p>
         </div>
 
-        <div className="mt-10 space-y-8">
+        <div className="mt-16 space-y-16">
           {releases.map(release => (
             <article
-              className="space-y-4 rounded-lg border p-6"
+              className="grid grid-cols-1 gap-8 md:grid-cols-[200px_1fr] lg:gap-12"
               key={release.id}
             >
-              <div className="flex flex-wrap items-baseline gap-3">
-                <h2 className="font-medium text-2xl">
+              <aside className="space-y-2">
+                <div className="sticky top-24 space-y-3">
+                  <p className="font-medium text-muted-foreground text-sm tabular-nums">
+                    {formatReleaseDate(release.published_at)}
+                  </p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="rounded bg-primary/10 px-2 py-1 font-mono text-primary text-xs">
+                      {release.tag_name}
+                    </span>
+                    {release.prerelease && (
+                      <span className="rounded bg-yellow-500/10 px-2 py-1 text-xs text-yellow-600">
+                        Pre-release
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </aside>
+
+              <div className="space-y-6">
+                <h2 className="text-balance font-medium text-2xl md:text-3xl">
                   {release.name || release.tag_name}
                 </h2>
-                <span className="rounded bg-primary/10 px-2 py-1 font-mono text-primary text-xs">
-                  {release.tag_name}
-                </span>
-                {release.prerelease ? (
-                  <span className="rounded bg-yellow-500/10 px-2 py-1 text-xs text-yellow-600">
-                    Pre-release
-                  </span>
-                ) : null}
+
+                <ReleaseMarkdown>
+                  {release.body?.trim() || 'No changelog notes provided.'}
+                </ReleaseMarkdown>
+
+                <div className="pt-4">
+                  <Link
+                    className="inline-flex font-medium text-sm underline underline-offset-4 transition-colors duration-200 ease-out hover:text-primary/80"
+                    href={release.html_url}
+                    rel="noopener noreferrer"
+                    target="_blank"
+                  >
+                    View release on GitHub
+                  </Link>
+                </div>
               </div>
-
-              <p className="text-muted-foreground text-sm">
-                Released on {formatReleaseDate(release.published_at)}
-              </p>
-
-              <ReleaseMarkdown>
-                {release.body?.trim() || 'No changelog notes provided.'}
-              </ReleaseMarkdown>
-
-              <Link
-                className="inline-flex text-sm underline underline-offset-4"
-                href={release.html_url}
-                rel="noopener noreferrer"
-                target="_blank"
-              >
-                View release on GitHub
-              </Link>
             </article>
           ))}
         </div>
