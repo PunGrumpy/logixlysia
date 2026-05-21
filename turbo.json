@@ -23,7 +23,7 @@
       "dependsOn": ["^test:coverage"]
     },
     "typecheck": {
-      "dependsOn": ["^build"]
+      "dependsOn": ["^build", "^typecheck"]
     },
     "clean": {
       "cache": false
