@@ -10,12 +10,11 @@ Logixlysia's source code is hosted on GitHub at [PunGrumpy/logixlysia](https://g
 
 Logixlysia is a monorepo managed with bun workspaces and Turbo:
 
-- `packages/cli` - The main Logixlysia package
+- `packages/logixlysia` - The main Logixlysia package
   - `src/` - Core logger implementation for Elysia
-  - `__tests__/` - Test files
+  - `__tests__/` - Unit and integration tests
 - `apps/docs` - Documentation website built with [Fumadocs](https://fumadocs.dev/) and Next.js
-- `apps/elysia` - Example Elysia application
-- `apps/elysia-node` - Example Elysia application with Node.js
+- `apps/elysia` - Playground demo (Bun + TypeScript + Swagger)
 
 ## Getting Started
 
@@ -34,8 +33,8 @@ Logixlysia is a monorepo managed with bun workspaces and Turbo:
 
 To test your local version of Logixlysia on a sample project:
 
-1. Build the package: `cd packages/cli && bun run build`
-2. Link it locally: `bun link --global` (from `packages/cli`)
+1. Build the package: `cd packages/logixlysia && bun run build`
+2. Link it locally: `bun link --global` (from `packages/logixlysia`)
 3. In your test project: `bun link --global logixlysia`
 4. Import and use Logixlysia in your Elysia app to test your changes
 5. Alternatively, use `npm pack` to create a tarball and install it in your test project
@@ -87,7 +86,8 @@ When making changes to the logger:
 3. Test with different log levels and configurations
 4. Consider backward compatibility - will this break existing users' workflows?
 5. Run `bun lint` and `bun format` to ensure code quality
-6. Test with the example apps in `apps/elysia` and `apps/elysia-node`
+6. Run integration tests: `cd packages/logixlysia && bun test __tests__/integration`
+7. Manual QA: `cd apps/elysia && bun run dev` (Swagger at `/swagger`)
 
 ## Pull Request Guidelines
 

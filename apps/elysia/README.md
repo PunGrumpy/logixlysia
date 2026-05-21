@@ -1,113 +1,88 @@
-# Elysia Example with Logixlysia
+# Elysia playground (Logixlysia demo)
 
-Example application demonstrating Logixlysia logging plugin with Elysia.js.
+Canonical demo for Logixlysia on **Bun + TypeScript**. Node.js compatibility is covered by integration tests in `packages/logixlysia/__tests__/integration`.
 
 ![Preview](./public/preview.png)
 
 ## Overview
 
-This example shows how to integrate Logixlysia into an Elysia.js application, including:
-
-- Basic request/response logging
-- Custom log formatting
-- File logging with rotation
-- Pino integration
-- Error handling and logging
-- Custom logger usage
+- `preset: 'dev'` with service name and slow-request thresholds
+- Request context (`mergeContext`) on `/checkout`
+- AI metrics (`logixlysia/ai`) on `POST /chat`
+- OpenTelemetry hook (`logixlysia/otel`) on `/trace`
+- WebSocket lifecycle via `plugin.wrapWs` on `/ws`
+- Classic examples: `/status/:code`, `/pino`, `/custom`, `/boom`, `/auto-redact`
 
 ## Getting Started
 
-### Installation
+From the monorepo root:
 
 ```bash
 bun install
-```
-
-### Running the Example
-
-```bash
+cd apps/elysia
 bun run dev
 ```
 
-The server will start on `http://localhost:3001` (or the port specified in `PORT` environment variable).
+Server: `http://localhost:3001` (override with `PORT`).
+
+Swagger UI: `http://localhost:3001/swagger`
 
 ## Configuration
 
-This example uses the following Logixlysia configuration:
-
 ```ts
 logixlysia({
+  preset: 'dev',
   config: {
-    timestamp: {
-      translateTime: 'yyyy-mm-dd HH:MM:ss'
-    },
-    customLogFormat: '🦊 {now} {level} {duration} {method} {pathname} {status} {message} {ip} {context}',
+    service: 'elysia-demo',
     logFilePath: './logs/example.log',
-    ip: true
+    ip: true,
+    autoRedact: true
   }
 })
 ```
 
-## Example Endpoints
+## Routes
 
-### Swagger Documentation
+| Method | Path | What it shows |
+|--------|------|----------------|
+| GET | `/` | Welcome |
+| GET | `/checkout` | Request context on access log |
+| POST | `/chat` | `mergeAIMetrics` → `context.ai` |
+| GET | `/trace` | `injectTraceContext` (needs active OTel span for IDs) |
+| WS | `/ws` | `wrapWs` lifecycle + context on socket |
+| GET | `/status/:code` | Status-based log levels |
+| GET | `/pino` | Direct Pino from store |
+| GET | `/custom` | Custom `logger.info` with context |
+| GET | `/boom` | Error logging |
+| GET | `/auto-redact` | PII redaction in logs |
 
-Visit `http://localhost:3001/swagger` to see the interactive API documentation.
-
-### Available Routes
-
-#### `GET /status/:code`
-
-Test different HTTP status codes and see how they're logged.
+### Quick curls
 
 ```bash
-curl http://localhost:3001/status/200
+curl http://localhost:3001/
+curl http://localhost:3001/checkout
+curl -X POST http://localhost:3001/chat
+curl http://localhost:3001/trace
 curl http://localhost:3001/status/404
-curl http://localhost:3001/status/500
-```
-
-#### `GET /pino`
-
-Example of using Pino logger directly from the store.
-
-```bash
-curl http://localhost:3001/pino
-```
-
-#### `GET /custom`
-
-Example of using the custom logger helper with context.
-
-```bash
-curl http://localhost:3001/custom
-```
-
-#### `GET /boom`
-
-Example of error handling and automatic error logging.
-
-```bash
 curl http://localhost:3001/boom
 ```
 
-## Log Output
+## Logs
 
-Logs are written to:
-- **Console**: Formatted logs with emoji and colors
-- **File**: `./logs/example.log` (created automatically)
+- **Console**: Pretty dev output (preset `dev`)
+- **File**: `./logs/example.log`
 
-## Features Demonstrated
+## Testing without this app
 
-1. **Automatic Request/Response Logging**: All requests are automatically logged with status codes
-2. **Custom Log Format**: Custom format string with placeholders
-3. **File Logging**: Logs are saved to files for persistence
-4. **Pino Integration**: Direct access to Pino logger for structured logging
-5. **Custom Logger**: Using logger helper methods with context
-6. **Error Handling**: Automatic error logging with stack traces
+```bash
+cd packages/logixlysia
+bun test
+bun test __tests__/integration
+```
 
-## Learn More
+The integration suite mirrors these demo routes and includes a **Node adapter** smoke test (`@elysiajs/node`).
 
-- [Logixlysia Documentation](/)
-- [Elysia.js Documentation](https://elysiajs.com)
-- [Pino Documentation](https://github.com/pinojs/pino)
+## Learn more
 
+- [Logixlysia docs](https://logixlysia.vercel.app)
+- [Elysia.js](https://elysiajs.com)
