@@ -11,13 +11,13 @@
     "@bogeychan/elysia-logger": "^0.1.10",
     "consola": "^3.4.2",
     "elysia": "^1.4.28",
-    "evlog": "^2.17.0",
+    "evlog": "^2.18.1",
     "logixlysia": "workspace:*",
     "pino": "^10.3.1",
     "winston": "^3.19.0"
   },
   "devDependencies": {
-    "vitest": "^4.1.6",
+    "vitest": "^4.1.7",
     "typescript": "^6.0.3"
   }
 }
