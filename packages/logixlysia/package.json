@@ -61,7 +61,7 @@
   "devDependencies": {
     "@elysiajs/node": "^1.4.5",
     "@types/bun": "^1.3.14",
-    "bunup": "^0.16.31",
+    "bunup": "^0.16.32",
     "elysia": "^1.4.28"
   },
   "peerDependencies": {
