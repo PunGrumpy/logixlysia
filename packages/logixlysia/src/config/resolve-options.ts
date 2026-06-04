@@ -17,6 +17,7 @@ const PRESET_DEFAULTS: Record<LogPreset, NonNullable<Options['config']>> = {
     useColors: false,
     showContextTree: false,
     autoRedact: true,
+    requestId: true,
     pino: {
       prettyPrint: false
     }
