@@ -65,6 +65,24 @@ export type PrettyPrintConfig = boolean | Record<string, unknown>
 
 export type LogPreset = 'dev' | 'prod' | 'json'
 
+export interface RequestIdConfig {
+  /**
+   * Enable request ID generation.
+   * When used as a boolean on `Options.config.requestId`, `true` enables with defaults.
+   */
+  enabled?: boolean
+  /**
+   * Custom ID generator function.
+   * @default crypto.randomUUID()
+   */
+  generator?: () => string
+  /**
+   * Header name to read from the incoming request and write to the response.
+   * @default 'X-Request-Id'
+   */
+  header?: string
+}
+
 export interface Options {
   config?: {
     showStartupMessage?: boolean
@@ -92,6 +110,21 @@ export interface Options {
 
     /** Skip automatic WebSocket lifecycle logs from `wrapWs`; default false. */
     disableWebSocketLogging?: boolean
+
+    /**
+     * Enable automatic request ID generation and propagation.
+     *
+     * - `true`: Enable with defaults (`X-Request-Id` header, `crypto.randomUUID()` generator).
+     * - `false` or `undefined`: Disabled (default).
+     * - `RequestIdConfig` object: Enable with custom header name and/or generator.
+     *
+     * When enabled, the plugin will:
+     * 1. Read `X-Request-Id` (or custom header) from the incoming request — honoring IDs set by upstream proxies.
+     * 2. Generate a new UUID if no header is present.
+     * 3. Merge `{ requestId }` into the request context (appears in logs and context tree).
+     * 4. Set the header on the outgoing response for client-side tracing.
+     */
+    requestId?: boolean | RequestIdConfig
 
     // Filtering
     logFilter?: LogFilter

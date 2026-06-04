@@ -4,6 +4,10 @@ import { createRequestContextStore } from './context/request-context'
 import { startServer } from './extensions'
 import type { LogixlysiaStore, Options } from './interfaces'
 import { createPluginLogger } from './logger'
+import {
+  getOrCreateRequestId,
+  resolveRequestIdConfig
+} from './middleware/request-id'
 import { createWsHandlerWrapper } from './websocket/wrap-ws'
 
 /**
@@ -39,6 +43,7 @@ export const logixlysia = (rawOptions: Options = {}): LogixlysiaPlugin => {
   const contextStore = createRequestContextStore()
   const baseLogger = createPluginLogger(options, contextStore)
   const wrapWs = createWsHandlerWrapper(options, baseLogger, contextStore)
+  const requestIdConfig = resolveRequestIdConfig(options.config?.requestId)
   const logger = {
     ...baseLogger,
     debug: (
@@ -97,11 +102,23 @@ export const logixlysia = (rawOptions: Options = {}): LogixlysiaPlugin => {
         startServer({ port, hostname, protocol: 'http' }, options)
       }
     })
-    .onRequest(({ store }) => {
+    .onRequest(({ request, store }) => {
       store.beforeTime = process.hrtime.bigint()
+      if (requestIdConfig) {
+        const requestId = getOrCreateRequestId(request, requestIdConfig)
+        contextStore.mergeContext(request, { requestId })
+      }
     })
     .onAfterHandle(({ request, set, store }) => {
       try {
+        if (requestIdConfig) {
+          const ctx = contextStore.getContext(request)
+          const id = ctx.requestId as string | undefined
+          if (id) {
+            set.headers[requestIdConfig.header] = id
+          }
+        }
+
         if (didCustomLog.has(request)) {
           return
         }
@@ -125,8 +142,15 @@ export const logixlysia = (rawOptions: Options = {}): LogixlysiaPlugin => {
         contextStore.clearContext(request)
       }
     })
-    .onError(({ request, error, store }) => {
+    .onError(({ request, error, set, store }) => {
       try {
+        if (requestIdConfig) {
+          const ctx = contextStore.getContext(request)
+          const id = ctx.requestId as string | undefined
+          if (id) {
+            set.headers[requestIdConfig.header] = id
+          }
+        }
         logger.handleHttpError(request, error, store)
       } finally {
         contextStore.clearContext(request)
@@ -147,10 +171,16 @@ export type {
   LogPreset,
   Options,
   Pino,
+  RequestIdConfig,
   StoreData,
   Transport
 } from './interfaces'
 export { createLogger, createPluginLogger } from './logger'
+export type { ResolvedRequestIdConfig } from './middleware/request-id'
+export {
+  getOrCreateRequestId,
+  resolveRequestIdConfig
+} from './middleware/request-id'
 export type { WsHandlerHooks } from './websocket/wrap-ws'
 export { createWsHandlerWrapper } from './websocket/wrap-ws'
 

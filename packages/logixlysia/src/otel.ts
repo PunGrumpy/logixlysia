@@ -58,4 +58,9 @@ export const injectTraceContext = (
   return fields
 }
 
+/** @internal Reset the cached OTel API reference. Only intended for tests. */
+export const __resetForTesting = (): void => {
+  otelApi = undefined
+}
+
 export { injectTraceContext as default }

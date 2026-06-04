@@ -21,7 +21,7 @@ const DEFAULT_LOG_FORMAT =
   '{now} {service}{icon} {method} {pathname} {status} {duration} {message}{speed}'
 
 const LOG_FORMAT_REGEX =
-  /\{(now|epoch|level|icon|duration|method|pathname|path|query|status|statusText|message|ip|context|service|speed)\}/g
+  /\{(now|epoch|level|icon|duration|method|pathname|path|query|status|statusText|message|ip|context|service|speed|requestId)\}/g
 
 export interface FormattedLogOutput {
   contextLines: string[]
@@ -484,7 +484,13 @@ export const formatLogOutput = ({
     '{ip}': ip,
     '{context}': ctxString,
     '{service}': serviceToken,
-    '{speed}': speedToken
+    '{speed}': speedToken,
+    '{requestId}':
+      typeof data.context === 'object' &&
+      data.context !== null &&
+      'requestId' in data.context
+        ? String((data.context as Record<string, unknown>).requestId)
+        : ''
   }
 
   const main = format.replace(

@@ -1,0 +1,87 @@
+---
+title: Request ID
+description: Generate or honor unique request identifiers across requests and responses
+---
+
+Logixlysia can automatically generate or retrieve unique request identifiers (Request IDs) and attach them to the request context, response headers, and log outputs.
+
+## Basic Usage
+
+You can enable the request ID feature using the `requestId` config option. When set to `true`, it uses the default configuration (`X-Request-Id` header and UUID v4 generator).
+
+```ts
+import { Elysia } from 'elysia'
+import { logixlysia } from 'logixlysia'
+
+const app = new Elysia()
+  .use(
+    logixlysia({
+      config: {
+        requestId: true
+      }
+    })
+  )
+```
+
+## Production Preset
+
+The `prod` preset enables `requestId` automatically by default:
+
+```ts
+const app = new Elysia()
+  .use(
+    logixlysia({
+      preset: 'prod' // requestId is enabled automatically
+    })
+  )
+```
+
+## Custom Configuration
+
+For advanced use cases, you can pass a configuration object instead of a boolean:
+
+```ts
+const app = new Elysia()
+  .use(
+    logixlysia({
+      config: {
+        requestId: {
+          // Custom header name to read from / write to
+          header: 'X-Correlation-Id',
+          // Custom request ID generator function
+          generator: () => `req-${crypto.randomUUID()}`
+        }
+      }
+    })
+  )
+```
+
+### Options
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `enabled` | `boolean` | `true` | Turn request ID generation on or off when using object configuration. |
+| `header` | `string` | `'X-Request-Id'` | The header key to check on incoming requests (honoring upstream proxies) and to set on responses. |
+| `generator` | `() => string` | `crypto.randomUUID` | A function that returns a unique string to use as the request ID. |
+
+## Log Formatting
+
+When Request ID is enabled, you can output it in your custom log format using the `{requestId}` token:
+
+```ts
+const app = new Elysia()
+  .use(
+    logixlysia({
+      config: {
+        requestId: true,
+        customLogFormat: '{method} {pathname} - Request ID: {requestId}'
+      }
+    })
+  )
+```
+
+If Request ID is disabled or not present, the token will render as an empty string.
+
+## Error Responses
+
+If a request fails (e.g. throws an exception), the request ID is still propagated in the response headers (like `X-Request-Id`) and is correctly logged in the HTTP error telemetry context, allowing trace correlation for failed requests.
