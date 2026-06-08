@@ -190,10 +190,7 @@ describe('redactRequest', () => {
     // Mirror Elysia consuming the body before logging runs.
     await req.text()
 
-    let out: Request
-    expect(() => {
-      out = redactRequest(req)
-    }).not.toThrow()
-    expect(out!.headers.get('x-forwarded-for')).toBe('[REDACTED]')
+    const out = redactRequest(req)
+    expect(out.headers.get('x-forwarded-for')).toBe('[REDACTED]')
   })
 })
