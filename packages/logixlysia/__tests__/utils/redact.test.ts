@@ -176,4 +176,24 @@ describe('redactRequest', () => {
     const req = new Request('http://localhost/plain')
     expect(redactRequest(req)).toBe(req)
   })
+
+  test('does not throw when the body was already consumed and a header needs redaction', async () => {
+    const req = new Request('http://localhost/user', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-forwarded-for': '10.0.0.1'
+      },
+      body: JSON.stringify({ name: 'alice' })
+    })
+
+    // Mirror Elysia consuming the body before logging runs.
+    await req.text()
+
+    let out: Request
+    expect(() => {
+      out = redactRequest(req)
+    }).not.toThrow()
+    expect(out!.headers.get('x-forwarded-for')).toBe('[REDACTED]')
+  })
 })

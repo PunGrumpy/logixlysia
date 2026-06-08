@@ -196,8 +196,10 @@ const redactInner = <T>(value: T, inProgress: WeakSet<object>): T => {
 export const redact = <T>(value: T): T => redactInner(value, new WeakSet())
 
 /**
- * Clone request URL and headers for logging with the same string redaction as {@link redact}.
- * Preserves body and signal so the original request is still usable.
+ * Clone request URL, method and headers for logging with the same string redaction as {@link redact}.
+ * The returned request is a logging-only artifact carrying url/method/headers/signal; it intentionally
+ * omits the body so it never re-uses the original (possibly already-consumed) request stream. The
+ * original request is left untouched and remains usable.
  */
 export const redactRequest = (request: Request): Request => {
   const redactedUrl = redactRequestUrl(request.url)
@@ -220,16 +222,11 @@ export const redactRequest = (request: Request): Request => {
     return request
   }
 
-  const init: RequestInit & { duplex?: 'half' } = {
+  const init: RequestInit = {
     method: redactedMethod,
     headers: nextHeaders,
     redirect: request.redirect,
     signal: request.signal
-  }
-
-  if (request.body !== null) {
-    init.body = request.body
-    init.duplex = 'half'
   }
 
   return new Request(redactedUrl, init)
