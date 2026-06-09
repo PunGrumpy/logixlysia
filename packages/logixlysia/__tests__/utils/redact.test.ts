@@ -176,4 +176,26 @@ describe('redactRequest', () => {
     const req = new Request('http://localhost/plain')
     expect(redactRequest(req)).toBe(req)
   })
+
+  test('redacts a header without re-using the body of a consumed request', async () => {
+    const req = new Request('http://localhost/user', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-forwarded-for': '10.0.0.1'
+      },
+      body: JSON.stringify({ name: 'alice' })
+    })
+
+    // Mirror Elysia consuming the body before logging runs.
+    await req.text()
+
+    const out = redactRequest(req)
+    expect(out.headers.get('x-forwarded-for')).toBe('[REDACTED]')
+    // The logging-only clone must not carry the original (already-consumed)
+    // stream — re-attaching it is what threw "ReadableStream has already been
+    // used" on Bun <=1.2.x. Asserting a null body guards the fix on every Bun
+    // version, not just the ones where the reuse happens to throw.
+    expect(out.body).toBeNull()
+  })
 })
