@@ -1,4 +1,5 @@
 import pino from 'pino'
+import pretty from 'pino-pretty'
 import {
   createRequestContextStore,
   mergeLogDataContext,
@@ -47,26 +48,31 @@ export const createLogger = (
   const errorKey =
     (prettyPrintOptions?.errorKey as string | undefined) ?? pinoOptions.errorKey
 
-  const transport = shouldPrettyPrint
-    ? {
-        target: 'pino-pretty',
-        options: {
-          colorize: process.stdout?.isTTY === true,
-          translateTime: config?.timestamp?.translateTime,
-          ...prettyPrintOptions,
-          messageKey,
-          errorKey
-        }
-      }
-    : pinoOptions.transport
-
-  const pinoLogger: Pino = pinoFactory({
+  const basePinoOptions = {
     ...pinoOptions,
     level: pinoOptions.level ?? 'info',
     messageKey,
-    errorKey,
-    transport
-  })
+    errorKey
+  }
+
+  let pinoLogger: Pino
+
+  if (shouldPrettyPrint) {
+    const prettyStream = pretty({
+      colorize: process.stdout?.isTTY === true,
+      translateTime: config?.timestamp?.translateTime,
+      ...prettyPrintOptions,
+      messageKey,
+      errorKey
+    } as Record<string, unknown>)
+
+    pinoLogger = pinoFactory(basePinoOptions, prettyStream)
+  } else {
+    pinoLogger = pinoFactory({
+      ...basePinoOptions,
+      transport: pinoOptions.transport
+    })
+  }
 
   const shouldLog = (level: LogLevel, logFilter?: LogFilter): boolean => {
     if (!logFilter?.level || logFilter.level.length === 0) {
