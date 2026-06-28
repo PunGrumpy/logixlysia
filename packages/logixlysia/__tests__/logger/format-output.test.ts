@@ -247,4 +247,31 @@ describe('buildContextTreeLines', () => {
     expect(lines.some(l => l.includes('user.id'))).toBe(true)
     expect(lines.some(l => l.includes('user.name'))).toBe(true)
   })
+
+  test('adds structured error fields (why, fix, link, internal) for StructuredError', () => {
+    class CustomStructuredError extends Error {
+      why = 'Card declined'
+      fix = 'Try another card'
+      link = 'https://link.com'
+      internal = { code: 'NSF' }
+    }
+
+    const lines = buildContextTreeLines(
+      'ERROR',
+      { error: new CustomStructuredError('Payment Failed') },
+      { config: { useColors: false } }
+    )
+
+    expect(lines.length).toBe(5)
+    expect(lines[0]).toContain('error')
+    expect(lines[0]).toContain('Payment Failed')
+    expect(lines[1]).toContain('error.why')
+    expect(lines[1]).toContain('Card declined')
+    expect(lines[2]).toContain('error.fix')
+    expect(lines[2]).toContain('Try another card')
+    expect(lines[3]).toContain('error.link')
+    expect(lines[3]).toContain('https://link.com')
+    expect(lines[4]).toContain('error.internal')
+    expect(lines[4]).toContain('{"code":"NSF"}')
+  })
 })

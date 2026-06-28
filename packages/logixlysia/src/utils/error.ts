@@ -11,3 +11,17 @@ export const parseError = (error: unknown): string => {
 
   return message
 }
+
+export interface StructuredError {
+  fix?: string
+  internal?: unknown
+  link?: string
+  why?: string
+}
+
+export const isStructuredError = (
+  value: unknown
+): value is StructuredError & Record<string, unknown> =>
+  typeof value === 'object' &&
+  value !== null &&
+  ('why' in value || 'fix' in value || 'link' in value || 'internal' in value)
