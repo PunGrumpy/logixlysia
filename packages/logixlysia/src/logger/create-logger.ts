@@ -8,7 +8,7 @@ import type {
   RequestInfo,
   StoreData
 } from '../interfaces'
-import { parseError } from '../utils/error'
+import { isStructuredError, parseError } from '../utils/error'
 
 const pad2 = (value: number): string => String(value).padStart(2, '0')
 const pad3 = (value: number): string => String(value).padStart(3, '0')
@@ -348,6 +348,29 @@ export const renderContextTreeLines = (
   return formatEntriesToTreeLines(entries, useColors)
 }
 
+const collectStructuredErrorEntries = (error: unknown): [string, string][] => {
+  const entries: [string, string][] = []
+  const msg = parseError(error)
+  if (msg) {
+    entries.push(['error', msg])
+  }
+  if (isStructuredError(error)) {
+    if (error.why !== undefined) {
+      entries.push(['error.why', String(error.why)])
+    }
+    if (error.fix !== undefined) {
+      entries.push(['error.fix', String(error.fix)])
+    }
+    if (error.link !== undefined) {
+      entries.push(['error.link', String(error.link)])
+    }
+    if (error.internal !== undefined) {
+      entries.push(['error.internal', stringifyTreeValue(error.internal)])
+    }
+  }
+  return entries
+}
+
 export const buildContextTreeLines = (
   level: LogLevel,
   data: Record<string, unknown>,
@@ -376,10 +399,7 @@ export const buildContextTreeLines = (
   }
 
   if (level === 'ERROR' && 'error' in data && data.error !== undefined) {
-    const msg = parseError(data.error)
-    if (msg) {
-      entries.push(['error', msg])
-    }
+    entries.push(...collectStructuredErrorEntries(data.error))
   }
 
   return formatEntriesToTreeLines(entries, useColors)
@@ -516,7 +536,7 @@ export const formatLine = (input: {
     options: {
       ...input.options,
       config: {
-        ...(input.options.config ?? {}),
+        ...input.options.config,
         showContextTree: false
       }
     }
