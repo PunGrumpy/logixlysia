@@ -9,7 +9,7 @@ description: How Logixlysia compares to evlog and other Elysia loggers
 | ---------- | ---------- | -------------------------- | ----------------------------------------------------------------------- |
 | Elysia plugin | Yes | Yes (`evlog/elysia`) | Yes |
 | Pino-backed | Yes | Optional drains | Yes |
-| Request context accumulation | `mergeContext` | `log.set()` | Manual |
+| Request context accumulation | `mergeContext`, `useLogger()` | `log.set()`, `useLogger()` | Manual |
 | Single access log per request | Auto | `log.emit()` | Auto |
 | File rotation | Yes | Via drains | Limited |
 | `autoRedact` PII | Yes | Varies | Manual |
