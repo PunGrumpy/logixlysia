@@ -1,5 +1,16 @@
 # Changelog
 
+## 6.6.0
+
+### Minor Changes
+
+- 4660c5d: Add support for request-scoped logger context propagation using `AsyncLocalStorage` and export a global `useLogger()` hook.
+- 51f1ca9: Add support for structured HTTP error logging, formatting properties such as `why`, `fix`, `link`, and `internal` inside the development context tree console log.
+
+### Patch Changes
+
+- 04e1a2f: Fix thread-stream worker crash when using pino-pretty in Bun by initializing pretty print streams synchronously on the main thread.
+
 ## 6.5.1
 
 ### Patch Changes
