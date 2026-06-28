@@ -1,6 +1,15 @@
 import { describe, expect, mock, test } from 'bun:test'
 import type pino from 'pino'
 import type { Options, Pino } from '../../src/interfaces'
+
+let prettyOptionsCaptured: any = null
+mock.module('pino-pretty', () => ({
+  default: (opts: any) => {
+    prettyOptionsCaptured = opts
+    return { prettyStreamMock: true }
+  }
+}))
+
 import { createLogger } from '../../src/logger'
 import { spyConsole } from '../_helpers/console'
 import { createMockRequest } from '../_helpers/request'
@@ -122,9 +131,11 @@ describe('createLogger', () => {
   })
 
   test('prettyPrint true configures pino-pretty transport', () => {
-    const captured: { options?: unknown } = {}
-    const fakePino = (options: unknown) => {
+    prettyOptionsCaptured = null
+    const captured: { options?: any; stream?: any } = {}
+    const fakePino = (options: any, stream: any) => {
       captured.options = options
+      captured.stream = stream
       return {} as unknown as Pino
     }
 
@@ -139,15 +150,18 @@ describe('createLogger', () => {
       fakePino as unknown as typeof pino
     )
 
-    expect(captured.options).toMatchObject({
-      transport: { target: 'pino-pretty' }
+    expect(captured.stream).toEqual({ prettyStreamMock: true })
+    expect(prettyOptionsCaptured).toMatchObject({
+      colorize: process.stdout?.isTTY === true
     })
   })
 
   test('prettyPrint options override defaults', () => {
-    const captured: { options?: unknown } = {}
-    const fakePino = (options: unknown) => {
+    prettyOptionsCaptured = null
+    const captured: { options?: any; stream?: any } = {}
+    const fakePino = (options: any, stream: any) => {
       captured.options = options
+      captured.stream = stream
       return {} as unknown as Pino
     }
 
@@ -164,8 +178,9 @@ describe('createLogger', () => {
       fakePino as unknown as typeof pino
     )
 
-    expect(captured.options).toMatchObject({
-      transport: { options: { colorize: false } }
+    expect(captured.stream).toEqual({ prettyStreamMock: true })
+    expect(prettyOptionsCaptured).toMatchObject({
+      colorize: false
     })
   })
 
@@ -199,9 +214,11 @@ describe('createLogger', () => {
   })
 
   test('prettyPrint uses messageKey override when provided', () => {
-    const captured: { options?: unknown } = {}
-    const fakePino = (options: unknown) => {
+    prettyOptionsCaptured = null
+    const captured: { options?: any; stream?: any } = {}
+    const fakePino = (options: any, stream: any) => {
       captured.options = options
+      captured.stream = stream
       return {} as unknown as Pino
     }
 
@@ -218,17 +235,17 @@ describe('createLogger', () => {
       fakePino as unknown as typeof pino
     )
 
-    expect(captured.options).toMatchObject({
-      transport: {
-        options: { messageKey: 'customMessage' }
-      }
+    expect(prettyOptionsCaptured).toMatchObject({
+      messageKey: 'customMessage'
     })
   })
 
   test('prettyPrint uses errorKey override when provided', () => {
-    const captured: { options?: unknown } = {}
-    const fakePino = (options: unknown) => {
+    prettyOptionsCaptured = null
+    const captured: { options?: any; stream?: any } = {}
+    const fakePino = (options: any, stream: any) => {
       captured.options = options
+      captured.stream = stream
       return {} as unknown as Pino
     }
 
@@ -245,17 +262,17 @@ describe('createLogger', () => {
       fakePino as unknown as typeof pino
     )
 
-    expect(captured.options).toMatchObject({
-      transport: {
-        options: { errorKey: 'customError' }
-      }
+    expect(prettyOptionsCaptured).toMatchObject({
+      errorKey: 'customError'
     })
   })
 
   test('prettyPrint merges with default translateTime from config', () => {
-    const captured: { options?: unknown } = {}
-    const fakePino = (options: unknown) => {
+    prettyOptionsCaptured = null
+    const captured: { options?: any; stream?: any } = {}
+    const fakePino = (options: any, stream: any) => {
       captured.options = options
+      captured.stream = stream
       return {} as unknown as Pino
     }
 
@@ -275,13 +292,9 @@ describe('createLogger', () => {
       fakePino as unknown as typeof pino
     )
 
-    expect(captured.options).toMatchObject({
-      transport: {
-        options: {
-          translateTime: 'yyyy-mm-dd HH:MM:ss',
-          colorize: true
-        }
-      }
+    expect(prettyOptionsCaptured).toMatchObject({
+      translateTime: 'yyyy-mm-dd HH:MM:ss',
+      colorize: true
     })
   })
 })
