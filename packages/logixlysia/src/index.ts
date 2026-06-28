@@ -1,8 +1,13 @@
 import { Elysia } from 'elysia'
 import { resolveOptions } from './config/resolve-options'
 import { createRequestContextStore } from './context/request-context'
+import { loggerStorage } from './context/storage'
 import { startServer } from './extensions'
-import type { LogixlysiaStore, Options } from './interfaces'
+import type {
+  LogixlysiaStore,
+  Options,
+  RequestScopedLogger
+} from './interfaces'
 import { createPluginLogger } from './logger'
 import {
   getOrCreateRequestId,
@@ -24,7 +29,9 @@ export interface EmptyElysiaSlot {
  */
 export interface LogixlysiaSingleton {
   decorator: EmptyElysiaSlot
-  derive: EmptyElysiaSlot
+  derive: {
+    log: RequestScopedLogger
+  }
   resolve: EmptyElysiaSlot
   store: LogixlysiaStore
 }
@@ -89,10 +96,21 @@ export const logixlysia = (rawOptions: Options = {}): LogixlysiaPlugin => {
     }
   })
 
+  // @ts-expect-error — derived log typing matches LogixlysiaSingleton.
   const plugin = app
     .state('logger', logger)
     .state('pino', logger.pino)
     .state('beforeTime', BigInt(0))
+    .derive(({ request }) => {
+      const requestScopedLogger: RequestScopedLogger = {
+        debug: (message, context) => logger.debug(request, message, context),
+        info: (message, context) => logger.info(request, message, context),
+        warn: (message, context) => logger.warn(request, message, context),
+        error: (message, context) => logger.error(request, message, context),
+        mergeContext: partial => contextStore.mergeContext(request, partial)
+      }
+      return { log: requestScopedLogger }
+    })
     .onStart(({ server }): void => {
       if (server) {
         startServer(server, options)
@@ -107,6 +125,17 @@ export const logixlysia = (rawOptions: Options = {}): LogixlysiaPlugin => {
       if (requestIdConfig) {
         const requestId = getOrCreateRequestId(request, requestIdConfig)
         contextStore.mergeContext(request, { requestId })
+      }
+
+      if (options.config?.useAsyncLocalStorage) {
+        const requestScopedLogger: RequestScopedLogger = {
+          debug: (message, context) => logger.debug(request, message, context),
+          info: (message, context) => logger.info(request, message, context),
+          warn: (message, context) => logger.warn(request, message, context),
+          error: (message, context) => logger.error(request, message, context),
+          mergeContext: partial => contextStore.mergeContext(request, partial)
+        }
+        loggerStorage.enterWith(requestScopedLogger)
       }
     })
     .onAfterHandle(({ request, set, store }) => {
@@ -163,6 +192,7 @@ export const logixlysia = (rawOptions: Options = {}): LogixlysiaPlugin => {
 
 // biome-ignore lint/performance/noBarrelFile: public package entry re-exports
 export { resolveOptions } from './config/resolve-options'
+export { useLogger } from './context/storage'
 export type {
   Logger,
   LogixlysiaContext,
@@ -172,6 +202,7 @@ export type {
   Options,
   Pino,
   RequestIdConfig,
+  RequestScopedLogger,
   StoreData,
   Transport
 } from './interfaces'
