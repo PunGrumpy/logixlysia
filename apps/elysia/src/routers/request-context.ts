@@ -1,8 +1,7 @@
 import type { Logixlysia } from 'logixlysia'
 import { useLogger } from 'logixlysia'
 
-async function dbQueryHelper() {
-  // biome-ignore lint/correctness/useHookAtTopLevel: Backend helper hook, not a React hook
+const dbQueryHelper = async () => {
   const log = useLogger()
   log.mergeContext({ query: 'SELECT * FROM users' })
   await Promise.resolve()
