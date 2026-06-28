@@ -32,7 +32,8 @@ export const logging = logixlysia({
     verySlowThreshold: 1000,
     logFilePath: './logs/example.log',
     ip: true,
-    autoRedact: true
+    autoRedact: true,
+    useAsyncLocalStorage: true
   }
 })
 
