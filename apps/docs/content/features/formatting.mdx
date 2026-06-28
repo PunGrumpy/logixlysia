@@ -125,9 +125,12 @@ Logixlysia natively supports structured errors (similar to the `evlog` pattern) 
 - `why`: Explains the root cause of the error.
 - `fix`: Suggests actionable remediation.
 - `link`: Provides a URL to documentation or troubleshooting help.
-- `internal`: Contains sensitive or deep metadata.
+- `internal`: Log-safe diagnostic metadata (e.g. error codes, non-sensitive context).
 
-If a caught error contains any of these fields, they are automatically extracted and rendered under the `error.` namespace (`error.why`, `error.fix`, `error.link`, and `error.internal`) as individual tree branches:
+If a caught error contains any of these fields, they are automatically extracted and rendered under the `error.` namespace (`error.why`, `error.fix`, `error.link`, and `error.internal`) as individual tree branches.
+
+> [!WARNING]
+> Because `error.internal` is emitted verbatim to logs, it should contain only log-safe diagnostic metadata. Do not place sensitive secrets, credentials, or PII (Personally Identifiable Information) in this field.
 
 ```ts
 // Custom error implementation
