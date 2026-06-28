@@ -118,6 +118,40 @@ Example (no ANSI colors), after a main line like `… GET /orders 500 3ms Checko
   └─ error  Card declined
 ```
 
+### Structured Error Logs
+
+Logixlysia natively supports structured errors (similar to the `evlog` pattern) when thrown exceptions contain specific troubleshooting fields:
+
+- `why`: Explains the root cause of the error.
+- `fix`: Suggests actionable remediation.
+- `link`: Provides a URL to documentation or troubleshooting help.
+- `internal`: Contains sensitive or deep metadata.
+
+If a caught error contains any of these fields, they are automatically extracted and rendered under the `error.` namespace (`error.why`, `error.fix`, `error.link`, and `error.internal`) as individual tree branches:
+
+```ts
+// Custom error implementation
+class CheckoutError extends Error {
+  why = 'Card declined by issuer due to insufficient funds.'
+  fix = 'Please try a different credit card or payment method.'
+  link = 'https://docs.example.com/payments/declined'
+  internal = { gatewayCode: 'NSF', raw: '...' }
+}
+
+throw new CheckoutError('Payment failed')
+```
+
+Console output tree:
+
+```
+  ├─ orderId  ord_123
+  ├─ error  Payment failed
+  ├─ error.why  Card declined by issuer due to insufficient funds.
+  ├─ error.fix  Please try a different credit card or payment method.
+  ├─ error.link  https://docs.example.com/payments/declined
+  └─ error.internal  {"gatewayCode":"NSF","raw":"..."}
+```
+
 Set `showContextTree: false` to disable the tree and put stringified context back on the main line via `{context}` when you include that token.
 
 ## Error Log Formatting
