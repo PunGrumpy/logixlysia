@@ -145,6 +145,13 @@ export interface Options {
 
     // Pino
     pino?: (PinoLoggerOptions & { prettyPrint?: PrettyPrintConfig }) | undefined
+
+    /**
+     * Enable request-scoped logger propagation via AsyncLocalStorage.
+     * When enabled, a request-scoped logger `log` is also derived on the Elysia context.
+     * @default false
+     */
+    useAsyncLocalStorage?: boolean
   }
   /**
    * Opinionated defaults for common environments.
@@ -200,6 +207,14 @@ export interface Logger {
     message: string,
     context?: Record<string, unknown>
   ) => void
+}
+
+export interface RequestScopedLogger {
+  debug: (message: string, context?: Record<string, unknown>) => void
+  error: (message: string, context?: Record<string, unknown>) => void
+  info: (message: string, context?: Record<string, unknown>) => void
+  mergeContext: (partial: Record<string, unknown>) => void
+  warn: (message: string, context?: Record<string, unknown>) => void
 }
 
 export interface LogixlysiaContext {

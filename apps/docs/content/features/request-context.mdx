@@ -31,3 +31,46 @@ When you call `logger.info(request, message, { ...explicit })`, keys in the expl
 ```ts
 const ctx = store.logger.getContext(request)
 ```
+
+## Request-Scoped Logger & AsyncLocalStorage
+
+Instead of manually passing the `request` object to `store.logger` methods (e.g. `store.logger.info(request, message)`), you can enable `AsyncLocalStorage` propagation:
+
+```ts
+logixlysia({
+  config: {
+    useAsyncLocalStorage: true
+  }
+})
+```
+
+When enabled, a request-scoped logger `log` is derived automatically on the Elysia handler context. You can also retrieve the active logger globally in nested service layers or helper functions using the `useLogger()` hook.
+
+### 1. Handler Context (`log`)
+
+Destructure `log` directly in your route handlers:
+
+```ts
+app.get('/user/:id', ({ log, params }) => {
+  log.mergeContext({ userId: params.id })
+  log.info('Fetched user profile')
+  return { success: true }
+})
+```
+
+### 2. Global Hook (`useLogger()`)
+
+Import `useLogger()` to log or merge context from deeply nested operations without prop-drilling the request context:
+
+```ts
+import { useLogger } from 'logixlysia'
+
+async function findUser(id: string) {
+  const log = useLogger()
+  log.mergeContext({ action: 'db_query' })
+  log.info('Executing database lookup...')
+  
+  // Database lookup logic...
+  return { id, name: 'John Doe' }
+}
+```
