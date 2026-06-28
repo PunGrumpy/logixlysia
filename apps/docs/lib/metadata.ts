@@ -1,8 +1,5 @@
 import type { Metadata } from 'next'
-
-const baseUrl = process.env.VERCEL_PROJECT_PRODUCTION_URL
-  ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
-  : 'http://localhost:3000'
+import { url } from './url'
 
 export const createMetadata = (
   title: string,
@@ -10,7 +7,7 @@ export const createMetadata = (
 ): Metadata => ({
   title,
   description,
-  metadataBase: new URL(baseUrl),
+  metadataBase: new URL(url),
   authors: [
     {
       name: 'Noppakorn Kaewsalabnil',
@@ -38,7 +35,7 @@ export const createMetadata = (
     type: 'website',
     images: [
       {
-        url: new URL('/opengraph-image.png', baseUrl).toString(),
+        url: new URL('/opengraph-image.png', url).toString(),
         width: 1200,
         height: 630
       }
@@ -51,7 +48,7 @@ export const createMetadata = (
     card: 'summary_large_image',
     images: [
       {
-        url: new URL('/opengraph-image.png', baseUrl).toString(),
+        url: new URL('/opengraph-image.png', url).toString(),
         width: 1200,
         height: 630
       }
