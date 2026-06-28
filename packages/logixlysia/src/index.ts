@@ -87,6 +87,16 @@ export const logixlysia = (rawOptions: Options = {}): LogixlysiaPlugin => {
     }
   }
 
+  const createRequestScopedLogger = (
+    request: Request
+  ): RequestScopedLogger => ({
+    debug: (message, context) => logger.debug(request, message, context),
+    info: (message, context) => logger.info(request, message, context),
+    warn: (message, context) => logger.warn(request, message, context),
+    error: (message, context) => logger.error(request, message, context),
+    mergeContext: partial => contextStore.mergeContext(request, partial)
+  })
+
   const app = new Elysia({
     name: 'Logixlysia',
     detail: {
@@ -101,16 +111,7 @@ export const logixlysia = (rawOptions: Options = {}): LogixlysiaPlugin => {
     .state('logger', logger)
     .state('pino', logger.pino)
     .state('beforeTime', BigInt(0))
-    .derive(({ request }) => {
-      const requestScopedLogger: RequestScopedLogger = {
-        debug: (message, context) => logger.debug(request, message, context),
-        info: (message, context) => logger.info(request, message, context),
-        warn: (message, context) => logger.warn(request, message, context),
-        error: (message, context) => logger.error(request, message, context),
-        mergeContext: partial => contextStore.mergeContext(request, partial)
-      }
-      return { log: requestScopedLogger }
-    })
+    .derive(({ request }) => ({ log: createRequestScopedLogger(request) }))
     .onStart(({ server }): void => {
       if (server) {
         startServer(server, options)
@@ -128,14 +129,7 @@ export const logixlysia = (rawOptions: Options = {}): LogixlysiaPlugin => {
       }
 
       if (options.config?.useAsyncLocalStorage) {
-        const requestScopedLogger: RequestScopedLogger = {
-          debug: (message, context) => logger.debug(request, message, context),
-          info: (message, context) => logger.info(request, message, context),
-          warn: (message, context) => logger.warn(request, message, context),
-          error: (message, context) => logger.error(request, message, context),
-          mergeContext: partial => contextStore.mergeContext(request, partial)
-        }
-        loggerStorage.enterWith(requestScopedLogger)
+        loggerStorage.enterWith(createRequestScopedLogger(request))
       }
     })
     .onAfterHandle(({ request, set, store }) => {
