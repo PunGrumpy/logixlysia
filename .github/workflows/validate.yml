@@ -48,7 +48,7 @@ jobs:
         uses: oven-sh/setup-bun@v2
       - name: 🌵 Cache Bun
         id: bun-cache
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: |
             ~/.bun/install/cache
@@ -74,7 +74,7 @@ jobs:
       - name: 🍞 Setup Bun
         uses: oven-sh/setup-bun@v2
       - name: 🌵 Cache Bun
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: |
             ~/.bun/install/cache
