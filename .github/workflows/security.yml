@@ -16,7 +16,7 @@ jobs:
     timeout-minutes: 360
     steps:
       - name: 🛫 Checkout Code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - name: 🔬 Setting up CodeQL
         uses: github/codeql-action/init@v4
         with:
