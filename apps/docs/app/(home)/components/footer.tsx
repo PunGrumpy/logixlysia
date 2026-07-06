@@ -31,7 +31,7 @@ const Actions = [
 export const Footer = () => (
   <footer className="grid gap-6 pb-20 sm:pb-28">
     <div className="grid gap-6 lg:grid-cols-2">
-      <Card className="rounded-3xl p-8 sm:p-10">
+      <Card className="rounded-3xl p-6 sm:p-10">
         <div className="flex flex-col items-start gap-3">
           <IconHeartFilled className="mt-0.5 size-5 text-pink-500" />
           <div className="flex flex-col gap-2">
@@ -46,7 +46,7 @@ export const Footer = () => (
         </div>
       </Card>
 
-      <Card className="relative isolate overflow-hidden rounded-3xl p-8 sm:p-10">
+      <Card className="relative isolate overflow-hidden rounded-3xl p-6 sm:p-10">
         <div className="relative z-10 flex flex-col items-center text-center">
           <h3 className="font-semibold font-serif text-3xl tracking-widest sm:text-4xl">
             Log your <span className="italic">Elysia.js</span>
@@ -64,7 +64,7 @@ export const Footer = () => (
       </Card>
     </div>
 
-    <Card className="rounded-3xl p-8 sm:p-10">
+    <Card className="rounded-3xl p-6 sm:p-10">
       <div className="flex flex-col gap-8">
         <div className="grid gap-5">
           {Actions.map(action => (

@@ -63,9 +63,9 @@ export const Hero = async (): Promise<React.JSX.Element> => {
         </p>
       </div>
 
-      <div className="flex h-fit max-w-lg flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end">
+      <div className="flex h-fit max-w-lg flex-col items-start gap-4 sm:flex-row sm:flex-wrap sm:items-end">
         <Installer className="w-fit shrink-0 items-start" />
-        <Button asChild className="h-10 px-4" size="lg" variant="link">
+        <Button asChild className="h-10 px-0" size="lg" variant="link">
           <Link href="/introduction">Read the docs</Link>
         </Button>
       </div>

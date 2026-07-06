@@ -528,7 +528,7 @@ const Output = () => {
 }
 
 export const Playground = () => (
-  <section className="relative flex w-full flex-col items-center justify-center overflow-hidden rounded-xl sm:rounded-2xl md:rounded-3xl">
+  <section className="relative flex w-full flex-col items-center justify-center overflow-hidden rounded-2xl sm:rounded-3xl">
     <Background />
 
     <div className="size-full px-3 pt-6 pb-3 sm:px-12 sm:pt-12 sm:pb-6 md:px-16">
