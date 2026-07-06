@@ -1,6 +1,7 @@
+import type React from 'react'
 import { Installer } from '@/components/installer'
 
-export const CallToAction = () => (
+export const CallToAction = (): React.JSX.Element => (
   <div className="grid items-center gap-8 sm:p-16 md:p-24">
     <div className="flex flex-col items-center justify-center gap-2 text-center">
       <h2 className="text-balance font-medium font-serif text-3xl md:text-4xl">
@@ -12,7 +13,7 @@ export const CallToAction = () => (
       </p>
     </div>
     <div className="mx-auto w-full max-w-xs">
-      <Installer code="bun add logixlysia" />
+      <Installer className="items-center" />
     </div>
   </div>
 )

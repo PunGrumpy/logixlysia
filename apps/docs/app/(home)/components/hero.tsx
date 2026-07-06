@@ -1,5 +1,6 @@
 import { IconArrowUpRight } from '@tabler/icons-react'
 import { Link } from 'fumadocs-core/framework'
+import type React from 'react'
 import { Installer } from '@/components/installer'
 import {
   Announcement,
@@ -10,7 +11,7 @@ import { Button } from '@/components/ui/button'
 import { getLatestRelease } from '@/lib/github'
 import { cn } from '@/lib/utils'
 
-export const Hero = async () => {
+export const Hero = async (): Promise<React.JSX.Element> => {
   const release = await getLatestRelease()
 
   const announcementHref = release ? release.html_url : '/changelog'
@@ -47,7 +48,7 @@ export const Hero = async () => {
           powerful
         </h1>
 
-        <p className="max-w-lg text-balance font-light text-muted-foreground">
+        <p className="max-w-lg text-pretty font-light text-muted-foreground">
           Logixlysia is a logger for{' '}
           <Link
             className="underline"
@@ -62,9 +63,9 @@ export const Hero = async () => {
         </p>
       </div>
 
-      <div className="flex h-fit max-w-md flex-row items-center gap-4">
-        <Installer code="bun add logixlysia" />
-        <Button className="px-4" size="lg" variant="link">
+      <div className="flex h-fit max-w-lg flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end">
+        <Installer className="w-fit shrink-0 items-start" />
+        <Button asChild className="h-10 px-4" size="lg" variant="link">
           <Link href="/introduction">Read the docs</Link>
         </Button>
       </div>

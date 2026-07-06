@@ -1,79 +1,47 @@
 'use client'
 
-import { useOpenPanel } from '@openpanel/nextjs'
-import { IconCheck, IconCopy } from '@tabler/icons-react'
-import { useEffect, useRef, useState } from 'react'
-import { toast } from 'sonner'
+import type React from 'react'
 import {
-  InputGroup,
-  InputGroupAddon,
-  InputGroupButton,
-  InputGroupInput,
-  InputGroupText
-} from '@/components/ui/input-group'
-
-const COPY_TIMEOUT = 2000
+  CommandPromptContent,
+  CommandPromptCopy,
+  CommandPromptList,
+  CommandPromptPrefix,
+  CommandPromptRoot,
+  CommandPromptSurface,
+  CommandPromptTrigger,
+  CommandPromptTriggerDivider,
+  CommandPromptViewport
+} from '@/components/command-prompt'
 
 interface InstallerProps {
-  code: string
+  className?: string
 }
 
-export const Installer = ({ code }: InstallerProps) => {
-  const { track } = useOpenPanel()
-  const [copied, setCopied] = useState(false)
-  const copyResetTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+const COMMAND_FOR_HUMANS = 'bun add logixlysia'
+const COMMAND_FOR_AGENTS = 'bunx skills add PunGrumpy/logixlysia'
 
-  useEffect(
-    () => () => {
-      if (copyResetTimeoutRef.current !== null) {
-        clearTimeout(copyResetTimeoutRef.current)
-      }
-    },
-    []
-  )
-
-  const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(code)
-      toast.success('Copied to clipboard')
-      track('copy_to_clipboard', { code, name: 'installer' })
-      setCopied(true)
-
-      if (copyResetTimeoutRef.current !== null) {
-        clearTimeout(copyResetTimeoutRef.current)
-      }
-
-      copyResetTimeoutRef.current = setTimeout(() => {
-        setCopied(false)
-      }, COPY_TIMEOUT)
-    } catch {
-      toast.error('Failed to copy to clipboard')
-    }
-  }
-
-  return (
-    <InputGroup className="h-10 rounded-md bg-card font-mono shadow-none">
-      <InputGroupAddon>
-        <InputGroupText className="font-normal text-muted-foreground">
-          🦊~
-        </InputGroupText>
-      </InputGroupAddon>
-      <InputGroupInput readOnly value={code} />
-      <InputGroupAddon align="inline-end">
-        <InputGroupButton
-          aria-label="Copy"
-          className="rounded-sm"
-          onClick={handleCopy}
-          size="icon-sm"
-          title="Copy"
-        >
-          {copied ? (
-            <IconCheck className="size-3.5" size={14} />
-          ) : (
-            <IconCopy className="size-3.5" size={14} />
-          )}
-        </InputGroupButton>
-      </InputGroupAddon>
-    </InputGroup>
-  )
-}
+export const Installer = ({ className }: InstallerProps): React.JSX.Element => (
+  <CommandPromptRoot className={className} defaultValue="humans">
+    <CommandPromptList>
+      <CommandPromptTrigger className="min-w-[90px]" value="humans">
+        For humans
+      </CommandPromptTrigger>
+      <CommandPromptTriggerDivider />
+      <CommandPromptTrigger className="min-w-[84px]" value="agents">
+        For agents
+      </CommandPromptTrigger>
+    </CommandPromptList>
+    <CommandPromptSurface>
+      <CommandPromptPrefix>$</CommandPromptPrefix>
+      <CommandPromptViewport>
+        <CommandPromptContent copyValue={COMMAND_FOR_HUMANS} value="humans">
+          {COMMAND_FOR_HUMANS}
+        </CommandPromptContent>
+        <CommandPromptContent copyValue={COMMAND_FOR_AGENTS} value="agents">
+          {COMMAND_FOR_AGENTS}
+        </CommandPromptContent>
+      </CommandPromptViewport>
+      <CommandPromptCopy />
+    </CommandPromptSurface>
+  </CommandPromptRoot>
+)
