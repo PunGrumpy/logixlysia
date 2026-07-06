@@ -435,6 +435,7 @@ export const CommandPromptCopy = ({
         'relative flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-full border border-transparent bg-transparent text-muted-foreground',
         'select-none transition-[background-color,color,transform] duration-200 hover:bg-muted hover:text-foreground active:scale-[0.96]',
         'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
+        'after:absolute after:-inset-1.5',
         className
       )}
       onClick={event => {
@@ -448,45 +449,15 @@ export const CommandPromptCopy = ({
       type="button"
       {...props}
     >
-      <AnimatePresence initial={false}>
-        {!context.copied && (
+      <AnimatePresence initial={false} mode="popLayout">
+        {context.copied ? (
           <motion.span
             animate={{
               opacity: 1,
               scale: 1,
               filter: 'blur(0px)'
             }}
-            className="absolute inset-0 flex items-center justify-center"
-            exit={{
-              opacity: 0,
-              scale: 0.25,
-              filter: 'blur(4px)'
-            }}
-            initial={{
-              opacity: 0,
-              scale: 0.25,
-              filter: 'blur(4px)'
-            }}
-            key="copy"
-            transition={
-              shouldReduceMotion
-                ? { duration: 0 }
-                : { type: 'spring', duration: 0.3, bounce: 0 }
-            }
-          >
-            <IconCopy className="block size-3.5" size={14} />
-          </motion.span>
-        )}
-      </AnimatePresence>
-      <AnimatePresence initial={false}>
-        {context.copied && (
-          <motion.span
-            animate={{
-              opacity: 1,
-              scale: 1,
-              filter: 'blur(0px)'
-            }}
-            className="absolute inset-0 flex items-center justify-center text-emerald-500 dark:text-emerald-400"
+            className="flex items-center justify-center text-emerald-500 dark:text-emerald-400"
             exit={{
               opacity: 0,
               scale: 0.25,
@@ -505,6 +476,33 @@ export const CommandPromptCopy = ({
             }
           >
             <IconCheck className="block size-3.5" size={14} />
+          </motion.span>
+        ) : (
+          <motion.span
+            animate={{
+              opacity: 1,
+              scale: 1,
+              filter: 'blur(0px)'
+            }}
+            className="flex items-center justify-center"
+            exit={{
+              opacity: 0,
+              scale: 0.25,
+              filter: 'blur(4px)'
+            }}
+            initial={{
+              opacity: 0,
+              scale: 0.25,
+              filter: 'blur(4px)'
+            }}
+            key="copy"
+            transition={
+              shouldReduceMotion
+                ? { duration: 0 }
+                : { type: 'spring', duration: 0.3, bounce: 0 }
+            }
+          >
+            <IconCopy className="block size-3.5" size={14} />
           </motion.span>
         )}
       </AnimatePresence>
