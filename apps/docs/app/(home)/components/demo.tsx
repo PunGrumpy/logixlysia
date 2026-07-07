@@ -1,4 +1,5 @@
 import { DynamicCodeBlock } from 'fumadocs-ui/components/dynamic-codeblock'
+import { CodeBlockCopyActions } from '@/components/copy-button'
 import { cn } from '@/lib/utils'
 
 const code = `import { Elysia } from 'elysia'
@@ -38,6 +39,7 @@ export const Demo = () => (
   >
     <DynamicCodeBlock
       code={code}
+      codeblock={{ Actions: CodeBlockCopyActions }}
       lang="typescript"
       options={{
         themes: {
