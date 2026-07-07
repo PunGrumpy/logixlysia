@@ -6,7 +6,7 @@ const DocsLayout = async ({ children }: LayoutProps<'/[...slug]'>) => (
   <FumadocsDocsLayout
     {...baseOptions()}
     nav={{ ...baseOptions().nav }}
-    sidebar={{ collapsible: false, className: 'bg-card! border-r' }}
+    sidebar={{ collapsible: false, className: 'bg-card! shadow-sm border-r-0' }}
     tree={source.pageTree}
   >
     {children}
