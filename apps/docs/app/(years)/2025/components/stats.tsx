@@ -47,7 +47,7 @@ const StatCard = ({
         <div className="mb-2 font-medium text-muted-foreground text-sm">
           {title}
         </div>
-        <div className="mb-2 font-bold font-serif text-4xl text-foreground md:text-5xl">
+        <div className="mb-2 font-bold font-serif text-4xl text-foreground tabular-nums md:text-5xl">
           {value}
         </div>
         {description && (
