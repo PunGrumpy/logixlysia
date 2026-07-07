@@ -117,6 +117,14 @@ const foxChipClass = (type: LogType) =>
     type === 'ERROR' && 'bg-red-600 text-black'
   )
 
+const logTypeAccentClass = (type: LogType) =>
+  cn(
+    'absolute top-1 bottom-1 left-0 w-0.5 rounded-full',
+    type === 'ERROR' && 'bg-red-500',
+    type === 'WARNING' && 'bg-yellow-500',
+    type === 'INFO' && 'bg-green-500/40'
+  )
+
 const DEMO_SERVICE = 'api-server'
 
 export const logs: LogEntry[] = [
@@ -440,6 +448,13 @@ const ContextTree = ({ lines }: { lines: ContextLine[] }) => {
   )
 }
 
+const logTypeIndicator = (type: LogType) =>
+  cn(
+    type === 'ERROR' && 'bg-red-500/15',
+    type === 'WARNING' && 'bg-yellow-500/10',
+    type === 'INFO' && 'bg-transparent'
+  )
+
 const LogBlock = ({ log }: { log: LogEntry }) => {
   const durationLabel = formatDurationMs(log.durationMs)
   const showSlow = log.durationMs >= VERY_SLOW_MS
@@ -447,7 +462,13 @@ const LogBlock = ({ log }: { log: LogEntry }) => {
   const timeCol = formatTimeColumn(log.timestamp)
 
   return (
-    <div>
+    <div
+      className={cn(
+        'relative rounded-sm transition-colors',
+        logTypeIndicator(log.type)
+      )}
+    >
+      <span aria-hidden className={logTypeAccentClass(log.type)} />
       <MainLine>
         <span className="shrink-0 text-muted-foreground tabular-nums">
           {timeCol}
