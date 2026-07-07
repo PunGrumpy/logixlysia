@@ -220,7 +220,7 @@ export const Comparison = () => (
                       {item.text}
                     </span>
                     <Tooltip>
-                      <TooltipTrigger>
+                      <TooltipTrigger className="relative after:absolute after:-inset-2">
                         <IconInfoCircle className="size-6 shrink-0 text-muted-foreground/50" />
                       </TooltipTrigger>
                       <TooltipContent>{item.caption}</TooltipContent>
