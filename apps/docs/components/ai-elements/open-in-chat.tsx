@@ -1,4 +1,3 @@
-/** biome-ignore-all lint/a11y/useAnchorContent: Anchor content is not needed for this component */
 'use client'
 
 import {
