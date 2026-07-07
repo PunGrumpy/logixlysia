@@ -538,7 +538,7 @@ export const Playground = () => (
           'sm:rounded-xl'
         )}
       >
-        <div className="flex items-center gap-2 border border-b bg-background/40 px-3 py-2 sm:px-4">
+        <div className="flex items-center gap-2 bg-background/40 px-3 py-2 shadow-[inset_0_-1px_0_var(--border)] sm:px-4">
           <span aria-hidden className="size-2.5 rounded-full bg-red-500/90" />
           <span
             aria-hidden
