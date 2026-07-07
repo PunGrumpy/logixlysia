@@ -1,6 +1,5 @@
 'use client'
 
-import { IconCheck, IconCopy } from '@tabler/icons-react'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import {
   Children,
@@ -17,6 +16,7 @@ import {
   useRef,
   useState
 } from 'react'
+import { CopyIcons } from '@/components/copy-button'
 import { cn } from '@/lib/utils'
 
 interface CommandPromptContextType {
@@ -421,7 +421,6 @@ export const CommandPromptCopy = ({
   ...props
 }: ComponentPropsWithoutRef<'button'>) => {
   const context = useCommandPromptContext('CommandPrompt.Copy')
-  const shouldReduceMotion = useReducedMotion()
 
   return (
     <button
@@ -444,63 +443,9 @@ export const CommandPromptCopy = ({
       type="button"
       {...props}
     >
-      <AnimatePresence initial={false} mode="popLayout">
-        {context.copied ? (
-          <motion.span
-            animate={{
-              opacity: 1,
-              scale: 1,
-              filter: 'blur(0px)'
-            }}
-            className="flex items-center justify-center text-emerald-500 dark:text-emerald-400"
-            exit={{
-              opacity: 0,
-              scale: 0.25,
-              filter: 'blur(4px)'
-            }}
-            initial={{
-              opacity: 0,
-              scale: 0.25,
-              filter: 'blur(4px)'
-            }}
-            key="check"
-            transition={
-              shouldReduceMotion
-                ? { duration: 0 }
-                : { type: 'spring', duration: 0.3, bounce: 0 }
-            }
-          >
-            <IconCheck className="block size-3.5" size={14} />
-          </motion.span>
-        ) : (
-          <motion.span
-            animate={{
-              opacity: 1,
-              scale: 1,
-              filter: 'blur(0px)'
-            }}
-            className="flex items-center justify-center"
-            exit={{
-              opacity: 0,
-              scale: 0.25,
-              filter: 'blur(4px)'
-            }}
-            initial={{
-              opacity: 0,
-              scale: 0.25,
-              filter: 'blur(4px)'
-            }}
-            key="copy"
-            transition={
-              shouldReduceMotion
-                ? { duration: 0 }
-                : { type: 'spring', duration: 0.3, bounce: 0 }
-            }
-          >
-            <IconCopy className="block size-3.5" size={14} />
-          </motion.span>
-        )}
-      </AnimatePresence>
+      <div className="relative size-3.5">
+        <CopyIcons checked={context.copied} />
+      </div>
     </button>
   )
 }
