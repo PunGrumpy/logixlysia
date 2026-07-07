@@ -1,5 +1,7 @@
 'use client'
 
+import { motion } from 'motion/react'
+import { useEffect, useMemo, useState } from 'react'
 import { cn } from '@/lib/utils'
 import { Background } from './background'
 
@@ -404,6 +406,35 @@ const createRepeatedRandomLogs = (
   )
 }
 
+const terminalVariants = {
+  hidden: { opacity: 0, y: 24, scale: 0.98 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: { type: 'spring' as const, duration: 0.6, bounce: 0 }
+  }
+}
+
+const logContainerVariants = {
+  hidden: {},
+  visible: {
+    transition: {
+      staggerChildren: 0.02,
+      delayChildren: 0.4
+    }
+  }
+}
+
+const logItemVariants = {
+  hidden: { opacity: 0, y: 6 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { type: 'spring' as const, duration: 0.3, bounce: 0 }
+  }
+}
+
 const MainLine = ({
   children,
   className
@@ -527,21 +558,43 @@ const TerminalCursor = () => (
 )
 
 const Output = () => {
-  const repeatedLogs = createRepeatedRandomLogs(PLAYGROUND_SEED).map(
-    (logList, listIndex) =>
-      logList.map((log, logIndex) => ({
-        ...log,
-        renderId: `seed-${PLAYGROUND_SEED}-${listIndex}-${logIndex}-${log.timestamp}`
-      }))
+  const [isMarqueeReady, setIsMarqueeReady] = useState(false)
+
+  const allLogs = useMemo(
+    () =>
+      createRepeatedRandomLogs(PLAYGROUND_SEED).flatMap((logList, listIndex) =>
+        logList.map((log, logIndex) => ({
+          ...log,
+          renderId: `seed-${PLAYGROUND_SEED}-${listIndex}-${logIndex}-${log.timestamp}`
+        }))
+      ),
+    []
   )
 
+  useEffect(() => {
+    const timer = setTimeout(() => setIsMarqueeReady(true), 1500)
+    return () => clearTimeout(timer)
+  }, [])
+
   return (
-    <code className="flex animate-marquee-vertical flex-col will-change-transform">
-      <div className="flex flex-col">
-        {repeatedLogs.flatMap(logList =>
-          logList.map(log => <LogBlock key={log.renderId} log={log} />)
-        )}
-      </div>
+    <code
+      className={cn(
+        'flex flex-col will-change-transform',
+        isMarqueeReady && 'animate-marquee-vertical'
+      )}
+    >
+      <motion.div
+        animate="visible"
+        className="flex flex-col"
+        initial="hidden"
+        variants={logContainerVariants}
+      >
+        {allLogs.map(log => (
+          <motion.div key={log.renderId} variants={logItemVariants}>
+            <LogBlock log={log} />
+          </motion.div>
+        ))}
+      </motion.div>
     </code>
   )
 }
@@ -551,11 +604,14 @@ export const Playground = () => (
     <Background />
 
     <div className="size-full px-3 pt-6 pb-3 sm:px-12 sm:pt-12 sm:pb-6 md:px-16">
-      <div
+      <motion.div
+        animate="visible"
         className={cn(
           'overflow-hidden rounded-lg bg-background/60 shadow-[0_0_0_1px_rgba(255,255,255,0.04)_inset] backdrop-blur-md',
           'sm:rounded-xl'
         )}
+        initial="hidden"
+        variants={terminalVariants}
       >
         <div className="flex items-center gap-2 bg-background/40 px-3 py-2 shadow-[inset_0_-1px_0_var(--border)] sm:px-4">
           <span aria-hidden className="size-2.5 rounded-full bg-red-500/90" />
@@ -579,7 +635,7 @@ export const Playground = () => (
           </pre>
           <TerminalCursor />
         </article>
-      </div>
+      </motion.div>
     </div>
   </section>
 )
