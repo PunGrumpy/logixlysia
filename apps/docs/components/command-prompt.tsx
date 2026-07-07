@@ -142,13 +142,7 @@ export const CommandPromptList = ({
   className,
   ...props
 }: ComponentPropsWithoutRef<'div'>) => (
-  <div
-    className={cn(
-      'flex items-center gap-1 rounded-full border border-border bg-muted/40 p-1 shadow-xs dark:bg-muted/20',
-      className
-    )}
-    {...props}
-  />
+  <div className={cn('flex items-center gap-1.5', className)} {...props} />
 )
 
 type CommandPromptTriggerProps = ComponentPropsWithoutRef<'button'> & {
@@ -169,9 +163,10 @@ export const CommandPromptTrigger = ({
     <button
       aria-pressed={active}
       className={cn(
-        'cursor-pointer select-none rounded-full bg-transparent px-3 py-0.5 font-medium text-muted-foreground text-xs transition-[color,background-color,transform] duration-200 active:scale-[0.96]',
+        'relative cursor-pointer select-none py-1 font-medium text-xs transition-colors duration-200 active:scale-[0.96]',
         'hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
-        'data-active:bg-background data-active:text-foreground data-active:shadow-xs',
+        'after:absolute after:-inset-2.5',
+        active ? 'text-foreground' : 'text-muted-foreground',
         className
       )}
       data-active={active ? '' : undefined}
@@ -196,7 +191,7 @@ export const CommandPromptTriggerDivider = ({
 }: ComponentPropsWithoutRef<'div'>) => (
   <div
     aria-hidden
-    className={cn('mx-1.5 h-3 w-px bg-border/60', className)}
+    className={cn('mx-0.5 h-3 w-px bg-border/20', className)}
     {...props}
   />
 )
