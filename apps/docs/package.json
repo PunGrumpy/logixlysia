@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "build": "blume build",
-    "dev": "blume dev",
+    "dev": "blume dev --port 3000",
     "clean": "git clean -xdf .blume .astro .cache .turbo dist node_modules",
     "typecheck": "tsc --noEmit"
   },
