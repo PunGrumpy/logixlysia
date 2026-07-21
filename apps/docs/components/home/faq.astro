@@ -1,0 +1,55 @@
+---
+const faqs = [
+  {
+    question: 'What is Logixlysia?',
+    answer:
+      'A logging plugin for Elysia.js. One .use(logixlysia()) gives every request a structured, colorful log line with method, path, status, and duration.'
+  },
+  {
+    question: 'Does it need configuration?',
+    answer:
+      'No — the defaults are production-ready. Custom formats, filtering, file output, and the startup banner are all opt-in options on the same plugin.'
+  },
+  {
+    question: 'Can I filter logs?',
+    answer:
+      'Yes. Filter by log level, HTTP method, or status code so health checks and favicons stay out of your terminal while warnings and errors stay loud.'
+  },
+  {
+    question: 'Can it write to files?',
+    answer:
+      'Yes. File logging ships with size- and time-based rotation built in, so old logs rotate and compress without extra tooling.'
+  },
+  {
+    question: 'Does it fit my stack?',
+    answer:
+      'Pino under the hood, OpenTelemetry ready, and WebSocket aware. It runs anywhere Elysia runs, with Bun as the first-class runtime.'
+  }
+]
+---
+
+<section class="t-stagger mx-auto w-full max-w-2xl" data-reveal>
+  <h2
+    class="t-stagger-line text-balance text-center font-medium text-[21px] text-foreground leading-[145%] lg:text-[25px]"
+  >
+    Frequently asked questions
+  </h2>
+  <div class="t-stagger-line t-stagger-line--2 mt-6 grid">
+    {faqs.map(faq => (
+        <details class="group border-border border-b">
+          <summary class="flex cursor-pointer list-none items-center justify-between gap-4 py-4 font-medium text-[15px] text-foreground [&::-webkit-details-marker]:hidden">
+            {faq.question}
+            <span
+              aria-hidden="true"
+              class="select-none text-muted-foreground transition-[rotate] duration-200 group-open:rotate-45"
+            >
+              +
+            </span>
+          </summary>
+          <p class="text-pretty pb-5 text-[15px] text-muted-foreground leading-[160%]">
+            {faq.answer}
+          </p>
+        </details>
+      ))}
+  </div>
+</section>
