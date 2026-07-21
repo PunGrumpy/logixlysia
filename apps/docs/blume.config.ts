@@ -11,7 +11,10 @@ export default defineConfig({
   },
   content: {
     sources: [
-      { type: 'filesystem', root: 'content' },
+      { prefix: 'docs', root: 'content', type: 'filesystem' },
+      // Logixlysia's GitHub releases become the changelog timeline at /changelog
+      // (each release is a type:changelog entry). Set GITHUB_TOKEN in CI to
+      // avoid rate limits; a failed fetch degrades to an empty changelog.
       {
         type: 'github-releases',
         prefix: 'changelog',
@@ -20,7 +23,20 @@ export default defineConfig({
       }
     ]
   },
+  navigation: {
+    tabs: [
+      {
+        label: 'Docs',
+        path: '/docs'
+      },
+      {
+        label: 'Changelog',
+        path: '/changelog'
+      }
+    ]
+  },
   theme: {
+    accent: '#0090ff',
     fonts: {
       body: 'geist',
       mono: 'geist-mono'
