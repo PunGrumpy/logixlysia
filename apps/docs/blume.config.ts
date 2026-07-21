@@ -59,6 +59,23 @@ export default defineConfig({
       }
     }
   },
+  analytics: {
+    scripts: [
+      {
+        src: 'https://cdn.databuddy.cc/databuddy.js',
+        attributes: {
+          'data-client-id': 'da244eb8-365e-4cc4-a869-8fdc146ea465',
+          'data-track-hash-changes': 'true',
+          'data-track-attributes': 'true',
+          'data-track-outgoing-links': 'true',
+          'data-track-interactions': 'true',
+          'data-track-web-vitals': 'true',
+          'data-track-errors': 'true'
+        },
+        strategy: 'async'
+      }
+    ]
+  },
   deployment: {
     adapter: 'vercel'
   }
