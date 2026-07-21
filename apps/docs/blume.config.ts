@@ -36,7 +36,7 @@ export default defineConfig({
     ]
   },
   theme: {
-    accent: '#0090ff',
+    accent: '#b24b0a',
     fonts: {
       body: 'geist',
       mono: 'geist-mono'
