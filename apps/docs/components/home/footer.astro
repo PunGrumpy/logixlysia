@@ -1,0 +1,63 @@
+---
+const columns = [
+  [
+    { href: '/docs/introduction', label: 'Documentation' },
+    { href: '/changelog', label: 'Changelog' }
+  ],
+  [
+    { href: '/docs/features/request-context', label: 'Request context' },
+    { href: '/docs/features/filtering', label: 'Filtering' },
+    { href: '/docs/features/file-logging', label: 'File logging' }
+  ],
+  [
+    { href: 'https://github.com/PunGrumpy/logixlysia', label: 'GitHub' },
+    { href: 'https://www.npmjs.com/package/logixlysia', label: 'npm' },
+    { href: 'https://elysiajs.com', label: 'Elysia.js' }
+  ]
+]
+---
+
+<footer class="relative overflow-clip">
+  <div class="pt-16 pb-[18vw] lg:pt-24 lg:pb-56">
+    <div
+      class="t-stagger flex flex-col items-start justify-between gap-10 lg:flex-row"
+      data-reveal
+    >
+      <p class="t-stagger-line text-muted-foreground text-sm">
+        🦊 Logixlysia, Built by{' '}
+        <a
+          class="text-foreground transition-colors hover:text-muted-foreground"
+          href="https://www.pungrumpy.com"
+          rel="noopener"
+          target="_blank"
+          >Noppakorn Kaewsalabnil</a
+        >
+      </p>
+      <nav
+        aria-label="Footer"
+        class="t-stagger-line t-stagger-line--2 flex flex-col gap-10 sm:flex-row sm:gap-16 lg:gap-24"
+      >
+        {columns.map(column => (
+            <div class="flex flex-col items-start gap-4">
+              {column.map(link => (
+                <a
+                  class="-my-2 w-fit py-2 font-medium text-[16px] text-muted-foreground leading-[145%] transition-colors hover:text-foreground"
+                  href={link.href}
+                  rel={link.href.startsWith('http') ? 'noopener' : undefined}
+                  target={link.href.startsWith('http') ? '_blank' : undefined}
+                >
+                  {link.label}
+                </a>
+              ))}
+            </div>
+          ))}
+      </nav>
+    </div>
+  </div>
+  <span
+    aria-hidden="true"
+    class="-translate-x-1/2 bottom-[-0.24em] pointer-events-none absolute left-1/2 select-none whitespace-nowrap font-medium text-[20vw] text-black/4 leading-none tracking-tight lg:text-[18rem] dark:text-white/4"
+  >
+    Logixlysia
+  </span>
+</footer>

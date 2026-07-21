@@ -3,7 +3,7 @@
   "extends": [
     "ultracite/biome/core",
     "ultracite/biome/react",
-    "ultracite/biome/next",
+    "ultracite/biome/astro",
     "ultracite/biome/vitest"
   ],
   "javascript": {
@@ -15,6 +15,25 @@
     }
   },
   "files": {
-    "includes": ["**/*", "!apps/docs/components/ui", "!__tests__"]
-  }
+    "includes": ["**/*", "!__tests__", "!**/.blume", "!**/.astro", "!**/dist"]
+  },
+  "overrides": [
+    {
+      "includes": ["**/*.astro"],
+      "assist": {
+        "actions": {
+          "source": {
+            "useSortedProperties": "off"
+          }
+        }
+      },
+      "linter": {
+        "rules": {
+          "correctness": {
+            "useJsxKeyInIterable": "off"
+          }
+        }
+      }
+    }
+  ]
 }
