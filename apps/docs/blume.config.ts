@@ -21,7 +21,7 @@ export default defineConfig({
     ]
   },
   markdown: {
-    code: {
+    codeBlocks: {
       theme: {
         light: 'github-light',
         dark: 'vesper'
