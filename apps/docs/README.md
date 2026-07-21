@@ -12,11 +12,15 @@ bun run dev
 
 ## Structure
 
-- `content/` — all pages as Markdown/MDX. `content/index.mdx` is the homepage;
-  folders become sidebar groups, ordered by the `meta.ts` file beside them.
-- `blume.config.ts` — site configuration (branding, code themes, content
-  sources). The changelog at `/changelog` is generated from GitHub Releases of
-  `PunGrumpy/logixlysia` via the `github-releases` content source.
+- `content/` — all docs pages as Markdown/MDX, served under `/docs`. Folders
+  become sidebar groups, ordered by the `meta.ts` file beside them. Legacy
+  root-level URLs (e.g. `/introduction`) 301 to their `/docs` counterparts.
+- `pages/index.astro` — the custom landing page at `/`, composed from the
+  sections in `components/home/` with styles in `styles/home.css`.
+- `blume.config.ts` — site configuration (branding, theme, navigation tabs,
+  analytics, redirects, code themes, content sources). The changelog at
+  `/changelog` is generated from GitHub Releases of `PunGrumpy/logixlysia`
+  via the `github-releases` content source.
 - `public/` — static assets (favicon, Open Graph fallback image).
 
 Search, `llms.txt`, per-page raw Markdown (append `.md` to any URL), Open Graph
