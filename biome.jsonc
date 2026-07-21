@@ -3,6 +3,7 @@
   "extends": [
     "ultracite/biome/core",
     "ultracite/biome/react",
+    "ultracite/biome/astro",
     "ultracite/biome/vitest"
   ],
   "javascript": {
@@ -14,6 +15,12 @@
     }
   },
   "files": {
-    "includes": ["**/*", "!__tests__"]
+    "includes": [
+      "**/*",
+      "!__tests__",
+      "!**/.blume",
+      "!**/.astro",
+      "!**/dist"
+    ]
   }
 }
