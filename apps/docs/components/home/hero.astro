@@ -1,0 +1,69 @@
+---
+import InstallCommand from './install-command.astro'
+
+interface Props {
+  releaseUrl: string
+  version: string
+}
+
+const { version, releaseUrl } = Astro.props
+---
+
+<section class="relative grid gap-8 sm:gap-20">
+  <div
+    aria-hidden="true"
+    class="-top-32 -translate-x-1/2 -z-10 pointer-events-none absolute left-1/2 h-72 w-xl max-w-full rounded-full bg-[radial-gradient(closest-side,oklch(70%_0.14_50/0.14),transparent)] blur-3xl dark:hidden"
+  ></div>
+  <div class="t-stagger grid justify-items-center gap-4 text-center">
+    <div class="t-stagger-line">
+      <a
+        class="group -my-2.5 flex w-fit items-center gap-2 py-2.5 text-muted-foreground text-sm transition-colors hover:text-foreground"
+        href={releaseUrl}
+        rel="noopener noreferrer"
+        target="_blank"
+      >
+        <span
+          aria-hidden="true"
+          class="size-2 shrink-0 rounded-full bg-emerald-500"
+        ></span>
+        <span>Latest update — v{version} released</span>
+      </a>
+    </div>
+
+    <div class="flex flex-col items-center gap-1.5">
+      <h1
+        class="t-stagger-line text-[27px] lg:text-[34px] leading-[145%] text-balance text-center w-full lg:w-fit font-medium flex justify-center flex-wrap"
+      >
+        Your Elysia logs are unreadable. This fixes it.
+      </h1>
+      <p
+        class="t-stagger-line t-stagger-line--2 text-[17px] leading-[145%] text-pretty text-center w-full lg:w-193.25 max-w-193.25 font-medium [font-variation-settings:'opsz'_26] flex justify-center flex-wrap text-muted-foreground"
+      >
+        Structure, color, and context across requests, startup, filtering, file
+        rotation, and custom formats.
+      </p>
+    </div>
+
+    <div
+      class="t-stagger-line t-stagger-line--3 flex flex-col lg:flex-row mt-8 items-center gap-3 lg:gap-4.5 w-full lg:w-auto"
+    >
+      <InstallCommand command="bun add logixlysia" />
+      <a
+        class="inline-flex h-12.25 items-center justify-center rounded-[7px] bg-linear-to-b from-[oklch(67%_0.16_48)] to-[oklch(60%_0.16_44)] px-6 font-medium text-sm text-white shadow-[inset_0_0_1px_1px_rgb(255_255_255/0.12),0_1.5px_2px_rgb(0_0_0/0.1),0_0_0_1px_oklch(54%_0.15_45)] transition-[filter,scale] duration-150 ease-out hover:brightness-105 active:scale-[0.96]"
+        href="/docs/introduction"
+        >Read the docs</a
+      >
+    </div>
+  </div>
+</section>
+
+<script>
+  for (const container of document.querySelectorAll('.t-stagger')) {
+    // Double rAF so the initial (hidden) styles paint before the transition.
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        container.classList.add('is-shown')
+      })
+    })
+  }
+</script>
