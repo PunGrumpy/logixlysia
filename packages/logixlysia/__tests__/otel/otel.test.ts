@@ -26,12 +26,12 @@ describe('logixlysia/otel', () => {
   test('injectTraceContext is a no-op when OpenTelemetry is not installed', () => {
     const result = spawnSync({
       cmd: ['bun', '-e', script],
-      cwd: new URL('../..', import.meta.url).pathname,
+      cwd: `${import.meta.dir}/../..`,
       stderr: 'pipe'
     })
 
     if (result.exitCode !== 0) {
-      console.error(result.stderr.toString())
+      throw new Error(`Subprocess failed:\n${result.stderr.toString()}`)
     }
     expect(result.exitCode).toBe(0)
   })
