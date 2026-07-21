@@ -9,20 +9,6 @@ export default defineConfig({
     text: 'Logixlysia',
     href: '/'
   },
-  content: {
-    sources: [
-      { prefix: 'docs', root: 'content', type: 'filesystem' },
-      // Logixlysia's GitHub releases become the changelog timeline at /changelog
-      // (each release is a type:changelog entry). Set GITHUB_TOKEN in CI to
-      // avoid rate limits; a failed fetch degrades to an empty changelog.
-      {
-        type: 'github-releases',
-        prefix: 'changelog',
-        owner: 'PunGrumpy',
-        repo: 'logixlysia'
-      }
-    ]
-  },
   github: {
     owner: 'PunGrumpy',
     repo: 'logixlysia'
@@ -40,6 +26,21 @@ export default defineConfig({
     ],
     repo: true
   },
+  content: {
+    sources: [
+      { prefix: 'docs', root: 'content', type: 'filesystem' },
+      // Logixlysia's GitHub releases become the changelog timeline at /changelog
+      // (each release is a type:changelog entry). Set GITHUB_TOKEN in CI to
+      // avoid rate limits; a failed fetch degrades to an empty changelog.
+      {
+        type: 'github-releases',
+        prefix: 'changelog',
+        owner: 'PunGrumpy',
+        repo: 'logixlysia'
+      }
+    ]
+  },
+  lastModified: true,
   theme: {
     background: {
       light: 'oklch(1 0 0)',
