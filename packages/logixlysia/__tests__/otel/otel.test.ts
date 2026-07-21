@@ -1,5 +1,5 @@
-import { spawnSync } from 'bun'
 import { describe, expect, test } from 'bun:test'
+import { spawnSync } from 'bun'
 
 // The "not installed" branch needs @opentelemetry/api to be unresolvable, but
 // mock.module registrations from otel-mock.test.ts persist for the whole test
