@@ -12,7 +12,7 @@
     "blume": "latest"
   },
   "devDependencies": {
-    "@repo/typescript-config": "*",
+    "@repo/typescript-config": "workspace:*",
     "@types/node": "^26.1.0",
     "typescript": "^6.0.3"
   }
