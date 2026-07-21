@@ -1,13 +1,20 @@
 {
   "extends": "@repo/typescript-config/base.json",
   "compilerOptions": {
+    "target": "ESNext",
     "module": "ESNext",
     "moduleResolution": "Bundler",
-    "declaration": false,
-    "declarationMap": false,
+    "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
     "noEmit": true,
-    "jsx": "react-jsx"
+    "forceConsistentCasingInFileNames": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "allowJs": true,
+    "jsx": "preserve",
+    "strict": true
   },
-  "include": ["blume.config.ts", "content/**/*.ts", "content/**/*.tsx"],
-  "exclude": ["node_modules", ".blume", "dist"]
+  "exclude": ["dist", ".blume", ".blume-verify"]
 }

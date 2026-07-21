@@ -1,22 +1,7 @@
-# deps
-/node_modules
-
-# blume / astro
+# Blume
 /.blume/
+.blume-verify/
+
+# Astro
 /.astro/
 /dist/
-
-# test & build
-/coverage
-*.tsbuildinfo
-
-# misc
-.DS_Store
-*.pem
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# others
-.env*.local
-.vercel
