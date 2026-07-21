@@ -26,6 +26,8 @@ bun run clean      # remove build output and caches
   become sidebar groups, ordered by the `meta.ts` file beside them.
 - `pages/index.astro` — the custom landing page at `/`, composed from the
   sections in `components/home/` with styles in `styles/home.css`.
+- `pages/2026.astro` — the year-in-review teaser at `/2026`, to be filled in
+  with the full retrospective in December.
 - `blume.config.ts` — site configuration: branding, theme, navigation tabs,
   analytics, code themes, content sources, and all redirects.
 - `public/` — static assets (favicon, Open Graph fallback image).
@@ -39,7 +41,7 @@ precedence over `vercel.json` rules:
 - Legacy root docs URLs from the pre-Blume site (e.g. `/introduction`,
   `/features/log-levels`) 301 to their `/docs` counterparts.
 - `/rss.xml` → `/changelog/rss.xml` (the feed moved with the changelog).
-- `/2025` → `/` (retired year-in-review page).
+- `/2025` → `/2026` (the retired year-in-review points at the current one).
 
 ## Changelog
 

@@ -78,7 +78,7 @@ export default defineConfig({
       to: `/docs/${path}`
     })),
     { from: '/rss.xml', to: '/changelog/rss.xml' },
-    { from: '/2025', to: '/' }
+    { from: '/2025', to: '/2026' }
   ],
   theme: {
     background: {
