@@ -36,6 +36,10 @@ export default defineConfig({
     ]
   },
   theme: {
+    background: {
+      light: 'oklch(1 0 0)',
+      dark: 'oklch(0.14 0 0)'
+    },
     accent: '#b24b0a',
     fonts: {
       body: 'geist',

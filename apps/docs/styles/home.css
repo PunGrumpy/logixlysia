@@ -26,18 +26,6 @@ html {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Surface separation, homepage only (this sheet loads only
-   here): a faintly warm off-white page so pure-white cards lift in light mode,
-   and a page slightly darker than the #131313 card surfaces in dark mode.
-   `html:root` outranks Blume's `:root` token defaults, which come later in
-   source order. */
-html:root {
-  --blume-background: oklch(0.99 0.002 95);
-}
-html:root[data-theme="dark"] {
-  --blume-background: oklch(0.07 0 0);
-}
-
 /* Dual-theme homepage code block (github-light / vesper). Same swap Blume
    applies inside .prose, scoped to the standalone <Code> on the homepage:
    shiki inlines the light color and exposes the dark one via --shiki-dark. */
