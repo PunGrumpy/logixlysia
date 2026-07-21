@@ -23,6 +23,10 @@ export default defineConfig({
       }
     ]
   },
+  github: {
+    owner: 'PunGrumpy',
+    repo: 'logixlysia'
+  },
   navigation: {
     tabs: [
       {
@@ -33,7 +37,8 @@ export default defineConfig({
         label: 'Changelog',
         path: '/changelog'
       }
-    ]
+    ],
+    repo: true
   },
   theme: {
     background: {
