@@ -20,6 +20,13 @@
   "overrides": [
     {
       "includes": ["**/*.astro"],
+      "assist": {
+        "actions": {
+          "source": {
+            "useSortedProperties": "off"
+          }
+        }
+      },
       "linter": {
         "rules": {
           "correctness": {
