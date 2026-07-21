@@ -1,30 +1,37 @@
-import { beforeEach, describe, expect, mock, test } from 'bun:test'
+import { describe, expect, test } from 'bun:test'
 
-import { createLogger } from '../../src/logger'
-import { __resetForTesting, injectTraceContext } from '../../src/otel'
+// The "not installed" branch needs @opentelemetry/api to be unresolvable, but
+// mock.module registrations from otel-mock.test.ts persist for the whole test
+// process and are evaluated eagerly, so they can neither be unregistered nor
+// made to throw. Run the assertion in a fresh subprocess with no mocks.
+const script = `
+import { createLogger } from './src/logger'
+import { injectTraceContext } from './src/otel'
 
-// mock.module registrations from other test files (otel-mock.test.ts) persist
-// for the whole process, so simulate an unresolvable module explicitly instead
-// of relying on test-file execution order.
-mock.module('@opentelemetry/api', () => {
-  throw new Error('module not installed')
+const logger = createLogger({
+  config: { disableInternalLogger: true, disableFileLogging: true }
 })
+const request = new Request('http://localhost/')
+
+if (injectTraceContext(logger, request) !== undefined) {
+  throw new Error('expected injectTraceContext to return undefined')
+}
+if (Object.keys(logger.getContext(request)).length > 0) {
+  throw new Error('expected request context to stay empty')
+}
+`
 
 describe('logixlysia/otel', () => {
-  beforeEach(() => {
-    __resetForTesting()
-  })
-
   test('injectTraceContext is a no-op when OpenTelemetry is not installed', () => {
-    const logger = createLogger({
-      config: {
-        disableInternalLogger: true,
-        disableFileLogging: true
-      }
+    const result = Bun.spawnSync({
+      cmd: ['bun', '-e', script],
+      cwd: new URL('../..', import.meta.url).pathname,
+      stderr: 'pipe'
     })
-    const request = new Request('http://localhost/')
 
-    expect(injectTraceContext(logger, request)).toBeUndefined()
-    expect(logger.getContext(request)).toEqual({})
+    if (result.exitCode !== 0) {
+      console.error(result.stderr.toString())
+    }
+    expect(result.exitCode).toBe(0)
   })
 })
