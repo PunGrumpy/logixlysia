@@ -1,5 +1,34 @@
 import { defineConfig } from 'blume'
 
+// The pre-blume site (Next.js + Fumadocs) served every docs page from the
+// root, e.g. /introduction and /features/log-levels. Those URLs are indexed
+// and linked externally, so each one 301s to its /docs counterpart.
+const legacyDocsPaths = [
+  'api-reference',
+  'comparison',
+  'configuration',
+  'contributing',
+  'examples',
+  'faq',
+  'introduction',
+  'migration-from-evlog',
+  'usage',
+  'features/file-logging',
+  'features/filtering',
+  'features/formatting',
+  'features/log-levels',
+  'features/log-rotation',
+  'features/presets',
+  'features/request-context',
+  'features/request-id',
+  'features/startup',
+  'features/transports',
+  'features/websocket',
+  'integrations/ai',
+  'integrations/otel',
+  'integrations/pino'
+]
+
 export default defineConfig({
   title: 'Logixlysia',
   description:
@@ -41,6 +70,10 @@ export default defineConfig({
     ]
   },
   lastModified: true,
+  redirects: legacyDocsPaths.map(path => ({
+    from: `/${path}`,
+    to: `/docs/${path}`
+  })),
   theme: {
     background: {
       light: 'oklch(1 0 0)',
