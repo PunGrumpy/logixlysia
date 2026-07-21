@@ -70,10 +70,16 @@ export default defineConfig({
     ]
   },
   lastModified: true,
-  redirects: legacyDocsPaths.map(path => ({
-    from: `/${path}`,
-    to: `/docs/${path}`
-  })),
+  // All redirects live here (not vercel.json): the Vercel adapter emits its
+  // own Build Output config, which takes precedence over vercel.json routing.
+  redirects: [
+    ...legacyDocsPaths.map(path => ({
+      from: `/${path}`,
+      to: `/docs/${path}`
+    })),
+    { from: '/rss.xml', to: '/changelog/rss.xml' },
+    { from: '/2025', to: '/' }
+  ],
   theme: {
     background: {
       light: 'oklch(1 0 0)',

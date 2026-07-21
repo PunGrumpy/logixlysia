@@ -3,9 +3,5 @@
   "bunVersion": "1.x",
   "framework": null,
   "ignoreCommand": "node scripts/skip-ci.js",
-  "outputDirectory": "dist",
-  "redirects": [
-    { "source": "/rss.xml", "destination": "/changelog/rss.xml" },
-    { "source": "/2025", "destination": "/", "permanent": false }
-  ]
+  "outputDirectory": "dist"
 }
