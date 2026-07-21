@@ -29,15 +29,15 @@ const columns = [
           class="text-foreground transition-colors hover:text-muted-foreground"
           href="https://www.pungrumpy.com"
           rel="noopener"
-          target="_blank">Noppakorn Kaewsalabnil</a
+          target="_blank"
+          >Noppakorn Kaewsalabnil</a
         >
       </p>
       <nav
         aria-label="Footer"
         class="t-stagger-line t-stagger-line--2 flex flex-col gap-10 sm:flex-row sm:gap-16 lg:gap-24"
       >
-        {
-          columns.map(column => (
+        {columns.map(column => (
             <div class="flex flex-col items-start gap-4">
               {column.map(link => (
                 <a
@@ -50,8 +50,7 @@ const columns = [
                 </a>
               ))}
             </div>
-          ))
-        }
+          ))}
       </nav>
     </div>
   </div>
