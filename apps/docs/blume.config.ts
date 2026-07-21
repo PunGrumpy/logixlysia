@@ -20,6 +20,12 @@ export default defineConfig({
       }
     ]
   },
+  theme: {
+    fonts: {
+      body: 'geist',
+      mono: 'geist-mono'
+    }
+  },
   markdown: {
     codeBlocks: {
       theme: {
@@ -29,6 +35,6 @@ export default defineConfig({
     }
   },
   deployment: {
-    site: 'https://logixlysia.vercel.app'
+    adapter: 'vercel'
   }
 })
