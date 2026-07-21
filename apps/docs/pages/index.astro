@@ -11,7 +11,7 @@ import Hero from '../components/home/hero.astro'
 import { getLatestVersion, getReleaseUrl } from '../lib/version'
 
 const { config } = data
-const version = await getLatestVersion()
+const version = getLatestVersion()
 const releaseUrl = getReleaseUrl(version)
 const title = 'The logger for Elysia.js | Logixlysia'
 const description =
