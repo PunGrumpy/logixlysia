@@ -1,0 +1,20 @@
+name: Redeploy docs on release
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  redeploy:
+    name: Trigger Vercel deploy hook
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger deploy hook
+        env:
+          DEPLOY_HOOK_URL: ${{ secrets.VERCEL_DEPLOY_HOOK_DOCS }}
+        run: |
+          if [ -z "$DEPLOY_HOOK_URL" ]; then
+            echo "VERCEL_DEPLOY_HOOK_DOCS secret is not set; skipping."
+            exit 0
+          fi
+          curl -fsS -X POST "$DEPLOY_HOOK_URL"

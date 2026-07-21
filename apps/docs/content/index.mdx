@@ -1,0 +1,49 @@
+---
+title: Logixlysia
+description: The logger for Elysia.js — simple and easy to use, beautiful and powerful
+---
+
+Logixlysia is a logger for [Elysia.js](https://elysiajs.com/), a web framework
+for Bun. It provides a simple and easy-to-use interface and powerful features
+for logging and debugging, powered by [Pino](https://github.com/pinojs/pino).
+
+<CodeGroup>
+
+```bash title="bun"
+bun add logixlysia
+```
+
+```bash title="npm"
+npm install logixlysia
+```
+
+```bash title="pnpm"
+pnpm add logixlysia
+```
+
+</CodeGroup>
+
+```ts title="index.ts"
+import { Elysia } from 'elysia'
+import logixlysia from 'logixlysia'
+
+const app = new Elysia()
+  .use(logixlysia())
+  .get('/', () => 'Hello World')
+  .listen(3000)
+```
+
+<CardGroup cols={2}>
+  <Card title="Introduction" icon="book-open" href="/introduction">
+    Get started with Logixlysia in a few minutes.
+  </Card>
+  <Card title="Configuration" icon="settings" href="/configuration">
+    Customize format, level, and output destinations.
+  </Card>
+  <Card title="Features" icon="sparkles" href="/features/startup">
+    Presets, file logging, rotation, transports, and more.
+  </Card>
+  <Card title="Integrations" icon="plug" href="/integrations/pino">
+    Pino, OpenTelemetry, and AI integrations.
+  </Card>
+</CardGroup>
