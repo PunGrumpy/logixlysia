@@ -1,0 +1,282 @@
+---
+// Mirrors logixlysia's real output: the `banner` startup box from
+// extensions/banner.ts and the default log format from logger/create-logger.ts
+// ({now} {service}{icon} {method} {pathname} {status} {duration} {message}{speed}),
+// including chalk colors, method padding, duration rounding, and the ⚡ slow badge.
+type TermPart = [cls: string, text: string]
+
+interface TermLine {
+  cls?: string
+  /** Pause in ms before this line prints during the replay animation. */
+  delay?: number
+  parts: TermPart[]
+}
+
+// Dual-mode terminal palette: react.doctor's light ink colors, vesper in dark.
+const c = {
+  muted: 'text-black/45 dark:text-white/40',
+  fg: 'text-[#2D2D2D] dark:text-[#DADADA]',
+  mint: 'text-[#067647] dark:text-[#99ffe4]',
+  blue: 'text-[#0550AE] dark:text-[#a5d6ff]',
+  orange: 'text-[#B26A00] dark:text-[#ffc799]',
+  red: 'text-[#C9303C] dark:text-[#ff8080]',
+  bold: 'font-semibold',
+  banner: 'text-black/55 dark:text-white/60',
+  foxInfo: 'rounded-sm bg-[#0550AE]/10 dark:bg-[#a5d6ff]/15',
+  foxWarn: 'rounded-sm bg-[#B26A00]/15 dark:bg-[#ffc799]/20',
+  foxError: 'rounded-sm bg-[#C9303C]/10 dark:bg-[#ff8080]/20'
+}
+
+const blink = 'animate-[term-blink_1.1s_steps(1)_infinite]'
+
+const banner: TermPart[][] = [
+  [['', '┌─────────────────────────────┐']],
+  [['', '│                             │']],
+  [['', '│       Elysia v1.4.28        │']],
+  [['', '│                             │']],
+  [['', '│  🦊  http://localhost:3000  │']],
+  [['', '│       logixlysia v6.6.0     │']],
+  [['', '│                             │']],
+  [['', '└─────────────────────────────┘']]
+]
+
+const bannerLines: TermLine[] = banner.map((parts, index) => ({
+  cls: index === banner.length - 1 ? `${c.banner} mb-4` : c.banner,
+  delay: 35,
+  parts
+}))
+
+const prefix = (time: string): TermPart => [
+  c.muted,
+  `2026-07-21 10:24:${time} [api-server] `
+]
+
+const termLines: TermLine[] = [
+  ...bannerLines,
+  {
+    delay: 500,
+    parts: [
+      prefix('31.804'),
+      [c.foxInfo, ' 🦊 '],
+      ['', ' '],
+      [`${c.mint} ${c.bold}`, 'GET    '],
+      ['', ' '],
+      [c.fg, '/'],
+      ['', ' '],
+      [c.mint, '200'],
+      ['', ' '],
+      [c.mint, '3ms']
+    ]
+  },
+  {
+    delay: 350,
+    parts: [
+      prefix('32.108'),
+      [c.foxInfo, ' 🦊 '],
+      ['', ' '],
+      [`${c.blue} ${c.bold}`, 'POST   '],
+      ['', ' '],
+      [c.fg, '/auth/login'],
+      ['', ' '],
+      [c.mint, '201'],
+      ['', ' '],
+      [c.mint, '38ms']
+    ]
+  },
+  {
+    delay: 650,
+    parts: [
+      prefix('33.020'),
+      [c.foxWarn, ' 🦊 '],
+      ['', ' '],
+      [`${c.mint} ${c.bold}`, 'GET    '],
+      ['', ' '],
+      [c.fg, '/favicon.ico'],
+      ['', ' '],
+      [c.orange, '404'],
+      ['', ' '],
+      [c.mint, '1ms']
+    ]
+  },
+  {
+    delay: 400,
+    parts: [
+      prefix('33.412'),
+      [c.foxInfo, ' 🦊 '],
+      ['', ' '],
+      [`${c.mint} ${c.bold}`, 'GET    '],
+      ['', ' '],
+      [c.fg, '/reports/heavy'],
+      ['', ' '],
+      [c.mint, '200'],
+      ['', ' '],
+      [c.orange, '613ms']
+    ]
+  },
+  {
+    delay: 600,
+    parts: [
+      prefix('34.001'),
+      [c.foxInfo, ' 🦊 '],
+      ['', ' '],
+      [`${c.mint} ${c.bold}`, 'GET    '],
+      ['', ' '],
+      [c.fg, '/export'],
+      ['', ' '],
+      [c.mint, '200'],
+      ['', ' '],
+      [`${c.red} ${c.bold}`, '1.2s'],
+      [c.orange, ' ⚡ slow']
+    ]
+  },
+  {
+    delay: 850,
+    parts: [
+      prefix('35.219'),
+      [c.foxError, ' 🦊 '],
+      ['', ' '],
+      [`${c.mint} ${c.bold}`, 'GET    '],
+      ['', ' '],
+      [c.fg, '/crash'],
+      ['', ' '],
+      [c.red, '500'],
+      ['', ' '],
+      [c.mint, '2ms']
+    ]
+  },
+  {
+    delay: 90,
+    parts: [
+      ['', '  └─ '],
+      [c.mint, 'error'],
+      ['', '  '],
+      [c.fg, 'Route crashed']
+    ]
+  },
+  {
+    cls: blink,
+    delay: 250,
+    parts: [[c.muted, '▌']]
+  }
+]
+---
+
+<section class="mx-auto w-full max-w-3xl">
+  <div
+    class="overflow-hidden rounded-3xl bg-white shadow-[0_0_0_1px_rgb(0_0_0/0.06),0_1px_2px_-1px_rgb(0_0_0/0.06),0_2px_4px_0_rgb(0_0_0/0.04)] dark:bg-[#131313] dark:shadow-[0_0_0_1px_rgb(255_255_255/0.08)]"
+    data-term
+  >
+    <div
+      class="relative flex h-11 items-center justify-center border-[#EBEBEB] border-b dark:border-white/8"
+    >
+      <div class="absolute left-4 flex items-center gap-2">
+        <span
+          class="size-3.5 rounded-full bg-[oklch(71.3%_0.171_26)] dark:bg-[#323232]"
+        ></span>
+        <span
+          class="size-3.5 rounded-full bg-[oklch(82.5%_0.159_80.9)] dark:bg-[#323232]"
+        ></span>
+        <span
+          class="size-3.5 rounded-full bg-[oklch(88.4%_0_0)] dark:bg-[#323232]"
+        ></span>
+      </div>
+      <span class="font-medium text-[#6E6E6E] text-sm dark:text-[#7A7A7A]">
+        Terminal — api-server
+      </span>
+    </div>
+    <div
+      aria-label="Example Logixlysia log output"
+      class="overflow-x-auto p-4 font-mono text-[#2D2D2D] text-[0.8rem] leading-relaxed dark:text-[#DADADA]"
+      data-term-body
+      role="img"
+    >
+      <div class="whitespace-pre">
+        <span class={c.muted}>$ </span
+        ><span class={c.fg} data-term-cmd>bun run dev</span
+        ><span data-term-caret class:list={[c.muted, blink]}>▌</span>
+      </div>
+      {termLines.map(line => (
+          <div
+            data-delay={line.delay}
+            class:list={['whitespace-pre', line.cls]}
+          >
+            {line.parts.map(part =>
+              part[0] ? <span class={part[0]}>{part[1]}</span> : part[1]
+            )}
+          </div>
+        ))}
+    </div>
+  </div>
+</section>
+
+<script>
+  const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
+
+  const terminal = document.querySelector('[data-term]')
+  const body = terminal?.querySelector<HTMLElement>('[data-term-body]')
+  const cmd = terminal?.querySelector<HTMLElement>('[data-term-cmd]')
+  const caret = terminal?.querySelector<HTMLElement>('[data-term-caret]')
+  const reduceMotion = window.matchMedia(
+    '(prefers-reduced-motion: reduce)'
+  ).matches
+
+  if (terminal && body && cmd && caret && !reduceMotion) {
+    const lines = [...body.querySelectorAll<HTMLElement>('[data-delay]')]
+    const command = cmd.textContent ?? ''
+
+    // Reserve the final height up front so the replay never shifts layout.
+    body.style.minHeight = `${body.offsetHeight}px`
+    cmd.textContent = ''
+    for (const line of lines) {
+      line.style.display = 'none'
+    }
+
+    // Replay only while the terminal is on screen.
+    let visible = false
+    let onVisible: (() => void) | undefined
+    const observer = new IntersectionObserver(
+      entries => {
+        visible = entries.some(entry => entry.isIntersecting)
+        if (visible && onVisible) {
+          onVisible()
+          onVisible = undefined
+        }
+      },
+      { threshold: 0.35 }
+    )
+    observer.observe(terminal)
+
+    const waitUntilVisible = () =>
+      visible
+        ? Promise.resolve()
+        : new Promise<void>(resolve => {
+            onVisible = resolve
+          })
+
+    const play = async () => {
+      for (;;) {
+        await waitUntilVisible()
+        // Clear the screen, then replay the whole session.
+        cmd.textContent = ''
+        caret.style.display = ''
+        for (const line of lines) {
+          line.style.display = 'none'
+        }
+        await sleep(400)
+        for (const char of command) {
+          cmd.textContent += char
+          await sleep(55)
+        }
+        await sleep(350)
+        caret.style.display = 'none'
+        for (const line of lines) {
+          await sleep(Number(line.dataset.delay) || 40)
+          line.style.display = ''
+        }
+        // Hold the finished session before clearing for the next run.
+        await sleep(3200)
+      }
+    }
+    play()
+  }
+</script>
