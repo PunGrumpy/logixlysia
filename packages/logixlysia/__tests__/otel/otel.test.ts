@@ -1,3 +1,4 @@
+import { spawnSync } from 'bun'
 import { describe, expect, test } from 'bun:test'
 
 // The "not installed" branch needs @opentelemetry/api to be unresolvable, but
@@ -23,7 +24,7 @@ if (Object.keys(logger.getContext(request)).length > 0) {
 
 describe('logixlysia/otel', () => {
   test('injectTraceContext is a no-op when OpenTelemetry is not installed', () => {
-    const result = Bun.spawnSync({
+    const result = spawnSync({
       cmd: ['bun', '-e', script],
       cwd: new URL('../..', import.meta.url).pathname,
       stderr: 'pipe'
