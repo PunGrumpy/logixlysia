@@ -15,12 +15,18 @@
     }
   },
   "files": {
-    "includes": [
-      "**/*",
-      "!__tests__",
-      "!**/.blume",
-      "!**/.astro",
-      "!**/dist"
-    ]
-  }
+    "includes": ["**/*", "!__tests__", "!**/.blume", "!**/.astro", "!**/dist"]
+  },
+  "overrides": [
+    {
+      "includes": ["**/*.astro"],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "useJsxKeyInIterable": "off"
+          }
+        }
+      }
+    }
+  ]
 }

@@ -104,22 +104,22 @@ const footerActions = [
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta content="width=device-width, initial-scale=1" name="viewport" />
     <title>The logger for Elysia.js | Logixlysia</title>
     <meta
-      name="description"
       content="Logixlysia is a logger for Elysia.js, a web framework for Bun. It provides a simple and easy-to-use interface and powerful features for logging and debugging."
+      name="description"
     />
-    <link rel="icon" href="/icon.png" />
-    <link rel="apple-touch-icon" href="/apple-touch.png" />
-    <meta property="og:title" content="The logger for Elysia.js | Logixlysia" />
-    <meta property="og:site_name" content="Logixlysia" />
-    <meta property="og:type" content="website" />
-    <meta property="og:image" content="/opengraph-image.png" />
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:creator" content="@pungrumpy" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="/icon.png" rel="icon" />
+    <link href="/apple-touch.png" rel="apple-touch-icon" />
+    <meta content="The logger for Elysia.js | Logixlysia" property="og:title" />
+    <meta content="Logixlysia" property="og:site_name" />
+    <meta content="website" property="og:type" />
+    <meta content="/opengraph-image.png" property="og:image" />
+    <meta content="summary_large_image" name="twitter:card" />
+    <meta content="@pungrumpy" name="twitter:creator" />
+    <link href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin href="https://fonts.gstatic.com" rel="preconnect" />
     <link
       href="https://fonts.googleapis.com/css2?family=Geist:wght@300..600&family=Geist+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&display=swap"
       rel="stylesheet"
@@ -128,7 +128,7 @@ const footerActions = [
   <body>
     <header class="nav">
       <a class="nav-brand" href="/">
-        <img src="/icon.png" alt="" width="24" height="24" />
+        <img alt="Logixlysia logo" height="24" src="/icon.png" width="24" />
         <span>Logixlysia</span>
       </a>
       <nav class="nav-links">
@@ -155,7 +155,7 @@ const footerActions = [
                   ? `${release.tag_name} is now available!`
                   : 'Logixlysia is always improving!'
               }
-              <svg class="icon" viewBox="0 0 24 24"><path d="M17 7l-10 10M8 7h9v9" /></svg>
+              <svg class="icon" viewBox="0 0 24 24"><title>Open link</title><path d="M17 7l-10 10M8 7h9v9" /></svg>
             </span>
           </a>
 
@@ -178,8 +178,8 @@ const footerActions = [
             <div class="command" data-copy="bun add logixlysia">
               <span class="command-prefix">$</span>
               <code>bun add logixlysia</code>
-              <button class="copy" type="button" aria-label="Copy command">
-                <svg class="icon" viewBox="0 0 24 24"><rect height="13" rx="2" width="13" x="8" y="8" /><path d="M5 16V5a1 1 0 0 1 1-1h11" /></svg>
+              <button aria-label="Copy command" class="copy" type="button">
+                <svg class="icon" viewBox="0 0 24 24"><title>Copy</title><rect height="13" rx="2" width="13" x="8" y="8" /><path d="M5 16V5a1 1 0 0 1 1-1h11" /></svg>
               </button>
             </div>
             <a class="docs-link" href="/introduction">Read the docs</a>
@@ -204,10 +204,12 @@ const footerActions = [
                   <li class={item.good ? 'good' : 'meh'}>
                     {item.good ? (
                       <svg class="icon" viewBox="0 0 24 24">
+                        <title>Included</title>
                         <path d="M5 12l5 5L20 7" />
                       </svg>
                     ) : (
                       <svg class="icon" viewBox="0 0 24 24">
+                        <title>Not included</title>
                         <path d="M5 12h14" />
                       </svg>
                     )}
@@ -230,8 +232,8 @@ const footerActions = [
         <div class="command centered" data-copy="bun add logixlysia">
           <span class="command-prefix">$</span>
           <code>bun add logixlysia</code>
-          <button class="copy" type="button" aria-label="Copy command">
-            <svg class="icon" viewBox="0 0 24 24"><rect height="13" rx="2" width="13" x="8" y="8" /><path d="M5 16V5a1 1 0 0 1 1-1h11" /></svg>
+          <button aria-label="Copy command" class="copy" type="button">
+            <svg class="icon" viewBox="0 0 24 24"><title>Copy</title><rect height="13" rx="2" width="13" x="8" y="8" /><path d="M5 16V5a1 1 0 0 1 1-1h11" /></svg>
           </button>
         </div>
       </section>
@@ -239,7 +241,7 @@ const footerActions = [
       <footer class="footer">
         <div class="footer-grid">
           <div class="card">
-            <svg class="icon heart" viewBox="0 0 24 24"><path d="M12 21C7 17 2 13.5 2 8.8 2 5.6 4.5 3 7.6 3c1.8 0 3.4.9 4.4 2.2C13 3.9 14.6 3 16.4 3 19.5 3 22 5.6 22 8.8c0 4.7-5 8.2-10 12.2z" fill="currentColor" stroke="none" /></svg>
+            <svg class="icon heart" viewBox="0 0 24 24"><title>Heart</title><path d="M12 21C7 17 2 13.5 2 8.8 2 5.6 4.5 3 7.6 3c1.8 0 3.4.9 4.4 2.2C13 3.9 14.6 3 16.4 3 19.5 3 22 5.6 22 8.8c0 4.7-5 8.2-10 12.2z" fill="currentColor" stroke="none" /></svg>
             <h3>Made Possible by You</h3>
             <p>
               Logixlysia is open-source and community-driven; issues, PRs, and
