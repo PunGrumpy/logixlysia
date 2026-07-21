@@ -1,0 +1,707 @@
+---
+import { Code } from 'astro:components'
+
+interface GitHubRelease {
+  draft: boolean
+  html_url: string
+  tag_name: string
+}
+
+let release: GitHubRelease | null = null
+
+try {
+  const response = await fetch(
+    'https://api.github.com/repos/PunGrumpy/logixlysia/releases/latest',
+    {
+      headers: {
+        Accept: 'application/vnd.github+json',
+        ...(import.meta.env.GITHUB_TOKEN
+          ? { Authorization: `Bearer ${import.meta.env.GITHUB_TOKEN}` }
+          : {})
+      }
+    }
+  )
+
+  if (response.ok) {
+    const data = (await response.json()) as GitHubRelease
+    if (!data.draft) {
+      release = data
+    }
+  }
+} catch {
+  release = null
+}
+
+const demoCode = `import { Elysia } from 'elysia'
+import logixlysia from 'logixlysia'
+
+const app = new Elysia({ name: 'Elysia with Logixlysia' })
+  .use(
+    logixlysia({
+      config: {
+        service: 'api-server',
+        showStartupMessage: true,
+        startupMessageFormat: 'banner',
+        showContextTree: true,
+        contextDepth: 2,
+        slowThreshold: 500,
+        verySlowThreshold: 1000,
+        timestamp: {
+          translateTime: 'yyyy-mm-dd HH:MM:ss.SSS'
+        },
+        ip: true
+      }
+    })
+  )
+  .get('/', () => {
+    return { message: 'Welcome to Basic Elysia with Logixlysia' }
+  })
+
+app.listen(3000)`
+
+const comparison = [
+  {
+    label: 'console.log',
+    description: 'Fast to start, but quickly becomes noisy at scale.',
+    items: [
+      { text: 'Zero setup', good: true },
+      { text: 'No request context by default', good: false },
+      { text: 'Hard to keep consistent', good: false },
+      { text: 'Limited filtering and structure', good: false }
+    ]
+  },
+  {
+    label: 'Logixlysia',
+    description:
+      'Elysia-first logger — sensible defaults with deep configuration when you need it.',
+    items: [
+      { text: 'Elysia plugin integration', good: true },
+      { text: 'Pino built-in (and exposed)', good: true },
+      { text: 'Request context included', good: true },
+      { text: 'Custom log format + timestamps', good: true },
+      { text: 'Log filtering', good: true }
+    ]
+  }
+]
+
+const footerActions = [
+  {
+    title: 'Production-ready defaults',
+    description: 'Sensible presets + deep configuration when you need it'
+  },
+  {
+    title: 'Fully open-source',
+    description: 'MIT licensed, use it anywhere and contribute back'
+  },
+  {
+    title: 'Setup in minutes',
+    description: 'Install once, plug in, and get consistent request logs'
+  }
+]
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>The logger for Elysia.js | Logixlysia</title>
+    <meta
+      name="description"
+      content="Logixlysia is a logger for Elysia.js, a web framework for Bun. It provides a simple and easy-to-use interface and powerful features for logging and debugging."
+    />
+    <link rel="icon" href="/icon.png" />
+    <link rel="apple-touch-icon" href="/apple-touch.png" />
+    <meta property="og:title" content="The logger for Elysia.js | Logixlysia" />
+    <meta property="og:site_name" content="Logixlysia" />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="/opengraph-image.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:creator" content="@pungrumpy" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Geist:wght@300..600&family=Geist+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <header class="nav">
+      <a class="nav-brand" href="/">
+        <img src="/icon.png" alt="" width="24" height="24" />
+        <span>Logixlysia</span>
+      </a>
+      <nav class="nav-links">
+        <a href="/introduction">Docs</a>
+        <a href="/changelog">Changelog</a>
+        <a href="https://www.npmjs.com/package/logixlysia" rel="noopener" target="_blank">NPM</a>
+        <a href="https://github.com/PunGrumpy/logixlysia" rel="noopener" target="_blank">GitHub</a>
+      </nav>
+    </header>
+
+    <main class="page">
+      <section class="hero-grid">
+        <div class="hero">
+          <a
+            class="announcement"
+            href={release ? release.html_url : '/changelog'}
+          >
+            <span class="announcement-tag"
+              >{release ? 'Release' : 'Announcement'}</span
+            >
+            <span class="announcement-title">
+              {
+                release
+                  ? `${release.tag_name} is now available!`
+                  : 'Logixlysia is always improving!'
+              }
+              <svg class="icon" viewBox="0 0 24 24"><path d="M17 7l-10 10M8 7h9v9" /></svg>
+            </span>
+          </a>
+
+          <h1 class="headline">
+            The logger for Elysia.js,
+            <span class="headline-accent"
+              ><em>simple and easy to use</em> beautiful and powerful</span
+            >
+          </h1>
+
+          <p class="lede">
+            Logixlysia is a logger for
+            <a href="https://elysiajs.com/" rel="noopener" target="_blank"
+              >Elysia.js</a
+            >, a web framework for Bun. It provides a simple and easy-to-use
+            interface and powerful features for logging and debugging.
+          </p>
+
+          <div class="installer">
+            <div class="command" data-copy="bun add logixlysia">
+              <span class="command-prefix">$</span>
+              <code>bun add logixlysia</code>
+              <button class="copy" type="button" aria-label="Copy command">
+                <svg class="icon" viewBox="0 0 24 24"><rect height="13" rx="2" width="13" x="8" y="8" /><path d="M5 16V5a1 1 0 0 1 1-1h11" /></svg>
+              </button>
+            </div>
+            <a class="docs-link" href="/introduction">Read the docs</a>
+          </div>
+        </div>
+
+        <div class="demo">
+          <Code code={demoCode} lang="ts" theme="vesper" />
+        </div>
+      </section>
+
+      <section class="comparison">
+        {
+          comparison.map(side => (
+            <div class="card">
+              <div class="card-header">
+                <h3>{side.label}</h3>
+                <p>{side.description}</p>
+              </div>
+              <ul class="feature-list">
+                {side.items.map(item => (
+                  <li class={item.good ? 'good' : 'meh'}>
+                    {item.good ? (
+                      <svg class="icon" viewBox="0 0 24 24">
+                        <path d="M5 12l5 5L20 7" />
+                      </svg>
+                    ) : (
+                      <svg class="icon" viewBox="0 0 24 24">
+                        <path d="M5 12h14" />
+                      </svg>
+                    )}
+                    {item.text}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))
+        }
+      </section>
+
+      <section class="cta">
+        <h2 class="cta-headline">
+          Install with <em>in line</em>. Log in <em>few clicks</em>.
+        </h2>
+        <p class="lede centered">
+          Install Logixlysia and start logging your Elysia applications.
+        </p>
+        <div class="command centered" data-copy="bun add logixlysia">
+          <span class="command-prefix">$</span>
+          <code>bun add logixlysia</code>
+          <button class="copy" type="button" aria-label="Copy command">
+            <svg class="icon" viewBox="0 0 24 24"><rect height="13" rx="2" width="13" x="8" y="8" /><path d="M5 16V5a1 1 0 0 1 1-1h11" /></svg>
+          </button>
+        </div>
+      </section>
+
+      <footer class="footer">
+        <div class="footer-grid">
+          <div class="card">
+            <svg class="icon heart" viewBox="0 0 24 24"><path d="M12 21C7 17 2 13.5 2 8.8 2 5.6 4.5 3 7.6 3c1.8 0 3.4.9 4.4 2.2C13 3.9 14.6 3 16.4 3 19.5 3 22 5.6 22 8.8c0 4.7-5 8.2-10 12.2z" fill="currentColor" stroke="none" /></svg>
+            <h3>Made Possible by You</h3>
+            <p>
+              Logixlysia is open-source and community-driven; issues, PRs, and
+              feedback keep it sharp
+            </p>
+          </div>
+          <div class="card glow">
+            <h3 class="serif">Log your <em>Elysia.js</em></h3>
+            <p>readable, consistent, and production-ready logs</p>
+          </div>
+        </div>
+
+        <div class="card">
+          <ul class="actions">
+            {
+              footerActions.map(action => (
+                <li>
+                  <p class="action-title">{action.title}</p>
+                  <p>{action.description}</p>
+                </li>
+              ))
+            }
+          </ul>
+          <div class="buttons">
+            <a class="button primary" href="/introduction">Read docs</a>
+            <a
+              class="button outline"
+              href="https://github.com/PunGrumpy/logixlysia"
+              rel="noopener"
+              target="_blank">Open GitHub</a
+            >
+          </div>
+        </div>
+      </footer>
+    </main>
+
+    <script>
+      for (const block of document.querySelectorAll('[data-copy]')) {
+        const button = block.querySelector('.copy')
+        button?.addEventListener('click', async () => {
+          const value = block.getAttribute('data-copy')
+          if (value) {
+            await navigator.clipboard.writeText(value)
+            button.classList.add('copied')
+            setTimeout(() => button.classList.remove('copied'), 1200)
+          }
+        })
+      }
+    </script>
+
+    <style>
+      :root {
+        --background: oklch(1 0 0);
+        --foreground: oklch(0.141 0.005 285.823);
+        --card: oklch(1 0 0);
+        --muted-foreground: oklch(0.552 0.016 285.938);
+        --border: oklch(0.92 0.004 286.32);
+        --primary: oklch(0.5534 0.1739 38.4);
+        --primary-foreground: oklch(0.985 0 0);
+        --tertiary: oklch(0.552 0.016 285.938);
+        --vesper-orange: oklch(0.5534 0.1739 38.4);
+        --vesper-peppermint: oklch(0.437 0.0705 188.22);
+        --font-sans: 'Geist', system-ui, sans-serif;
+        --font-serif: 'Instrument Serif', Georgia, serif;
+        --font-mono: 'Geist Mono', ui-monospace, monospace;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --background: oklch(0.141 0.005 285.823);
+          --foreground: oklch(0.985 0 0);
+          --card: oklch(0.21 0.006 285.885);
+          --muted-foreground: oklch(0.705 0.015 286.067);
+          --border: oklch(1 0 0 / 10%);
+          --primary: oklch(0.8689 0.0877 60.68);
+          --primary-foreground: oklch(0.21 0.006 285.885);
+          --tertiary: oklch(0.705 0.015 286.067);
+          --vesper-orange: oklch(0.8689 0.0877 60.68);
+          --vesper-peppermint: oklch(0.93 0.1035 175.07);
+        }
+      }
+
+      body {
+        margin: 0;
+        background: var(--background);
+        color: var(--foreground);
+        font-family: var(--font-sans);
+        font-weight: 300;
+        line-height: 1.6;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      .icon {
+        width: 1em;
+        height: 1em;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        flex-shrink: 0;
+      }
+
+      .nav {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        max-width: 72rem;
+        margin: 0 auto;
+        padding: 1.25rem 1.5rem;
+      }
+
+      .nav-brand {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: inherit;
+        text-decoration: none;
+        font-weight: 500;
+      }
+
+      .nav-links {
+        display: flex;
+        gap: 1.25rem;
+      }
+
+      .nav-links a {
+        color: var(--muted-foreground);
+        text-decoration: none;
+        font-size: 0.9rem;
+      }
+
+      .nav-links a:hover {
+        color: var(--foreground);
+      }
+
+      .page {
+        max-width: 72rem;
+        margin: 0 auto;
+        padding: 0 1.5rem 5rem;
+      }
+
+      .hero-grid {
+        display: grid;
+        gap: 2rem;
+        padding-top: 3rem;
+        align-items: center;
+      }
+
+      @media (min-width: 768px) {
+        .hero-grid {
+          grid-template-columns: 1.5fr 2fr;
+          padding-top: 5rem;
+        }
+      }
+
+      .hero {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        align-items: flex-start;
+      }
+
+      .announcement {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        padding: 0.25rem 0.75rem 0.25rem 0.25rem;
+        color: inherit;
+        text-decoration: none;
+        font-size: 0.85rem;
+      }
+
+      .announcement-tag {
+        background: color-mix(in oklch, var(--primary) 10%, transparent);
+        color: var(--primary);
+        border-radius: 999px;
+        padding: 0.1rem 0.6rem;
+        font-weight: 500;
+      }
+
+      .announcement-title {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        color: var(--muted-foreground);
+      }
+
+      .headline {
+        margin: 0;
+        font-family: var(--font-serif);
+        font-weight: 400;
+        font-size: clamp(2.25rem, 5vw, 3.75rem);
+        line-height: 1;
+        text-wrap: balance;
+        background: linear-gradient(
+          to bottom,
+          var(--foreground),
+          var(--tertiary)
+        );
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+      }
+
+      .headline-accent {
+        display: block;
+      }
+
+      .lede {
+        margin: 0;
+        max-width: 32rem;
+        color: var(--muted-foreground);
+        text-wrap: pretty;
+      }
+
+      .lede a {
+        color: inherit;
+      }
+
+      .centered {
+        margin-inline: auto;
+        text-align: center;
+      }
+
+      .installer {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 1rem;
+        margin-top: 1rem;
+      }
+
+      .command {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.6rem;
+        border: 1px solid var(--border);
+        border-radius: 0.75rem;
+        padding: 0.6rem 0.75rem;
+        font-family: var(--font-mono);
+        font-size: 0.9rem;
+        background: var(--card);
+      }
+
+      .command.centered {
+        display: flex;
+        width: fit-content;
+      }
+
+      .command-prefix {
+        color: var(--muted-foreground);
+        user-select: none;
+      }
+
+      .copy {
+        display: inline-flex;
+        border: 0;
+        background: none;
+        color: var(--muted-foreground);
+        cursor: pointer;
+        padding: 0.15rem;
+      }
+
+      .copy:hover {
+        color: var(--foreground);
+      }
+
+      .copy.copied {
+        color: var(--vesper-peppermint);
+      }
+
+      .docs-link {
+        color: var(--foreground);
+        font-size: 0.95rem;
+        text-underline-offset: 4px;
+      }
+
+      .demo {
+        min-width: 0;
+        border-radius: 1rem;
+        overflow: hidden;
+        border: 1px solid var(--border);
+      }
+
+      .demo :global(pre) {
+        margin: 0;
+        padding: 1rem;
+        font-family: var(--font-mono);
+        font-size: 0.85rem;
+        overflow-x: auto;
+      }
+
+      .comparison {
+        display: grid;
+        gap: 1.5rem;
+        padding: 5rem 0 0;
+      }
+
+      @media (min-width: 768px) {
+        .comparison {
+          grid-template-columns: 1fr 1fr;
+        }
+      }
+
+      .card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 1.5rem;
+        padding: 1.5rem;
+      }
+
+      @media (min-width: 640px) {
+        .card {
+          padding: 2.25rem;
+        }
+      }
+
+      .card h3 {
+        margin: 0 0 0.5rem;
+        font-size: 1.1rem;
+        font-weight: 600;
+      }
+
+      .card p {
+        margin: 0;
+        color: var(--muted-foreground);
+        font-size: 0.9rem;
+      }
+
+      .feature-list {
+        list-style: none;
+        margin: 1.25rem 0 0;
+        padding: 0;
+        display: grid;
+        gap: 0.6rem;
+      }
+
+      .feature-list li {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        font-size: 0.95rem;
+      }
+
+      .feature-list .good .icon,
+      .feature-list li.good svg {
+        color: var(--vesper-peppermint);
+      }
+
+      .feature-list li.meh {
+        color: var(--muted-foreground);
+      }
+
+      .cta {
+        display: grid;
+        gap: 1rem;
+        justify-items: center;
+        padding: 6rem 0;
+        text-align: center;
+      }
+
+      .cta-headline {
+        margin: 0;
+        font-family: var(--font-serif);
+        font-weight: 400;
+        font-size: clamp(1.9rem, 4vw, 2.5rem);
+        text-wrap: balance;
+      }
+
+      .footer {
+        display: grid;
+        gap: 1.5rem;
+      }
+
+      .footer-grid {
+        display: grid;
+        gap: 1.5rem;
+      }
+
+      @media (min-width: 1024px) {
+        .footer-grid {
+          grid-template-columns: 1fr 1fr;
+        }
+      }
+
+      .heart {
+        color: oklch(0.656 0.241 354.308);
+        width: 1.25rem;
+        height: 1.25rem;
+        margin-bottom: 0.75rem;
+      }
+
+      .glow {
+        position: relative;
+        isolation: isolate;
+        overflow: hidden;
+        display: grid;
+        justify-items: center;
+        text-align: center;
+      }
+
+      .glow::after {
+        content: '';
+        position: absolute;
+        left: 50%;
+        bottom: -14rem;
+        width: 24rem;
+        height: 24rem;
+        transform: translateX(-50%);
+        border-radius: 999px;
+        background: color-mix(in oklch, var(--vesper-orange) 55%, transparent);
+        filter: blur(48px);
+        z-index: -1;
+      }
+
+      .serif {
+        font-family: var(--font-serif);
+        font-weight: 400;
+        font-size: 1.9rem;
+        letter-spacing: 0.1em;
+      }
+
+      .actions {
+        list-style: none;
+        margin: 0 0 2rem;
+        padding: 0;
+        display: grid;
+        gap: 1.1rem;
+      }
+
+      .action-title {
+        color: var(--foreground) !important;
+        font-weight: 500;
+      }
+
+      .buttons {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+      }
+
+      .button {
+        display: inline-flex;
+        align-items: center;
+        border-radius: 0.75rem;
+        padding: 0.65rem 1.5rem;
+        font-size: 0.95rem;
+        text-decoration: none;
+      }
+
+      .button.primary {
+        background: var(--primary);
+        color: var(--primary-foreground);
+      }
+
+      .button.outline {
+        border: 1px solid var(--border);
+        color: var(--foreground);
+      }
+    </style>
+  </body>
+</html>
