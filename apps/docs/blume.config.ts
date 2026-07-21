@@ -22,7 +22,7 @@ export default defineConfig({
   },
   markdown: {
     code: {
-      themes: {
+      theme: {
         light: 'github-light',
         dark: 'vesper'
       }
