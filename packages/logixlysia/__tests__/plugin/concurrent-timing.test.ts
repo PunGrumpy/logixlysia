@@ -1,4 +1,4 @@
-import { describe, expect, mock, test } from 'bun:test'
+import { describe, expect, test } from 'bun:test'
 import { Elysia } from 'elysia'
 
 import { logixlysia } from '../../src'
@@ -10,19 +10,21 @@ const sleep = (ms: number): Promise<void> =>
 describe('logixlysia plugin - per-request timing under concurrency', () => {
   test('overlapping requests report independent, correct durations', async () => {
     const calls: { url: string; beforeTime: bigint; capturedAt: bigint }[] = []
-    const transport = mock(
-      (_level: unknown, _message: unknown, meta?: unknown) => {
-        const record = meta as { request: { url: string }; beforeTime: bigint }
-        calls.push({
-          url: record.request.url,
-          beforeTime: record.beforeTime,
-          // Captured at the same instant `logToTransports` runs, mirroring
-          // how `formatLogOutput` samples `process.hrtime.bigint()` when it
-          // computes `durationMs` in production.
-          capturedAt: process.hrtime.bigint()
-        })
-      }
-    )
+    const transport = (
+      _level: unknown,
+      _message: unknown,
+      meta?: unknown
+    ): void => {
+      const record = meta as { request: { url: string }; beforeTime: bigint }
+      calls.push({
+        url: record.request.url,
+        beforeTime: record.beforeTime,
+        // Captured at the same instant `logToTransports` runs, mirroring
+        // how `formatLogOutput` samples `process.hrtime.bigint()` when it
+        // computes `durationMs` in production.
+        capturedAt: process.hrtime.bigint()
+      })
+    }
 
     const options: Options = {
       config: {
