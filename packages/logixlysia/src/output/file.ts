@@ -7,7 +7,7 @@ import { performRotation, shouldRotate } from './rotation-manager'
 // Per-file mutex to prevent race conditions during rotation
 const fileLocks = new Map<string, Promise<void>>()
 
-const acquireLock = (filePath: string): Promise<() => void> => {
+const acquireLock = async (filePath: string): Promise<() => void> => {
   const prior = fileLocks.get(filePath) ?? Promise.resolve()
 
   let resolveLock: () => void
@@ -15,15 +15,17 @@ const acquireLock = (filePath: string): Promise<() => void> => {
     resolveLock = resolve
   })
 
-  // Register synchronously: same-tick callers must chain onto THIS lock.
+  // Register before awaiting: same-tick callers must chain onto THIS lock.
   fileLocks.set(filePath, newLock)
 
-  return prior.then(() => () => {
+  await prior
+
+  return () => {
     resolveLock?.()
     if (fileLocks.get(filePath) === newLock) {
       fileLocks.delete(filePath)
     }
-  })
+  }
 }
 
 interface LogToFileInput {

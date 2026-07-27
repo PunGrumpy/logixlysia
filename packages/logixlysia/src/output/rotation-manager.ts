@@ -14,7 +14,9 @@ const gzipAsync = promisify(gzip)
 // Compression lock to prevent concurrent compression of the same file
 const compressionLocks = new Map<string, Promise<void>>()
 
-const acquireCompressionLock = (filePath: string): Promise<() => void> => {
+const acquireCompressionLock = async (
+  filePath: string
+): Promise<() => void> => {
   const prior = compressionLocks.get(filePath) ?? Promise.resolve()
 
   let resolveLock: () => void
@@ -22,15 +24,17 @@ const acquireCompressionLock = (filePath: string): Promise<() => void> => {
     resolveLock = resolve
   })
 
-  // Register synchronously: same-tick callers must chain onto THIS lock.
+  // Register before awaiting: same-tick callers must chain onto THIS lock.
   compressionLocks.set(filePath, newLock)
 
-  return prior.then(() => () => {
+  await prior
+
+  return () => {
     resolveLock?.()
     if (compressionLocks.get(filePath) === newLock) {
       compressionLocks.delete(filePath)
     }
-  })
+  }
 }
 
 const pad2 = (value: number): string => String(value).padStart(2, '0')
