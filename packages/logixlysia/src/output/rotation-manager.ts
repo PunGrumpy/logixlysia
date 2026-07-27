@@ -22,16 +22,13 @@ const acquireCompressionLock = (filePath: string): Promise<() => void> => {
     resolveLock = resolve
   })
 
-  return prior.then(() => {
-    // Only set the lock after acquiring the prior lock to prevent race conditions
-    compressionLocks.set(filePath, newLock)
+  // Register synchronously: same-tick callers must chain onto THIS lock.
+  compressionLocks.set(filePath, newLock)
 
-    // Critical section can now proceed
-    return () => {
-      resolveLock?.()
-      if (compressionLocks.get(filePath) === newLock) {
-        compressionLocks.delete(filePath)
-      }
+  return prior.then(() => () => {
+    resolveLock?.()
+    if (compressionLocks.get(filePath) === newLock) {
+      compressionLocks.delete(filePath)
     }
   })
 }

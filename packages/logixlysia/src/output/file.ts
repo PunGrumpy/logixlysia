@@ -15,16 +15,13 @@ const acquireLock = (filePath: string): Promise<() => void> => {
     resolveLock = resolve
   })
 
-  return prior.then(() => {
-    // Only set the lock after acquiring the prior lock to prevent race conditions
-    fileLocks.set(filePath, newLock)
+  // Register synchronously: same-tick callers must chain onto THIS lock.
+  fileLocks.set(filePath, newLock)
 
-    // Critical section can now proceed
-    return () => {
-      resolveLock?.()
-      if (fileLocks.get(filePath) === newLock) {
-        fileLocks.delete(filePath)
-      }
+  return prior.then(() => () => {
+    resolveLock?.()
+    if (fileLocks.get(filePath) === newLock) {
+      fileLocks.delete(filePath)
     }
   })
 }
