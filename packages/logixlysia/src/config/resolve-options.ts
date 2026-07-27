@@ -115,20 +115,17 @@ const mergeConfig = (
 /** Applies preset defaults; explicit `config` keys override preset values. */
 export const resolveOptions = (options: Options = {}): Options => {
   const preset = options.preset
-  if (!preset) {
-    validateLogRotation(options.config)
-    return options
-  }
-
-  if (!VALID_PRESETS.includes(preset)) {
+  if (preset && !VALID_PRESETS.includes(preset)) {
     throw new Error(`logixlysia: invalid preset — ${preset}`)
   }
 
-  const presetConfig = PRESET_DEFAULTS[preset]
-  const resolved = {
-    ...options,
-    config: mergeConfig(presetConfig, options.config)
-  }
+  const resolved = preset
+    ? {
+        ...options,
+        config: mergeConfig(PRESET_DEFAULTS[preset], options.config)
+      }
+    : options
+
   validateLogRotation(resolved.config)
   return resolved
 }
