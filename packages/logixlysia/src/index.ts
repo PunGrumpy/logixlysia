@@ -47,6 +47,7 @@ export type LogixlysiaPlugin = Logixlysia & {
 export const logixlysia = (rawOptions: Options = {}): LogixlysiaPlugin => {
   const options = resolveOptions(rawOptions)
   const didCustomLog = new WeakSet<Request>()
+  const requestStartTimes = new WeakMap<Request, bigint>()
   const contextStore = createRequestContextStore()
   const baseLogger = createPluginLogger(options, contextStore)
   const wrapWs = createWsHandlerWrapper(options, baseLogger, contextStore)
@@ -121,8 +122,8 @@ export const logixlysia = (rawOptions: Options = {}): LogixlysiaPlugin => {
         startServer({ port, hostname, protocol: 'http' }, options)
       }
     })
-    .onRequest(({ request, store }) => {
-      store.beforeTime = process.hrtime.bigint()
+    .onRequest(({ request }) => {
+      requestStartTimes.set(request, process.hrtime.bigint())
       if (requestIdConfig) {
         const requestId = getOrCreateRequestId(request, requestIdConfig)
         contextStore.mergeContext(request, { requestId })
@@ -132,7 +133,7 @@ export const logixlysia = (rawOptions: Options = {}): LogixlysiaPlugin => {
         loggerStorage.enterWith(createRequestScopedLogger(request))
       }
     })
-    .onAfterHandle(({ request, set, store }) => {
+    .onAfterHandle(({ request, set }) => {
       try {
         if (requestIdConfig) {
           const ctx = contextStore.getContext(request)
@@ -160,12 +161,15 @@ export const logixlysia = (rawOptions: Options = {}): LogixlysiaPlugin => {
           data.context = { ...accumulated }
         }
 
-        logger.log(level, request, data, store)
+        logger.log(level, request, data, {
+          beforeTime: requestStartTimes.get(request) ?? BigInt(0)
+        })
       } finally {
+        requestStartTimes.delete(request)
         contextStore.clearContext(request)
       }
     })
-    .onError(({ request, error, set, store }) => {
+    .onError(({ request, error, set }) => {
       try {
         if (requestIdConfig) {
           const ctx = contextStore.getContext(request)
@@ -174,8 +178,11 @@ export const logixlysia = (rawOptions: Options = {}): LogixlysiaPlugin => {
             set.headers[requestIdConfig.header] = id
           }
         }
-        logger.handleHttpError(request, error, store)
+        logger.handleHttpError(request, error, {
+          beforeTime: requestStartTimes.get(request) ?? BigInt(0)
+        })
       } finally {
+        requestStartTimes.delete(request)
         contextStore.clearContext(request)
       }
     })
