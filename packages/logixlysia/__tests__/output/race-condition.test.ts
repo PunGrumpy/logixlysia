@@ -113,4 +113,68 @@ describe('logToFile race condition', () => {
       await removeTempDir(dir)
     }
   })
+
+  test('same-tick logToFile calls to one path never interleave writes', async () => {
+    const dir = await createTempDir()
+    try {
+      const filePath = join(dir, 'logs', 'exclusion.log')
+      const options: Options = {
+        config: {
+          // Rotate on every write so the critical section races with rotation
+          logRotation: { maxSize: 1, compress: false }
+        }
+      }
+
+      const total = 20
+      // A full-line regex: a torn line (cut mid-write) or a merged line
+      // (two writes concatenated without a newline in between) will not
+      // match this anchored pattern, revealing broken mutual exclusion.
+      const LINE_REGEX =
+        /^(DEBUG|INFO|WARNING|ERROR) [\d.]+ms GET \/test\d+ msg-(\d+)-x+$/
+
+      // Fire all calls in the same tick (no awaits between them) so any
+      // caller that fails to see a same-tick prior lock is exposed.
+      const writes = Array.from({ length: total }, (_, i) =>
+        logToFile({
+          filePath,
+          level: 'INFO',
+          request: createMockRequest(`http://localhost/test${i}`),
+          data: { message: `msg-${i}-${'x'.repeat(50)}` },
+          store: { beforeTime: BigInt(0) },
+          options
+        })
+      )
+
+      await Promise.all(writes)
+
+      const files = await fs.readdir(join(dir, 'logs'))
+      const logFiles = files.filter(
+        name => name === 'exclusion.log' || name.startsWith('exclusion.log.')
+      )
+
+      let totalLines = 0
+      const seenIds = new Set<string>()
+
+      for (const file of logFiles) {
+        const content = await fs.readFile(join(dir, 'logs', file), 'utf-8')
+        const lines = content.split('\n').filter(l => l.length > 0)
+        totalLines += lines.length
+
+        for (const line of lines) {
+          // Every line must be a single, complete, well-formed entry.
+          expect(line).toMatch(LINE_REGEX)
+          const match = line.match(LINE_REGEX)
+          if (match) {
+            seenIds.add(match[2])
+          }
+        }
+      }
+
+      // No lines dropped or torn: exactly `total` distinct, well-formed lines.
+      expect(totalLines).toBe(total)
+      expect(seenIds.size).toBe(total)
+    } finally {
+      await removeTempDir(dir)
+    }
+  })
 })
