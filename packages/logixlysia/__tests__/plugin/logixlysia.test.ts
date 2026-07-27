@@ -2,7 +2,23 @@ import { describe, expect, mock, test } from 'bun:test'
 import { Elysia } from 'elysia'
 
 import { logixlysia } from '../../src'
-import type { Options } from '../../src/interfaces'
+import { HttpError, type Options } from '../../src/interfaces'
+
+const createCaptureTransport = () => {
+  const transport = mock<(lvl: unknown, msg: unknown, meta?: unknown) => void>(
+    () => {
+      /* noop */
+    }
+  )
+  const options: Options = {
+    config: {
+      transports: [{ log: transport }],
+      disableInternalLogger: true,
+      disableFileLogging: true
+    }
+  }
+  return { transport, options }
+}
 
 describe('logixlysia plugin', () => {
   test('auto-logs once when no custom log was emitted', async () => {
@@ -246,5 +262,76 @@ describe('logixlysia plugin', () => {
     expect(transport).toHaveBeenCalledTimes(1)
     const [levelValue] = transport.mock.calls[0] ?? [undefined]
     expect(levelValue).toBe('ERROR')
+  })
+
+  test('string set.status is resolved to its real code and ERROR level', async () => {
+    const { transport, options } = createCaptureTransport()
+
+    const app = new Elysia()
+      .use(logixlysia(options))
+      .get('/test', ({ set }) => {
+        set.status = 'Internal Server Error'
+        return 'ok'
+      })
+
+    await app.handle(new Request('http://localhost/test'))
+
+    expect(transport).toHaveBeenCalledTimes(1)
+    const [levelValue, , meta] = transport.mock.calls[0] ?? [
+      undefined,
+      undefined,
+      undefined
+    ]
+    expect(levelValue).toBe('ERROR')
+    expect((meta as Record<string, unknown> | undefined)?.status).toBe(500)
+  })
+
+  test('string set.status "Not Found" logs as 404 / WARNING', async () => {
+    const { transport, options } = createCaptureTransport()
+
+    const app = new Elysia()
+      .use(logixlysia(options))
+      .get('/test', ({ set }) => {
+        set.status = 'Not Found'
+        return 'ok'
+      })
+
+    await app.handle(new Request('http://localhost/test'))
+
+    expect(transport).toHaveBeenCalledTimes(1)
+    const [levelValue, , meta] = transport.mock.calls[0] ?? [
+      undefined,
+      undefined,
+      undefined
+    ]
+    expect(levelValue).toBe('WARNING')
+    expect((meta as Record<string, unknown> | undefined)?.status).toBe(404)
+  })
+
+  test('thrown HttpError(404) logs at WARNING, not ERROR', async () => {
+    const { transport, options } = createCaptureTransport()
+
+    const app = new Elysia().use(logixlysia(options)).get('/boom', () => {
+      throw new HttpError(404, 'not found')
+    })
+
+    await app.handle(new Request('http://localhost/boom'))
+
+    const levels = transport.mock.calls.map(call => call[0])
+    expect(levels).toContain('WARNING')
+    expect(levels).not.toContain('ERROR')
+  })
+
+  test('thrown HttpError(503) logs at ERROR', async () => {
+    const { transport, options } = createCaptureTransport()
+
+    const app = new Elysia().use(logixlysia(options)).get('/boom', () => {
+      throw new HttpError(503, 'unavailable')
+    })
+
+    await app.handle(new Request('http://localhost/boom'))
+
+    const levels = transport.mock.calls.map(call => call[0])
+    expect(levels).toContain('ERROR')
   })
 })

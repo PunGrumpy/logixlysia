@@ -3,6 +3,7 @@ import { resolveOptions } from './config/resolve-options'
 import { createRequestContextStore } from './context/request-context'
 import { loggerStorage } from './context/storage'
 import { startServer } from './extensions'
+import { getStatusCode } from './helpers/status'
 import type {
   LogixlysiaStore,
   Options,
@@ -147,7 +148,10 @@ export const logixlysia = (rawOptions: Options = {}): LogixlysiaPlugin => {
           return
         }
 
-        const status = typeof set.status === 'number' ? set.status : 200
+        const status =
+          set.status === undefined || set.status === null
+            ? 200
+            : getStatusCode(set.status)
         let level: 'INFO' | 'WARNING' | 'ERROR' = 'INFO'
         if (status >= 500) {
           level = 'ERROR'

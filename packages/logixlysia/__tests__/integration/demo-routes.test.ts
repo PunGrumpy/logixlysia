@@ -57,6 +57,24 @@ describe('demo routes (Bun)', () => {
     expect(response.status).toBe(200)
     expect(transport).toHaveBeenCalled()
   })
+
+  test('GET /status/9999 clamps out-of-range codes to 400', async () => {
+    const transport = mockTransport()
+    const app = createDemoApp(silentTestOptions(transport))
+    const response = await app.handle(
+      new Request('http://localhost/status/9999')
+    )
+    expect(response.status).toBe(400)
+  })
+
+  test('GET /status/name/Not%20Found resolves the named status', async () => {
+    const transport = mockTransport()
+    const app = createDemoApp(silentTestOptions(transport))
+    const response = await app.handle(
+      new Request('http://localhost/status/name/Not%20Found')
+    )
+    expect(response.status).toBe(404)
+  })
 })
 
 describe('Node adapter', () => {
