@@ -49,6 +49,17 @@ describe('parseSize', () => {
     expect(() => parseSize('abc')).toThrow('Invalid size format')
     expect(() => parseSize('10x')).toThrow('Invalid size format')
   })
+
+  test('rejects empty and negative string sizes', () => {
+    expect(() => parseSize('')).toThrow('Invalid size')
+    expect(() => parseSize('-5')).toThrow('Invalid size')
+  })
+
+  test('rejects zero, negative, and non-finite number sizes', () => {
+    expect(() => parseSize(0)).toThrow('Invalid size')
+    expect(() => parseSize(-1)).toThrow('Invalid size')
+    expect(() => parseSize(Number.NaN)).toThrow('Invalid size')
+  })
 })
 
 describe('parseInterval', () => {

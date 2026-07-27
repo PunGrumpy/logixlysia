@@ -1,6 +1,39 @@
 import type { Options } from '../interfaces'
+import { parseInterval, parseRetention, parseSize } from '../utils/rotation'
 
 export type LogPreset = 'dev' | 'prod' | 'json'
+
+const VALID_PRESETS: readonly LogPreset[] = ['dev', 'prod', 'json']
+
+const validateLogRotation = (config: Options['config']): void => {
+  const logRotation = config?.logRotation
+  if (!logRotation) {
+    return
+  }
+
+  try {
+    if (logRotation.maxSize !== undefined) {
+      parseSize(logRotation.maxSize)
+    }
+    if (logRotation.maxFiles !== undefined) {
+      parseRetention(logRotation.maxFiles)
+    }
+    if (logRotation.interval !== undefined) {
+      parseInterval(logRotation.interval)
+    }
+    if (
+      logRotation.compression !== undefined &&
+      logRotation.compression !== 'gzip'
+    ) {
+      throw new Error(
+        `Invalid compression algorithm: ${logRotation.compression}`
+      )
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    throw new Error(`logixlysia: invalid logRotation config — ${message}`)
+  }
+}
 
 const PRESET_DEFAULTS: Record<LogPreset, NonNullable<Options['config']>> = {
   dev: {
@@ -83,12 +116,19 @@ const mergeConfig = (
 export const resolveOptions = (options: Options = {}): Options => {
   const preset = options.preset
   if (!preset) {
+    validateLogRotation(options.config)
     return options
   }
 
+  if (!VALID_PRESETS.includes(preset)) {
+    throw new Error(`logixlysia: invalid preset — ${preset}`)
+  }
+
   const presetConfig = PRESET_DEFAULTS[preset]
-  return {
+  const resolved = {
     ...options,
     config: mergeConfig(presetConfig, options.config)
   }
+  validateLogRotation(resolved.config)
+  return resolved
 }
