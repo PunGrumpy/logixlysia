@@ -1,5 +1,17 @@
 import type { LogLevel, Options, RequestInfo, StoreData } from '../interfaces'
 
+let lastTransportErrorAt = 0
+const TRANSPORT_ERROR_INTERVAL_MS = 5000
+
+const reportTransportError = (error: unknown): void => {
+  const now = Date.now()
+  if (now - lastTransportErrorAt < TRANSPORT_ERROR_INTERVAL_MS) {
+    return
+  }
+  lastTransportErrorAt = now
+  console.error('[logixlysia] transport failed:', error)
+}
+
 interface LogToTransportsInput {
   data: Record<string, unknown>
   level: LogLevel
@@ -37,7 +49,10 @@ export const logToTransports = (
       url: request.url
     },
     ...data,
-    beforeTime: store.beforeTime
+    durationMs:
+      store.beforeTime === BigInt(0)
+        ? 0
+        : Number(process.hrtime.bigint() - store.beforeTime) / 1_000_000
   }
 
   for (const transport of transports) {
@@ -47,12 +62,10 @@ export const logToTransports = (
         result &&
         typeof (result as { catch?: unknown }).catch === 'function'
       ) {
-        ;(result as Promise<void>).catch(() => {
-          // Ignore errors
-        })
+        ;(result as Promise<void>).catch(reportTransportError)
       }
-    } catch {
-      // Transport failures must never crash application logging.
+    } catch (error) {
+      reportTransportError(error)
     }
   }
 }

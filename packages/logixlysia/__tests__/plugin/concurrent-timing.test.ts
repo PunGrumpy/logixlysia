@@ -9,20 +9,16 @@ const sleep = (ms: number): Promise<void> =>
 
 describe('logixlysia plugin - per-request timing under concurrency', () => {
   test('overlapping requests report independent, correct durations', async () => {
-    const calls: { url: string; beforeTime: bigint; capturedAt: bigint }[] = []
+    const calls: { url: string; durationMs: number }[] = []
     const transport = (
       _level: unknown,
       _message: unknown,
       meta?: unknown
     ): void => {
-      const record = meta as { request: { url: string }; beforeTime: bigint }
+      const record = meta as { request: { url: string }; durationMs: number }
       calls.push({
         url: record.request.url,
-        beforeTime: record.beforeTime,
-        // Captured at the same instant `logToTransports` runs, mirroring
-        // how `formatLogOutput` samples `process.hrtime.bigint()` when it
-        // computes `durationMs` in production.
-        capturedAt: process.hrtime.bigint()
+        durationMs: record.durationMs
       })
     }
 
@@ -52,17 +48,17 @@ describe('logixlysia plugin - per-request timing under concurrency', () => {
       if (!call) {
         throw new Error(`no transport call recorded for ${path}`)
       }
-      return Number(call.capturedAt - call.beforeTime) / 1_000_000
+      return call.durationMs
     }
 
     const slowDurationMs = durationFor('/slow')
     const fastDurationMs = durationFor('/fast')
 
-    // Pre-fix, `store.beforeTime` was mutated in Elysia's app-global state:
-    // the `/fast` request (started ~30ms after `/slow`) overwrites the single
-    // shared slot before `/slow`'s `onAfterHandle` reads it, so `/slow`'s
-    // logged duration collapses to roughly `120 - 30 = 90ms` instead of
-    // reflecting its true ~120ms runtime.
+    // Pre-fix, the request start time was mutated in Elysia's app-global
+    // state: the `/fast` request (started ~30ms after `/slow`) overwrites the
+    // single shared slot before `/slow`'s `onAfterHandle` reads it, so
+    // `/slow`'s logged duration collapses to roughly `120 - 30 = 90ms`
+    // instead of reflecting its true ~120ms runtime.
     expect(slowDurationMs).toBeGreaterThanOrEqual(100)
     expect(fastDurationMs).toBeLessThan(100)
   })
