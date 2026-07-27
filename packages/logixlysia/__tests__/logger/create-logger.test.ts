@@ -122,10 +122,13 @@ describe('createLogger', () => {
     const store = { beforeTime: BigInt(0) }
 
     logger.handleHttpError(request, { status: 400, message: 'bad' }, store)
+    logger.handleHttpError(request, { status: 503, message: 'down' }, store)
 
-    expect(transport).toHaveBeenCalledTimes(1)
-    const [levelValue] = transport.mock.calls[0] ?? [undefined]
-    expect(levelValue).toBe('ERROR')
+    expect(transport).toHaveBeenCalledTimes(2)
+    const [firstLevelValue] = transport.mock.calls[0] ?? [undefined]
+    expect(firstLevelValue).toBe('WARNING')
+    const [secondLevelValue] = transport.mock.calls[1] ?? [undefined]
+    expect(secondLevelValue).toBe('ERROR')
 
     await new Promise(resolve => setTimeout(resolve, 0))
   })

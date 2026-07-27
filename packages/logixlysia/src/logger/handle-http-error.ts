@@ -26,11 +26,17 @@ export const handleHttpError = (
 ): void => {
   const config = options.config
 
+  const status = isErrorWithStatus(error) ? error.status : 500
+  let level: LogLevel = 'ERROR'
+  if (status < 500 && status >= 400) {
+    level = 'WARNING'
+  }
+
   const logFilter = config?.logFilter
   if (
     logFilter?.level &&
     logFilter.level.length > 0 &&
-    !logFilter.level.includes('ERROR')
+    !logFilter.level.includes(level)
   ) {
     return
   }
@@ -39,10 +45,8 @@ export const handleHttpError = (
   const disableInternalLogger = config?.disableInternalLogger === true
   const disableFileLogging = config?.disableFileLogging === true
 
-  const status = isErrorWithStatus(error) ? error.status : 500
   const message = parseError(error)
 
-  const level: LogLevel = 'ERROR'
   const data: Record<string, unknown> = { status, message, error }
   const dataWithContext = contextStore
     ? mergeLogDataContext(data, contextStore.getContext(request))
