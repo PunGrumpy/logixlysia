@@ -37,7 +37,10 @@ export const logToTransports = (
       url: request.url
     },
     ...data,
-    beforeTime: store.beforeTime
+    durationMs:
+      store.beforeTime === BigInt(0)
+        ? 0
+        : Number(process.hrtime.bigint() - store.beforeTime) / 1_000_000
   }
 
   for (const transport of transports) {
