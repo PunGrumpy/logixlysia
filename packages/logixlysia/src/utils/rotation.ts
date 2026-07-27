@@ -8,13 +8,21 @@ const ROTATED_REGEX =
 
 export const parseSize = (value: number | string): number => {
   if (typeof value === 'number') {
+    if (!Number.isFinite(value) || value <= 0) {
+      throw new Error(`Invalid size: ${value}`)
+    }
     return value
   }
 
   const trimmed = value.trim()
-  const asNumber = Number(trimmed)
-  if (Number.isFinite(asNumber)) {
-    return asNumber
+  if (trimmed !== '') {
+    const asNumber = Number(trimmed)
+    if (Number.isFinite(asNumber)) {
+      if (asNumber <= 0) {
+        throw new Error(`Invalid size: ${value}`)
+      }
+      return asNumber
+    }
   }
 
   const match = trimmed.match(SIZE_REGEX)
