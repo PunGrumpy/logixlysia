@@ -4,6 +4,22 @@ import { Elysia } from 'elysia'
 import { logixlysia } from '../../src'
 import { HttpError, type Options } from '../../src/interfaces'
 
+const createCaptureTransport = () => {
+  const transport = mock<(lvl: unknown, msg: unknown, meta?: unknown) => void>(
+    () => {
+      /* noop */
+    }
+  )
+  const options: Options = {
+    config: {
+      transports: [{ log: transport }],
+      disableInternalLogger: true,
+      disableFileLogging: true
+    }
+  }
+  return { transport, options }
+}
+
 describe('logixlysia plugin', () => {
   test('auto-logs once when no custom log was emitted', async () => {
     const transport = mock<
@@ -249,18 +265,7 @@ describe('logixlysia plugin', () => {
   })
 
   test('string set.status is resolved to its real code and ERROR level', async () => {
-    const transport = mock<
-      (lvl: unknown, msg: unknown, meta?: unknown) => void
-    >(() => {
-      /* noop */
-    })
-    const options: Options = {
-      config: {
-        transports: [{ log: transport }],
-        disableInternalLogger: true,
-        disableFileLogging: true
-      }
-    }
+    const { transport, options } = createCaptureTransport()
 
     const app = new Elysia()
       .use(logixlysia(options))
@@ -282,18 +287,7 @@ describe('logixlysia plugin', () => {
   })
 
   test('string set.status "Not Found" logs as 404 / WARNING', async () => {
-    const transport = mock<
-      (lvl: unknown, msg: unknown, meta?: unknown) => void
-    >(() => {
-      /* noop */
-    })
-    const options: Options = {
-      config: {
-        transports: [{ log: transport }],
-        disableInternalLogger: true,
-        disableFileLogging: true
-      }
-    }
+    const { transport, options } = createCaptureTransport()
 
     const app = new Elysia()
       .use(logixlysia(options))
@@ -315,18 +309,7 @@ describe('logixlysia plugin', () => {
   })
 
   test('thrown HttpError(404) logs at WARNING, not ERROR', async () => {
-    const transport = mock<
-      (lvl: unknown, msg: unknown, meta?: unknown) => void
-    >(() => {
-      /* noop */
-    })
-    const options: Options = {
-      config: {
-        transports: [{ log: transport }],
-        disableInternalLogger: true,
-        disableFileLogging: true
-      }
-    }
+    const { transport, options } = createCaptureTransport()
 
     const app = new Elysia().use(logixlysia(options)).get('/boom', () => {
       throw new HttpError(404, 'not found')
@@ -340,18 +323,7 @@ describe('logixlysia plugin', () => {
   })
 
   test('thrown HttpError(503) logs at ERROR', async () => {
-    const transport = mock<
-      (lvl: unknown, msg: unknown, meta?: unknown) => void
-    >(() => {
-      /* noop */
-    })
-    const options: Options = {
-      config: {
-        transports: [{ log: transport }],
-        disableInternalLogger: true,
-        disableFileLogging: true
-      }
-    }
+    const { transport, options } = createCaptureTransport()
 
     const app = new Elysia().use(logixlysia(options)).get('/boom', () => {
       throw new HttpError(503, 'unavailable')
