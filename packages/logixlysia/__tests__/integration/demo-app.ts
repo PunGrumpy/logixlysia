@@ -32,6 +32,16 @@ export const createDemoApp = (options: Options) => {
       injectTraceContext(store.logger, request)
     })
     .get('/trace', () => ({ ok: true }))
+    .get('/status/:code', ({ params, set }) => {
+      const code = Number(params.code)
+      set.status =
+        Number.isInteger(code) && code >= 200 && code <= 599 ? code : 400
+      return { status: set.status }
+    })
+    .get('/status/name/:name', ({ params, set }) => {
+      set.status = decodeURIComponent(params.name) as never // e.g. "Not Found" — exercises string statuses
+      return { status: set.status }
+    })
 }
 
 export const silentTestOptions = (transport: TransportLog): Options => ({
