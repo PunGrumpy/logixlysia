@@ -54,7 +54,7 @@
     "url": "git+https://github.com/PunGrumpy/logixlysia.git"
   },
   "dependencies": {
-    "chalk": "^5.6.2",
+    "chalk": "^6.0.0",
     "pino": "^10.3.1",
     "pino-pretty": "^13.1.3"
   },
