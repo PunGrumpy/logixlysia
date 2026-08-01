@@ -18,12 +18,12 @@ jobs:
       - name: 🛫 Checkout Code
         uses: actions/checkout@v7
       - name: 🔬 Setting up CodeQL
-        uses: github/codeql-action/init@v4
+        uses: github/codeql-action/init@v4.37.3
         with:
           languages: javascript-typescript
       - name: 🩻 Auto Build
-        uses: github/codeql-action/autobuild@v4
+        uses: github/codeql-action/autobuild@v4.37.3
       - name: 🧪 Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v4
+        uses: github/codeql-action/analyze@v4.37.3
         with:
           category: "/languages/javascript-typescript"
