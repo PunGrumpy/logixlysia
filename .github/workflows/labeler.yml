@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: 🔖 Add Labels
-        uses: actions/labeler@v6
+        uses: actions/labeler@v7
       - name: 😵 Check Conflicts
         uses: mschilde/auto-label-merge-conflicts@master
         with:
