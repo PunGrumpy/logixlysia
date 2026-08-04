@@ -4,8 +4,8 @@ import { createLogger } from '../../src/logger'
 import { __resetForTesting, injectTraceContext } from '../../src/otel'
 
 const fakeSpanContext = {
-  traceId: 'abc123def456789012345678abcdef01',
-  spanId: '0123456789abcdef'
+  spanId: '0123456789abcdef',
+  traceId: 'abc123def456789012345678abcdef01'
 }
 
 const getSpanMock = mock(() => ({
@@ -34,8 +34,8 @@ describe('logixlysia/otel (mocked)', () => {
 
     const logger = createLogger({
       config: {
-        disableInternalLogger: true,
-        disableFileLogging: true
+        disableFileLogging: true,
+        disableInternalLogger: true
       }
     })
     const request = new Request('http://localhost/')
@@ -43,12 +43,12 @@ describe('logixlysia/otel (mocked)', () => {
     const result = injectTraceContext(logger, request)
 
     expect(result).toEqual({
-      trace_id: fakeSpanContext.traceId,
-      span_id: fakeSpanContext.spanId
+      span_id: fakeSpanContext.spanId,
+      trace_id: fakeSpanContext.traceId
     })
     expect(logger.getContext(request)).toMatchObject({
-      trace_id: fakeSpanContext.traceId,
-      span_id: fakeSpanContext.spanId
+      span_id: fakeSpanContext.spanId,
+      trace_id: fakeSpanContext.traceId
     })
   })
 
@@ -58,8 +58,8 @@ describe('logixlysia/otel (mocked)', () => {
 
     const logger = createLogger({
       config: {
-        disableInternalLogger: true,
-        disableFileLogging: true
+        disableFileLogging: true,
+        disableInternalLogger: true
       }
     })
     const request = new Request('http://localhost/')

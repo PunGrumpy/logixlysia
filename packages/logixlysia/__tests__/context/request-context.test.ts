@@ -13,7 +13,7 @@ describe('request context store', () => {
     store.mergeContext(request, { userId: 'u1' })
     store.mergeContext(request, { plan: 'pro' })
 
-    expect(store.getContext(request)).toEqual({ userId: 'u1', plan: 'pro' })
+    expect(store.getContext(request)).toEqual({ plan: 'pro', userId: 'u1' })
   })
 
   test('clearContext removes accumulated fields', () => {
@@ -28,10 +28,10 @@ describe('request context store', () => {
 
   test('mergeLogDataContext prefers explicit context over accumulated', () => {
     const merged = mergeLogDataContext(
-      { status: 200, context: { userId: 'override' } },
-      { userId: 'accumulated', plan: 'pro' }
+      { context: { userId: 'override' }, status: 200 },
+      { plan: 'pro', userId: 'accumulated' }
     )
 
-    expect(merged.context).toEqual({ userId: 'override', plan: 'pro' })
+    expect(merged.context).toEqual({ plan: 'pro', userId: 'override' })
   })
 })

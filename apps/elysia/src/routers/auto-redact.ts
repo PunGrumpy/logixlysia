@@ -1,6 +1,6 @@
 import type { Logixlysia } from 'logixlysia'
 
-const BASE64URL_PAD_STRIP = /=+$/
+const BASE64URL_PAD_STRIP = /[=]+$/
 
 const b64urlJson = (value: object) =>
   Buffer.from(JSON.stringify(value), 'utf8')
@@ -28,10 +28,10 @@ export const autoRedactRouter = <App extends Logixlysia>(app: App) =>
     '/auto-redact',
     ({ request, store }) => {
       store.logger.info(request, 'Hello, world!', {
-        jwt: mockJwt(),
-        ip: '192.168.1.100',
         creditCard: mockCreditCard(),
-        email: 'logixlysia@elysiajs.com'
+        email: 'logixlysia@elysiajs.com',
+        ip: '192.168.1.100',
+        jwt: mockJwt()
       })
       return { message: 'Hello, world!' }
     },

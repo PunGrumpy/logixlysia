@@ -6,10 +6,10 @@ export const loggerStorage: AsyncLocalStorage<RequestScopedLogger> =
 
 const NOOP_LOGGER: RequestScopedLogger = {
   debug: () => undefined,
-  info: () => undefined,
-  warn: () => undefined,
   error: () => undefined,
-  mergeContext: () => undefined
+  info: () => undefined,
+  mergeContext: () => undefined,
+  warn: () => undefined
 }
 
 export const useLogger = (): RequestScopedLogger =>

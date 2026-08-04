@@ -13,11 +13,11 @@ describe('resolveOptions', () => {
 
   test('explicit config overrides preset', () => {
     const resolved = resolveOptions({
-      preset: 'prod',
       config: {
         autoRedact: false,
         showStartupMessage: true
-      }
+      },
+      preset: 'prod'
     })
 
     expect(resolved.config?.autoRedact).toBe(false)
@@ -35,19 +35,19 @@ describe('resolveOptions', () => {
     const resolved = resolveOptions({
       config: {
         logRotation: {
-          maxSize: '10m',
-          maxFiles: 5,
+          compression: 'gzip',
           interval: '1d',
-          compression: 'gzip'
+          maxFiles: 5,
+          maxSize: '10m'
         }
       }
     })
 
     expect(resolved.config?.logRotation).toEqual({
-      maxSize: '10m',
-      maxFiles: 5,
+      compression: 'gzip',
       interval: '1d',
-      compression: 'gzip'
+      maxFiles: 5,
+      maxSize: '10m'
     })
   })
 
@@ -82,8 +82,8 @@ describe('resolveOptions', () => {
   test('validates logRotation after preset merge', () => {
     expect(() =>
       resolveOptions({
-        preset: 'prod',
-        config: { logRotation: { maxSize: -5 } }
+        config: { logRotation: { maxSize: -5 } },
+        preset: 'prod'
       })
     ).toThrow('logixlysia: invalid logRotation config')
   })

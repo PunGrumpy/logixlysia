@@ -28,11 +28,11 @@ export const logToTransports = (
   const input: LogToTransportsInput =
     typeof args[0] === 'string'
       ? {
-          level: args[0],
-          request: args[1],
           data: args[2],
-          store: args[3],
-          options: args[4]
+          level: args[0],
+          options: args[4],
+          request: args[1],
+          store: args[3]
         }
       : args[0]
 

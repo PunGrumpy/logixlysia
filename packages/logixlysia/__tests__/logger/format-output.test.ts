@@ -38,11 +38,11 @@ describe('formatLogOutput', () => {
     const request = createMockRequest('http://localhost/api/hello')
     const store = { beforeTime: BigInt(0) }
     const out = formatLogOutput({
-      level: 'INFO',
-      request,
       data: { status: 200 },
-      store,
-      options: baseOptions()
+      level: 'INFO',
+      options: baseOptions(),
+      request,
+      store
     })
 
     expect(out.main).toContain('/api/hello')
@@ -56,22 +56,22 @@ describe('formatLogOutput', () => {
     const request = createMockRequest('http://localhost/x')
     const store = { beforeTime: BigInt(0) }
     const out = formatLogOutput({
-      level: 'INFO',
-      request,
       data: {
-        status: 200,
-        context: { userId: 42, feature: 'test' }
+        context: { feature: 'test', userId: 42 },
+        status: 200
       },
-      store,
-      options: baseOptions()
+      level: 'INFO',
+      options: baseOptions(),
+      request,
+      store
     })
 
     expect(out.contextLines.length).toBe(2)
     expect(out.contextLines[0]).toContain('├─')
-    expect(out.contextLines[0]).toContain('userId')
-    expect(out.contextLines[0]).toContain('42')
+    expect(out.contextLines[0]).toContain('feature')
     expect(out.contextLines[1]).toContain('└─')
-    expect(out.contextLines[1]).toContain('feature')
+    expect(out.contextLines[1]).toContain('userId')
+    expect(out.contextLines[1]).toContain('42')
     expect(out.main).not.toContain('"userId"')
   })
 
@@ -79,20 +79,20 @@ describe('formatLogOutput', () => {
     const request = createMockRequest('http://localhost/x')
     const store = { beforeTime: BigInt(0) }
     const out = formatLogOutput({
-      level: 'INFO',
-      request,
       data: {
-        status: 200,
-        context: { a: 1 }
+        context: { a: 1 },
+        status: 200
       },
-      store,
+      level: 'INFO',
       options: baseOptions({
         config: {
-          useColors: false,
+          customLogFormat: '{pathname} {context}',
           showContextTree: false,
-          customLogFormat: '{pathname} {context}'
+          useColors: false
         }
-      })
+      }),
+      request,
+      store
     })
 
     expect(out.contextLines).toEqual([])
@@ -105,13 +105,13 @@ describe('formatLogOutput', () => {
     )
     const store = { beforeTime: BigInt(0) }
     const out = formatLogOutput({
-      level: 'INFO',
-      request,
       data: { status: 200 },
-      store,
+      level: 'INFO',
       options: baseOptions({
         config: { logQueryParams: true }
-      })
+      }),
+      request,
+      store
     })
 
     expect(out.main).toContain('/api/hello?foo=bar&baz=123')
@@ -121,15 +121,15 @@ describe('formatLogOutput', () => {
     const request = createMockRequest('http://localhost/api/hello?a=b')
     const store = { beforeTime: BigInt(0) }
     const out = formatLogOutput({
-      level: 'INFO',
-      request,
       data: { status: 200 },
-      store,
+      level: 'INFO',
       options: baseOptions({
         config: {
           customLogFormat: '{pathname} > {query}'
         }
-      })
+      }),
+      request,
+      store
     })
 
     expect(out.main).toBe('/api/hello > ?a=b')
@@ -139,13 +139,13 @@ describe('formatLogOutput', () => {
     const request = createMockRequest('http://localhost/')
     const store = { beforeTime: BigInt(0) }
     const out = formatLogOutput({
-      level: 'INFO',
-      request,
       data: { status: 200 },
-      store,
+      level: 'INFO',
       options: baseOptions({
-        config: { useColors: false, service: 'my-api' }
-      })
+        config: { service: 'my-api', useColors: false }
+      }),
+      request,
+      store
     })
 
     expect(out.main).toContain('[my-api]')
@@ -155,16 +155,16 @@ describe('formatLogOutput', () => {
     const request = createMockRequest('http://localhost/not-found')
     const store = { beforeTime: BigInt(0) }
     const out = formatLogOutput({
-      level: 'INFO',
-      request,
       data: { status: 404 },
-      store,
+      level: 'INFO',
       options: baseOptions({
         config: {
-          useColors: false,
-          customLogFormat: '{status} {statusText} {pathname}'
+          customLogFormat: '{status} {statusText} {pathname}',
+          useColors: false
         }
-      })
+      }),
+      request,
+      store
     })
 
     expect(out.main).toContain('404')
@@ -182,17 +182,17 @@ describe('formatLogOutput', () => {
     const redacted = redactRequest(request)
     const store = { beforeTime: BigInt(0) }
     const out = formatLogOutput({
-      level: 'INFO',
-      request: redacted,
       data: { status: 200 },
-      store,
+      level: 'INFO',
       options: baseOptions({
         config: {
-          useColors: false,
+          customLogFormat: '{pathname} {ip}',
           ip: true,
-          customLogFormat: '{pathname} {ip}'
+          useColors: false
         }
-      })
+      }),
+      request: redacted,
+      store
     })
 
     expect(out.main).toContain('/user/[REDACTED]/x')
@@ -207,17 +207,17 @@ describe('formatLogOutput', () => {
       beforeTime: process.hrtime.bigint() - BigInt(1_200_000_000)
     }
     const out = formatLogOutput({
-      level: 'INFO',
-      request,
       data: { status: 200 },
-      store,
+      level: 'INFO',
       options: baseOptions({
         config: {
+          slowThreshold: 500,
           useColors: false,
-          verySlowThreshold: 1000,
-          slowThreshold: 500
+          verySlowThreshold: 1000
         }
-      })
+      }),
+      request,
+      store
     })
 
     expect(out.main).toContain('⚡ slow')
@@ -241,7 +241,7 @@ describe('buildContextTreeLines', () => {
     const lines = buildContextTreeLines(
       'INFO',
       { context: { user: { id: 7, name: 'a' } } },
-      { config: { useColors: false, contextDepth: 2 } }
+      { config: { contextDepth: 2, useColors: false } }
     )
 
     expect(lines.some(l => l.includes('user.id'))).toBe(true)

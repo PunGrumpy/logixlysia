@@ -83,11 +83,11 @@ describe('Simple Log (String)', () => {
 
 describe('Structured Log (Object)', () => {
   const data = {
-    user: 'John Doe',
-    id: 123,
     active: true,
+    id: 123,
+    meta: { foo: 'bar' },
     tags: ['a', 'b', 'c'],
-    meta: { foo: 'bar' }
+    user: 'John Doe'
   }
 
   bench('logixlysia', () => {
@@ -154,8 +154,8 @@ describe('Deep Nested Log', () => {
 })
 
 const silentLogixConfig = {
-  disableInternalLogger: true,
   disableFileLogging: true,
+  disableInternalLogger: true,
   pino: { enabled: false }
 } as const
 

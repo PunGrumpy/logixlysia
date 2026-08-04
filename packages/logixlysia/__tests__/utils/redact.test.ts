@@ -46,20 +46,20 @@ describe('redactString', () => {
 describe('redact', () => {
   test('redacts deeply nested objects', () => {
     const original = {
+      message: 'Hello',
       user: {
         email: 'test@example.com',
         ip: '10.0.0.1'
-      },
-      message: 'Hello'
+      }
     }
     const result = redact(original)
 
     expect(result).toEqual({
+      message: 'Hello',
       user: {
         email: '[REDACTED]',
         ip: '[REDACTED]'
-      },
-      message: 'Hello'
+      }
     })
 
     // Original should not be mutated
@@ -179,12 +179,12 @@ describe('redactRequest', () => {
 
   test('redacts a header without re-using the body of a consumed request', async () => {
     const req = new Request('http://localhost/user', {
-      method: 'POST',
+      body: JSON.stringify({ name: 'alice' }),
       headers: {
         'content-type': 'application/json',
         'x-forwarded-for': '10.0.0.1'
       },
-      body: JSON.stringify({ name: 'alice' })
+      method: 'POST'
     })
 
     // Mirror Elysia consuming the body before logging runs.

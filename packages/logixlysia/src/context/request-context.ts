@@ -20,19 +20,19 @@ export const createRequestContextStore = (): RequestContextStore => {
   }
 
   return {
+    clearContext(key) {
+      bags.delete(key)
+    },
+    getContext(key) {
+      const bag = bags.get(key)
+      return bag ? { ...bag } : {}
+    },
     mergeContext(key, partial) {
       if (Object.keys(partial).length === 0) {
         return
       }
       const bag = getOrCreate(key)
       Object.assign(bag, partial)
-    },
-    getContext(key) {
-      const bag = bags.get(key)
-      return bag ? { ...bag } : {}
-    },
-    clearContext(key) {
-      bags.delete(key)
     }
   }
 }

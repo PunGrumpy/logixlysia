@@ -1,7 +1,6 @@
 import { defineMeta } from 'blume'
 
 export default defineMeta({
-  title: 'Features',
   collapsed: false,
   pages: [
     'startup',
@@ -15,5 +14,6 @@ export default defineMeta({
     'file-logging',
     'transports',
     'log-rotation'
-  ]
+  ],
+  title: 'Features'
 })

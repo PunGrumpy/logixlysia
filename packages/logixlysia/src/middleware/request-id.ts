@@ -25,8 +25,8 @@ export const resolveRequestIdConfig = (
   if (raw === true) {
     return {
       enabled: true,
-      header: DEFAULT_HEADER,
-      generator: () => crypto.randomUUID()
+      generator: () => crypto.randomUUID(),
+      header: DEFAULT_HEADER
     }
   }
 
@@ -37,8 +37,8 @@ export const resolveRequestIdConfig = (
 
   return {
     enabled: true,
-    header: raw.header?.trim() || DEFAULT_HEADER,
-    generator: raw.generator ?? (() => crypto.randomUUID())
+    generator: raw.generator ?? (() => crypto.randomUUID()),
+    header: raw.header?.trim() || DEFAULT_HEADER
   }
 }
 

@@ -4,7 +4,7 @@ export const pinoRouter = <App extends Logixlysia>(app: App) =>
   app.get(
     '/pino',
     ({ store }) => {
-      store.pino.info({ feature: 'pino', at: Date.now() }, 'pino log example')
+      store.pino.info({ at: Date.now(), feature: 'pino' }, 'pino log example')
       return { ok: true }
     },
     {

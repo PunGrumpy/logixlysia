@@ -14,12 +14,12 @@ describe('logToFile', () => {
       const options: Options = { config: {} }
 
       await logToFile({
+        data: { message: 'hello' },
         filePath,
         level: 'INFO',
+        options,
         request: createMockRequest('http://localhost/test'),
-        data: { message: 'hello' },
-        store: { beforeTime: BigInt(0) },
-        options
+        store: { beforeTime: BigInt(0) }
       })
 
       const content = await fs.readFile(filePath, 'utf-8')
@@ -35,17 +35,17 @@ describe('logToFile', () => {
       const filePath = join(dir, 'logs', 'rotate.log')
       const options: Options = {
         config: {
-          logRotation: { maxSize: 1, compress: true, compression: 'gzip' }
+          logRotation: { compress: true, compression: 'gzip', maxSize: 1 }
         }
       }
 
       await logToFile({
+        data: { message: 'x'.repeat(50) },
         filePath,
         level: 'INFO',
+        options,
         request: createMockRequest('http://localhost/test'),
-        data: { message: 'x'.repeat(50) },
-        store: { beforeTime: BigInt(0) },
-        options
+        store: { beforeTime: BigInt(0) }
       })
 
       const files = await fs.readdir(join(dir, 'logs'))
@@ -67,12 +67,12 @@ describe('logToFile', () => {
       }
 
       await logToFile({
+        data: { message: 'msg' },
         filePath,
         level: 'INFO',
+        options,
         request: createMockRequest('http://localhost/api/test?user=123'),
-        data: { message: 'msg' },
-        store: { beforeTime: BigInt(0) },
-        options
+        store: { beforeTime: BigInt(0) }
       })
 
       const content = await fs.readFile(filePath, 'utf-8')

@@ -18,15 +18,15 @@ export const requestContextRouter = <App extends Logixlysia>(app: App) =>
           cart: { items: 2, total: 4999 }
         })
         return {
-          ok: true,
-          note: 'See access log — context merged automatically'
+          note: 'See access log — context merged automatically',
+          ok: true
         }
       },
       {
         detail: {
-          summary: 'Request context accumulation',
           description:
             'Calls `mergeContext` during the handler. Fields appear on the automatic access log (no extra `logger.info` required).',
+          summary: 'Request context accumulation',
           tags: ['logging', 'request-context']
         }
       }
@@ -40,15 +40,15 @@ export const requestContextRouter = <App extends Logixlysia>(app: App) =>
         await dbQueryHelper()
 
         return {
-          ok: true,
-          note: 'Check console logs for useLogger() context propagation'
+          note: 'Check console logs for useLogger() context propagation',
+          ok: true
         }
       },
       {
         detail: {
-          summary: 'AsyncLocalStorage logger context propagation',
           description:
             'Demonstrates request-scoped logging using derived `log` and global `useLogger()` inside async helper boundaries.',
+          summary: 'AsyncLocalStorage logger context propagation',
           tags: ['logging', 'request-context']
         }
       }

@@ -1,7 +1,6 @@
 import { defineMeta } from 'blume'
 
 export default defineMeta({
-  title: 'Documentation',
   pages: [
     'introduction',
     'comparison',
@@ -14,5 +13,6 @@ export default defineMeta({
     'api-reference',
     'features',
     'integrations'
-  ]
+  ],
+  title: 'Documentation'
 })

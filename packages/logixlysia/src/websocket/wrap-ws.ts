@@ -44,7 +44,7 @@ export const createWsHandlerWrapper = (
     logger.log(
       level,
       wsSyntheticRequest(path),
-      { message, context, status: 200 },
+      { context, message, status: 200 },
       store
     )
   }
@@ -59,12 +59,13 @@ export const createWsHandlerWrapper = (
   ): THooks =>
     ({
       ...hooks,
-      open(ws) {
-        wsTimings.set(ws as object, process.hrtime.bigint())
-        hooks.open?.(ws)
+      close(ws) {
+        hooks.close?.(ws)
         if (options.config?.disableWebSocketLogging !== true) {
-          logWs('INFO', ws, path, 'WebSocket opened')
+          logWs('INFO', ws, path, 'WebSocket closed')
         }
+        contextStore.clearContext(ws as object)
+        wsTimings.delete(ws as object)
       },
       message(ws, message) {
         hooks.message?.(ws, message)
@@ -74,13 +75,12 @@ export const createWsHandlerWrapper = (
           })
         }
       },
-      close(ws) {
-        hooks.close?.(ws)
+      open(ws) {
+        wsTimings.set(ws as object, process.hrtime.bigint())
+        hooks.open?.(ws)
         if (options.config?.disableWebSocketLogging !== true) {
-          logWs('INFO', ws, path, 'WebSocket closed')
+          logWs('INFO', ws, path, 'WebSocket opened')
         }
-        contextStore.clearContext(ws as object)
-        wsTimings.delete(ws as object)
       }
     }) as THooks
 }
