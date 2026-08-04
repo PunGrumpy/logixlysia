@@ -16,7 +16,7 @@ import type {
 } from '../interfaces'
 import { logToTransports } from '../output'
 import { logToFile } from '../output/file'
-import { redact, redactRequest } from '../utils/redact'
+import { buildPinoRedactPaths, redact, redactRequest } from '../utils/redact'
 import { formatLogOutput } from './create-logger'
 import { handleHttpError } from './handle-http-error'
 
@@ -52,7 +52,15 @@ export const createLogger = (
     ...pinoOptions,
     errorKey,
     level: pinoOptions.level ?? 'info',
-    messageKey
+    messageKey,
+    ...(config?.autoRedact === true && pinoOptions.redact === undefined
+      ? {
+          redact: {
+            censor: '[REDACTED]',
+            paths: buildPinoRedactPaths(config?.redactKeys)
+          }
+        }
+      : {})
   }
 
   let pinoLogger: Pino
@@ -110,9 +118,13 @@ export const createLogger = (
       contextStore.getContext(request)
     )
     const logData =
-      config?.autoRedact === true ? redact(dataWithContext) : dataWithContext
+      config?.autoRedact === true
+        ? redact(dataWithContext, config?.redactKeys)
+        : dataWithContext
     const logRequest =
-      config?.autoRedact === true ? redactRequest(request) : request
+      config?.autoRedact === true
+        ? redactRequest(request, config?.redactKeys)
+        : request
 
     if (hasTransports) {
       logToTransports({

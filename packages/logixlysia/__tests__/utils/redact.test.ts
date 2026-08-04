@@ -1,6 +1,12 @@
 import { describe, expect, test } from 'bun:test'
 import { HttpError } from '../../src/interfaces'
-import { redact, redactRequest, redactString } from '../../src/utils/redact'
+import {
+  buildPinoRedactPaths,
+  isSensitiveKey,
+  redact,
+  redactRequest,
+  redactString
+} from '../../src/utils/redact'
 
 describe('redactString', () => {
   test('redacts emails', () => {
@@ -136,6 +142,45 @@ describe('redact', () => {
     expect(result.b.email).toBe('[REDACTED]')
     expect(result.a).not.toBe(result.b)
   })
+
+  test('redacts sensitive object keys by name', () => {
+    expect(redact({ password: 'hunter2' })).toEqual({
+      password: '[REDACTED]'
+    })
+  })
+
+  test('redacts sensitive nested keys but keeps unrelated keys', () => {
+    const result = redact({ user: { apiKey: 'abc', name: 'ok' } })
+    expect(result).toEqual({ user: { apiKey: '[REDACTED]', name: 'ok' } })
+  })
+
+  test('redacts a key added via extraKeys', () => {
+    expect(redact({ custom: 'v' }, ['custom'])).toEqual({
+      custom: '[REDACTED]'
+    })
+  })
+})
+
+describe('isSensitiveKey', () => {
+  test('matches case/format variants of built-in names', () => {
+    expect(isSensitiveKey('Authorization')).toBe(true)
+    expect(isSensitiveKey('x_api_key')).toBe(true)
+    expect(isSensitiveKey('accessToken')).toBe(true)
+  })
+
+  test('does not match on substring (no false positives)', () => {
+    expect(isSensitiveKey('tokenizer')).toBe(false)
+    expect(isSensitiveKey('sessions')).toBe(false)
+  })
+})
+
+describe('buildPinoRedactPaths', () => {
+  test('includes bare and nested paths for simple keys, bracket-quoted for hyphenated keys', () => {
+    const paths = buildPinoRedactPaths()
+    expect(paths).toContain('password')
+    expect(paths).toContain('*.password')
+    expect(paths).toContain('["x-api-key"]')
+  })
 })
 
 const sampleJwt =
@@ -164,12 +209,18 @@ describe('redactRequest', () => {
     expect(out.url).toBe('http://redacted:8080/')
   })
 
-  test('redacts sensitive header values', () => {
+  test('redacts sensitive header values wholly by name, regardless of value pattern', () => {
     const req = new Request('http://localhost/', {
-      headers: { authorization: `Bearer ${sampleJwt}` }
+      headers: {
+        authorization: `Bearer ${sampleJwt}`,
+        'content-type': 'application/json',
+        cookie: 'session=xyz'
+      }
     })
     const out = redactRequest(req)
-    expect(out.headers.get('authorization')).toBe('Bearer [REDACTED]')
+    expect(out.headers.get('authorization')).toBe('[REDACTED]')
+    expect(out.headers.get('cookie')).toBe('[REDACTED]')
+    expect(out.headers.get('content-type')).toBe('application/json')
   })
 
   test('returns same request when nothing would change', () => {

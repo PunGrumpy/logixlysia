@@ -76,13 +76,30 @@ These headers are typically set by reverse proxies (nginx, Caddy, Cloudflare, et
 
 ### `autoRedact`
 
-Automatically redacts sensitive PII (emails, IPs, credit cards, JWTs) from log messages, context objects, and errors before they are outputted.
+Automatically redacts sensitive data from log messages, context objects, errors, and request headers before they are outputted. Redaction runs in two ways:
+
+1. **By key/header name** — a built-in, case-insensitive denylist (`authorization`, `cookie`, `x-api-key`, `password`, `secret`, `token`, `session`, and more) wholly redacts the value of any matching object key or request header, regardless of what the value looks like. `-`, `_`, and camelCase variants (`x-api-key`, `x_api_key`, `xApiKey`) all match.
+2. **By value pattern** — emails, IP addresses, Luhn-valid payment card numbers, and JWTs are redacted wherever they appear in strings, even in fields not covered by the key denylist.
+
+Value-pattern redaction is best-effort — it only catches values matching those specific shapes. Always prefer key-based redaction (`redactKeys`) for known sensitive fields instead of relying on their value happening to match a pattern.
 
 - **Type:** `boolean`
 - **Default:** `false`
 
 ```ts
 autoRedact: true
+```
+
+### `redactKeys`
+
+Additional key/header names to redact when `autoRedact` is enabled, extending the built-in denylist. Matching is case-insensitive and normalizes `-`, `_`, and camelCase variants.
+
+- **Type:** `string[]`
+- **Default:** `undefined`
+
+```ts
+autoRedact: true,
+redactKeys: ['x-internal-token', 'customerSsn']
 ```
 
 ### `logQueryParams`

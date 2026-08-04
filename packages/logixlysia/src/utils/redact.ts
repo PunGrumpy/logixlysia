@@ -12,6 +12,70 @@ const PAN_MAX_LEN = 19
 const REDACTED_TEXT = '[REDACTED]'
 const CIRCULAR_REF = '[Circular]'
 
+/** Case-insensitive key/header names whose VALUES are always redacted. */
+export const DEFAULT_REDACT_KEYS: readonly string[] = [
+  'authorization',
+  'proxy-authorization',
+  'cookie',
+  'set-cookie',
+  'x-api-key',
+  'api-key',
+  'apikey',
+  'x-auth-token',
+  'password',
+  'passwd',
+  'secret',
+  'client-secret',
+  'token',
+  'access-token',
+  'refresh-token',
+  'id-token',
+  'session',
+  'session-id',
+  'private-key',
+  'credit-card',
+  'card-number',
+  'cvv',
+  'ssn'
+]
+
+const CAMEL_CASE_BOUNDARY_REGEX = /([a-z0-9])([A-Z])/g
+
+/** Normalize `X_Api-Key` / `apiKey` style variants to `x-api-key` form. */
+const normalizeKeyName = (key: string): string =>
+  key
+    .replace(CAMEL_CASE_BOUNDARY_REGEX, '$1-$2')
+    .replaceAll('_', '-')
+    .toLowerCase()
+
+export const isSensitiveKey = (
+  key: string,
+  extraKeys?: readonly string[]
+): boolean => {
+  const normalized = normalizeKeyName(key)
+  if (DEFAULT_REDACT_KEYS.includes(normalized)) {
+    return true
+  }
+  return (
+    extraKeys?.some(extraKey => normalizeKeyName(extraKey) === normalized) ??
+    false
+  )
+}
+
+/** pino redact paths for one key: top-level and one nesting level. */
+export const buildPinoRedactPaths = (
+  extraKeys?: readonly string[]
+): string[] => {
+  const keys = [...DEFAULT_REDACT_KEYS, ...(extraKeys ?? [])]
+  return keys.flatMap(key => {
+    // pino paths don't allow `-` in bare identifiers; bracket-quote them.
+    if (key.includes('-')) {
+      return [`["${key}"]`, `*["${key}"]`]
+    }
+    return [key, `*.${key}`]
+  })
+}
+
 /**
  * Host and userinfo cannot contain `[REDACTED]` — `[` begins an IPv6 literal in URLs and breaks parsing.
  */
@@ -94,7 +158,8 @@ export const redactString = (text: string): string => {
 
 const redactErrorClone = (
   originalError: Error,
-  inProgress: WeakSet<object>
+  inProgress: WeakSet<object>,
+  extraKeys?: readonly string[]
 ): Error & Record<string, unknown> => {
   const redactedMessage = redactString(originalError.message)
   const proto = Object.getPrototypeOf(originalError) as object
@@ -111,7 +176,9 @@ const redactErrorClone = (
 
   for (const key of Object.keys(errorRecord)) {
     if (key !== 'message' && key !== 'name' && key !== 'stack') {
-      newError[key] = redactInner(errorRecord[key], inProgress)
+      newError[key] = isSensitiveKey(key, extraKeys)
+        ? REDACTED_TEXT
+        : redactInner(errorRecord[key], inProgress, extraKeys)
     }
   }
 
@@ -120,22 +187,26 @@ const redactErrorClone = (
 
 const redactArrayItems = (
   value: unknown[],
-  inProgress: WeakSet<object>
+  inProgress: WeakSet<object>,
+  extraKeys?: readonly string[]
 ): unknown[] => {
   const redactedArray: unknown[] = Array.from({ length: value.length })
   for (let i = 0; i < value.length; i += 1) {
-    redactedArray[i] = redactInner(value[i], inProgress)
+    redactedArray[i] = redactInner(value[i], inProgress, extraKeys)
   }
   return redactedArray
 }
 
 const redactRecordEntries = (
   recordValue: Record<string, unknown>,
-  inProgress: WeakSet<object>
+  inProgress: WeakSet<object>,
+  extraKeys?: readonly string[]
 ): Record<string, unknown> => {
   const redactedRecord: Record<string, unknown> = {}
   for (const key of Object.keys(recordValue)) {
-    redactedRecord[key] = redactInner(recordValue[key], inProgress)
+    redactedRecord[key] = isSensitiveKey(key, extraKeys)
+      ? REDACTED_TEXT
+      : redactInner(recordValue[key], inProgress, extraKeys)
   }
   return redactedRecord
 }
@@ -153,7 +224,11 @@ const withReentrancyGuard = <T>(
   }
 }
 
-const redactInner = <T>(value: T, inProgress: WeakSet<object>): T => {
+const redactInner = <T>(
+  value: T,
+  inProgress: WeakSet<object>,
+  extraKeys?: readonly string[]
+): T => {
   if (value === null || value === undefined) {
     return value
   }
@@ -178,22 +253,23 @@ const redactInner = <T>(value: T, inProgress: WeakSet<object>): T => {
 
   if (value instanceof Error) {
     return withReentrancyGuard(obj, inProgress, () =>
-      redactErrorClone(value, inProgress)
+      redactErrorClone(value, inProgress, extraKeys)
     ) as unknown as T
   }
 
   if (Array.isArray(value)) {
     return withReentrancyGuard(obj, inProgress, () =>
-      redactArrayItems(value, inProgress)
+      redactArrayItems(value, inProgress, extraKeys)
     ) as unknown as T
   }
 
   return withReentrancyGuard(obj, inProgress, () =>
-    redactRecordEntries(value as Record<string, unknown>, inProgress)
+    redactRecordEntries(value as Record<string, unknown>, inProgress, extraKeys)
   ) as unknown as T
 }
 
-export const redact = <T>(value: T): T => redactInner(value, new WeakSet())
+export const redact = <T>(value: T, extraKeys?: readonly string[]): T =>
+  redactInner(value, new WeakSet(), extraKeys)
 
 /**
  * Clone request URL, method and headers for logging with the same string redaction as {@link redact}.
@@ -201,13 +277,18 @@ export const redact = <T>(value: T): T => redactInner(value, new WeakSet())
  * omits the body so it never re-uses the original (possibly already-consumed) request stream. The
  * original request is left untouched and remains usable.
  */
-export const redactRequest = (request: Request): Request => {
+export const redactRequest = (
+  request: Request,
+  extraKeys?: readonly string[]
+): Request => {
   const redactedUrl = redactRequestUrl(request.url)
   const nextHeaders = new Headers()
   let headersChanged = false
 
   for (const [name, value] of request.headers.entries()) {
-    const redacted = redactString(value)
+    const redacted = isSensitiveKey(name, extraKeys)
+      ? REDACTED_TEXT
+      : redactString(value)
     if (redacted !== value) {
       headersChanged = true
     }
