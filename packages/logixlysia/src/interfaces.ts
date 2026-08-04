@@ -151,6 +151,13 @@ export interface Options {
      */
     redactKeys?: string[]
 
+    /**
+     * Log the offending payload (`found`/`errors`) from validation errors.
+     * Off by default: request bodies routinely contain credentials.
+     * @default false
+     */
+    logErrorPayload?: boolean
+
     // Pino
     pino?: (PinoLoggerOptions & { prettyPrint?: PrettyPrintConfig }) | undefined
 

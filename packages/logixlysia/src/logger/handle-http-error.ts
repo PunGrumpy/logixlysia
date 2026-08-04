@@ -5,7 +5,7 @@ import {
 import type { LogLevel, Options, RequestInfo, StoreData } from '../interfaces'
 import { logToTransports } from '../output'
 import { logToFile } from '../output/file'
-import { parseError } from '../utils/error'
+import { normalizeLoggedError } from '../utils/error'
 import { redact, redactRequest } from '../utils/redact'
 import { formatLogOutput } from './create-logger'
 
@@ -45,9 +45,12 @@ export const handleHttpError = (
   const disableInternalLogger = config?.disableInternalLogger === true
   const disableFileLogging = config?.disableFileLogging === true
 
-  const message = parseError(error)
+  const { error: safeError, message } = normalizeLoggedError(
+    error,
+    config?.logErrorPayload === true
+  )
 
-  const data: Record<string, unknown> = { error, message, status }
+  const data: Record<string, unknown> = { error: safeError, message, status }
   const dataWithContext = contextStore
     ? mergeLogDataContext(data, contextStore.getContext(request))
     : data
