@@ -108,7 +108,10 @@ export default defineConfig({
     { from: '/2025', to: '/2026' }
   ],
   theme: {
-    accent: '#b24b0a',
+    accent: {
+      dark: 'oklch(0.68 0.15 45.2)',
+      light: 'oklch(0.54 0.15 45.2)'
+    },
     background: {
       dark: 'oklch(0.14 0 0)',
       light: 'oklch(1 0 0)'
