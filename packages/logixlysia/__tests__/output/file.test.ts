@@ -6,6 +6,9 @@ import { logToFile } from '../../src/output/file'
 import { createMockRequest } from '../_helpers/request'
 import { createTempDir, removeTempDir } from '../_helpers/tmp'
 
+/** Owner/group/other permission bits as a 3-digit octal string, e.g. '600'. */
+const permBits = (mode: number): string => mode.toString(8).slice(-3)
+
 describe('logToFile', () => {
   test('writes to file and creates directories', async () => {
     const dir = await createTempDir()
@@ -123,8 +126,8 @@ describe('logToFile', () => {
 
       const fileStat = await fs.stat(filePath)
       const dirStat = await fs.stat(dirname(filePath))
-      expect(fileStat.mode & 0o777).toBe(0o600)
-      expect(dirStat.mode & 0o777).toBe(0o700)
+      expect(permBits(fileStat.mode)).toBe('600')
+      expect(permBits(dirStat.mode)).toBe('700')
     } finally {
       await removeTempDir(dir)
     }
@@ -146,7 +149,7 @@ describe('logToFile', () => {
       })
 
       const fileStat = await fs.stat(filePath)
-      expect(fileStat.mode & 0o777).toBe(0o644)
+      expect(permBits(fileStat.mode)).toBe('644')
     } finally {
       await removeTempDir(dir)
     }
