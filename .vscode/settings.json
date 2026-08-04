@@ -12,6 +12,9 @@
   "[css]": {
     "editor.defaultFormatter": "biomejs.biome"
   },
+  "[postcss]": {
+    "editor.defaultFormatter": "biomejs.biome"
+  },
   "[graphql]": {
     "editor.defaultFormatter": "biomejs.biome"
   },
