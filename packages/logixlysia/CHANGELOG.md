@@ -1,5 +1,16 @@
 # Changelog
 
+## 6.6.1
+
+### Patch Changes
+
+- 8d86149: Bump `chalk` from 5 to 6. Chalk 6 requires Node.js 22 or newer, so this raises the effective minimum runtime for `logixlysia`. The colouring API used by the logger is unchanged.
+- b0f6078: Fix the per-file write/compression mutex: locks are now registered synchronously, so concurrent same-tick writes to one log file no longer interleave with rotation (previously could drop or tear lines).
+- ded5689: Track request start time per-request instead of in Elysia app-global state; logged durations are now correct when requests overlap.
+- 3660d08: Reject invalid log-rotation sizes (empty, negative, non-finite) and validate `logRotation`/`preset` config at plugin construction instead of failing silently per write.
+- b96dd49: String `set.status` values (e.g. `'Not Found'`) now log their real status code and severity instead of `200 INFO`, and thrown 4xx errors log as WARNING (matching the success-path severity ladder) instead of always ERROR.
+- 2204ee3: Transport meta now carries a JSON-serializable `durationMs` number instead of a BigInt `beforeTime` (which made `JSON.stringify` throw in every serializing transport), and transport failures are reported to stderr (rate-limited) instead of being silently swallowed.
+
 ## 6.6.0
 
 ### Minor Changes
