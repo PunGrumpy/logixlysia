@@ -45,7 +45,10 @@ export const handleHttpError = (
   const disableInternalLogger = config?.disableInternalLogger === true
   const disableFileLogging = config?.disableFileLogging === true
 
-  const { error: safeError, message } = normalizeLoggedError(error, false)
+  const { error: safeError, message } = normalizeLoggedError(
+    error,
+    config?.logErrorPayload === true
+  )
 
   const data: Record<string, unknown> = { error: safeError, message, status }
   const dataWithContext = contextStore

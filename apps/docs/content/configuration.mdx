@@ -102,6 +102,17 @@ autoRedact: true,
 redactKeys: ['x-internal-token', 'customerSsn']
 ```
 
+### `logErrorPayload`
+
+Log the offending payload (`found`/`errors`) from validation errors. Off by default — a failed schema validation embeds the entire request body (passwords, tokens, card fields) in the error message, so leaving this off keeps those values out of your logs and transports.
+
+- **Type:** `boolean`
+- **Default:** `false`
+
+```ts
+logErrorPayload: true
+```
+
 ### `logQueryParams`
 
 Include query parameters in the logged URL path.
