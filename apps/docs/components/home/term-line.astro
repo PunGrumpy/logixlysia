@@ -1,0 +1,15 @@
+---
+import TermPart from './term-part.astro'
+
+interface Props {
+  cls?: string
+  delay?: number
+  parts: [cls: string, text: string][]
+}
+
+const { cls, delay, parts } = Astro.props
+---
+
+<div data-delay={delay} class:list={['whitespace-pre', cls]}>
+  {parts.map(part => <TermPart cls={part[0]} text={part[1]} />)}
+</div>

@@ -1,0 +1,17 @@
+---
+interface Props {
+  href: string
+  label: string
+}
+
+const { href, label } = Astro.props
+---
+
+<a
+  class="-my-2 w-fit py-2 font-medium text-[16px] text-muted-foreground leading-[145%] transition-colors hover:text-foreground"
+  href={href}
+  rel={href.startsWith('http') ? 'noopener' : undefined}
+  target={href.startsWith('http') ? '_blank' : undefined}
+>
+  {label}
+</a>

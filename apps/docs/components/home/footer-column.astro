@@ -1,0 +1,13 @@
+---
+import FooterLink from './footer-link.astro'
+
+interface Props {
+  links: { href: string; label: string }[]
+}
+
+const { links } = Astro.props
+---
+
+<div class="flex flex-col items-start gap-4">
+  {links.map(link => <FooterLink href={link.href} label={link.label} />)}
+</div>

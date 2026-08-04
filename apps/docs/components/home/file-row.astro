@@ -1,0 +1,32 @@
+---
+import LiveBadge from './live-badge.astro'
+
+interface Props {
+  live: boolean
+  name: string
+  size: string
+}
+
+const { live, name, size } = Astro.props
+---
+
+<div
+  data-live-row={live ? '' : undefined}
+  class:list={[
+    'flex items-center justify-between gap-4',
+    live &&
+      '-mx-1.5 rounded-md px-1.5 transition-[background-color] duration-500',
+    !live && 'opacity-45'
+  ]}
+>
+  <span class="flex items-center gap-2">
+    <span class="text-[#2D2D2D] dark:text-[#DADADA]">{name}</span>
+    {live ? <LiveBadge /> : null}
+  </span>
+  <span
+    class="text-black/45 tabular-nums dark:text-white/40"
+    data-live-size={live ? '' : undefined}
+  >
+    {size}
+  </span>
+</div>

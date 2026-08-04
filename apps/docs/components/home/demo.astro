@@ -3,9 +3,11 @@
 // extensions/banner.ts and the default log format from logger/create-logger.ts
 // ({now} {service}{icon} {method} {pathname} {status} {duration} {message}{speed}),
 // including chalk colors, method padding, duration rounding, and the ⚡ slow badge.
+import TermLine from './term-line.astro'
+
 type TermPart = [cls: string, text: string]
 
-interface TermLine {
+interface TermLineData {
   cls?: string
   /** Pause in ms before this line prints during the replay animation. */
   delay?: number
@@ -14,17 +16,17 @@ interface TermLine {
 
 // Dual-mode terminal palette: muted ink colors in light mode, vesper in dark.
 const c = {
-  muted: 'text-black/45 dark:text-white/40',
-  fg: 'text-[#2D2D2D] dark:text-[#DADADA]',
-  mint: 'text-[#067647] dark:text-[#99ffe4]',
-  blue: 'text-[#0550AE] dark:text-[#a5d6ff]',
-  orange: 'text-[#B26A00] dark:text-[#ffc799]',
-  red: 'text-[#C9303C] dark:text-[#ff8080]',
-  bold: 'font-semibold',
   banner: 'text-black/55 dark:text-white/60',
+  blue: 'text-[#0550AE] dark:text-[#a5d6ff]',
+  bold: 'font-semibold',
+  fg: 'text-[#2D2D2D] dark:text-[#DADADA]',
+  foxError: 'rounded-sm bg-[#C9303C]/10 dark:bg-[#ff8080]/20',
   foxInfo: 'rounded-sm bg-[#0550AE]/10 dark:bg-[#a5d6ff]/15',
   foxWarn: 'rounded-sm bg-[#B26A00]/15 dark:bg-[#ffc799]/20',
-  foxError: 'rounded-sm bg-[#C9303C]/10 dark:bg-[#ff8080]/20'
+  mint: 'text-[#067647] dark:text-[#99ffe4]',
+  muted: 'text-black/45 dark:text-white/40',
+  orange: 'text-[#B26A00] dark:text-[#ffc799]',
+  red: 'text-[#C9303C] dark:text-[#ff8080]'
 }
 
 const blink = 'animate-[term-blink_1.1s_steps(1)_infinite]'
@@ -40,7 +42,7 @@ const banner: TermPart[][] = [
   [['', '└─────────────────────────────┘']]
 ]
 
-const bannerLines: TermLine[] = banner.map((parts, index) => ({
+const bannerLines: TermLineData[] = banner.map((parts, index) => ({
   cls: index === banner.length - 1 ? `${c.banner} mb-4` : c.banner,
   delay: 35,
   parts
@@ -51,7 +53,7 @@ const prefix = (time: string): TermPart => [
   `2026-07-21 10:24:${time} [api-server] `
 ]
 
-const termLines: TermLine[] = [
+const termLines: TermLineData[] = [
   ...bannerLines,
   {
     delay: 500,
@@ -196,15 +198,8 @@ const termLines: TermLine[] = [
         ><span data-term-caret class:list={[c.muted, blink]}>▌</span>
       </div>
       {termLines.map(line => (
-          <div
-            data-delay={line.delay}
-            class:list={['whitespace-pre', line.cls]}
-          >
-            {line.parts.map(part =>
-              part[0] ? <span class={part[0]}>{part[1]}</span> : part[1]
-            )}
-          </div>
-        ))}
+        <TermLine cls={line.cls} delay={line.delay} parts={line.parts} />
+      ))}
     </div>
   </div>
 </section>
@@ -253,29 +248,60 @@ const termLines: TermLine[] = [
             onVisible = resolve
           })
 
-    const play = async () => {
-      for (;;) {
-        await waitUntilVisible()
-        // Clear the screen, then replay the whole session.
-        cmd.textContent = ''
-        caret.style.display = ''
-        for (const line of lines) {
-          line.style.display = 'none'
+    // setTimeout chains instead of awaited loops keep each frame's timing
+    // identical while staying sequential.
+    const typeCommand = () =>
+      new Promise<void>(resolve => {
+        let index = 0
+        const tick = () => {
+          if (index >= command.length) {
+            resolve()
+            return
+          }
+          cmd.textContent += command.charAt(index)
+          index += 1
+          setTimeout(tick, 55)
         }
-        await sleep(400)
-        for (const char of command) {
-          cmd.textContent += char
-          await sleep(55)
+        tick()
+      })
+
+    const revealLines = () =>
+      new Promise<void>(resolve => {
+        let index = 0
+        const tick = () => {
+          const line = lines[index]
+          if (!line) {
+            resolve()
+            return
+          }
+          index += 1
+          setTimeout(() => {
+            line.style.display = ''
+            tick()
+          }, Number(line.dataset.delay) || 40)
         }
-        await sleep(350)
-        caret.style.display = 'none'
-        for (const line of lines) {
-          await sleep(Number(line.dataset.delay) || 40)
-          line.style.display = ''
-        }
-        // Hold the finished session before clearing for the next run.
-        await sleep(3200)
+        tick()
+      })
+
+    const playRound = async () => {
+      await waitUntilVisible()
+      // Clear the screen, then replay the whole session.
+      cmd.textContent = ''
+      caret.style.display = ''
+      for (const line of lines) {
+        line.style.display = 'none'
       }
+      await sleep(400)
+      await typeCommand()
+      await sleep(350)
+      caret.style.display = 'none'
+      await revealLines()
+      // Hold the finished session before clearing for the next run.
+      await sleep(3200)
+    }
+
+    const play = () => {
+      playRound().then(play)
     }
     play()
   }

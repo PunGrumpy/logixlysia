@@ -1,20 +1,25 @@
 ---
 // Log-line text lives in data (like demo.astro) so column spacing survives —
 // spans written directly in markup get their whitespace collapsed.
+import FileRow from './file-row.astro'
+import LegendChip from './legend-chip.astro'
+import LogLine from './log-line.astro'
+import TokenSpan from './token-span.astro'
+
 type Part = [cls: string, text: string]
 
 // Dual-mode terminal palette: muted ink colors in light mode, vesper in dark.
 const c = {
-  muted: 'text-black/45 dark:text-white/40',
-  fg: 'text-[#2D2D2D] dark:text-[#DADADA]',
-  mint: 'text-[#067647] dark:text-[#99ffe4]',
   blue: 'text-[#0550AE] dark:text-[#a5d6ff]',
-  orange: 'text-[#B26A00] dark:text-[#ffc799]',
-  red: 'text-[#C9303C] dark:text-[#ff8080]',
   bold: 'font-semibold',
+  fg: 'text-[#2D2D2D] dark:text-[#DADADA]',
+  foxError: 'rounded-sm bg-[#C9303C]/10 dark:bg-[#ff8080]/20',
   foxInfo: 'rounded-sm bg-[#0550AE]/10 dark:bg-[#a5d6ff]/15',
   foxWarn: 'rounded-sm bg-[#B26A00]/15 dark:bg-[#ffc799]/20',
-  foxError: 'rounded-sm bg-[#C9303C]/10 dark:bg-[#ff8080]/20'
+  mint: 'text-[#067647] dark:text-[#99ffe4]',
+  muted: 'text-black/45 dark:text-white/40',
+  orange: 'text-[#B26A00] dark:text-[#ffc799]',
+  red: 'text-[#C9303C] dark:text-[#ff8080]'
 }
 
 // Tokens get a data attribute so the spotlight loop can highlight each part
@@ -46,7 +51,7 @@ const legend = [
   { cls: c.blue, label: 'ip' }
 ]
 
-interface LogLine {
+interface LogLineData {
   duration: string
   fox: string
   method: string
@@ -55,7 +60,7 @@ interface LogLine {
   statusCls: string
 }
 
-const logParts = (line: LogLine): Part[] => [
+const logParts = (line: LogLineData): Part[] => [
   [line.fox, ' 🦊 '],
   ['', ' '],
   [`${c.mint} ${c.bold}`, line.method.padEnd(7)],
@@ -71,64 +76,64 @@ const filtered: { kept: boolean; parts: Part[] }[] = [
   {
     kept: false,
     parts: logParts({
+      duration: '1ms',
       fox: c.foxInfo,
       method: 'GET',
       path: '/health',
-      statusCls: c.mint,
       status: '200',
-      duration: '1ms'
+      statusCls: c.mint
     })
   },
   {
     kept: false,
     parts: logParts({
+      duration: '3ms',
       fox: c.foxInfo,
       method: 'GET',
       path: '/',
-      statusCls: c.mint,
       status: '200',
-      duration: '3ms'
+      statusCls: c.mint
     })
   },
   {
     kept: true,
     parts: logParts({
+      duration: '1ms',
       fox: c.foxWarn,
       method: 'GET',
       path: '/favicon.ico',
-      statusCls: c.orange,
       status: '404',
-      duration: '1ms'
+      statusCls: c.orange
     })
   },
   {
     kept: false,
     parts: logParts({
+      duration: '38ms',
       fox: c.foxInfo,
       method: 'POST',
       path: '/auth/login',
-      statusCls: c.mint,
       status: '201',
-      duration: '38ms'
+      statusCls: c.mint
     })
   },
   {
     kept: true,
     parts: logParts({
+      duration: '2ms',
       fox: c.foxError,
       method: 'GET',
       path: '/crash',
-      statusCls: c.red,
       status: '500',
-      duration: '2ms'
+      statusCls: c.red
     })
   }
 ]
 
 const files = [
-  { name: 'logs/api-2026-07-21.log', size: '2.1 MB', live: true },
-  { name: 'logs/api-2026-07-20.log', size: '10.0 MB', live: false },
-  { name: 'logs/api-2026-07-19.log.gz', size: '1.2 MB', live: false }
+  { live: true, name: 'logs/api-2026-07-21.log', size: '2.1 MB' },
+  { live: false, name: 'logs/api-2026-07-20.log', size: '10.0 MB' },
+  { live: false, name: 'logs/api-2026-07-19.log.gz', size: '1.2 MB' }
 ]
 ---
 
@@ -169,38 +174,15 @@ const files = [
     >
       <div class="overflow-x-auto p-5 font-mono text-[0.8rem] leading-relaxed">
         <div class="whitespace-pre">
-          {requestLine.map(part =>
-            part.cls || part.token ? (
-              <span
-                data-token={part.token}
-                class:list={[
-                  part.cls,
-                  part.token &&
-                    'rounded-sm transition-[background-color] duration-300'
-                ]}
-              >
-                {part.text}
-              </span>
-            ) : (
-              part.text
-            )
-          )}
+          {requestLine.map(part => (
+            <TokenSpan cls={part.cls} text={part.text} token={part.token} />
+          ))}
         </div>
       </div>
       <div
         class="flex flex-wrap gap-1.5 border-[#EBEBEB] border-t p-4 dark:border-white/8"
       >
-        {legend.map(item => (
-          <span
-            data-chip={item.label}
-            class:list={[
-              'rounded-full px-2 py-0.5 font-mono text-[11px] shadow-[0_0_0_1px_rgb(0_0_0/0.08)] transition-opacity duration-300 dark:shadow-[0_0_0_1px_rgb(255_255_255/0.1)]',
-              item.cls
-            ]}
-          >
-            {item.label}
-          </span>
-        ))}
+        {legend.map(item => <LegendChip cls={item.cls} label={item.label} />)}
       </div>
     </div>
   </div>
@@ -249,20 +231,7 @@ const files = [
         </span>
       </div>
       <div class="overflow-x-auto p-5 font-mono text-[0.8rem] leading-relaxed">
-        {filtered.map(line => (
-          <div
-            data-kept={line.kept ? '' : undefined}
-            data-log
-            class:list={[
-              'whitespace-pre transition-opacity duration-300',
-              !line.kept && 'opacity-35'
-            ]}
-          >
-            {line.parts.map(part =>
-              part[0] ? <span class={part[0]}>{part[1]}</span> : part[1]
-            )}
-          </div>
-        ))}
+        {filtered.map(line => <LogLine kept={line.kept} parts={line.parts} />)}
       </div>
     </div>
   </div>
@@ -311,35 +280,7 @@ const files = [
       </div>
       <div class="grid gap-1 p-5 font-mono text-[0.8rem] leading-relaxed">
         {files.map(file => (
-          <div
-            data-live-row={file.live ? '' : undefined}
-            class:list={[
-              'flex items-center justify-between gap-4',
-              file.live &&
-                '-mx-1.5 rounded-md px-1.5 transition-[background-color] duration-500',
-              !file.live && 'opacity-45'
-            ]}
-          >
-            <span class="flex items-center gap-2">
-              <span class={c.fg}>{file.name}</span>
-              {file.live && (
-                <span
-                  class:list={[
-                    'rounded-full px-2 py-0.5 font-mono text-[11px] shadow-[0_0_0_1px_rgb(0_0_0/0.08)] dark:shadow-[0_0_0_1px_rgb(255_255_255/0.1)]',
-                    c.mint
-                  ]}
-                >
-                  live
-                </span>
-              )}
-            </span>
-            <span
-              data-live-size={file.live ? '' : undefined}
-              class:list={[c.muted, 'tabular-nums']}
-            >
-              {file.size}
-            </span>
-          </div>
+          <FileRow live={file.live} name={file.name} size={file.size} />
         ))}
       </div>
     </div>
@@ -381,26 +322,33 @@ const files = [
     const tokens = [...anatomy.querySelectorAll<HTMLElement>('[data-token]')]
     const chips = [...anatomy.querySelectorAll<HTMLElement>('[data-chip]')]
     const waitUntilVisible = visibilityGate(anatomy)
-    ;(async () => {
-      for (;;) {
-        for (const token of tokens) {
-          await waitUntilVisible()
-          token.classList.add('bg-black/5', 'dark:bg-white/10')
-          for (const chip of chips) {
-            chip.classList.toggle(
-              'opacity-40',
-              chip.dataset.chip !== token.dataset.token
-            )
-          }
-          await sleep(1100)
-          token.classList.remove('bg-black/5', 'dark:bg-white/10')
-        }
-        for (const chip of chips) {
-          chip.classList.remove('opacity-40')
-        }
-        await sleep(900)
+    const spotlight = async (token: HTMLElement) => {
+      await waitUntilVisible()
+      token.classList.add('bg-black/5', 'dark:bg-white/10')
+      for (const chip of chips) {
+        chip.classList.toggle(
+          'opacity-40',
+          chip.dataset.chip !== token.dataset.token
+        )
       }
-    })()
+      await sleep(1100)
+      token.classList.remove('bg-black/5', 'dark:bg-white/10')
+    }
+    const round = async () => {
+      // Chain instead of an awaited loop: each token spotlights in turn.
+      await tokens.reduce(
+        (previous, token) => previous.then(() => spotlight(token)),
+        Promise.resolve()
+      )
+      for (const chip of chips) {
+        chip.classList.remove('opacity-40')
+      }
+      await sleep(900)
+    }
+    const loop = () => {
+      round().then(loop)
+    }
+    loop()
   }
 
   // 02 · Replay the raw stream, then apply the filter and dim the noise.
@@ -409,30 +357,45 @@ const files = [
     const lines = [...filterDemo.querySelectorAll<HTMLElement>('[data-log]')]
     const chip = filterDemo.querySelector<HTMLElement>('[data-filter-chip]')
     const waitUntilVisible = visibilityGate(filterDemo)
-    ;(async () => {
-      for (;;) {
-        await waitUntilVisible()
-        for (const line of lines) {
-          line.classList.add('opacity-0')
-          line.classList.remove('opacity-35')
-        }
-        await sleep(500)
-        for (const line of lines) {
-          line.classList.remove('opacity-0')
-          await sleep(180)
-        }
-        await sleep(800)
-        chip?.classList.add('bg-black/5', 'dark:bg-white/10')
-        for (const line of lines) {
-          if (line.dataset.kept === undefined) {
-            line.classList.add('opacity-35')
+    // setTimeout chain instead of an awaited loop: lines reveal one by one.
+    const revealLines = () =>
+      new Promise<void>(resolve => {
+        let index = 0
+        const tick = () => {
+          const line = lines[index]
+          if (!line) {
+            resolve()
+            return
           }
+          index += 1
+          line.classList.remove('opacity-0')
+          setTimeout(tick, 180)
         }
-        await sleep(600)
-        chip?.classList.remove('bg-black/5', 'dark:bg-white/10')
-        await sleep(2800)
+        tick()
+      })
+    const round = async () => {
+      await waitUntilVisible()
+      for (const line of lines) {
+        line.classList.add('opacity-0')
+        line.classList.remove('opacity-35')
       }
-    })()
+      await sleep(500)
+      await revealLines()
+      await sleep(800)
+      chip?.classList.add('bg-black/5', 'dark:bg-white/10')
+      for (const line of lines) {
+        if (line.dataset.kept === undefined) {
+          line.classList.add('opacity-35')
+        }
+      }
+      await sleep(600)
+      chip?.classList.remove('bg-black/5', 'dark:bg-white/10')
+      await sleep(2800)
+    }
+    const loop = () => {
+      round().then(loop)
+    }
+    loop()
   }
 
   // 03 · The live file grows until the size threshold, flashes, and rotates.
@@ -442,21 +405,33 @@ const files = [
     const size = rotation.querySelector<HTMLElement>('[data-live-size]')
     const waitUntilVisible = visibilityGate(rotation)
     if (row && size) {
-      ;(async () => {
-        for (;;) {
-          await waitUntilVisible()
+      // setTimeout chain instead of an awaited loop: the size ticks upward.
+      const growFile = () =>
+        new Promise<void>(resolve => {
           let megabytes = 0.1
-          while (megabytes < 10) {
+          const tick = () => {
+            if (megabytes >= 10) {
+              resolve()
+              return
+            }
             size.textContent = `${megabytes.toFixed(1)} MB`
             megabytes += 0.3
-            await sleep(120)
+            setTimeout(tick, 120)
           }
-          size.textContent = '10.0 MB'
-          row.classList.add('bg-[#067647]/10', 'dark:bg-[#99ffe4]/10')
-          await sleep(700)
-          row.classList.remove('bg-[#067647]/10', 'dark:bg-[#99ffe4]/10')
-        }
-      })()
+          tick()
+        })
+      const round = async () => {
+        await waitUntilVisible()
+        await growFile()
+        size.textContent = '10.0 MB'
+        row.classList.add('bg-[#067647]/10', 'dark:bg-[#99ffe4]/10')
+        await sleep(700)
+        row.classList.remove('bg-[#067647]/10', 'dark:bg-[#99ffe4]/10')
+      }
+      const loop = () => {
+        round().then(loop)
+      }
+      loop()
     }
   }
 </script>

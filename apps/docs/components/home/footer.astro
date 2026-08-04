@@ -1,4 +1,6 @@
 ---
+import FooterColumn from './footer-column.astro'
+
 const columns = [
   [
     { href: '/docs/introduction', label: 'Documentation' },
@@ -37,20 +39,7 @@ const columns = [
         aria-label="Footer"
         class="t-stagger-line t-stagger-line--2 flex flex-col gap-10 sm:flex-row sm:gap-16 lg:gap-24"
       >
-        {columns.map(column => (
-            <div class="flex flex-col items-start gap-4">
-              {column.map(link => (
-                <a
-                  class="-my-2 w-fit py-2 font-medium text-[16px] text-muted-foreground leading-[145%] transition-colors hover:text-foreground"
-                  href={link.href}
-                  rel={link.href.startsWith('http') ? 'noopener' : undefined}
-                  target={link.href.startsWith('http') ? '_blank' : undefined}
-                >
-                  {link.label}
-                </a>
-              ))}
-            </div>
-          ))}
+        {columns.map(column => <FooterColumn links={column} />)}
       </nav>
     </div>
   </div>
