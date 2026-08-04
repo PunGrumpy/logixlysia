@@ -1,6 +1,7 @@
 import { appendFile } from 'node:fs/promises'
 import { dirname } from 'node:path'
 import type { LogLevel, Options, RequestInfo, StoreData } from '../interfaces'
+import { sanitizeLogText } from '../utils/sanitize'
 import { ensureDir } from './fs'
 import { performRotation, shouldRotate } from './rotation-manager'
 
@@ -102,15 +103,18 @@ export const logToFile = async (
     pathname = request.url
   }
 
-  const line = `${level} ${durationMs.toFixed(2)}ms ${request.method} ${pathname} ${message}\n`
+  const line = `${level} ${durationMs.toFixed(2)}ms ${request.method} ${sanitizeLogText(pathname, 1024)} ${sanitizeLogText(message)}\n`
 
   // Acquire lock before any file operations to prevent race conditions
   const releaseLock = await acquireLock(filePath)
 
   try {
     try {
-      await ensureDir(dirname(filePath))
-      await appendFile(filePath, line, { encoding: 'utf-8' })
+      await ensureDir(dirname(filePath), config?.logDirMode)
+      await appendFile(filePath, line, {
+        encoding: 'utf-8',
+        mode: config?.logFileMode ?? 0o600
+      })
     } catch (error) {
       // Log file write errors to stderr so they're not completely silent
       console.error(

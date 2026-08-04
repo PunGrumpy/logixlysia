@@ -9,6 +9,7 @@ import type {
   StoreData
 } from '../interfaces'
 import { isStructuredError, parseError } from '../utils/error'
+import { sanitizeLogText } from '../utils/sanitize'
 
 const pad2 = (value: number): string => String(value).padStart(2, '0')
 const pad3 = (value: number): string => String(value).padStart(3, '0')
@@ -63,10 +64,10 @@ const formatTimestamp = (date: Date, pattern?: string): string => {
 /** Resolves client IP from x-forwarded-for (first IP) or x-real-ip. Empty when neither header is set (e.g. localhost). */
 const getIp = (request: RequestInfo): string => {
   const forwarded = request.headers.get('x-forwarded-for')
-  if (forwarded) {
-    return forwarded.split(',')[0]?.trim() ?? ''
-  }
-  return request.headers.get('x-real-ip') ?? ''
+  const candidate = forwarded
+    ? (forwarded.split(',')[0]?.trim() ?? '')
+    : (request.headers.get('x-real-ip') ?? '')
+  return sanitizeLogText(candidate, 64)
 }
 
 export const formatDuration = (ms: number): string => {
@@ -268,18 +269,18 @@ const stringifyTreeValue = (value: unknown): string => {
     return 'undefined'
   }
   if (typeof value === 'string') {
-    return value
+    return sanitizeLogText(value)
   }
   if (typeof value === 'number' || typeof value === 'boolean') {
     return String(value)
   }
   if (value instanceof Error) {
-    return value.message
+    return sanitizeLogText(value.message)
   }
   try {
-    return JSON.stringify(value)
+    return sanitizeLogText(JSON.stringify(value))
   } catch {
-    return String(value)
+    return sanitizeLogText(String(value))
   }
 }
 

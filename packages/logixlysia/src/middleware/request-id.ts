@@ -1,6 +1,7 @@
 import type { RequestIdConfig } from '../interfaces'
 
 const DEFAULT_HEADER = 'X-Request-Id'
+const VALID_REQUEST_ID = /^[A-Za-z0-9._-]{1,128}$/
 
 export interface ResolvedRequestIdConfig {
   enabled: boolean
@@ -45,13 +46,18 @@ export const resolveRequestIdConfig = (
 /**
  * Reads an existing request ID from the incoming request header, or generates a
  * new one using the configured generator.
+ *
+ * Inbound values are validated against `VALID_REQUEST_ID` (alphanumeric plus
+ * `.`, `_`, `-`, 1-128 chars) before being trusted — request IDs flow into log
+ * lines, response headers, and context trees, so malformed or oversized
+ * values are replaced with a freshly generated one rather than echoed back.
  */
 export const getOrCreateRequestId = (
   request: Request,
   config: ResolvedRequestIdConfig
 ): string => {
   const existing = request.headers.get(config.header)
-  if (existing) {
+  if (existing && VALID_REQUEST_ID.test(existing)) {
     return existing
   }
   return config.generator()
