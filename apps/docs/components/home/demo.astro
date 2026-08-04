@@ -29,7 +29,7 @@ const c = {
   red: 'text-[#C9303C] dark:text-[#ff8080]'
 }
 
-const blink = 'animate-[term-blink_1.1s_steps(1)_infinite]'
+const blink = 'motion-safe:animate-[term-blink_1.1s_steps(1)_infinite]'
 
 const banner: TermPart[][] = [
   [['', '┌─────────────────────────────┐']],
@@ -169,7 +169,7 @@ const termLines: TermLineData[] = [
     data-term
   >
     <div
-      class="relative flex h-11 items-center justify-center border-[#EBEBEB] border-b dark:border-white/8"
+      class="relative flex h-11 items-center justify-center border-[#EBEBEB] border-b px-20 dark:border-white/8"
     >
       <div class="absolute left-4 flex items-center gap-2">
         <span
@@ -182,9 +182,41 @@ const termLines: TermLineData[] = [
           class="size-3.5 rounded-full bg-[oklch(88.4%_0_0)] dark:bg-[#323232]"
         ></span>
       </div>
-      <span class="font-medium text-[#6E6E6E] text-sm dark:text-[#7A7A7A]">
+      <span
+        class="truncate font-medium text-[#6E6E6E] text-sm dark:text-[#888888]"
+      >
         Terminal — api-server
       </span>
+      <button
+        aria-label="Pause animation"
+        class="group absolute right-2.5 grid size-9 cursor-pointer place-items-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+        data-term-pause
+        hidden
+        type="button"
+      >
+        <span class="relative size-4">
+          <svg
+            aria-hidden="true"
+            class="size-4 transition-[opacity,scale,filter] duration-300 ease-[cubic-bezier(0.2,0,0,1)] group-data-paused:scale-25 group-data-paused:opacity-0 group-data-paused:blur-xs"
+            fill="none"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+          >
+            <path d="M10 5v14M14 5v14"></path>
+          </svg>
+          <svg
+            aria-hidden="true"
+            class="absolute inset-0 size-4 translate-x-px scale-25 opacity-0 blur-xs transition-[opacity,scale,filter] duration-300 ease-[cubic-bezier(0.2,0,0,1)] group-data-paused:scale-100 group-data-paused:opacity-100 group-data-paused:blur-none"
+            fill="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path d="M8 5v14l11-7z"></path>
+          </svg>
+        </span>
+      </button>
     </div>
     <div
       aria-label="Example Logixlysia log output"
@@ -226,27 +258,51 @@ const termLines: TermLineData[] = [
       line.style.display = 'none'
     }
 
-    // Replay only while the terminal is on screen.
+    // Replay only while the terminal is on screen and not paused by the user
+    // (the visible pause control keeps this indefinite replay WCAG 2.2.2
+    // compliant). One consumer awaits the gate at a time, so a single
+    // `onReady` slot is enough.
+    const pauseButton = terminal.querySelector<HTMLElement>('[data-term-pause]')
     let visible = false
-    let onVisible: (() => void) | undefined
+    let paused = false
+    let onReady: (() => void) | undefined
+    const ready = () => visible && !paused
+    const notifyReady = () => {
+      if (ready() && onReady) {
+        const resume = onReady
+        onReady = undefined
+        resume()
+      }
+    }
     const observer = new IntersectionObserver(
       entries => {
         visible = entries.some(entry => entry.isIntersecting)
-        if (visible && onVisible) {
-          onVisible()
-          onVisible = undefined
-        }
+        notifyReady()
       },
       { threshold: 0.35 }
     )
     observer.observe(terminal)
 
-    const waitUntilVisible = () =>
-      visible
+    const waitUntilReady = () =>
+      ready()
         ? Promise.resolve()
         : new Promise<void>(resolve => {
-            onVisible = resolve
+            onReady = resolve
           })
+
+    if (pauseButton) {
+      pauseButton.hidden = false
+      pauseButton.addEventListener('click', () => {
+        paused = !paused
+        pauseButton.toggleAttribute('data-paused', paused)
+        terminal.toggleAttribute('data-term-paused', paused)
+        pauseButton.setAttribute(
+          'aria-label',
+          paused ? 'Play animation' : 'Pause animation'
+        )
+        notifyReady()
+      })
+    }
 
     // setTimeout chains instead of awaited loops keep each frame's timing
     // identical while staying sequential.
@@ -254,6 +310,10 @@ const termLines: TermLineData[] = [
       new Promise<void>(resolve => {
         let index = 0
         const tick = () => {
+          if (!ready()) {
+            onReady = tick
+            return
+          }
           if (index >= command.length) {
             resolve()
             return
@@ -269,6 +329,10 @@ const termLines: TermLineData[] = [
       new Promise<void>(resolve => {
         let index = 0
         const tick = () => {
+          if (!ready()) {
+            onReady = tick
+            return
+          }
           const line = lines[index]
           if (!line) {
             resolve()
@@ -284,7 +348,7 @@ const termLines: TermLineData[] = [
       })
 
     const playRound = async () => {
-      await waitUntilVisible()
+      await waitUntilReady()
       // Clear the screen, then replay the whole session.
       cmd.textContent = ''
       caret.style.display = ''

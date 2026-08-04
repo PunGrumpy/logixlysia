@@ -169,8 +169,10 @@ const files = [
       </a>
     </div>
     <div
+      aria-label="Example log line with each colored token highlighted in turn: timestamp, service, method, path, status, duration, and client IP"
       class="t-stagger-line t-stagger-line--2 min-w-0 rounded-3xl bg-white shadow-[0_0_0_1px_rgb(0_0_0/0.06),0_1px_2px_-1px_rgb(0_0_0/0.06),0_2px_4px_0_rgb(0_0_0/0.04)] dark:bg-[#131313] dark:shadow-[0_0_0_1px_rgb(255_255_255/0.08)]"
       data-anatomy
+      role="img"
     >
       <div class="overflow-x-auto p-5 font-mono text-[0.8rem] leading-relaxed">
         <div class="whitespace-pre">
@@ -217,14 +219,16 @@ const files = [
       </a>
     </div>
     <div
+      aria-label="Example filter config keeping only warnings and errors; filtered-out request logs appear dimmed"
       class="t-stagger-line t-stagger-line--2 min-w-0 rounded-3xl bg-white shadow-[0_0_0_1px_rgb(0_0_0/0.06),0_1px_2px_-1px_rgb(0_0_0/0.06),0_2px_4px_0_rgb(0_0_0/0.04)] lg:order-1 dark:bg-[#131313] dark:shadow-[0_0_0_1px_rgb(255_255_255/0.08)]"
       data-filter-demo
+      role="img"
     >
       <div
-        class="flex items-center gap-2 border-[#EBEBEB] border-b p-4 dark:border-white/8"
+        class="flex items-center gap-2 overflow-x-auto border-[#EBEBEB] border-b p-4 dark:border-white/8"
       >
         <span
-          class="rounded-full px-2 py-0.5 font-mono text-[#2D2D2D] text-[11px] shadow-[0_0_0_1px_rgb(0_0_0/0.08)] transition-[background-color] duration-300 dark:text-[#DADADA] dark:shadow-[0_0_0_1px_rgb(255_255_255/0.1)]"
+          class="whitespace-nowrap rounded-full px-2 py-0.5 font-mono text-[#2D2D2D] text-[11px] shadow-[0_0_0_1px_rgb(0_0_0/0.08)] transition-[background-color] duration-300 dark:text-[#DADADA] dark:shadow-[0_0_0_1px_rgb(255_255_255/0.1)]"
           data-filter-chip
         >
           filter: &lbrace; level: ['warn', 'error'] &rbrace;
@@ -266,19 +270,23 @@ const files = [
       </a>
     </div>
     <div
+      aria-label="Example rotation config: the live log file grows to the 10 MB size limit, then rotates while older files compress"
       class="t-stagger-line t-stagger-line--2 min-w-0 rounded-3xl bg-white shadow-[0_0_0_1px_rgb(0_0_0/0.06),0_1px_2px_-1px_rgb(0_0_0/0.06),0_2px_4px_0_rgb(0_0_0/0.04)] dark:bg-[#131313] dark:shadow-[0_0_0_1px_rgb(255_255_255/0.08)]"
       data-rotation
+      role="img"
     >
       <div
-        class="flex items-center gap-2 border-[#EBEBEB] border-b p-4 dark:border-white/8"
+        class="flex items-center gap-2 overflow-x-auto border-[#EBEBEB] border-b p-4 dark:border-white/8"
       >
         <span
-          class="rounded-full px-2 py-0.5 font-mono text-[#2D2D2D] text-[11px] shadow-[0_0_0_1px_rgb(0_0_0/0.08)] dark:text-[#DADADA] dark:shadow-[0_0_0_1px_rgb(255_255_255/0.1)]"
+          class="whitespace-nowrap rounded-full px-2 py-0.5 font-mono text-[#2D2D2D] text-[11px] shadow-[0_0_0_1px_rgb(0_0_0/0.08)] dark:text-[#DADADA] dark:shadow-[0_0_0_1px_rgb(255_255_255/0.1)]"
         >
           rotation: &lbrace; size: '10m', interval: '1d' &rbrace;
         </span>
       </div>
-      <div class="grid gap-1 p-5 font-mono text-[0.8rem] leading-relaxed">
+      <div
+        class="grid gap-1 overflow-x-auto p-5 font-mono text-[0.8rem] leading-relaxed"
+      >
         {files.map(file => (
           <FileRow live={file.live} name={file.name} size={file.size} />
         ))}
@@ -345,8 +353,16 @@ const files = [
       }
       await sleep(900)
     }
+    // Bounded replay (WCAG 2.2.2): stop after a few rounds instead of looping
+    // forever; the resting state matches the static markup.
+    let rounds = 0
     const loop = () => {
-      round().then(loop)
+      round().then(() => {
+        rounds += 1
+        if (rounds < 3) {
+          loop()
+        }
+      })
     }
     loop()
   }
@@ -392,8 +408,14 @@ const files = [
       chip?.classList.remove('bg-black/5', 'dark:bg-white/10')
       await sleep(2800)
     }
+    let rounds = 0
     const loop = () => {
-      round().then(loop)
+      round().then(() => {
+        rounds += 1
+        if (rounds < 3) {
+          loop()
+        }
+      })
     }
     loop()
   }
@@ -428,8 +450,17 @@ const files = [
         await sleep(700)
         row.classList.remove('bg-[#067647]/10', 'dark:bg-[#99ffe4]/10')
       }
+      const initialSize = size.textContent
+      let rounds = 0
       const loop = () => {
-        round().then(loop)
+        round().then(() => {
+          rounds += 1
+          if (rounds < 3) {
+            loop()
+            return
+          }
+          size.textContent = initialSize
+        })
       }
       loop()
     }

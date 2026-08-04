@@ -47,11 +47,13 @@ const { command } = Astro.props
       </svg>
     </span>
   </button>
+  <span class="sr-only" data-copy-status role="status"></span>
 </div>
 
 <script>
   for (const block of document.querySelectorAll('[data-copy]')) {
     const button = block.querySelector('button')
+    const status = block.querySelector('[data-copy-status]')
     if (!button) {
       continue
     }
@@ -63,9 +65,15 @@ const { command } = Astro.props
       }
       await navigator.clipboard.writeText(value)
       button.dataset.copied = ''
+      if (status) {
+        status.textContent = 'Copied'
+      }
       clearTimeout(timeout)
       timeout = setTimeout(() => {
         delete button.dataset.copied
+        if (status) {
+          status.textContent = ''
+        }
       }, 1200)
     })
   }

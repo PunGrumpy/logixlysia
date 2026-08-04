@@ -53,6 +53,15 @@ html {
   }
 }
 
+/* User-paused demo terminal (`data-term-paused` is toggled by its pause
+   button): freeze the caret blink along with the scripted replay. The
+   `:root` prefix outweighs the animate-[…] utility's shorthand, which would
+   otherwise win on source order (this sheet loads before Tailwind's). */
+:root [data-term-paused] * {
+  animation-play-state: paused;
+}
+
+
 /* Staggered text entrance. Lines start shifted and
    blurred; a script marks the `.t-stagger` container `.is-shown` after the
    first paint and each line transitions in, offset by --stagger-stagger. */
