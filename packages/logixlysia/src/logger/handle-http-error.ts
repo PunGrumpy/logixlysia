@@ -52,9 +52,13 @@ export const handleHttpError = (
     ? mergeLogDataContext(data, contextStore.getContext(request))
     : data
   const logData =
-    config?.autoRedact === true ? redact(dataWithContext) : dataWithContext
+    config?.autoRedact === true
+      ? redact(dataWithContext, config?.redactKeys)
+      : dataWithContext
   const logRequest =
-    config?.autoRedact === true ? redactRequest(request) : request
+    config?.autoRedact === true
+      ? redactRequest(request, config?.redactKeys)
+      : request
 
   logToTransports({ data: logData, level, options, request: logRequest, store })
 

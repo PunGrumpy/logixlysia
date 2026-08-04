@@ -143,6 +143,14 @@ export interface Options {
      */
     autoRedact?: boolean
 
+    /**
+     * Additional key/header names (case-insensitive; `-`/`_`/camelCase variants
+     * are normalized) whose values are redacted when `autoRedact` is enabled.
+     * Extends the built-in list (authorization, cookie, x-api-key, password,
+     * secret, token, session, …).
+     */
+    redactKeys?: string[]
+
     // Pino
     pino?: (PinoLoggerOptions & { prettyPrint?: PrettyPrintConfig }) | undefined
 
