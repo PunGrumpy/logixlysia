@@ -88,24 +88,17 @@ export const normalizeLoggedError = (
   }
 
   if (error instanceof Error) {
-    const record = error as unknown as Record<string, unknown>
+    const safe = copyStructuredErrorFields(
+      error as unknown as Record<string, unknown>
+    )
+    safe.message = error.message
     // Native subclasses (e.g. `class HttpError extends Error`) don't set
     // `.name` unless the author overrides it, so it reads back as the
     // generic "Error". Prefer the constructor name in that case.
-    const name =
+    safe.name =
       error.name === 'Error'
         ? (error.constructor?.name ?? error.name)
         : error.name
-    const safe: Record<string, unknown> = {
-      message: error.message,
-      name
-    }
-    // Preserve structured-error fields the formatter renders.
-    for (const key of ['why', 'fix', 'link', 'internal', 'status'] as const) {
-      if (record[key] !== undefined) {
-        safe[key] = record[key]
-      }
-    }
     return { error: safe, message: parseError(error) }
   }
 
