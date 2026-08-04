@@ -62,6 +62,19 @@ export const isSensitiveKey = (
   )
 }
 
+/** pino redact paths for one key: top-level and one nesting level. */
+export const buildPinoRedactPaths = (
+  extraKeys?: readonly string[]
+): string[] => {
+  const keys = [...DEFAULT_REDACT_KEYS, ...(extraKeys ?? [])]
+  return keys.flatMap(key => {
+    // pino paths don't allow `-` in bare identifiers; bracket-quote them.
+    const path = key.includes('-') ? `["${key}"]` : key
+    const nested = key.includes('-') ? `*["${key}"]` : `*.${key}`
+    return [path, nested]
+  })
+}
+
 /**
  * Host and userinfo cannot contain `[REDACTED]` — `[` begins an IPv6 literal in URLs and breaks parsing.
  */
