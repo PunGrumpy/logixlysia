@@ -138,4 +138,27 @@ describe('handleHttpError', () => {
     expect(metaError.fix).toBe('set the config value')
     expect(metaError.message).toBe('bad config')
   })
+
+  // Class names (and thus `.name`/`.constructor.name`) are mangled under
+  // bundler minification (e.g. `bun build --minify`, esbuild). Elysia's
+  // `code === 'VALIDATION'` is the minification-safe discriminant; simulate
+  // a mangled class to prove detection still works.
+  test('detects a validation error by code when class names are minified', () => {
+    class MangledClassName extends Error {}
+    const mangled = Object.assign(
+      new MangledClassName('{"found":{"password":"leak-me"}}'),
+      {
+        all: [{ path: '/password' }],
+        code: 'VALIDATION',
+        type: 'body'
+      }
+    )
+
+    const { error: metaError, message } = normalizeLoggedError(mangled, false)
+
+    expect(message).toBe('Validation failed (body): /password')
+    expect(metaError.name).toBe('ValidationError')
+    expect(JSON.stringify(metaError)).not.toContain('leak-me')
+    expect(message).not.toContain('leak-me')
+  })
 })

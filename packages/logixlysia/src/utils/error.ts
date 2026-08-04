@@ -33,7 +33,12 @@ const isValidationErrorLike = (
   value: unknown
 ): value is Error & { all?: unknown[]; status?: number; type?: string } =>
   value instanceof Error &&
-  (value.name === 'ValidationError' ||
+  // `code` is Elysia's minification-safe discriminant — `.name` and
+  // `.constructor.name` both degrade to a mangled string under bundler
+  // minification (e.g. `bun build --minify`, esbuild), so `code` must be
+  // checked too or validation bodies silently re-leak in that build mode.
+  ((value as { code?: unknown }).code === 'VALIDATION' ||
+    value.name === 'ValidationError' ||
     value.constructor?.name === 'ValidationError')
 
 const STRUCTURED_ERROR_KEYS = [
