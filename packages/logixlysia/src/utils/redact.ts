@@ -69,9 +69,10 @@ export const buildPinoRedactPaths = (
   const keys = [...DEFAULT_REDACT_KEYS, ...(extraKeys ?? [])]
   return keys.flatMap(key => {
     // pino paths don't allow `-` in bare identifiers; bracket-quote them.
-    const path = key.includes('-') ? `["${key}"]` : key
-    const nested = key.includes('-') ? `*["${key}"]` : `*.${key}`
-    return [path, nested]
+    if (key.includes('-')) {
+      return [`["${key}"]`, `*["${key}"]`]
+    }
+    return [key, `*.${key}`]
   })
 }
 
