@@ -2,7 +2,7 @@ name: 🛡️ Security Scan
 
 on:
   schedule:
-    - cron: "0 0 * * *"
+    - cron: '0 0 * * *'
   workflow_call:
 
 jobs:
@@ -18,12 +18,12 @@ jobs:
       - name: 🛫 Checkout Code
         uses: actions/checkout@v7
       - name: 🔬 Setting up CodeQL
-        uses: github/codeql-action/init@v4.37.3
+        uses: github/codeql-action/init@v4.37.4
         with:
           languages: javascript-typescript
       - name: 🩻 Auto Build
-        uses: github/codeql-action/autobuild@v4.37.3
+        uses: github/codeql-action/autobuild@v4.37.4
       - name: 🧪 Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v4.37.3
+        uses: github/codeql-action/analyze@v4.37.4
         with:
-          category: "/languages/javascript-typescript"
+          category: '/languages/javascript-typescript'
