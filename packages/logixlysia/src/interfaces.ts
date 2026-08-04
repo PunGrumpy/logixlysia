@@ -135,6 +135,10 @@ export interface Options {
     disableInternalLogger?: boolean
     disableFileLogging?: boolean
     logFilePath?: string
+    /** File mode for created log files. @default 0o600 */
+    logFileMode?: number
+    /** Directory mode for created log directories. @default 0o700 */
+    logDirMode?: number
     logRotation?: LogRotationConfig
 
     /**
