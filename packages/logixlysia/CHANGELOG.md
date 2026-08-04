@@ -1,5 +1,12 @@
 # Changelog
 
+## 6.7.0
+
+### Minor Changes
+
+- 964e60c: `autoRedact` now redacts by sensitive key/header names (authorization, cookie, x-api-key, password, secret, token, session, …) in addition to value patterns; new `config.redactKeys` extends the list, and pino gets matching `redact.paths` defaults.
+- 11a0cd2: Validation errors no longer log the submitted request body (`found`/`errors`) by default — messages are normalized to the failed paths only. Set `config.logErrorPayload: true` to restore payload logging. Raw Error objects are no longer passed into transport meta.
+
 ## 6.6.1
 
 ### Patch Changes
