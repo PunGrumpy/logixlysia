@@ -1,6 +1,6 @@
 import { describe, expect, mock, test } from 'bun:test'
 import { Elysia } from 'elysia'
-import { logixlysia, useLogger } from '../../src'
+import logixlysia, { useLogger } from '../../src'
 import type { Options } from '../../src/interfaces'
 
 describe('AsyncLocalStorage & useLogger() context integration', () => {
@@ -10,9 +10,9 @@ describe('AsyncLocalStorage & useLogger() context integration', () => {
     )
     const options: Options = {
       config: {
-        transports: [{ log: transport }],
+        disableFileLogging: true,
         disableInternalLogger: true,
-        disableFileLogging: true
+        transports: [{ log: transport }]
       }
     }
 
@@ -43,9 +43,9 @@ describe('AsyncLocalStorage & useLogger() context integration', () => {
     )
     const options: Options = {
       config: {
-        transports: [{ log: transport }],
-        disableInternalLogger: true,
         disableFileLogging: true,
+        disableInternalLogger: true,
+        transports: [{ log: transport }],
         useAsyncLocalStorage: true
       }
     }
@@ -86,9 +86,9 @@ describe('AsyncLocalStorage & useLogger() context integration', () => {
     )
     const options: Options = {
       config: {
-        transports: [{ log: transport }],
-        disableInternalLogger: true,
         disableFileLogging: true,
+        disableInternalLogger: true,
+        transports: [{ log: transport }],
         useAsyncLocalStorage: false
       }
     }

@@ -1,7 +1,7 @@
 import { describe, expect, mock, test } from 'bun:test'
 import { Elysia } from 'elysia'
 
-import { logixlysia } from '../../src'
+import logixlysia from '../../src'
 import type { Options } from '../../src/interfaces'
 
 describe('logixlysia request context', () => {
@@ -13,9 +13,9 @@ describe('logixlysia request context', () => {
     })
     const options: Options = {
       config: {
-        transports: [{ log: transport }],
+        disableFileLogging: true,
         disableInternalLogger: true,
-        disableFileLogging: true
+        transports: [{ log: transport }]
       }
     }
 
@@ -43,9 +43,9 @@ describe('logixlysia request context', () => {
     })
     const options: Options = {
       config: {
-        transports: [{ log: transport }],
+        disableFileLogging: true,
         disableInternalLogger: true,
-        disableFileLogging: true
+        transports: [{ log: transport }]
       }
     }
 
@@ -53,8 +53,8 @@ describe('logixlysia request context', () => {
       .use(logixlysia(options))
       .get('/test', ({ request, store }) => {
         store.logger.mergeContext(request, {
-          userId: 'accumulated',
-          plan: 'pro'
+          plan: 'pro',
+          userId: 'accumulated'
         })
         store.logger.info(request, 'custom', { userId: 'override' })
         return 'ok'
@@ -66,7 +66,7 @@ describe('logixlysia request context', () => {
     const meta = transport.mock.calls[0]?.[2] as
       | Record<string, unknown>
       | undefined
-    expect(meta?.context).toEqual({ userId: 'override', plan: 'pro' })
+    expect(meta?.context).toEqual({ plan: 'pro', userId: 'override' })
   })
 
   test('autoRedact applies to merged request context', async () => {
@@ -78,9 +78,9 @@ describe('logixlysia request context', () => {
     const options: Options = {
       config: {
         autoRedact: true,
-        transports: [{ log: transport }],
+        disableFileLogging: true,
         disableInternalLogger: true,
-        disableFileLogging: true
+        transports: [{ log: transport }]
       }
     }
 
@@ -109,9 +109,9 @@ describe('logixlysia request context', () => {
     })
     const options: Options = {
       config: {
-        transports: [{ log: transport }],
+        disableFileLogging: true,
         disableInternalLogger: true,
-        disableFileLogging: true
+        transports: [{ log: transport }]
       }
     }
 

@@ -1,6 +1,6 @@
 import { Elysia } from 'elysia'
 
-import { logixlysia } from '../../src'
+import logixlysia from '../../src'
 import { mergeAIMetrics } from '../../src/ai'
 import type { Options } from '../../src/interfaces'
 import { injectTraceContext } from '../../src/otel'
@@ -21,8 +21,8 @@ export const createDemoApp = (options: Options) => {
     })
     .post('/chat', ({ request, store }) => {
       mergeAIMetrics(store.logger, request, {
-        model: 'test-model',
         inputTokens: 10,
+        model: 'test-model',
         outputTokens: 5,
         totalTokens: 15
       })
@@ -45,11 +45,11 @@ export const createDemoApp = (options: Options) => {
 }
 
 export const silentTestOptions = (transport: TransportLog): Options => ({
-  preset: 'dev',
   config: {
-    transports: [{ log: transport }],
-    disableInternalLogger: true,
     disableFileLogging: true,
-    pino: { enabled: false }
-  }
+    disableInternalLogger: true,
+    pino: { enabled: false },
+    transports: [{ log: transport }]
+  },
+  preset: 'dev'
 })

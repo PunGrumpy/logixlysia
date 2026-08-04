@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import { Elysia } from 'elysia'
 
-import { logixlysia } from '../../src'
+import logixlysia from '../../src'
 import type { Options } from '../../src/interfaces'
 
 const sleep = (ms: number): Promise<void> =>
@@ -17,16 +17,16 @@ describe('logixlysia plugin - per-request timing under concurrency', () => {
     ): void => {
       const record = meta as { request: { url: string }; durationMs: number }
       calls.push({
-        url: record.request.url,
-        durationMs: record.durationMs
+        durationMs: record.durationMs,
+        url: record.request.url
       })
     }
 
     const options: Options = {
       config: {
-        transports: [{ log: transport }],
+        disableFileLogging: true,
         disableInternalLogger: true,
-        disableFileLogging: true
+        transports: [{ log: transport }]
       }
     }
 

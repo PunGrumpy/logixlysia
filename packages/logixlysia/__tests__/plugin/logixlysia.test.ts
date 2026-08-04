@@ -1,7 +1,7 @@
 import { describe, expect, mock, test } from 'bun:test'
 import { Elysia } from 'elysia'
 
-import { logixlysia } from '../../src'
+import logixlysia from '../../src'
 import { HttpError, type Options } from '../../src/interfaces'
 
 const createCaptureTransport = () => {
@@ -12,12 +12,12 @@ const createCaptureTransport = () => {
   )
   const options: Options = {
     config: {
-      transports: [{ log: transport }],
+      disableFileLogging: true,
       disableInternalLogger: true,
-      disableFileLogging: true
+      transports: [{ log: transport }]
     }
   }
-  return { transport, options }
+  return { options, transport }
 }
 
 describe('logixlysia plugin', () => {
@@ -29,9 +29,9 @@ describe('logixlysia plugin', () => {
     })
     const options: Options = {
       config: {
-        transports: [{ log: transport }],
+        disableFileLogging: true,
         disableInternalLogger: true,
-        disableFileLogging: true
+        transports: [{ log: transport }]
       }
     }
 
@@ -52,9 +52,9 @@ describe('logixlysia plugin', () => {
     })
     const options: Options = {
       config: {
-        transports: [{ log: transport }],
+        disableFileLogging: true,
         disableInternalLogger: true,
-        disableFileLogging: true
+        transports: [{ log: transport }]
       }
     }
 
@@ -84,9 +84,9 @@ describe('logixlysia plugin', () => {
     })
     const options: Options = {
       config: {
-        transports: [{ log: transport }],
+        disableFileLogging: true,
         disableInternalLogger: true,
-        disableFileLogging: true
+        transports: [{ log: transport }]
       }
     }
 
@@ -108,12 +108,12 @@ describe('logixlysia plugin', () => {
     })
     const options: Options = {
       config: {
+        disableFileLogging: true,
+        disableInternalLogger: true,
         logFilter: {
           level: ['ERROR', 'WARNING']
         },
-        transports: [{ log: transport }],
-        disableInternalLogger: true,
-        disableFileLogging: true
+        transports: [{ log: transport }]
       }
     }
 
@@ -133,9 +133,9 @@ describe('logixlysia plugin', () => {
     })
     const options: Options = {
       config: {
-        transports: [{ log: transport }],
+        disableFileLogging: true,
         disableInternalLogger: true,
-        disableFileLogging: true
+        transports: [{ log: transport }]
       }
     }
 
@@ -157,12 +157,12 @@ describe('logixlysia plugin', () => {
     })
     const options: Options = {
       config: {
+        disableFileLogging: true,
+        disableInternalLogger: true,
         logFilter: {
           level: ['ERROR']
         },
-        transports: [{ log: transport }],
-        disableInternalLogger: true,
-        disableFileLogging: true
+        transports: [{ log: transport }]
       }
     }
 
@@ -189,12 +189,12 @@ describe('logixlysia plugin', () => {
     })
     const options: Options = {
       config: {
+        disableFileLogging: true,
+        disableInternalLogger: true,
         logFilter: {
           level: []
         },
-        transports: [{ log: transport }],
-        disableInternalLogger: true,
-        disableFileLogging: true
+        transports: [{ log: transport }]
       }
     }
 
@@ -216,12 +216,12 @@ describe('logixlysia plugin', () => {
     })
     const options: Options = {
       config: {
+        disableFileLogging: true,
+        disableInternalLogger: true,
         logFilter: {
           level: ['INFO', 'WARNING']
         },
-        transports: [{ log: transport }],
-        disableInternalLogger: true,
-        disableFileLogging: true
+        transports: [{ log: transport }]
       }
     }
 
@@ -243,12 +243,12 @@ describe('logixlysia plugin', () => {
     })
     const options: Options = {
       config: {
+        disableFileLogging: true,
+        disableInternalLogger: true,
         logFilter: {
           level: ['ERROR']
         },
-        transports: [{ log: transport }],
-        disableInternalLogger: true,
-        disableFileLogging: true
+        transports: [{ log: transport }]
       }
     }
 

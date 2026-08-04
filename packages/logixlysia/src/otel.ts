@@ -51,8 +51,8 @@ export const injectTraceContext = (
 
   const { traceId, spanId } = span.spanContext()
   const fields = {
-    trace_id: traceId,
-    span_id: spanId
+    span_id: spanId,
+    trace_id: traceId
   } satisfies TraceContextFields
   logger.mergeContext(request, fields)
   return fields
@@ -62,5 +62,3 @@ export const injectTraceContext = (
 export const __resetForTesting = (): void => {
   otelApi = undefined
 }
-
-export { injectTraceContext as default }

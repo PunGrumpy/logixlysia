@@ -28,5 +28,3 @@ export const mergeAIMetrics = (
   }
   logger.mergeContext(request, { ai: metrics })
 }
-
-export { mergeAIMetrics as default }

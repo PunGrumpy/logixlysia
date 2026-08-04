@@ -1,7 +1,7 @@
 import { describe, expect, mock, test } from 'bun:test'
 import { Elysia } from 'elysia'
 
-import { logixlysia } from '../../src'
+import logixlysia from '../../src'
 import { mergeAIMetrics } from '../../src/ai'
 
 describe('logixlysia/ai', () => {
@@ -16,16 +16,16 @@ describe('logixlysia/ai', () => {
       .use(
         logixlysia({
           config: {
-            transports: [{ log: transport }],
+            disableFileLogging: true,
             disableInternalLogger: true,
-            disableFileLogging: true
+            transports: [{ log: transport }]
           }
         })
       )
       .get('/chat', ({ request, store }) => {
         mergeAIMetrics(store.logger, request, {
-          model: 'claude-sonnet',
           inputTokens: 100,
+          model: 'claude-sonnet',
           outputTokens: 50,
           totalTokens: 150
         })
@@ -68,9 +68,9 @@ describe('logixlysia/ai', () => {
       .use(
         logixlysia({
           config: {
-            transports: [{ log: transport }],
+            disableFileLogging: true,
             disableInternalLogger: true,
-            disableFileLogging: true
+            transports: [{ log: transport }]
           }
         })
       )
@@ -98,9 +98,9 @@ describe('logixlysia/ai', () => {
       .use(
         logixlysia({
           config: {
-            transports: [{ log: transport }],
+            disableFileLogging: true,
             disableInternalLogger: true,
-            disableFileLogging: true
+            transports: [{ log: transport }]
           }
         })
       )

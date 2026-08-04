@@ -1,7 +1,7 @@
 import { describe, expect, mock, test } from 'bun:test'
 import { Elysia } from 'elysia'
 
-import { logixlysia } from '../../src'
+import logixlysia from '../../src'
 import type { Options } from '../../src/interfaces'
 
 const UUID_V4_REGEX =
@@ -16,10 +16,10 @@ describe('request ID plugin integration', () => {
     })
     const options: Options = {
       config: {
-        requestId: true,
-        transports: [{ log: transport }],
+        disableFileLogging: true,
         disableInternalLogger: true,
-        disableFileLogging: true
+        requestId: true,
+        transports: [{ log: transport }]
       }
     }
 
@@ -40,9 +40,9 @@ describe('request ID plugin integration', () => {
   test('sets X-Request-Id response header', async () => {
     const options: Options = {
       config: {
-        requestId: true,
+        disableFileLogging: true,
         disableInternalLogger: true,
-        disableFileLogging: true
+        requestId: true
       }
     }
 
@@ -63,10 +63,10 @@ describe('request ID plugin integration', () => {
     })
     const options: Options = {
       config: {
-        requestId: true,
-        transports: [{ log: transport }],
+        disableFileLogging: true,
         disableInternalLogger: true,
-        disableFileLogging: true
+        requestId: true,
+        transports: [{ log: transport }]
       }
     }
 
@@ -97,9 +97,9 @@ describe('request ID plugin integration', () => {
     })
     const options: Options = {
       config: {
-        transports: [{ log: transport }],
+        disableFileLogging: true,
         disableInternalLogger: true,
-        disableFileLogging: true
+        transports: [{ log: transport }]
       }
     }
 
@@ -120,9 +120,9 @@ describe('request ID plugin integration', () => {
   test('uses custom header name from RequestIdConfig', async () => {
     const options: Options = {
       config: {
-        requestId: { header: 'X-Correlation-Id' },
+        disableFileLogging: true,
         disableInternalLogger: true,
-        disableFileLogging: true
+        requestId: { header: 'X-Correlation-Id' }
       }
     }
 
@@ -140,16 +140,21 @@ describe('request ID plugin integration', () => {
     let counter = 0
     const options: Options = {
       config: {
-        requestId: { generator: () => `custom-${++counter}` },
+        disableFileLogging: true,
+        disableInternalLogger: true,
+        requestId: {
+          generator: () => {
+            counter += 1
+            return `custom-${counter}`
+          }
+        },
         transports: [
           {
             log: () => {
               /* noop */
             }
           }
-        ],
-        disableInternalLogger: true,
-        disableFileLogging: true
+        ]
       }
     }
 
@@ -170,10 +175,10 @@ describe('request ID plugin integration', () => {
     })
     const options: Options = {
       config: {
-        requestId: { generator: () => 'test-req-id-789' },
         customLogFormat: '{method} {pathname} {requestId}',
-        transports: [{ log: transport }],
-        disableFileLogging: true
+        disableFileLogging: true,
+        requestId: { generator: () => 'test-req-id-789' },
+        transports: [{ log: transport }]
       }
     }
 
@@ -197,12 +202,12 @@ describe('request ID plugin integration', () => {
       /* noop */
     })
     const options: Options = {
-      preset: 'prod',
       config: {
-        transports: [{ log: transport }],
+        disableFileLogging: true,
         disableInternalLogger: true,
-        disableFileLogging: true
-      }
+        transports: [{ log: transport }]
+      },
+      preset: 'prod'
     }
 
     const app = new Elysia().use(logixlysia(options)).get('/test', () => 'ok')
@@ -219,9 +224,9 @@ describe('request ID plugin integration', () => {
   test('sets X-Request-Id response header on errors', async () => {
     const options: Options = {
       config: {
-        requestId: true,
+        disableFileLogging: true,
         disableInternalLogger: true,
-        disableFileLogging: true
+        requestId: true
       }
     }
 

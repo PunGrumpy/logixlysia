@@ -45,7 +45,7 @@ export type LogixlysiaPlugin = Logixlysia & {
   wrapWs: ReturnType<typeof createWsHandlerWrapper>
 }
 
-export const logixlysia = (rawOptions: Options = {}): LogixlysiaPlugin => {
+const logixlysia = (rawOptions: Options = {}): LogixlysiaPlugin => {
   const options = resolveOptions(rawOptions)
   const didCustomLog = new WeakSet<Request>()
   const requestStartTimes = new WeakMap<Request, bigint>()
@@ -63,6 +63,14 @@ export const logixlysia = (rawOptions: Options = {}): LogixlysiaPlugin => {
       didCustomLog.add(request)
       baseLogger.debug(request, message, context)
     },
+    error: (
+      request: Request,
+      message: string,
+      context?: Record<string, unknown>
+    ) => {
+      didCustomLog.add(request)
+      baseLogger.error(request, message, context)
+    },
     info: (
       request: Request,
       message: string,
@@ -78,14 +86,6 @@ export const logixlysia = (rawOptions: Options = {}): LogixlysiaPlugin => {
     ) => {
       didCustomLog.add(request)
       baseLogger.warn(request, message, context)
-    },
-    error: (
-      request: Request,
-      message: string,
-      context?: Record<string, unknown>
-    ) => {
-      didCustomLog.add(request)
-      baseLogger.error(request, message, context)
     }
   }
 
@@ -93,19 +93,19 @@ export const logixlysia = (rawOptions: Options = {}): LogixlysiaPlugin => {
     request: Request
   ): RequestScopedLogger => ({
     debug: (message, context) => logger.debug(request, message, context),
-    info: (message, context) => logger.info(request, message, context),
-    warn: (message, context) => logger.warn(request, message, context),
     error: (message, context) => logger.error(request, message, context),
-    mergeContext: partial => contextStore.mergeContext(request, partial)
+    info: (message, context) => logger.info(request, message, context),
+    mergeContext: partial => contextStore.mergeContext(request, partial),
+    warn: (message, context) => logger.warn(request, message, context)
   })
 
   const app = new Elysia({
-    name: 'Logixlysia',
     detail: {
       description:
         'Logixlysia is a plugin for Elysia that provides a logger and pino logger.',
       tags: ['logging', 'pino']
-    }
+    },
+    name: 'Logixlysia'
   })
 
   // @ts-expect-error — derived log typing matches LogixlysiaSingleton.
@@ -120,7 +120,7 @@ export const logixlysia = (rawOptions: Options = {}): LogixlysiaPlugin => {
       } else {
         const port = Number(process.env.PORT) || 3000
         const hostname = process.env.HOST || 'localhost'
-        startServer({ port, hostname, protocol: 'http' }, options)
+        startServer({ hostname, port, protocol: 'http' }, options)
       }
     })
     .onRequest(({ request }) => {
