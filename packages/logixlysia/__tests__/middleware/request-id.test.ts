@@ -67,8 +67,8 @@ describe('resolveRequestIdConfig', () => {
 describe('getOrCreateRequestId', () => {
   const defaultConfig: ResolvedRequestIdConfig = {
     enabled: true,
-    header: 'X-Request-Id',
-    generator: () => 'generated-uuid'
+    generator: () => 'generated-uuid',
+    header: 'X-Request-Id'
   }
 
   test('generates new ID when no header present', () => {
@@ -88,8 +88,8 @@ describe('getOrCreateRequestId', () => {
   test('uses custom header name to read existing ID', () => {
     const config: ResolvedRequestIdConfig = {
       enabled: true,
-      header: 'X-Correlation-Id',
-      generator: () => 'fallback'
+      generator: () => 'fallback',
+      header: 'X-Correlation-Id'
     }
     const request = new Request('http://localhost/test', {
       headers: { 'X-Correlation-Id': 'corr-456' }
@@ -101,8 +101,8 @@ describe('getOrCreateRequestId', () => {
   test('generates ID when custom header is absent', () => {
     const config: ResolvedRequestIdConfig = {
       enabled: true,
-      header: 'X-Correlation-Id',
-      generator: () => 'new-corr-id'
+      generator: () => 'new-corr-id',
+      header: 'X-Correlation-Id'
     }
     const request = new Request('http://localhost/test')
     const id = getOrCreateRequestId(request, config)
@@ -113,8 +113,11 @@ describe('getOrCreateRequestId', () => {
     let counter = 0
     const config: ResolvedRequestIdConfig = {
       enabled: true,
-      header: 'X-Request-Id',
-      generator: () => `req-${++counter}`
+      generator: () => {
+        counter += 1
+        return `req-${counter}`
+      },
+      header: 'X-Request-Id'
     }
     const req1 = new Request('http://localhost/1')
     const req2 = new Request('http://localhost/2')

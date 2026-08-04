@@ -21,19 +21,19 @@ describe('logToFile race condition', () => {
       const options: Options = {
         config: {
           // Very small size to trigger rotation quickly
-          logRotation: { maxSize: 100, compress: false }
+          logRotation: { compress: false, maxSize: 100 }
         }
       }
 
       // Create 50 concurrent write operations
       const writes = Array.from({ length: 50 }, (_, i) =>
         logToFile({
+          data: { message: `message-${i}-${'x'.repeat(20)}` },
           filePath,
           level: 'INFO',
+          options,
           request: createMockRequest(`http://localhost/test${i}`),
-          data: { message: `message-${i}-${'x'.repeat(20)}` },
-          store: { beforeTime: BigInt(0) },
-          options
+          store: { beforeTime: BigInt(0) }
         })
       )
 
@@ -49,8 +49,10 @@ describe('logToFile race condition', () => {
       let totalLines = 0
       const allMessages = new Set<string>()
 
-      for (const file of logFiles) {
-        const content = await fs.readFile(join(dir, 'logs', file), 'utf-8')
+      const contents = await Promise.all(
+        logFiles.map(file => fs.readFile(join(dir, 'logs', file), 'utf-8'))
+      )
+      for (const content of contents) {
         const lines = content.split('\n').filter(l => l.length > 0)
         totalLines += lines.length
 
@@ -68,7 +70,7 @@ describe('logToFile race condition', () => {
       expect(totalLines).toBe(50)
 
       // Verify all message IDs from 0-49 are present
-      for (let i = 0; i < 50; i++) {
+      for (let i = 0; i < 50; i += 1) {
         expect(allMessages.has(String(i))).toBe(true)
       }
     } finally {
@@ -83,19 +85,19 @@ describe('logToFile race condition', () => {
       const options: Options = {
         config: {
           // Trigger rotation on every write
-          logRotation: { maxSize: 1, compress: false }
+          logRotation: { compress: false, maxSize: 1 }
         }
       }
 
       // Create 20 writes that should all trigger rotation
       const writes = Array.from({ length: 20 }, (_, i) =>
         logToFile({
+          data: { message: `msg-${i}-${'x'.repeat(100)}` },
           filePath,
           level: 'INFO',
+          options,
           request: createMockRequest(`http://localhost/test${i}`),
-          data: { message: `msg-${i}-${'x'.repeat(100)}` },
-          store: { beforeTime: BigInt(0) },
-          options
+          store: { beforeTime: BigInt(0) }
         })
       )
 
@@ -106,8 +108,10 @@ describe('logToFile race condition', () => {
       const files = await fs.readdir(join(dir, 'logs'))
       let totalEntries = 0
 
-      for (const file of files) {
-        const content = await fs.readFile(join(dir, 'logs', file), 'utf-8')
+      const contents = await Promise.all(
+        files.map(file => fs.readFile(join(dir, 'logs', file), 'utf-8'))
+      )
+      for (const content of contents) {
         const lines = content.split('\n').filter(l => l.length > 0)
         totalEntries += lines.length
       }
@@ -126,7 +130,7 @@ describe('logToFile race condition', () => {
       const options: Options = {
         config: {
           // Rotate on every write so the critical section races with rotation
-          logRotation: { maxSize: 1, compress: false }
+          logRotation: { compress: false, maxSize: 1 }
         }
       }
 
@@ -136,12 +140,12 @@ describe('logToFile race condition', () => {
       // caller that fails to see a same-tick prior lock is exposed.
       const writes = Array.from({ length: total }, (_, i) =>
         logToFile({
+          data: { message: `msg-${i}-${'x'.repeat(50)}` },
           filePath,
           level: 'INFO',
+          options,
           request: createMockRequest(`http://localhost/test${i}`),
-          data: { message: `msg-${i}-${'x'.repeat(50)}` },
-          store: { beforeTime: BigInt(0) },
-          options
+          store: { beforeTime: BigInt(0) }
         })
       )
 
@@ -155,8 +159,10 @@ describe('logToFile race condition', () => {
       let totalLines = 0
       const seenIds = new Set<string>()
 
-      for (const file of logFiles) {
-        const content = await fs.readFile(join(dir, 'logs', file), 'utf-8')
+      const contents = await Promise.all(
+        logFiles.map(file => fs.readFile(join(dir, 'logs', file), 'utf-8'))
+      )
+      for (const content of contents) {
         const lines = content.split('\n').filter(l => l.length > 0)
         totalLines += lines.length
 

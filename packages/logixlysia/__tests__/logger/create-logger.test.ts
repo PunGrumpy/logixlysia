@@ -34,9 +34,9 @@ describe('createLogger', () => {
     })
     const options: Options = {
       config: {
-        transports: [{ log: transport }],
+        disableFileLogging: true,
         disableInternalLogger: true,
-        disableFileLogging: true
+        transports: [{ log: transport }]
       }
     }
 
@@ -49,7 +49,7 @@ describe('createLogger', () => {
 
     // transport should be invoked synchronously
     expect(transport).toHaveBeenCalledTimes(1)
-    const firstCall = transport.mock.calls[0]
+    const [firstCall] = transport.mock.calls
     expect(firstCall).toBeDefined()
     const [levelValue, messageValue] = firstCall ?? [undefined, undefined]
     expect(levelValue).toBe('INFO')
@@ -78,10 +78,10 @@ describe('createLogger', () => {
       'eyJhbGciOiJIUzI1NiIsInR5cCI.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c'
     const options: Options = {
       config: {
-        transports: [{ log: transport }],
-        disableInternalLogger: true,
+        autoRedact: true,
         disableFileLogging: true,
-        autoRedact: true
+        disableInternalLogger: true,
+        transports: [{ log: transport }]
       }
     }
 
@@ -111,9 +111,9 @@ describe('createLogger', () => {
     })
     const options: Options = {
       config: {
-        transports: [{ log: transport }],
+        disableFileLogging: true,
         disableInternalLogger: true,
-        disableFileLogging: true
+        transports: [{ log: transport }]
       }
     }
 
@@ -121,8 +121,8 @@ describe('createLogger', () => {
     const request = createMockRequest('http://localhost/test')
     const store = { beforeTime: BigInt(0) }
 
-    logger.handleHttpError(request, { status: 400, message: 'bad' }, store)
-    logger.handleHttpError(request, { status: 503, message: 'down' }, store)
+    logger.handleHttpError(request, { message: 'bad', status: 400 }, store)
+    logger.handleHttpError(request, { message: 'down', status: 503 }, store)
 
     expect(transport).toHaveBeenCalledTimes(2)
     const [firstLevelValue] = transport.mock.calls[0] ?? [undefined]
@@ -282,13 +282,13 @@ describe('createLogger', () => {
     createLogger(
       {
         config: {
-          timestamp: {
-            translateTime: 'yyyy-mm-dd HH:MM:ss'
-          },
           pino: {
             prettyPrint: {
               colorize: true
             }
+          },
+          timestamp: {
+            translateTime: 'yyyy-mm-dd HH:MM:ss'
           }
         }
       },
@@ -296,8 +296,8 @@ describe('createLogger', () => {
     )
 
     expect(prettyOptionsCaptured).toMatchObject({
-      translateTime: 'yyyy-mm-dd HH:MM:ss',
-      colorize: true
+      colorize: true,
+      translateTime: 'yyyy-mm-dd HH:MM:ss'
     })
   })
 })

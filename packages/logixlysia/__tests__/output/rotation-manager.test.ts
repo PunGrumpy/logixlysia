@@ -74,11 +74,13 @@ describe('performRotation retention', () => {
     ]
 
     // Stagger mtimes: index 0 is oldest, index 3 is newest.
-    for (const [index, rotatedPath] of rotatedPaths.entries()) {
-      await fs.writeFile(rotatedPath, `rotated-${index}`)
-      const mtimeSeconds = now / 1000 - (rotatedPaths.length - index) * 60
-      await fs.utimes(rotatedPath, mtimeSeconds, mtimeSeconds)
-    }
+    await Promise.all(
+      rotatedPaths.map(async (rotatedPath, index) => {
+        await fs.writeFile(rotatedPath, `rotated-${index}`)
+        const mtimeSeconds = now / 1000 - (rotatedPaths.length - index) * 60
+        await fs.utimes(rotatedPath, mtimeSeconds, mtimeSeconds)
+      })
+    )
 
     // performRotation rotates the live file first, producing a 5th rotated
     // file (the newest of all), then cleans up down to maxFiles.

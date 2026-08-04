@@ -105,14 +105,16 @@ describe('getRotatedFiles', () => {
       await fs.writeFile(`${filePath}.backup`, 'd')
 
       const rotated = await getRotatedFiles(filePath)
-      const names = rotated.map(p => p.slice(dir.length + 1)).sort()
+      const names = rotated
+        .map(p => p.slice(dir.length + 1))
+        .sort((a, b) => a.localeCompare(b))
 
       expect(names).toEqual(
         [
           'app.log.2026-01-02-03-04-05',
           'app.log.2026-01-02-03-04-05-123-9999999',
           'app.log.2026-01-02-03-04-05.gz'
-        ].sort()
+        ].sort((a, b) => a.localeCompare(b))
       )
     } finally {
       await removeTempDir(dir)

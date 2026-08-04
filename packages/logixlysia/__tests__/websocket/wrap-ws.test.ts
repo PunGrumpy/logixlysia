@@ -15,9 +15,9 @@ describe('wrapWs', () => {
     const logger = createLogger(
       {
         config: {
-          transports: [{ log: transport }],
+          disableFileLogging: true,
           disableInternalLogger: true,
-          disableFileLogging: true
+          transports: [{ log: transport }]
         }
       },
       undefined,
@@ -27,20 +27,20 @@ describe('wrapWs', () => {
     const ws = { id: 'ws-1' }
 
     const hooks = wrapWs('/chat', {
-      open(_ws) {
+      close(_ws) {
         /* noop */
       },
       message(_ws, _message) {
         /* noop */
       },
-      close(_ws) {
+      open(_ws) {
         /* noop */
       }
     })
 
-    hooks.open?.(ws)
-    hooks.message?.(ws, { hello: 'world' })
-    hooks.close?.(ws)
+    hooks.open(ws)
+    hooks.message(ws, { hello: 'world' })
+    hooks.close(ws)
 
     expect(transport).toHaveBeenCalledTimes(3)
     const messages = transport.mock.calls.map(call => String(call[1]))

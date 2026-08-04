@@ -27,17 +27,17 @@ describe('logToTransports', () => {
     const store = { beforeTime: BigInt(0) }
 
     logToTransports({
-      level: 'INFO',
-      request,
       data: { message: 'Test message', status: 200 },
-      store,
-      options
+      level: 'INFO',
+      options,
+      request,
+      store
     })
 
     expect(t1).toHaveBeenCalledTimes(1)
     expect(t2).toHaveBeenCalledTimes(1)
 
-    const firstCall = t1.mock.calls[0]
+    const [firstCall] = t1.mock.calls
     expect(firstCall).toBeDefined()
     const [levelValue, messageValue, metaValue] = firstCall ?? [
       undefined,
@@ -70,11 +70,11 @@ describe('logToTransports', () => {
     const store = { beforeTime }
 
     logToTransports({
-      level: 'INFO',
-      request,
       data: { message: 'Test message' },
-      store,
-      options
+      level: 'INFO',
+      options,
+      request,
+      store
     })
 
     const meta = t1.mock.calls[0]?.[2] as Record<string, unknown>
@@ -91,11 +91,11 @@ describe('logToTransports', () => {
     const zeroStore = { beforeTime: BigInt(0) }
 
     logToTransports({
-      level: 'INFO',
-      request,
       data: { message: 'Test message' },
-      store: zeroStore,
-      options: zeroOptions
+      level: 'INFO',
+      options: zeroOptions,
+      request,
+      store: zeroStore
     })
 
     const zeroMeta = t2.mock.calls[0]?.[2] as Record<string, unknown>
@@ -122,24 +122,24 @@ describe('logToTransports', () => {
       const store = { beforeTime: BigInt(0) }
 
       logToTransports({
-        level: 'INFO',
-        request,
         data: { message: 'ignored' },
-        store,
-        options
+        level: 'INFO',
+        options,
+        request,
+        store
       })
 
       expect(spies.error).toHaveBeenCalledTimes(1)
-      const firstErrorCall = spies.error.mock.calls[0]
+      const [firstErrorCall] = spies.error.mock.calls
       expect(firstErrorCall?.[0]).toContain('transport failed')
 
       // A second immediate failure must not log again (rate limit).
       logToTransports({
-        level: 'INFO',
-        request,
         data: { message: 'ignored again' },
-        store,
-        options
+        level: 'INFO',
+        options,
+        request,
+        store
       })
 
       expect(spies.error).toHaveBeenCalledTimes(1)
@@ -161,11 +161,11 @@ describe('logToTransports', () => {
 
     expect(() => {
       logToTransports({
-        level: 'INFO',
-        request,
         data: { message: 'ignored' },
-        store,
-        options
+        level: 'INFO',
+        options,
+        request,
+        store
       })
     }).not.toThrow()
   })
@@ -180,11 +180,11 @@ describe('logToTransports', () => {
     const store = { beforeTime: BigInt(0) }
 
     logToTransports({
-      level: 'INFO',
-      request,
       data: { message: 'async' },
-      store,
-      options
+      level: 'INFO',
+      options,
+      request,
+      store
     })
 
     // Let promise microtasks run; rejections should be caught internally.
