@@ -32,10 +32,16 @@
     "node": ">=24"
   },
   "devEngines": {
-    "packageManager": {
-      "name": "bun",
-      "version": "1.3.14",
-      "onFail": "download"
-    }
+    "packageManager": [
+      {
+        "name": "bun",
+        "version": "1.3.14",
+        "onFail": "download"
+      },
+      {
+        "name": "npm",
+        "onFail": "ignore"
+      }
+    ]
   }
 }
