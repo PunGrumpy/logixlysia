@@ -40,7 +40,7 @@ export const renderBanner = (
   urlDisplayLine: string,
   logixlysiaLine: string | null
 ): string => {
-  const version = elysiaPkg.version
+  const { version } = elysiaPkg
   const versionLine = version ? `Elysia v${version}` : 'Elysia'
 
   const rows: RowSpec[] = [
@@ -75,7 +75,7 @@ export const renderBanner = (
       out.push(`│${centerText(row.text, innerWidth)}│`)
       continue
     }
-    const text = row.text
+    const { text } = row
     const padding = Math.max(0, innerWidth - text.length - 4)
     out.push(`│  ${text}${' '.repeat(padding)}  │`)
   }

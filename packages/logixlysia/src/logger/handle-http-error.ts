@@ -24,7 +24,7 @@ export const handleHttpError = (
   options: Options,
   contextStore?: RequestContextStore
 ): void => {
-  const config = options.config
+  const { config } = options
 
   const status = isErrorWithStatus(error) ? error.status : 500
   let level: LogLevel = 'ERROR'
@@ -47,7 +47,7 @@ export const handleHttpError = (
 
   const message = parseError(error)
 
-  const data: Record<string, unknown> = { status, message, error }
+  const data: Record<string, unknown> = { error, message, status }
   const dataWithContext = contextStore
     ? mergeLogDataContext(data, contextStore.getContext(request))
     : data
@@ -56,18 +56,18 @@ export const handleHttpError = (
   const logRequest =
     config?.autoRedact === true ? redactRequest(request) : request
 
-  logToTransports({ level, request: logRequest, data: logData, store, options })
+  logToTransports({ data: logData, level, options, request: logRequest, store })
 
   if (!(useTransportsOnly || disableFileLogging)) {
     const filePath = config?.logFilePath
     if (filePath) {
       logToFile({
+        data: logData,
         filePath,
         level,
+        options,
         request: logRequest,
-        data: logData,
-        store,
-        options
+        store
       }).catch(() => {
         // Ignore errors
       })
@@ -79,11 +79,11 @@ export const handleHttpError = (
   }
 
   const { main, contextLines } = formatLogOutput({
-    level,
-    request: logRequest,
     data: logData,
-    store,
-    options
+    level,
+    options,
+    request: logRequest,
+    store
   })
 
   const formattedMessage =

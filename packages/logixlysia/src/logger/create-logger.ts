@@ -29,7 +29,7 @@ export interface FormattedLogOutput {
 }
 
 const shouldUseColors = (options: Options): boolean => {
-  const config = options.config
+  const { config } = options
   const enabledByConfig = config?.useColors ?? true
 
   // Avoid ANSI sequences in non-interactive output (pipes, CI logs, files).
@@ -87,7 +87,7 @@ export const formatDuration = (ms: number): string => {
 const getSlowThresholds = (
   options: Options
 ): { slow: number; verySlow: number } => {
-  const config = options.config
+  const { config } = options
   return {
     slow: config?.slowThreshold ?? DEFAULT_SLOW_MS,
     verySlow: config?.verySlowThreshold ?? DEFAULT_VERY_SLOW_MS
@@ -104,7 +104,7 @@ const colorDurationText = (
   const isVerySlow = ms >= verySlow
 
   if (!useColors) {
-    return { text: raw, isVerySlow }
+    return { isVerySlow, text: raw }
   }
 
   let colored = raw
@@ -116,7 +116,7 @@ const colorDurationText = (
     colored = chalk.red.bold(raw)
   }
 
-  return { text: colored, isVerySlow }
+  return { isVerySlow, text: colored }
 }
 
 const getSpeedToken = (isVerySlow: boolean, useColors: boolean): string => {
@@ -320,7 +320,7 @@ const formatEntriesToTreeLines = (
 
   const lines: string[] = []
   const last = entries.length - 1
-  for (let i = 0; i < entries.length; i++) {
+  for (let i = 0; i < entries.length; i += 1) {
     const branch = i === last ? '└─' : '├─'
     const pair = entries[i]
     if (!pair) {
@@ -426,7 +426,7 @@ export const formatLogOutput = ({
   store: StoreData
   options: Options
 }): FormattedLogOutput => {
-  const config = options.config
+  const { config } = options
   const useColors = shouldUseColors(options)
   const format = config?.customLogFormat ?? DEFAULT_LOG_FORMAT
 
@@ -444,9 +444,7 @@ export const formatLogOutput = ({
   let rawPathname: string
   let search: string
   try {
-    const url = new URL(request.url)
-    rawPathname = url.pathname
-    search = url.search
+    ;({ pathname: rawPathname, search } = new URL(request.url))
   } catch {
     rawPathname = request.url || '/'
     search = ''
@@ -489,28 +487,28 @@ export const formatLogOutput = ({
   const serviceToken = getServiceToken(options, useColors)
 
   const tokenMap: Record<string, string> = {
-    '{now}': timestamp,
-    '{epoch}': epoch,
-    '{level}': coloredLevel,
-    '{icon}': icon,
-    '{duration}': coloredDuration,
-    '{method}': coloredMethod,
-    '{pathname}': coloredPathname,
-    '{path}': coloredPathname,
-    '{query}': query,
-    '{status}': coloredStatus,
-    '{statusText}': statusText,
-    '{message}': message,
-    '{ip}': ip,
     '{context}': ctxString,
-    '{service}': serviceToken,
-    '{speed}': speedToken,
+    '{duration}': coloredDuration,
+    '{epoch}': epoch,
+    '{icon}': icon,
+    '{ip}': ip,
+    '{level}': coloredLevel,
+    '{message}': message,
+    '{method}': coloredMethod,
+    '{now}': timestamp,
+    '{path}': coloredPathname,
+    '{pathname}': coloredPathname,
+    '{query}': query,
     '{requestId}':
       typeof data.context === 'object' &&
       data.context !== null &&
       'requestId' in data.context
         ? String((data.context as Record<string, unknown>).requestId)
-        : ''
+        : '',
+    '{service}': serviceToken,
+    '{speed}': speedToken,
+    '{status}': coloredStatus,
+    '{statusText}': statusText
   }
 
   const main = format.replace(
@@ -520,7 +518,7 @@ export const formatLogOutput = ({
 
   const contextLines = buildContextTreeLines(level, data, options)
 
-  return { main, contextLines }
+  return { contextLines, main }
 }
 
 /** @deprecated Prefer {@link formatLogOutput} for multi-line context trees. Returns the main line only. */

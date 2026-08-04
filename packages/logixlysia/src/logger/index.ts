@@ -26,7 +26,7 @@ export const createLogger = (
   externalContextStore?: RequestContextStore
 ): Logger => {
   const contextStore = externalContextStore ?? createRequestContextStore()
-  const config = options.config
+  const { config } = options
 
   const pinoConfig = config?.pino
   const { prettyPrint, ...pinoOptions } = pinoConfig ?? {}
@@ -50,9 +50,9 @@ export const createLogger = (
 
   const basePinoOptions = {
     ...pinoOptions,
+    errorKey,
     level: pinoOptions.level ?? 'info',
-    messageKey,
-    errorKey
+    messageKey
   }
 
   let pinoLogger: Pino
@@ -62,8 +62,8 @@ export const createLogger = (
       colorize: process.stdout?.isTTY === true,
       translateTime: config?.timestamp?.translateTime,
       ...prettyPrintOptions,
-      messageKey,
-      errorKey
+      errorKey,
+      messageKey
     } as Record<string, unknown>)
 
     pinoLogger = pinoFactory(basePinoOptions, prettyStream)
@@ -116,11 +116,11 @@ export const createLogger = (
 
     if (hasTransports) {
       logToTransports({
-        level,
-        request: logRequest,
         data: logData,
-        store,
-        options
+        level,
+        options,
+        request: logRequest,
+        store
       })
     }
 
@@ -128,12 +128,12 @@ export const createLogger = (
       const filePath = config?.logFilePath
       if (filePath) {
         logToFile({
+          data: logData,
           filePath,
           level,
+          options,
           request: logRequest,
-          data: logData,
-          store,
-          options
+          store
         }).catch(() => {
           /* Ignore errors */
         })
@@ -145,11 +145,11 @@ export const createLogger = (
     }
 
     const { main, contextLines } = formatLogOutput({
-      level,
-      request: logRequest,
       data: logData,
-      store,
-      options
+      level,
+      options,
+      request: logRequest,
+      store
     })
     const message =
       contextLines.length > 0 ? `${main}\n${contextLines.join('\n')}` : main
@@ -188,30 +188,30 @@ export const createLogger = (
       return
     }
     const store: StoreData = { beforeTime: process.hrtime.bigint() }
-    log(level, request, { message, context }, store)
+    log(level, request, { context, message }, store)
   }
 
   return {
-    pino: pinoLogger,
-    mergeContext: (request, partial) => {
-      contextStore.mergeContext(request, partial)
-    },
-    getContext: request => contextStore.getContext(request),
-    log,
-    handleHttpError: (request, error, store) => {
-      handleHttpError(request, error, store, options, contextStore)
-    },
     debug: (request, message, context) => {
       logWithContext('DEBUG', request, message, context)
+    },
+    error: (request, message, context) => {
+      logWithContext('ERROR', request, message, context)
+    },
+    getContext: request => contextStore.getContext(request),
+    handleHttpError: (request, error, store) => {
+      handleHttpError(request, error, store, options, contextStore)
     },
     info: (request, message, context) => {
       logWithContext('INFO', request, message, context)
     },
+    log,
+    mergeContext: (request, partial) => {
+      contextStore.mergeContext(request, partial)
+    },
+    pino: pinoLogger,
     warn: (request, message, context) => {
       logWithContext('WARNING', request, message, context)
-    },
-    error: (request, message, context) => {
-      logWithContext('ERROR', request, message, context)
     }
   }
 }

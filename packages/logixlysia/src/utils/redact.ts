@@ -49,7 +49,7 @@ const passesLuhn = (digits: string): boolean => {
   let sum = 0
   let alternate = false
 
-  for (let i = digits.length - 1; i >= 0; i--) {
+  for (let i = digits.length - 1; i >= 0; i -= 1) {
     const code = digits.charCodeAt(i)
     if (code < 48 || code > 57) {
       return false
@@ -123,7 +123,7 @@ const redactArrayItems = (
   inProgress: WeakSet<object>
 ): unknown[] => {
   const redactedArray: unknown[] = Array.from({ length: value.length })
-  for (let i = 0; i < value.length; i++) {
+  for (let i = 0; i < value.length; i += 1) {
     redactedArray[i] = redactInner(value[i], inProgress)
   }
   return redactedArray
@@ -223,8 +223,8 @@ export const redactRequest = (request: Request): Request => {
   }
 
   const init: RequestInit = {
-    method: redactedMethod,
     headers: nextHeaders,
+    method: redactedMethod,
     redirect: request.redirect,
     signal: request.signal
   }

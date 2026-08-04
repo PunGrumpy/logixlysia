@@ -68,18 +68,18 @@ export const logToFile = async (
             Options
           ]
           return {
+            data: dataArg,
             filePath: filePathArg,
             level: levelArg,
+            options: optionsArg,
             request: requestArg,
-            data: dataArg,
-            store: storeArg,
-            options: optionsArg
+            store: storeArg
           }
         })()
       : args[0]
 
   const { filePath, level, request, data, store, options } = input
-  const config = options.config
+  const { config } = options
   const useTransportsOnly = config?.useTransportsOnly === true
   const disableFileLogging = config?.disableFileLogging === true
   if (useTransportsOnly || disableFileLogging) {

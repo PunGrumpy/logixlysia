@@ -31,37 +31,39 @@ const validateLogRotation = (config: Options['config']): void => {
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
-    throw new Error(`logixlysia: invalid logRotation config — ${message}`)
+    throw new Error(`logixlysia: invalid logRotation config — ${message}`, {
+      cause: error
+    })
   }
 }
 
 const PRESET_DEFAULTS: Record<LogPreset, NonNullable<Options['config']>> = {
   dev: {
-    showStartupMessage: true,
-    startupMessageFormat: 'banner',
-    useColors: true,
-    showContextTree: true,
     pino: {
       prettyPrint: true
-    }
-  },
-  prod: {
-    showStartupMessage: false,
-    useColors: false,
-    showContextTree: false,
-    autoRedact: true,
-    requestId: true,
-    pino: {
-      prettyPrint: false
-    }
+    },
+    showContextTree: true,
+    showStartupMessage: true,
+    startupMessageFormat: 'banner',
+    useColors: true
   },
   json: {
-    showStartupMessage: false,
-    useColors: false,
-    showContextTree: false,
     pino: {
       prettyPrint: false
-    }
+    },
+    showContextTree: false,
+    showStartupMessage: false,
+    useColors: false
+  },
+  prod: {
+    autoRedact: true,
+    pino: {
+      prettyPrint: false
+    },
+    requestId: true,
+    showContextTree: false,
+    showStartupMessage: false,
+    useColors: false
   }
 }
 
@@ -114,7 +116,7 @@ const mergeConfig = (
 
 /** Applies preset defaults; explicit `config` keys override preset values. */
 export const resolveOptions = (options: Options = {}): Options => {
-  const preset = options.preset
+  const { preset } = options
   if (preset && !VALID_PRESETS.includes(preset)) {
     throw new Error(`logixlysia: invalid preset — ${preset}`)
   }
