@@ -124,4 +124,28 @@ describe('getOrCreateRequestId', () => {
     expect(getOrCreateRequestId(req1, config)).toBe('req-1')
     expect(getOrCreateRequestId(req2, config)).toBe('req-2')
   })
+
+  test('preserves a valid inbound id with dots, dashes, and mixed case', () => {
+    const request = new Request('http://localhost/test', {
+      headers: { 'X-Request-Id': 'abc-123.DEF' }
+    })
+    const id = getOrCreateRequestId(request, defaultConfig)
+    expect(id).toBe('abc-123.DEF')
+  })
+
+  test('replaces an inbound id containing disallowed characters', () => {
+    const request = new Request('http://localhost/test', {
+      headers: { 'X-Request-Id': 'bad id $value' }
+    })
+    const id = getOrCreateRequestId(request, defaultConfig)
+    expect(id).toBe('generated-uuid')
+  })
+
+  test('replaces an inbound id that exceeds the max length', () => {
+    const request = new Request('http://localhost/test', {
+      headers: { 'X-Request-Id': 'a'.repeat(200) }
+    })
+    const id = getOrCreateRequestId(request, defaultConfig)
+    expect(id).toBe('generated-uuid')
+  })
 })
