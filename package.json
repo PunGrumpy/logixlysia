@@ -1,34 +1,41 @@
 {
   "name": "logixlysia-monorepo",
   "description": "🦊 Logixlysia is a logger for Elysia",
-  "scripts": {
-    "build": "turbo run build",
-    "dev": "turbo run dev",
-    "bench": "turbo run bench",
-    "test": "turbo test",
-    "test:coverage": "turbo test:coverage",
-    "lint": "ultracite check",
-    "format": "ultracite fix",
-    "changeset": "changeset",
-    "changeset:version": "changeset version",
-    "changeset:publish": "bun build && changeset publish",
-    "bump-deps": "bunx npm-check-updates --deep -u && bun install",
-    "clean": "git clean -xdf .turbo node_modules",
-    "typecheck": "turbo run typecheck"
-  },
-  "devDependencies": {
-    "@biomejs/biome": "2.5.6",
-    "@changesets/cli": "^2.31.0",
-    "turbo": "^2.10.7",
-    "typescript": "7.0.2",
-    "ultracite": "7.8.1"
-  },
-  "engines": {
-    "node": ">=24"
-  },
-  "packageManager": "bun@1.3.13",
   "workspaces": [
     "apps/*",
     "packages/*"
-  ]
+  ],
+  "scripts": {
+    "bench": "turbo run bench",
+    "build": "turbo run build",
+    "bump-deps": "bunx npm-check-updates --deep -u && bun install",
+    "changeset": "changeset",
+    "changeset:publish": "bun build && changeset publish",
+    "changeset:version": "changeset version",
+    "clean": "git clean -xdf .turbo node_modules",
+    "dev": "turbo run dev",
+    "format": "ultracite fix",
+    "lint": "ultracite check",
+    "test": "turbo test",
+    "test:coverage": "turbo test:coverage",
+    "typecheck": "turbo run typecheck"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.7",
+    "@changesets/cli": "^2.31.0",
+    "turbo": "^2.10.8",
+    "typescript": "7.0.2",
+    "ultracite": "7.10.0"
+  },
+  "packageManager": "bun@1.3.14",
+  "engines": {
+    "node": ">=24"
+  },
+  "devEngines": {
+    "packageManager": {
+      "name": "bun",
+      "version": "1.3.14",
+      "onFail": "download"
+    }
+  }
 }
