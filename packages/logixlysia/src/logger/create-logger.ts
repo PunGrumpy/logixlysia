@@ -64,10 +64,10 @@ const formatTimestamp = (date: Date, pattern?: string): string => {
 /** Resolves client IP from x-forwarded-for (first IP) or x-real-ip. Empty when neither header is set (e.g. localhost). */
 const getIp = (request: RequestInfo): string => {
   const forwarded = request.headers.get('x-forwarded-for')
-  if (forwarded) {
-    return sanitizeLogText(forwarded.split(',')[0]?.trim() ?? '', 64)
-  }
-  return sanitizeLogText(request.headers.get('x-real-ip') ?? '', 64)
+  const candidate = forwarded
+    ? (forwarded.split(',')[0]?.trim() ?? '')
+    : (request.headers.get('x-real-ip') ?? '')
+  return sanitizeLogText(candidate, 64)
 }
 
 export const formatDuration = (ms: number): string => {
