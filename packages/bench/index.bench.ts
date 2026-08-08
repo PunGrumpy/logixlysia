@@ -1,3 +1,6 @@
+import { mkdtempSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import {
   logger as bogeychanLogger,
   createPinoLogger as createBogeychan
@@ -181,7 +184,7 @@ const bogeychanApp = new Elysia()
   )
   .get('/', () => 'ok')
 
-describe('Elysia plugin request path', () => {
+describe('Elysia plugin request path — overhead floor (all sinks disabled)', () => {
   bench('logixlysia', async () => {
     await logixlysiaApp.handle(new Request('http://localhost/'))
   })
@@ -192,5 +195,61 @@ describe('Elysia plugin request path', () => {
 
   bench('bogeychan', async () => {
     await bogeychanApp.handle(new Request('http://localhost/'))
+  })
+})
+
+// A no-op transport still exercises data assembly, context merge, meta
+// construction, and dispatch — unlike the floor suite above, this is real
+// work, just with a sink that discards the result instead of writing it
+// anywhere. evlog's noop `drain` (reused from `evlogApp` above) is its
+// equivalent structured sink, so this comparison is apples-to-apples.
+// bogeychan has no comparable noop-sink mode (its `enabled: false` fully
+// short-circuits, same as the floor suite), so it's left out here.
+const noopTransport = {
+  log: () => {
+    /* consume */
+  }
+}
+
+const logixlysiaTransportApp = new Elysia()
+  .use(
+    logixlysia({
+      config: {
+        transports: [noopTransport],
+        useTransportsOnly: true
+      }
+    })
+  )
+  .get('/', () => 'ok')
+
+describe('Elysia plugin request path — structured sink (noop consumer)', () => {
+  bench('logixlysia (transport)', async () => {
+    await logixlysiaTransportApp.handle(new Request('http://localhost/'))
+  })
+
+  bench('evlog (drain)', async () => {
+    await evlogApp.handle(new Request('http://localhost/'))
+  })
+})
+
+const benchLogDir = mkdtempSync(join(tmpdir(), 'logixlysia-bench-'))
+
+const logixlysiaFileApp = new Elysia()
+  .use(
+    logixlysia({
+      config: {
+        disableInternalLogger: true,
+        logFilePath: join(benchLogDir, 'bench.log')
+      }
+    })
+  )
+  .get('/', () => 'ok')
+
+// `logToFile` is fire-and-forget from `log()` (`.catch(() => {})`), so this
+// suite measures enqueue cost per request plus amortized write cost — not a
+// guarantee that each write has completed by the time `handle()` resolves.
+describe('Elysia plugin request path — file sink', () => {
+  bench('logixlysia (logFilePath)', async () => {
+    await logixlysiaFileApp.handle(new Request('http://localhost/'))
   })
 })
