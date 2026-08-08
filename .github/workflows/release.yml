@@ -29,8 +29,6 @@ jobs:
           node-version: "24"
           registry-url: "https://registry.npmjs.org"
           cache-dependency-path: "package.json"
-      - name: 🔄️ Update npm
-        run: npm install -g npm@latest
       - name: 🍞 Setup Bun
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
       - name: 🌵 Cache Bun
