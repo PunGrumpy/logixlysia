@@ -7,12 +7,24 @@ import {
 } from '@bogeychan/elysia-logger'
 import { consola } from 'consola'
 import { Elysia } from 'elysia'
-import { createLogger as createEvlog } from 'evlog'
+import { createLogger as createEvlog, initLogger } from 'evlog'
 import { evlog } from 'evlog/elysia'
 import logixlysia, { createLogger } from 'logixlysia'
 import pino from 'pino'
 import { bench, describe } from 'vitest'
 import winston from 'winston'
+
+// evlog prints every wide event to console in addition to draining it —
+// pretty-formatted in dev, or JSON.stringify'd once `pretty` is off (see
+// `emitWideEvent` in evlog's dist: the console branch is gated on
+// `state.silent`, not `state.pretty`; `pretty` only chooses the format).
+// `silent` only suppresses that console branch — the elysia plugin's own
+// `drain` option flows through `options.drain ?? getGlobalDrain()` in its
+// request middleware, independent of `state.drain`/`state.silent` — so this
+// does not disable the drains configured below. Silencing it here makes the
+// drain evlog's only sink, matching logixlysia's noop transport in the
+// structured-sink suite.
+initLogger({ pretty: false, silent: true })
 
 const mockRequest = new Request('http://localhost:3000/')
 
@@ -184,6 +196,10 @@ const bogeychanApp = new Elysia()
   )
   .get('/', () => 'ok')
 
+// evlog has no fully-disabled mode — its "floor" case (evlogApp, below)
+// still assembles and drains a wide event per request, so its number here
+// is not a pure dispatch floor. bogeychan (`enabled: false`) and
+// logixlysia (all sinks disabled) are true floors.
 describe('Elysia plugin request path — overhead floor (all sinks disabled)', () => {
   bench('logixlysia', async () => {
     await logixlysiaApp.handle(new Request('http://localhost/'))
