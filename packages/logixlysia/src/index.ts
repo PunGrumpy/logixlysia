@@ -25,21 +25,25 @@ export interface EmptyElysiaSlot {
 }
 
 /**
- * Explicit singleton without Elysia's `SingletonBase` `Record<string, unknown>` on decorator/derive/resolve so
+ * Explicit singleton without Elysia's `SingletonBase` `Record<string, unknown>` on decorator/derive so
  * merged `Context` and WebSocket `ws.data` keep precise keys after `.use(logixlysia())`.
+ *
+ * Elysia 2 dropped the `resolve` slot from `SingletonBase` along with the `resolve` lifecycle.
  */
 export interface LogixlysiaSingleton {
   decorator: EmptyElysiaSlot
   derive: {
     log: RequestScopedLogger
   }
-  resolve: EmptyElysiaSlot
   store: LogixlysiaStore
 }
 
+// Elysia 2 inserts `Scope` as the second type parameter, after `BasePath` and before `Singleton`.
+// The instance is built without `config.as`, so its scope stays the default `'local'`; `.as('plugin')`
+// promotes the hooks at runtime without changing that parameter.
 // Elysia's `SingletonBase.store` is `Record<string, unknown>`; `LogixlysiaStore` is intentionally closed (see #220).
 // @ts-expect-error — closed store is correct at runtime and for merged `ws.data` inference.
-export type Logixlysia = Elysia<'', LogixlysiaSingleton>
+export type Logixlysia = Elysia<'', 'local', LogixlysiaSingleton>
 
 export type LogixlysiaPlugin = Logixlysia & {
   wrapWs: ReturnType<typeof createWsHandlerWrapper>
@@ -114,7 +118,7 @@ const logixlysia = (rawOptions: Options = {}): LogixlysiaPlugin => {
     .state('pino', logger.pino)
     .state('beforeTime', BigInt(0))
     .derive(({ request }) => ({ log: createRequestScopedLogger(request) }))
-    .onStart(({ server }): void => {
+    .setup(({ server }): void => {
       if (server) {
         startServer(server, options)
       } else {
@@ -123,7 +127,7 @@ const logixlysia = (rawOptions: Options = {}): LogixlysiaPlugin => {
         startServer({ hostname, port, protocol: 'http' }, options)
       }
     })
-    .onRequest(({ request }) => {
+    .request(({ request }) => {
       requestStartTimes.set(request, process.hrtime.bigint())
       if (requestIdConfig) {
         const requestId = getOrCreateRequestId(request, requestIdConfig)
@@ -134,7 +138,7 @@ const logixlysia = (rawOptions: Options = {}): LogixlysiaPlugin => {
         loggerStorage.enterWith(createRequestScopedLogger(request))
       }
     })
-    .onAfterHandle(({ request, set }) => {
+    .afterHandle(({ request, set }) => {
       try {
         if (requestIdConfig) {
           const ctx = contextStore.getContext(request)
@@ -173,7 +177,7 @@ const logixlysia = (rawOptions: Options = {}): LogixlysiaPlugin => {
         contextStore.clearContext(request)
       }
     })
-    .onError(({ request, error, set }) => {
+    .error(({ request, error, set }) => {
       try {
         if (requestIdConfig) {
           const ctx = contextStore.getContext(request)
@@ -190,7 +194,7 @@ const logixlysia = (rawOptions: Options = {}): LogixlysiaPlugin => {
         contextStore.clearContext(request)
       }
     })
-    .as('scoped') as Logixlysia
+    .as('plugin') as Logixlysia
 
   return Object.assign(plugin, { wrapWs }) as LogixlysiaPlugin
 }
