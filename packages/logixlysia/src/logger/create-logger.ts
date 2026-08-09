@@ -1,13 +1,7 @@
 import { STATUS_CODES } from 'node:http'
 import chalk from 'chalk'
 import { getStatusCode } from '../helpers/status'
-import type {
-  LogLevel,
-  Options,
-  Pino,
-  RequestInfo,
-  StoreData
-} from '../interfaces'
+import type { LogLevel, Options, RequestInfo, StoreData } from '../interfaces'
 import { isStructuredError, parseError } from '../utils/error'
 import { sanitizeLogText } from '../utils/sanitize'
 
@@ -372,20 +366,6 @@ const formatEntriesToTreeLines = (
   return lines
 }
 
-export const renderContextTreeLines = (
-  ctx: Record<string, unknown>,
-  options: Options,
-  useColors: boolean
-): string[] => {
-  const depth = options.config?.contextDepth ?? 1
-  if (depth < 1) {
-    return []
-  }
-
-  const entries = collectContextEntries(ctx, '', depth)
-  return formatEntriesToTreeLines(entries, useColors)
-}
-
 const collectStructuredErrorEntries = (error: unknown): [string, string][] => {
   const entries: [string, string][] = []
   const msg = parseError(error)
@@ -715,43 +695,4 @@ export const formatLogOutput = ({
   const contextLines = buildContextTreeLines(level, data, options, useColors)
 
   return { contextLines, main }
-}
-
-/** @deprecated Prefer {@link formatLogOutput} for multi-line context trees. Returns the main line only. */
-export const formatLine = (input: {
-  level: LogLevel
-  request: RequestInfo
-  data: Record<string, unknown>
-  store: StoreData
-  options: Options
-}): string =>
-  formatLogOutput({
-    ...input,
-    options: {
-      ...input.options,
-      config: {
-        ...input.options.config,
-        showContextTree: false
-      }
-    }
-  }).main
-
-export const logWithPino = (
-  logger: Pino,
-  level: LogLevel,
-  data: Record<string, unknown>
-): void => {
-  if (level === 'ERROR') {
-    logger.error(data)
-    return
-  }
-  if (level === 'WARNING') {
-    logger.warn(data)
-    return
-  }
-  if (level === 'DEBUG') {
-    logger.debug(data)
-    return
-  }
-  logger.info(data)
 }

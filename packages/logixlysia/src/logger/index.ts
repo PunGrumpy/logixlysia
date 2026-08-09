@@ -106,10 +106,13 @@ export const createLogger = (
       : {})
   }
 
-  let pinoLogger: Pino
-
-  if (shouldPrettyPrint) {
-    const prettyStream = pretty({
+  // Pino (and, when configured, its pino-pretty transform stream) is expensive to construct
+  // and is only ever needed when a caller explicitly reads store.pino/logger.pino or configures
+  // config.pino — the plugin's own log path writes via console.* and never touches it. Building
+  // it lazily behind a stable Proxy keeps `store.pino === logger.pino` identity while deferring
+  // the cost until first access.
+  const prettyStream = (): ReturnType<typeof pretty> =>
+    pretty({
       colorize: process.stdout?.isTTY === true,
       translateTime: config?.timestamp?.translateTime,
       ...prettyPrintOptions,
@@ -117,12 +120,37 @@ export const createLogger = (
       messageKey
     } as Record<string, unknown>)
 
-    pinoLogger = pinoFactory(basePinoOptions, prettyStream)
-  } else {
-    pinoLogger = pinoFactory({
-      ...basePinoOptions,
-      transport: pinoOptions.transport
-    })
+  let realPino: Pino | undefined
+
+  const getPino = (): Pino => {
+    if (!realPino) {
+      realPino = shouldPrettyPrint
+        ? pinoFactory(basePinoOptions, prettyStream())
+        : pinoFactory({
+            ...basePinoOptions,
+            transport: pinoOptions.transport
+          })
+    }
+    return realPino
+  }
+
+  const lazyPino = new Proxy({} as Pino, {
+    get(_target, prop) {
+      const target = getPino()
+      const value = (target as unknown as Record<string | symbol, unknown>)[
+        prop
+      ]
+      return typeof value === 'function'
+        ? (value as (...args: unknown[]) => unknown).bind(target)
+        : value
+    },
+    has: (_target, prop) => prop in (getPino() as object)
+  })
+
+  // Explicit config.pino means the user opted in to pino directly: construct eagerly so
+  // invalid options fail fast at plugin setup time, matching pre-lazy behavior.
+  if (config?.pino !== undefined) {
+    getPino()
   }
 
   const shouldLog = (level: LogLevel, logFilter?: LogFilter): boolean => {
@@ -279,7 +307,7 @@ export const createLogger = (
     mergeContext: (request, partial) => {
       contextStore.mergeContext(request, partial)
     },
-    pino: pinoLogger,
+    pino: lazyPino,
     warn: (request, message, context) => {
       logWithContext('WARNING', request, message, context)
     }
