@@ -51,8 +51,10 @@ jobs:
           path: |
             ~/.bun/install/cache
             **/node_modules
-          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}
+            .turbo
+          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}-${{ github.sha }}
           restore-keys: |
+            ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}-
             ${{ runner.os }}-bun-
       - name: 🔽 Install Dependencies
         run: bun install
@@ -79,8 +81,10 @@ jobs:
           path: |
             ~/.bun/install/cache
             **/node_modules
-          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}
+            .turbo
+          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}-${{ github.sha }}
           restore-keys: |
+            ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}-
             ${{ runner.os }}-bun-
       - name: 🔽 Install Dependencies
         run: bun install
