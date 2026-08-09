@@ -145,6 +145,7 @@ const redactCreditCardCandidates = (text: string): string =>
     return match
   })
 
+/** Returns `text` unchanged (same value) when nothing matched — callers can compare `=== input`. */
 export const redactString = (text: string): string => {
   let result = text
 
@@ -156,6 +157,9 @@ export const redactString = (text: string): string => {
   return result
 }
 
+// Errors are exempt from the identity fast path below: a redacted Error is always constructed
+// fresh (even when nothing changed) so consumers never receive the original, potentially
+// stack-trace-carrying instance by reference.
 const redactErrorClone = (
   originalError: Error,
   inProgress: WeakSet<object>,
@@ -185,30 +189,58 @@ const redactErrorClone = (
   return newError
 }
 
+/**
+ * Redacts each item; returns the ORIGINAL array reference when no item changed (zero
+ * allocations for the common no-PII case). A new array is materialized lazily, starting from
+ * the first item that changes — items before that point are known-unchanged, so they're copied
+ * from `value` as-is rather than recomputed.
+ */
 const redactArrayItems = (
   value: unknown[],
   inProgress: WeakSet<object>,
   extraKeys?: readonly string[]
 ): unknown[] => {
-  const redactedArray: unknown[] = Array.from({ length: value.length })
-  for (let i = 0; i < value.length; i += 1) {
-    redactedArray[i] = redactInner(value[i], inProgress, extraKeys)
+  let result: unknown[] | undefined
+
+  for (const [index, original] of value.entries()) {
+    const redacted = redactInner(original, inProgress, extraKeys)
+    if (result === undefined && redacted !== original) {
+      result = value.slice(0, index)
+    }
+    result?.push(redacted)
   }
-  return redactedArray
+
+  return result ?? value
 }
 
+/** Same lazy-materialization strategy as {@link redactArrayItems}, for plain objects. */
 const redactRecordEntries = (
   recordValue: Record<string, unknown>,
   inProgress: WeakSet<object>,
   extraKeys?: readonly string[]
 ): Record<string, unknown> => {
-  const redactedRecord: Record<string, unknown> = {}
-  for (const key of Object.keys(recordValue)) {
-    redactedRecord[key] = isSensitiveKey(key, extraKeys)
+  const keys = Object.keys(recordValue)
+  let result: Record<string, unknown> | undefined
+
+  for (const [index, key] of keys.entries()) {
+    const original = recordValue[key]
+    const sensitive = isSensitiveKey(key, extraKeys)
+    const redacted = sensitive
       ? REDACTED_TEXT
-      : redactInner(recordValue[key], inProgress, extraKeys)
+      : redactInner(original, inProgress, extraKeys)
+
+    if (result === undefined && (sensitive || redacted !== original)) {
+      result = {}
+      for (const priorKey of keys.slice(0, index)) {
+        result[priorKey] = recordValue[priorKey]
+      }
+    }
+    if (result !== undefined) {
+      result[key] = redacted
+    }
   }
-  return redactedRecord
+
+  return result ?? recordValue
 }
 
 const withReentrancyGuard = <T>(
@@ -243,7 +275,10 @@ const redactInner = <T>(
   }
 
   if (value instanceof Date) {
-    return new Date(value.getTime()) as unknown as T
+    // Dates carry no redactable string content and are never mutated by this module, so they
+    // pass through by reference (part of the identity fast path) instead of being defensively
+    // cloned as before.
+    return value
   }
 
   const obj = value as object
