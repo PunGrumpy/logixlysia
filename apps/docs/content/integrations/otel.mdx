@@ -19,7 +19,7 @@ const plugin = logixlysia()
 
 const app = new Elysia()
   .use(plugin)
-  .onRequest(({ request, store }) => {
+  .request(({ request, store }) => {
     injectTraceContext(store.logger, request)
   })
   .get('/', () => 'ok')

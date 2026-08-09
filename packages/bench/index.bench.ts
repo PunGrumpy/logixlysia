@@ -1,11 +1,7 @@
-import {
-  logger as bogeychanLogger,
-  createPinoLogger as createBogeychan
-} from '@bogeychan/elysia-logger'
+import { createPinoLogger as createBogeychan } from '@bogeychan/elysia-logger'
 import { consola } from 'consola'
 import { Elysia } from 'elysia'
 import { createLogger as createEvlog } from 'evlog'
-import { evlog } from 'evlog/elysia'
 import logixlysia, { createLogger } from 'logixlysia'
 import pino from 'pino'
 import { bench, describe } from 'vitest'
@@ -163,34 +159,11 @@ const logixlysiaApp = new Elysia()
   .use(logixlysia({ config: silentLogixConfig }))
   .get('/', () => 'ok')
 
-const evlogApp = new Elysia()
-  .use(
-    evlog({
-      drain: () => {
-        /* benchmark noop */
-      }
-    })
-  )
-  .get('/', () => 'ok')
-
-const bogeychanApp = new Elysia()
-  .use(
-    bogeychanLogger({
-      enabled: false
-    })
-  )
-  .get('/', () => 'ok')
-
+// `evlog/elysia` and `@bogeychan/elysia-logger` still declare an Elysia 1 peer and
+// use the pre-2.0 lifecycle names, so their plugin-path benchmarks are parked until
+// they ship Elysia 2 builds. Their raw-logger benchmarks above are unaffected.
 describe('Elysia plugin request path', () => {
   bench('logixlysia', async () => {
     await logixlysiaApp.handle(new Request('http://localhost/'))
-  })
-
-  bench('evlog', async () => {
-    await evlogApp.handle(new Request('http://localhost/'))
-  })
-
-  bench('bogeychan', async () => {
-    await bogeychanApp.handle(new Request('http://localhost/'))
   })
 })

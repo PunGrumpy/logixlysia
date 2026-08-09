@@ -204,7 +204,7 @@ app.get('/api/risky', ({ store }) => {
 ### Custom Error Handler
 
 ```ts
-app.onError(({ code, error, store }) => {
+app.error(({ code, error, store }) => {
   const { pino } = store
   
   pino.error({

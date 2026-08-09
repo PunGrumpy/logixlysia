@@ -1,4 +1,5 @@
 import Elysia from 'elysia'
+import { websocket } from 'elysia/websocket'
 import logixlysia from 'logixlysia'
 import { aiMetricsRouter } from './ai-metrics'
 import { autoRedactRouter } from './auto-redact'
@@ -38,6 +39,8 @@ export const logging = logixlysia({
 })
 
 export const routers = new Elysia()
+  // Elysia 2 makes WebSocket support opt-in; `.ws()` needs a registered provider.
+  .use(websocket())
   .use(logging)
   .get(
     '/',

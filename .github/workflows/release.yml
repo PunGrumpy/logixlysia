@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - main
+      # `next` carries the Elysia 2 pre-release line and publishes under the `next` dist-tag
+      - next
 
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 
@@ -55,7 +57,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: "" # Workaround for https://github.com/changesets/action/pull/545
       - name: ▲ Deploy to Vercel
-        if: steps.changesets.outputs.published == 'true'
+        if: ${{ steps.changesets.outputs.published == 'true' && github.ref == 'refs/heads/main' }}
         run: bunx vercel --prod --token=${{ secrets.VERCEL_TOKEN }}
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
