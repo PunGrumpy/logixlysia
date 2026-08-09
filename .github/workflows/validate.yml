@@ -25,18 +25,14 @@ jobs:
     uses: ./.github/workflows/security.yml
 
   code-quality:
-    needs:
-      - security
     name: ${{ matrix.name }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         include:
-          - name: Lint
+          - name: Lint & Format
             command: bun run lint
-          - name: Format
-            command: bun run format
           - name: Typecheck
             command: bun run typecheck
           - name: Test
@@ -55,8 +51,10 @@ jobs:
           path: |
             ~/.bun/install/cache
             **/node_modules
-          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}
+            .turbo
+          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}-${{ github.sha }}
           restore-keys: |
+            ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}-
             ${{ runner.os }}-bun-
       - name: 🔽 Install Dependencies
         run: bun install
@@ -83,8 +81,10 @@ jobs:
           path: |
             ~/.bun/install/cache
             **/node_modules
-          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}
+            .turbo
+          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}-${{ github.sha }}
           restore-keys: |
+            ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}-
             ${{ runner.os }}-bun-
       - name: 🔽 Install Dependencies
         run: bun install
