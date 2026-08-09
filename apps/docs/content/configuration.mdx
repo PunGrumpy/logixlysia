@@ -276,6 +276,19 @@ Disable file logging.
 disableFileLogging: true
 ```
 
+### `onError`
+
+Called when a sink (transport, file, or rotation) fails. Errors thrown by the hook itself are swallowed. When absent, failures go to stderr (rate-limited for transports).
+
+- **Type:** `(context: { sink: 'transport' | 'file' | 'rotation'; error: unknown }) => void`
+- **Default:** `undefined`
+
+```ts
+onError: ({ sink, error }) => {
+  metrics.increment(`logixlysia.sink_error.${sink}`)
+}
+```
+
 ## File Logging Options
 
 ### `logFilePath`

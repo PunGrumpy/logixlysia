@@ -192,4 +192,51 @@ describe('logToTransports', () => {
 
     expect(rejecting).toHaveBeenCalledTimes(1)
   })
+
+  test('invokes config.onError with sink "transport" instead of the rate-limited stderr fallback, and swallows a throwing hook', () => {
+    const throwing = mock<
+      (lvl: unknown, msg: unknown, metaArg?: unknown) => void
+    >(() => {
+      throw new Error('boom')
+    })
+    const onError = mock((_context: unknown) => {
+      throw new Error('hook boom')
+    })
+
+    const options: Options = {
+      config: { onError, transports: [{ log: throwing }] }
+    }
+    const request = createMockRequest('http://localhost/throw')
+    const store = { beforeTime: BigInt(0) }
+
+    expect(() => {
+      logToTransports({
+        data: { message: 'ignored' },
+        level: 'INFO',
+        options,
+        request,
+        store
+      })
+    }).not.toThrow()
+
+    expect(onError).toHaveBeenCalledTimes(1)
+    const [context] = onError.mock.calls[0] ?? [undefined]
+    const { sink, error } = (context ?? {}) as {
+      error?: unknown
+      sink?: unknown
+    }
+    expect(sink).toBe('transport')
+    expect(error).toBeDefined()
+
+    // A second immediate failure still invokes the hook (unlike the stderr
+    // fallback, onError is not rate-limited: the hook owns its own policy).
+    logToTransports({
+      data: { message: 'ignored again' },
+      level: 'INFO',
+      options,
+      request,
+      store
+    })
+    expect(onError).toHaveBeenCalledTimes(2)
+  })
 })

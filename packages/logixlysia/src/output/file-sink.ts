@@ -10,6 +10,8 @@ export interface FileSinkOptions {
   logDirMode?: number
   logFileMode?: number
   logRotation?: LogRotationConfig
+  /** Reports a rotation-sink failure; falls back to a stderr line when omitted. */
+  onRotationError?: (error: unknown) => void
 }
 
 export interface FileSink {
@@ -128,14 +130,18 @@ class FileSinkImpl implements FileSink {
       this.handle = null
       this.bytesWritten = 0
       await handle?.close()
-      await performRotation(this.filePath, rotation)
+      await performRotation(this.filePath, rotation, options.onRotationError)
     } catch (error) {
       // Log entries were already durably written and resolved above;
       // rotation failures must not fail the caller's write.
-      console.error(
-        `[logixlysia] Failed to rotate log file ${this.filePath}:`,
-        error
-      )
+      if (options.onRotationError) {
+        options.onRotationError(error)
+      } else {
+        console.error(
+          `[logixlysia] Failed to rotate log file ${this.filePath}:`,
+          error
+        )
+      }
     }
   }
 

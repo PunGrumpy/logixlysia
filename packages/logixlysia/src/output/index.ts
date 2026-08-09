@@ -1,9 +1,26 @@
-import type { LogLevel, Options, RequestInfo, StoreData } from '../interfaces'
+import type {
+  LogLevel,
+  Options,
+  RequestInfo,
+  SinkErrorContext,
+  StoreData
+} from '../interfaces'
 
 let lastTransportErrorAt = 0
 const TRANSPORT_ERROR_INTERVAL_MS = 5000
 
-const reportTransportError = (error: unknown): void => {
+const reportTransportError = (
+  error: unknown,
+  onError?: (context: SinkErrorContext) => void
+): void => {
+  if (onError) {
+    try {
+      onError({ error, sink: 'transport' })
+    } catch {
+      // Swallow errors thrown by the hook itself.
+    }
+    return
+  }
   const now = Date.now()
   if (now - lastTransportErrorAt < TRANSPORT_ERROR_INTERVAL_MS) {
     return
@@ -22,27 +39,13 @@ interface LogToTransportsInput {
   store: StoreData
 }
 
-export const logToTransports = (
-  ...args:
-    | [LogToTransportsInput]
-    | [LogLevel, RequestInfo, Record<string, unknown>, StoreData, Options]
-): void => {
-  const input: LogToTransportsInput =
-    typeof args[0] === 'string'
-      ? {
-          data: args[2],
-          level: args[0],
-          options: args[4],
-          request: args[1],
-          store: args[3]
-        }
-      : args[0]
-
+export const logToTransports = (input: LogToTransportsInput): void => {
   const { level, request, data, store, options, precomputed } = input
   const transports = options.config?.transports ?? []
   if (transports.length === 0) {
     return
   }
+  const onError = options.config?.onError
 
   const message = typeof data.message === 'string' ? data.message : ''
   const meta: Record<string, unknown> = {
@@ -65,10 +68,12 @@ export const logToTransports = (
         result &&
         typeof (result as { catch?: unknown }).catch === 'function'
       ) {
-        ;(result as Promise<void>).catch(reportTransportError)
+        ;(result as Promise<void>).catch(error =>
+          reportTransportError(error, onError)
+        )
       }
     } catch (error) {
-      reportTransportError(error)
+      reportTransportError(error, onError)
     }
   }
 }
