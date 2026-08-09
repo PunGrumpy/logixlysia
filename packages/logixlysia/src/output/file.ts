@@ -7,6 +7,8 @@ interface LogToFileInput {
   filePath: string
   level: LogLevel
   options: Options
+  /** Duration/URL parts already computed by the caller; parsed on the fly when omitted. */
+  precomputed?: { durationMs: number; pathname: string; search: string }
   request: RequestInfo
   store: StoreData
 }
@@ -52,7 +54,7 @@ export const logToFile = async (
         })()
       : args[0]
 
-  const { filePath, level, request, data, store, options } = input
+  const { filePath, level, request, data, store, options, precomputed } = input
   const { config } = options
   const useTransportsOnly = config?.useTransportsOnly === true
   const disableFileLogging = config?.disableFileLogging === true
@@ -62,18 +64,26 @@ export const logToFile = async (
 
   const message = typeof data.message === 'string' ? data.message : ''
   const durationMs =
-    store.beforeTime === BigInt(0)
+    precomputed?.durationMs ??
+    (store.beforeTime === BigInt(0)
       ? 0
-      : Number(process.hrtime.bigint() - store.beforeTime) / 1_000_000
+      : Number(process.hrtime.bigint() - store.beforeTime) / 1_000_000)
 
-  // Safely parse URL to avoid crashes on malformed URLs
   let pathname = '/'
-  try {
-    const { pathname: rawPathname, search } = new URL(request.url)
+  if (precomputed) {
+    const { pathname: rawPathname, search } = precomputed
     pathname = config?.logQueryParams ? `${rawPathname}${search}` : rawPathname
-  } catch {
-    // Fallback to raw URL if parsing fails
-    pathname = request.url
+  } else {
+    // Safely parse URL to avoid crashes on malformed URLs
+    try {
+      const { pathname: rawPathname, search } = new URL(request.url)
+      pathname = config?.logQueryParams
+        ? `${rawPathname}${search}`
+        : rawPathname
+    } catch {
+      // Fallback to raw URL if parsing fails
+      pathname = request.url
+    }
   }
 
   const line = `${level} ${durationMs.toFixed(2)}ms ${request.method} ${sanitizeLogText(pathname, 1024)} ${sanitizeLogText(message)}\n`
