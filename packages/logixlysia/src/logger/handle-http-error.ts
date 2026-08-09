@@ -52,7 +52,9 @@ export const handleHttpError = (
 
   const data: Record<string, unknown> = { error: safeError, message, status }
   const dataWithContext = contextStore
-    ? mergeLogDataContext(data, contextStore.getContext(request))
+    ? // mergeLogDataContext only reads/spreads this bag into a new object; it never retains
+      // the reference, so a non-cloning peek is safe here.
+      mergeLogDataContext(data, contextStore.peekContext(request))
     : data
   const logData =
     config?.autoRedact === true
