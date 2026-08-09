@@ -34,4 +34,36 @@ describe('request context store', () => {
 
     expect(merged.context).toEqual({ plan: 'pro', userId: 'override' })
   })
+
+  test('peekContext returns the live bag without cloning', () => {
+    const store = createRequestContextStore()
+    const request = new Request('http://localhost/')
+
+    store.mergeContext(request, { userId: 'u1' })
+    const peeked = store.peekContext(request)
+    store.mergeContext(request, { plan: 'pro' })
+
+    // Same reference as the internally stored bag: mutations made via mergeContext
+    // are visible through the reference obtained earlier from peekContext.
+    expect(peeked).toEqual({ plan: 'pro', userId: 'u1' })
+  })
+
+  test('peekContext returns a shared empty object for unknown keys', () => {
+    const store = createRequestContextStore()
+    const request = new Request('http://localhost/')
+
+    expect(store.peekContext(request)).toEqual({})
+  })
+
+  test('getContext still returns a fresh copy each call, unlike peekContext', () => {
+    const store = createRequestContextStore()
+    const request = new Request('http://localhost/')
+    store.mergeContext(request, { userId: 'u1' })
+
+    const first = store.getContext(request)
+    const second = store.getContext(request)
+
+    expect(first).toEqual(second)
+    expect(first).not.toBe(second)
+  })
 })

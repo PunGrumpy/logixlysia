@@ -17,8 +17,48 @@ import type {
 import { logToTransports } from '../output'
 import { logToFile } from '../output/file'
 import { buildPinoRedactPaths, redact, redactRequest } from '../utils/redact'
-import { formatLogOutput } from './create-logger'
+import {
+  createFormatContext,
+  formatLogOutput,
+  type PrecomputedLogParts
+} from './create-logger'
 import { handleHttpError } from './handle-http-error'
+
+const computeDurationMs = (store: StoreData): number =>
+  store.beforeTime === BigInt(0)
+    ? 0
+    : Number(process.hrtime.bigint() - store.beforeTime) / 1_000_000
+
+/** Parses the URL once; only called when at least one active sink reads pathname/search. */
+const parseRequestUrlOnce = (
+  request: RequestInfo
+): { pathname: string; search: string } => {
+  try {
+    const { pathname, search } = new URL(request.url)
+    return { pathname, search }
+  } catch {
+    return { pathname: request.url || '/', search: '' }
+  }
+}
+
+/**
+ * Samples duration and parses the URL once per emission for the sinks that will actually run.
+ * `logToTransports`' meta only reads `durationMs` (not pathname/search), so the URL is parsed
+ * only when file logging or the internal console logger is active — skipping it entirely for
+ * transports-only configs, matching that path's pre-optimization behavior.
+ */
+const computePrecomputedLogParts = (
+  store: StoreData,
+  request: RequestInfo,
+  needsUrlParts: boolean
+): PrecomputedLogParts => {
+  const durationMs = computeDurationMs(store)
+  const { pathname, search } = needsUrlParts
+    ? parseRequestUrlOnce(request)
+    : { pathname: '', search: '' }
+
+  return { durationMs, pathname, search }
+}
 
 export const createLogger = (
   options: Options = {},
@@ -27,6 +67,9 @@ export const createLogger = (
 ): Logger => {
   const contextStore = externalContextStore ?? createRequestContextStore()
   const { config } = options
+  // Hoisted once per logger instance: colors/format/thresholds/service don't change across
+  // requests within a process lifetime (see createFormatContext's doc comment).
+  const formatContext = createFormatContext(options)
 
   const pinoConfig = config?.pino
   const { prettyPrint, ...pinoOptions } = pinoConfig ?? {}
@@ -102,6 +145,9 @@ export const createLogger = (
     hasFileLogging ||
     hasInternalLogger
   )
+  // Only file logging and the internal console formatter read pathname/search; transports'
+  // meta only reads durationMs, so skip the URL parse entirely when they're the only sink.
+  const needsUrlParts = hasFileLogging || hasInternalLogger
 
   const log = (
     level: LogLevel,
@@ -115,7 +161,9 @@ export const createLogger = (
 
     const dataWithContext = mergeLogDataContext(
       data,
-      contextStore.getContext(request)
+      // mergeLogDataContext only reads/spreads this bag into a new object; it never retains
+      // the reference, so a non-cloning peek is safe here.
+      contextStore.peekContext(request)
     )
     const logData =
       config?.autoRedact === true
@@ -126,11 +174,18 @@ export const createLogger = (
         ? redactRequest(request, config?.redactKeys)
         : request
 
+    const precomputed = computePrecomputedLogParts(
+      store,
+      logRequest,
+      needsUrlParts
+    )
+
     if (hasTransports) {
       logToTransports({
         data: logData,
         level,
         options,
+        precomputed,
         request: logRequest,
         store
       })
@@ -144,6 +199,7 @@ export const createLogger = (
           filePath,
           level,
           options,
+          precomputed,
           request: logRequest,
           store
         }).catch(() => {
@@ -158,8 +214,10 @@ export const createLogger = (
 
     const { main, contextLines } = formatLogOutput({
       data: logData,
+      formatContext,
       level,
       options,
+      precomputed,
       request: logRequest,
       store
     })

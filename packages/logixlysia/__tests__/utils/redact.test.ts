@@ -159,6 +159,35 @@ describe('redact', () => {
       custom: '[REDACTED]'
     })
   })
+
+  test('returns the same object reference when nothing needs redacting', () => {
+    const original = { count: 3, message: 'all good', nested: { ok: true } }
+    const result = redact(original)
+    expect(result).toBe(original)
+  })
+
+  test('returns the same array reference when nothing needs redacting', () => {
+    const original = [1, 'safe', { ok: true }]
+    const result = redact(original)
+    expect(result).toBe(original)
+  })
+
+  test('changed objects still return new references and leave the original unmutated', () => {
+    const original = { user: { email: 'test@example.com', name: 'ok' } }
+    const result = redact(original)
+    expect(result).not.toBe(original)
+    expect((result as typeof original).user).not.toBe(original.user)
+    expect(original.user.email).toBe('test@example.com')
+  })
+
+  test('only clones the branch containing a change; sibling branches keep their reference', () => {
+    const unrelated = { safe: true }
+    const original = { a: unrelated, b: { email: 'x@example.com' } }
+    const result = redact(original) as typeof original
+    expect(result).not.toBe(original)
+    expect(result.a).toBe(unrelated)
+    expect(result.b).not.toBe(original.b)
+  })
 })
 
 describe('isSensitiveKey', () => {

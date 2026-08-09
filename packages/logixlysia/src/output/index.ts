@@ -16,6 +16,8 @@ interface LogToTransportsInput {
   data: Record<string, unknown>
   level: LogLevel
   options: Options
+  /** Duration already computed by the caller; sampled on the fly when omitted. */
+  precomputed?: { durationMs: number; pathname: string; search: string }
   request: RequestInfo
   store: StoreData
 }
@@ -36,7 +38,7 @@ export const logToTransports = (
         }
       : args[0]
 
-  const { level, request, data, store, options } = input
+  const { level, request, data, store, options, precomputed } = input
   const transports = options.config?.transports ?? []
   if (transports.length === 0) {
     return
@@ -50,9 +52,10 @@ export const logToTransports = (
     },
     ...data,
     durationMs:
-      store.beforeTime === BigInt(0)
+      precomputed?.durationMs ??
+      (store.beforeTime === BigInt(0)
         ? 0
-        : Number(process.hrtime.bigint() - store.beforeTime) / 1_000_000
+        : Number(process.hrtime.bigint() - store.beforeTime) / 1_000_000)
   }
 
   for (const transport of transports) {

@@ -15,8 +15,18 @@ export interface WsHandlerHooks<
   open?: (ws: TWs) => void
 }
 
-const wsSyntheticRequest = (path: string): Request =>
-  new Request(`http://logixlysia.local${path}`, { method: 'WS' })
+// Synthetic requests are only read (method/url) by the log pipeline, never mutated, so caching
+// one per path avoids allocating a fresh Request on every WS open/message/close log event.
+const wsRequestCache = new Map<string, Request>()
+
+const wsSyntheticRequest = (path: string): Request => {
+  let request = wsRequestCache.get(path)
+  if (!request) {
+    request = new Request(`http://logixlysia.local${path}`, { method: 'WS' })
+    wsRequestCache.set(path, request)
+  }
+  return request
+}
 
 export const createWsHandlerWrapper = (
   options: Options,
@@ -35,7 +45,8 @@ export const createWsHandlerWrapper = (
     const key = ws as object
     const beforeTime = wsTimings.get(key) ?? process.hrtime.bigint()
     const store: StoreData = { beforeTime }
-    const accumulated = contextStore.getContext(key)
+    // Read-only: immediately spread below into a new object, never retained or mutated.
+    const accumulated = contextStore.peekContext(key)
     const context =
       Object.keys(accumulated).length > 0 || extra
         ? { ...accumulated, ...extra, wsId: ws.id }
