@@ -9,6 +9,8 @@ import { createTempDir, removeTempDir } from '../_helpers/tmp'
 /** Owner/group/other permission bits as a 3-digit octal string, e.g. '600'. */
 const permBits = (mode: number): string => mode.toString(8).slice(-3)
 
+const MESSAGE_ID_REGEX = /msg-(\d+)$/
+
 describe('logToFile', () => {
   test('writes to file and creates directories', async () => {
     const dir = await createTempDir()
@@ -150,6 +152,176 @@ describe('logToFile', () => {
 
       const fileStat = await fs.stat(filePath)
       expect(permBits(fileStat.mode)).toBe('644')
+    } finally {
+      await removeTempDir(dir)
+    }
+  })
+
+  test('coalesces same-tick writes into one file with all lines intact', async () => {
+    const dir = await createTempDir()
+    try {
+      const filePath = join(dir, 'logs', 'batch.log')
+      const options: Options = { config: {} }
+      const total = 50
+
+      // No awaits between calls: all 50 land in the same microtask batch.
+      const writes = Array.from({ length: total }, (_, i) =>
+        logToFile({
+          data: { message: `msg-${i}` },
+          filePath,
+          level: 'INFO',
+          options,
+          request: createMockRequest(`http://localhost/test${i}`),
+          store: { beforeTime: BigInt(0) }
+        })
+      )
+
+      // Every caller's own promise must resolve, proving per-caller
+      // resolution semantics survive batching.
+      await Promise.all(writes)
+
+      const content = await fs.readFile(filePath, 'utf-8')
+      const lines = content.split('\n').filter(line => line.length > 0)
+      expect(lines.length).toBe(total)
+
+      const seenIds = new Set<string>()
+      for (const line of lines) {
+        const match = line.match(MESSAGE_ID_REGEX)
+        expect(match).not.toBeNull()
+        if (match) {
+          seenIds.add(match[1])
+        }
+      }
+      expect(seenIds.size).toBe(total)
+    } finally {
+      await removeTempDir(dir)
+    }
+  })
+
+  test('rotates on size and resumes writing into a fresh live file', async () => {
+    const dir = await createTempDir()
+    try {
+      const filePath = join(dir, 'logs', 'reopen.log')
+      const options: Options = {
+        config: { logRotation: { maxSize: 100 } }
+      }
+
+      // This single line already exceeds maxSize, so it rotates on its own.
+      await logToFile({
+        data: { message: 'x'.repeat(90) },
+        filePath,
+        level: 'INFO',
+        options,
+        request: createMockRequest('http://localhost/first'),
+        store: { beforeTime: BigInt(0) }
+      })
+
+      // Small enough to stay under maxSize: proves the live file was
+      // reopened and writes keep landing in it (not the rotated one).
+      await logToFile({
+        data: { message: 'y' },
+        filePath,
+        level: 'INFO',
+        options,
+        request: createMockRequest('http://localhost/second'),
+        store: { beforeTime: BigInt(0) }
+      })
+
+      const entries = await fs.readdir(join(dir, 'logs'))
+      const rotated = entries.filter(name => name.startsWith('reopen.log.'))
+      expect(rotated.length).toBe(1)
+
+      const rotatedContent = await fs.readFile(
+        join(dir, 'logs', rotated[0]),
+        'utf-8'
+      )
+      expect(rotatedContent).toContain('x'.repeat(90))
+
+      const liveContent = await fs.readFile(filePath, 'utf-8')
+      expect(liveContent).toContain('/second y')
+      expect(liveContent).not.toContain('x'.repeat(90))
+    } finally {
+      await removeTempDir(dir)
+    }
+  })
+
+  test('does not re-rotate immediately after the byte counter resets', async () => {
+    const dir = await createTempDir()
+    try {
+      const filePath = join(dir, 'logs', 'no-leak.log')
+      const options: Options = {
+        config: { logRotation: { maxSize: 100 } }
+      }
+
+      // Triggers rotation on its own.
+      await logToFile({
+        data: { message: 'x'.repeat(90) },
+        filePath,
+        level: 'INFO',
+        options,
+        request: createMockRequest('http://localhost/first'),
+        store: { beforeTime: BigInt(0) }
+      })
+
+      // Two small writes after the reset: if bytesWritten leaked across the
+      // rotation instead of resetting to 0, these would spuriously rotate
+      // again.
+      await logToFile({
+        data: { message: 'a' },
+        filePath,
+        level: 'INFO',
+        options,
+        request: createMockRequest('http://localhost/second'),
+        store: { beforeTime: BigInt(0) }
+      })
+      await logToFile({
+        data: { message: 'b' },
+        filePath,
+        level: 'INFO',
+        options,
+        request: createMockRequest('http://localhost/third'),
+        store: { beforeTime: BigInt(0) }
+      })
+
+      const entries = await fs.readdir(join(dir, 'logs'))
+      const rotated = entries.filter(name => name.startsWith('no-leak.log.'))
+      expect(rotated.length).toBe(1)
+
+      const liveContent = await fs.readFile(filePath, 'utf-8')
+      const lines = liveContent.split('\n').filter(line => line.length > 0)
+      expect(lines.length).toBe(2)
+    } finally {
+      await removeTempDir(dir)
+    }
+  })
+
+  test('reopened file after rotation keeps the configured mode', async () => {
+    const dir = await createTempDir()
+    try {
+      const filePath = join(dir, 'logs', 'mode-after-rotate.log')
+      const options: Options = {
+        config: { logRotation: { maxSize: 50 } }
+      }
+
+      await logToFile({
+        data: { message: 'x'.repeat(60) },
+        filePath,
+        level: 'INFO',
+        options,
+        request: createMockRequest('http://localhost/first'),
+        store: { beforeTime: BigInt(0) }
+      })
+      await logToFile({
+        data: { message: 'hello' },
+        filePath,
+        level: 'INFO',
+        options,
+        request: createMockRequest('http://localhost/second'),
+        store: { beforeTime: BigInt(0) }
+      })
+
+      const fileStat = await fs.stat(filePath)
+      expect(permBits(fileStat.mode)).toBe('600')
     } finally {
       await removeTempDir(dir)
     }

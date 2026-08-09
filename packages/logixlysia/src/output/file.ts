@@ -1,33 +1,6 @@
-import { appendFile } from 'node:fs/promises'
-import { dirname } from 'node:path'
 import type { LogLevel, Options, RequestInfo, StoreData } from '../interfaces'
 import { sanitizeLogText } from '../utils/sanitize'
-import { ensureDir } from './fs'
-import { performRotation, shouldRotate } from './rotation-manager'
-
-// Per-file mutex to prevent race conditions during rotation
-const fileLocks = new Map<string, Promise<void>>()
-
-const acquireLock = async (filePath: string): Promise<() => void> => {
-  const prior = fileLocks.get(filePath) ?? Promise.resolve()
-
-  let resolveLock: () => void
-  const newLock = new Promise<void>(resolve => {
-    resolveLock = resolve
-  })
-
-  // Register before awaiting: same-tick callers must chain onto THIS lock.
-  fileLocks.set(filePath, newLock)
-
-  await prior
-
-  return () => {
-    resolveLock?.()
-    if (fileLocks.get(filePath) === newLock) {
-      fileLocks.delete(filePath)
-    }
-  }
-}
+import { getFileSink } from './file-sink'
 
 interface LogToFileInput {
   data: Record<string, unknown>
@@ -105,44 +78,18 @@ export const logToFile = async (
 
   const line = `${level} ${durationMs.toFixed(2)}ms ${request.method} ${sanitizeLogText(pathname, 1024)} ${sanitizeLogText(message)}\n`
 
-  // Acquire lock before any file operations to prevent race conditions
-  const releaseLock = await acquireLock(filePath)
-
   try {
-    try {
-      await ensureDir(dirname(filePath), config?.logDirMode)
-      await appendFile(filePath, line, {
-        encoding: 'utf-8',
-        mode: config?.logFileMode ?? 0o600
-      })
-    } catch (error) {
-      // Log file write errors to stderr so they're not completely silent
-      console.error(
-        `[logixlysia] Failed to write to log file ${filePath}:`,
-        error
-      )
-      throw error
-    }
-
-    const rotation = config?.logRotation
-    if (!rotation) {
-      return
-    }
-
-    const should = await shouldRotate(filePath, rotation)
-    if (should) {
-      try {
-        await performRotation(filePath, rotation)
-      } catch (error) {
-        // Log rotation errors but don't crash - log entry was already written
-        console.error(
-          `[logixlysia] Failed to rotate log file ${filePath}:`,
-          error
-        )
-      }
-    }
-  } finally {
-    // Release lock
-    releaseLock()
+    await getFileSink(filePath).write(line, {
+      logDirMode: config?.logDirMode,
+      logFileMode: config?.logFileMode,
+      logRotation: config?.logRotation
+    })
+  } catch (error) {
+    // Log file write errors to stderr so they're not completely silent
+    console.error(
+      `[logixlysia] Failed to write to log file ${filePath}:`,
+      error
+    )
+    throw error
   }
 }
