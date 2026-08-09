@@ -37,4 +37,4 @@ Run the monorepo benchmark package:
 bun run bench
 ```
 
-The `Elysia plugin request path` suite compares full `handle()` overhead for Logixlysia, evlog, and elysia-logger. Results vary by machine—use them for regression tracking, not absolute rankings.
+The benchmark package has three request-path suites: an **overhead floor** (all sinks disabled — measures plugin dispatch cost only), a **structured sink** run (no-op transport/drain — measures log assembly and dispatch), and a **file sink** run. Compare like with like: the floor numbers contain no logging work by design. Results vary by machine — use them for regression tracking, not absolute rankings.
