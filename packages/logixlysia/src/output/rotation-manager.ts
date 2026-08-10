@@ -188,7 +188,7 @@ export const performRotation = async (
     await cleanupRotated(filePath, retention, onError)
   }
 
-  // `config.interval` (fixed-interval rotation, e.g. '1d'/'12h') is not
-  // implemented here: rotation is currently only triggered by `maxSize`
-  // (see `FileSinkImpl.maybeRotate` in file-sink.ts).
+  // Interval-based triggering lives in `FileSinkImpl.maybeRotate`
+  // (file-sink.ts); performRotation is trigger-agnostic — it renames,
+  // compresses, and cleans up regardless of why rotation fired.
 }
