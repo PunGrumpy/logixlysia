@@ -1,7 +1,7 @@
-import { describe, expect, test } from 'bun:test'
+import { describe, expect, mock, test } from 'bun:test'
 import { promises as fs } from 'node:fs'
 import { dirname, join } from 'node:path'
-import type { Options } from '../../src/interfaces'
+import type { Options, SinkErrorContext } from '../../src/interfaces'
 import { logToFile } from '../../src/output/file'
 import { createMockRequest } from '../_helpers/request'
 import { createTempDir, removeTempDir } from '../_helpers/tmp'
@@ -322,6 +322,43 @@ describe('logToFile', () => {
 
       const fileStat = await fs.stat(filePath)
       expect(permBits(fileStat.mode)).toBe('600')
+    } finally {
+      await removeTempDir(dir)
+    }
+  })
+
+  test('invokes config.onError with sink "file" when the write fails, and swallows a throwing hook', async () => {
+    const dir = await createTempDir()
+    try {
+      // A regular file where a directory is expected: mkdir(..., {recursive:
+      // true}) fails with ENOTDIR, giving a deterministic, permission-model-
+      // independent write failure.
+      const blocker = join(dir, 'not-a-directory')
+      await fs.writeFile(blocker, 'x')
+      const filePath = join(blocker, 'nested', 'app.log')
+
+      const onError = mock((_context: SinkErrorContext) => {
+        throw new Error('hook boom')
+      })
+      const options: Options = { config: { onError } }
+
+      // The hook throwing must not crash the caller; logToFile still
+      // rejects with the original error (callers already .catch() this).
+      await expect(
+        logToFile({
+          data: { message: 'hello' },
+          filePath,
+          level: 'INFO',
+          options,
+          request: createMockRequest('http://localhost/test'),
+          store: { beforeTime: BigInt(0) }
+        })
+      ).rejects.toBeDefined()
+
+      expect(onError).toHaveBeenCalledTimes(1)
+      const [context] = onError.mock.calls[0] ?? [undefined]
+      expect(context?.sink).toBe('file')
+      expect(context?.error).toBeDefined()
     } finally {
       await removeTempDir(dir)
     }

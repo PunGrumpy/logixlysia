@@ -65,6 +65,12 @@ export type PrettyPrintConfig = boolean | Record<string, unknown>
 
 export type LogPreset = 'dev' | 'prod' | 'json'
 
+/** Context passed to {@link Options.config.onError} when a sink fails. */
+export interface SinkErrorContext {
+  error: unknown
+  sink: 'file' | 'rotation' | 'transport'
+}
+
 export interface RequestIdConfig {
   /**
    * Enable request ID generation.
@@ -161,6 +167,13 @@ export interface Options {
      * @default false
      */
     logErrorPayload?: boolean
+
+    /**
+     * Called when a sink (transport, file, rotation) fails. Errors thrown by
+     * the hook itself are swallowed. When absent, failures go to stderr
+     * (rate-limited for transports).
+     */
+    onError?: (context: SinkErrorContext) => void
 
     // Pino
     pino?: (PinoLoggerOptions & { prettyPrint?: PrettyPrintConfig }) | undefined

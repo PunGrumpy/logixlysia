@@ -1,4 +1,10 @@
-import type { LogLevel, Options, RequestInfo, StoreData } from '../interfaces'
+import type {
+  LogLevel,
+  Options,
+  RequestInfo,
+  SinkErrorContext,
+  StoreData
+} from '../interfaces'
 import { sanitizeLogText } from '../utils/sanitize'
 import { getFileSink } from './file-sink'
 
@@ -13,47 +19,46 @@ interface LogToFileInput {
   store: StoreData
 }
 
-export const logToFile = async (
-  ...args:
-    | [LogToFileInput]
-    | [
-        string,
-        LogLevel,
-        RequestInfo,
-        Record<string, unknown>,
-        StoreData,
-        Options
-      ]
-): Promise<void> => {
-  const input: LogToFileInput =
-    typeof args[0] === 'string'
-      ? (() => {
-          const [
-            filePathArg,
-            levelArg,
-            requestArg,
-            dataArg,
-            storeArg,
-            optionsArg
-          ] = args as [
-            string,
-            LogLevel,
-            RequestInfo,
-            Record<string, unknown>,
-            StoreData,
-            Options
-          ]
-          return {
-            data: dataArg,
-            filePath: filePathArg,
-            level: levelArg,
-            options: optionsArg,
-            request: requestArg,
-            store: storeArg
-          }
-        })()
-      : args[0]
+/** Resolves the logged pathname (with query string when configured) from precomputed parts or a fresh parse. */
+const resolvePathname = (
+  request: RequestInfo,
+  logQueryParams: boolean | undefined,
+  precomputed?: { pathname: string; search: string }
+): string => {
+  if (precomputed) {
+    const { pathname, search } = precomputed
+    return logQueryParams ? `${pathname}${search}` : pathname
+  }
+  try {
+    // Safely parse URL to avoid crashes on malformed URLs
+    const { pathname, search } = new URL(request.url)
+    return logQueryParams ? `${pathname}${search}` : pathname
+  } catch {
+    // Fallback to raw URL if parsing fails
+    return request.url
+  }
+}
 
+/** Reports a sink failure via `config.onError` when set (swallowing hook errors), else stderr. */
+const reportSinkError = (
+  config: Options['config'],
+  sink: SinkErrorContext['sink'],
+  fallbackMessage: string,
+  error: unknown
+): void => {
+  const onError = config?.onError
+  if (!onError) {
+    console.error(fallbackMessage, error)
+    return
+  }
+  try {
+    onError({ error, sink })
+  } catch {
+    // Swallow errors thrown by the hook itself.
+  }
+}
+
+export const logToFile = async (input: LogToFileInput): Promise<void> => {
   const { filePath, level, request, data, store, options, precomputed } = input
   const { config } = options
   const useTransportsOnly = config?.useTransportsOnly === true
@@ -69,34 +74,24 @@ export const logToFile = async (
       ? 0
       : Number(process.hrtime.bigint() - store.beforeTime) / 1_000_000)
 
-  let pathname = '/'
-  if (precomputed) {
-    const { pathname: rawPathname, search } = precomputed
-    pathname = config?.logQueryParams ? `${rawPathname}${search}` : rawPathname
-  } else {
-    // Safely parse URL to avoid crashes on malformed URLs
-    try {
-      const { pathname: rawPathname, search } = new URL(request.url)
-      pathname = config?.logQueryParams
-        ? `${rawPathname}${search}`
-        : rawPathname
-    } catch {
-      // Fallback to raw URL if parsing fails
-      pathname = request.url
-    }
-  }
-
+  const pathname = resolvePathname(request, config?.logQueryParams, precomputed)
   const line = `${level} ${durationMs.toFixed(2)}ms ${request.method} ${sanitizeLogText(pathname, 1024)} ${sanitizeLogText(message)}\n`
+
+  const onRotationError = config?.onError
+    ? (error: unknown) => reportSinkError(config, 'rotation', '', error)
+    : undefined
 
   try {
     await getFileSink(filePath).write(line, {
       logDirMode: config?.logDirMode,
       logFileMode: config?.logFileMode,
-      logRotation: config?.logRotation
+      logRotation: config?.logRotation,
+      onRotationError
     })
   } catch (error) {
-    // Log file write errors to stderr so they're not completely silent
-    console.error(
+    reportSinkError(
+      config,
+      'file',
       `[logixlysia] Failed to write to log file ${filePath}:`,
       error
     )

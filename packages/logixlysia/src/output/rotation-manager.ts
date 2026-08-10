@@ -8,33 +8,26 @@ import {
   parseSize,
   shouldRotateBySize
 } from '../utils/rotation'
+import { createKeyedMutex } from './keyed-mutex'
 
 const gzipAsync = promisify(gzip)
 
-// Compression lock to prevent concurrent compression of the same file
-const compressionLocks = new Map<string, Promise<void>>()
+// Prevents concurrent compression of the same file (keyed by filePath).
+const compressionLock = createKeyedMutex()
 
-const acquireCompressionLock = async (
-  filePath: string
-): Promise<() => void> => {
-  const prior = compressionLocks.get(filePath) ?? Promise.resolve()
+/** Reports a sink failure; when omitted, the caller falls back to stderr. */
+export type RotationErrorReporter = (error: unknown) => void
 
-  let resolveLock: () => void
-  const newLock = new Promise<void>(resolve => {
-    resolveLock = resolve
-  })
-
-  // Register before awaiting: same-tick callers must chain onto THIS lock.
-  compressionLocks.set(filePath, newLock)
-
-  await prior
-
-  return () => {
-    resolveLock?.()
-    if (compressionLocks.get(filePath) === newLock) {
-      compressionLocks.delete(filePath)
-    }
+const reportRotationError = (
+  message: string,
+  error: unknown,
+  onError?: RotationErrorReporter
+): void => {
+  if (onError) {
+    onError(error)
+    return
   }
+  console.error(message, error)
 }
 
 const pad2 = (value: number): string => String(value).padStart(2, '0')
@@ -66,8 +59,11 @@ export const rotateFile = async (filePath: string): Promise<string> => {
   return rotated
 }
 
-export const compressFile = async (filePath: string): Promise<void> => {
-  const release = await acquireCompressionLock(filePath)
+export const compressFile = async (
+  filePath: string,
+  onError?: RotationErrorReporter
+): Promise<void> => {
+  const release = await compressionLock.acquire(filePath)
   try {
     // Check if file still exists (might have been compressed by another process)
     try {
@@ -82,7 +78,11 @@ export const compressFile = async (filePath: string): Promise<void> => {
     await fs.writeFile(`${filePath}.gz`, compressed)
     await fs.rm(filePath, { force: true })
   } catch (error) {
-    console.error(`[logixlysia] Failed to compress file ${filePath}:`, error)
+    reportRotationError(
+      `[logixlysia] Failed to compress file ${filePath}:`,
+      error,
+      onError
+    )
     throw error
   } finally {
     release()
@@ -100,12 +100,31 @@ export const shouldRotate = async (
   return await shouldRotateBySize(filePath, maxSize)
 }
 
-const cleanupByCount = async (
+interface FileStat {
+  path: string
+  stat: import('node:fs').Stats
+}
+
+const isFulfilled = <T>(
+  result: PromiseSettledResult<T>
+): result is PromiseFulfilledResult<T> => result.status === 'fulfilled'
+
+/**
+ * Deletes rotated files beyond `retention`: for `'count'`, keeps the newest
+ * `retention.value` files (by mtime); for `'time'`, deletes files older than
+ * `retention.value` ms. Individual stat/delete failures are tolerated (via
+ * `allSettled`) so one bad file never blocks cleanup of the rest.
+ */
+const cleanupRotated = async (
   filePath: string,
-  maxFiles: number
+  retention: { type: 'count' | 'time'; value: number },
+  onError?: RotationErrorReporter
 ): Promise<void> => {
   const rotated = await getRotatedFiles(filePath)
-  if (rotated.length <= maxFiles) {
+  if (rotated.length === 0) {
+    return
+  }
+  if (retention.type === 'count' && rotated.length <= retention.value) {
     return
   }
 
@@ -115,69 +134,19 @@ const cleanupByCount = async (
   )
 
   // Extract successful stats, ignore files that were deleted concurrently
-  const stats = statsResults
-    .filter(
-      (
-        result
-      ): result is PromiseFulfilledResult<{
-        path: string
-        stat: import('node:fs').Stats
-      }> => result.status === 'fulfilled'
-    )
-    .map(result => result.value)
+  const stats = statsResults.filter(isFulfilled<FileStat>).map(r => r.value)
 
-  if (stats.length <= maxFiles) {
-    return
-  }
-
-  stats.sort((a, b) => b.stat.mtimeMs - a.stat.mtimeMs)
-  const toDelete = stats.slice(maxFiles)
-
-  // Delete files individually, continuing even if some fail
-  const deleteResults = await Promise.allSettled(
-    toDelete.map(({ path }) => fs.rm(path, { force: true }))
-  )
-
-  // Log failures but don't crash
-  deleteResults.forEach((result, idx) => {
-    if (result.status === 'rejected') {
-      console.error(
-        `[logixlysia] Failed to delete rotated log ${toDelete[idx].path}:`,
-        result.reason
-      )
+  let toDelete: FileStat[]
+  if (retention.type === 'count') {
+    if (stats.length <= retention.value) {
+      return
     }
-  })
-}
-
-const cleanupByTime = async (
-  filePath: string,
-  maxAgeMs: number
-): Promise<void> => {
-  const rotated = await getRotatedFiles(filePath)
-  if (rotated.length === 0) {
-    return
+    stats.sort((a, b) => b.stat.mtimeMs - a.stat.mtimeMs)
+    toDelete = stats.slice(retention.value)
+  } else {
+    const now = Date.now()
+    toDelete = stats.filter(({ stat }) => now - stat.mtimeMs > retention.value)
   }
-
-  const now = Date.now()
-
-  // Use Promise.allSettled to handle individual file stat failures gracefully
-  const statsResults = await Promise.allSettled(
-    rotated.map(async p => ({ path: p, stat: await fs.stat(p) }))
-  )
-
-  // Extract successful stats
-  const stats = statsResults
-    .filter(
-      (
-        result
-      ): result is PromiseFulfilledResult<{
-        path: string
-        stat: import('node:fs').Stats
-      }> => result.status === 'fulfilled'
-    )
-    .map(result => result.value)
-
-  const toDelete = stats.filter(({ stat }) => now - stat.mtimeMs > maxAgeMs)
 
   // Delete files individually, continuing even if some fail
   const deleteResults = await Promise.allSettled(
@@ -187,9 +156,10 @@ const cleanupByTime = async (
   // Log failures but don't crash
   deleteResults.forEach((result, idx) => {
     if (result.status === 'rejected') {
-      console.error(
-        `[logixlysia] Failed to delete old log ${toDelete[idx].path}:`,
-        result.reason
+      reportRotationError(
+        `[logixlysia] Failed to delete rotated log ${toDelete[idx].path}:`,
+        result.reason,
+        onError
       )
     }
   })
@@ -197,7 +167,8 @@ const cleanupByTime = async (
 
 export const performRotation = async (
   filePath: string,
-  config: LogRotationConfig
+  config: LogRotationConfig,
+  onError?: RotationErrorReporter
 ): Promise<void> => {
   const rotated = await rotateFile(filePath)
   if (!rotated) {
@@ -208,18 +179,16 @@ export const performRotation = async (
   if (shouldCompress) {
     const algo = config.compression ?? 'gzip'
     if (algo === 'gzip') {
-      await compressFile(rotated)
+      await compressFile(rotated, onError)
     }
   }
 
   if (config.maxFiles !== undefined) {
     const retention = parseRetention(config.maxFiles)
-    if (retention.type === 'count') {
-      await cleanupByCount(filePath, retention.value)
-    } else {
-      await cleanupByTime(filePath, retention.value)
-    }
+    await cleanupRotated(filePath, retention, onError)
   }
 
-  // Optional interval-based rotation cleanup (create interval directories / naming) is not required by tests.
+  // `config.interval` (fixed-interval rotation, e.g. '1d'/'12h') is not
+  // implemented here: rotation is currently only triggered by `maxSize`
+  // (see `FileSinkImpl.maybeRotate` in file-sink.ts).
 }
