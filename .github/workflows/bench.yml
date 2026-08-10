@@ -1,0 +1,109 @@
+name: 📊 Bench
+
+on:
+  workflow_dispatch:
+    inputs:
+      base:
+        description: Base ref or SHA to compare against
+        required: false
+        default: main
+        type: string
+      filter:
+        description: Optional vitest -t name pattern (empty runs all suites)
+        required: false
+        default: ''
+        type: string
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  bench:
+    name: 🏋️ Base vs head (same runner)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: 🛫 Checkout Code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: 🍞 Setup Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: package.json
+      - name: 🌵 Cache Bun
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.bun/install/cache
+            **/node_modules
+          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+      - name: 🔎 Resolve refs
+        id: refs
+        env:
+          BASE_INPUT: ${{ inputs.base }}
+        run: |
+          BASE_SHA="$(git rev-parse --verify --quiet "origin/${BASE_INPUT}^{commit}" || git rev-parse --verify "${BASE_INPUT}^{commit}")"
+          echo "base=${BASE_SHA}" >> "$GITHUB_OUTPUT"
+          echo "head=${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+          if [ "${BASE_SHA}" = "${GITHUB_SHA}" ]; then
+            echo "Base and head resolve to the same commit — nothing to compare." >&2
+            exit 1
+          fi
+      - name: 📏 Bench base
+        env:
+          BASE_SHA: ${{ steps.refs.outputs.base }}
+          FILTER: ${{ inputs.filter }}
+          NO_COLOR: '1'
+        run: |
+          git checkout --detach "$BASE_SHA"
+          bun install --frozen-lockfile
+          bun run build --filter logixlysia
+          cd packages/bench
+          bun x vitest bench --run ${FILTER:+-t "$FILTER"} \
+            --outputJson "$RUNNER_TEMP/bench-base.json"
+      - name: 📐 Bench head and compare
+        env:
+          HEAD_SHA: ${{ steps.refs.outputs.head }}
+          FILTER: ${{ inputs.filter }}
+          NO_COLOR: '1'
+        run: |
+          git checkout --detach "$HEAD_SHA"
+          bun install --frozen-lockfile
+          bun run build --filter logixlysia
+          cd packages/bench
+          bun x vitest bench --run ${FILTER:+-t "$FILTER"} \
+            --compare "$RUNNER_TEMP/bench-base.json" \
+            --outputJson "$RUNNER_TEMP/bench-head.json" \
+            2>&1 | tee "$RUNNER_TEMP/bench-compare.txt"
+      - name: 📝 Write job summary
+        env:
+          BASE_SHA: ${{ steps.refs.outputs.base }}
+          HEAD_SHA: ${{ steps.refs.outputs.head }}
+        run: |
+          {
+            echo "## Bench: base \`${BASE_SHA}\` vs head \`${HEAD_SHA}\`"
+            echo
+            echo "Same-runner comparison — read \`min\`/\`p75\` for ordering;"
+            echo "\`mean\`/\`hz\` flip run-to-run at sub-microsecond medians."
+            echo "Absolute numbers are NOT comparable across workflow runs."
+            echo
+            echo '```'
+            cat "$RUNNER_TEMP/bench-compare.txt"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: 📤 Upload raw results
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: bench-results-${{ steps.refs.outputs.head }}
+          path: |
+            ${{ runner.temp }}/bench-base.json
+            ${{ runner.temp }}/bench-head.json
+            ${{ runner.temp }}/bench-compare.txt
