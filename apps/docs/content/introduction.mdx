@@ -3,13 +3,13 @@ title: Introduction
 description: Get started with Logixlysia, a high-performance logging plugin for Elysia.js
 ---
 
-Logixlysia is a powerful logging plugin for [Elysia.js](https://elysiajs.com/) that provides structured, high-performance logging integrated with [Pino](https://github.com/pinojs/pino). Built for production environments, it offers flexible configuration, file logging, and seamless integration with your Elysia applications.
+Logixlysia is a powerful logging plugin for [Elysia.js](https://elysiajs.com/) that provides structured logging with a fast built-in console logger, plus an optional [Pino integration](/docs/integrations/pino) when you need Pino's ecosystem. Built for production environments, it offers flexible configuration, file logging, and seamless integration with your Elysia applications.
 
 ![Preview](./preview.png)
 
 ## Features
 
-- **High Performance** - Powered by Pino, one of the fastest Node.js loggers
+- **High Performance** - Fast built-in console logger with minimal overhead
 - **Structured Logging** - JSON-first approach for better log analysis
 - **Flexible Configuration** - Customize format, level, and output destinations
 - **File Logging** - Save logs to files with automatic rotation
@@ -36,7 +36,7 @@ bun add logixlysia
 
 ## Why Logixlysia?
 
-Logixlysia combines the simplicity of Elysia's plugin system with Pino's high-performance logging engine. It provides a clean API for logging requests, responses, and custom events while maintaining minimal overhead.
+Logixlysia combines the simplicity of Elysia's plugin system with a fast built-in console logger, plus an optional [Pino integration](/docs/integrations/pino) for teams that want Pino's ecosystem. It provides a clean API for logging requests, responses, and custom events while maintaining minimal overhead.
 
 Whether you're building a small API or a large-scale application, Logixlysia scales with your needs—from simple console logging to complex multi-transport setups.
 
