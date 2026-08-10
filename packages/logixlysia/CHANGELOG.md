@@ -1,5 +1,31 @@
 # Changelog
 
+## 6.7.0
+
+### Minor Changes
+
+- 64333ca: `logRotation.interval` now actually rotates. The live file's age (from
+  filesystem creation time, falling back to open time where the filesystem
+  reports none) is checked after every write, and the file rotates on the
+  first write after the interval elapses — no timers, so an idle process
+  rotates on its next write rather than on a wall-clock schedule. When both
+  `maxSize` and `interval` are set, whichever trigger is crossed first
+  rotates. Previously `interval` was accepted and format-validated but
+  never triggered rotation; configs that already set it will begin rotating
+  on upgrade.
+- 964e60c: `autoRedact` now redacts by sensitive key/header names (authorization, cookie, x-api-key, password, secret, token, session, …) in addition to value patterns; new `config.redactKeys` extends the list, and pino gets matching `redact.paths` defaults.
+- 1e949a1: Harden log output: file-sink lines, client IPs, and context-tree values are sanitized (control characters escaped/stripped, lengths bounded); malformed inbound request IDs are replaced with generated ones; log files/dirs are created with `0600`/`0700` modes, configurable via `logFileMode`/`logDirMode` (existing files keep their mode).
+- 3267e1f: Internal log/error pipelines are unified: error-path logs now honor the same sink gates and console-method-by-level as success-path logs (a 4xx warning now prints via `console.warn` instead of `console.error`). New `config.onError` hook surfaces transport/file/rotation sink failures to your code.
+- 11a0cd2: Validation errors no longer log the submitted request body (`found`/`errors`) by default — messages are normalized to the failed paths only. Set `config.logErrorPayload: true` to restore payload logging. Raw Error objects are no longer passed into transport meta.
+
+### Patch Changes
+
+- efab720: File sink now holds an open file handle, batches same-tick lines into single writes, creates the log directory once, and tracks file size in memory — removing the per-line mkdir/open/stat syscalls. Rotation behavior is unchanged.
+- 69b83aa: Per-request logging is faster: format tokens are computed only when present in the log format, colors/thresholds/service are resolved once per logger, URL parsing and duration sampling happen once per emission, internal context reads no longer clone, WebSocket synthetic requests are memoized per path, and `autoRedact` returns the original object untouched when nothing needs redacting.
+- ad0a2e6: pino is now constructed lazily on first access to `store.pino`/`logger.pino` (or eagerly when `config.pino` is set), instead of on every plugin instantiation. Dead internal helpers `formatLine`, `logWithPino`, and `renderContextTreeLines` were removed (they were never exported from the package).
+- 6c26cc2: Remove the unused `ai` peer dependency, mark `typescript` as an optional peer and widen it to the proven TS 5.x floor, and align the package tsconfig with the shared monorepo base.
+- 30869f4: Internal type reorganization: the config object is now composed of named sub-interfaces (`FormattingConfig`, `OutputConfig`, `RedactionConfig`, …) behind the same `Options` shape; `HttpError` moved to a dedicated module. All public import paths and names are unchanged.
+
 ### Correction (2026-08-10)
 
 The 5.3.0 entries "log-rotation: implement complete rotation with
