@@ -57,6 +57,8 @@ Enable colored output in console logs.
 useColors: true
 ```
 
+Colors require an interactive terminal: when `stdout` is not a TTY (Docker, CI, or output piped to a file), logs are printed uncolored even with `useColors: true`.
+
 ### `ip`
 
 Include client IP address in logs.
@@ -312,7 +314,6 @@ Log rotation configuration.
 ```ts
 logRotation: {
   maxSize: '10m',
-  interval: '1d',
   maxFiles: '7d',
   compress: true
 }
@@ -331,14 +332,10 @@ maxSize: '10m'
 
 #### `logRotation.interval`
 
-Time interval for rotation.
+Accepted and format-validated (`'1h'`, `'1d'`, `'1w'`), but not yet functional — it does not trigger rotation. Rotation currently triggers on `maxSize` only. See [Log Rotation](/docs/features/log-rotation) for details.
 
 - **Type:** `string`
 - **Format:** `'1h'`, `'1d'`, `'1w'`
-
-```ts
-interval: '1d'
-```
 
 #### `logRotation.maxFiles`
 
@@ -515,7 +512,6 @@ logixlysia({
     logFilePath: './logs/app.log',
     logRotation: {
       maxSize: '100m',
-      interval: '1d',
       maxFiles: '30d',
       compress: true
     },
