@@ -1,7 +1,5 @@
-import type { Options } from '../interfaces'
+import type { LogPreset, Options } from '../interfaces'
 import { parseInterval, parseRetention, parseSize } from '../utils/rotation'
-
-export type LogPreset = 'dev' | 'prod' | 'json'
 
 const VALID_PRESETS: readonly LogPreset[] = ['dev', 'prod', 'json']
 
