@@ -2,9 +2,20 @@ import type { FileHandle } from 'node:fs/promises'
 import { open } from 'node:fs/promises'
 import { dirname } from 'node:path'
 import type { LogRotationConfig } from '../interfaces'
-import { parseSize } from '../utils/rotation'
+import { parseInterval, parseSize } from '../utils/rotation'
 import { ensureDir } from './fs'
 import { performRotation } from './rotation-manager'
+
+/**
+ * The live file's creation time when the filesystem reports one;
+ * some filesystems report 0/absent birthtime — fall back to `now`
+ * (losing restart-survival for the interval clock, but never wrong
+ * by more than the process lifetime).
+ */
+export const resolveOpenedAt = (
+  birthtimeMs: number | undefined,
+  now: number
+): number => (birthtimeMs && birthtimeMs > 0 ? birthtimeMs : now)
 
 export interface FileSinkOptions {
   logDirMode?: number
@@ -33,6 +44,7 @@ class FileSinkImpl implements FileSink {
   private readonly filePath: string
   private handle: FileHandle | null = null
   private bytesWritten = 0
+  private openedAt = 0
   private latestOptions: FileSinkOptions = {}
   private pendingBatch: PendingBatch | null = null
   // Serializes flush and rotation work per path: every batch (and the
@@ -112,23 +124,41 @@ class FileSinkImpl implements FileSink {
     const stat = await handle.stat()
     this.handle = handle
     this.bytesWritten = stat.size
+    this.openedAt = resolveOpenedAt(stat.birthtimeMs, Date.now())
+  }
+
+  /** True when either configured trigger (size, interval) has been crossed. */
+  private shouldRotateNow(rotation: LogRotationConfig): boolean {
+    if (
+      rotation.maxSize !== undefined &&
+      this.bytesWritten > parseSize(rotation.maxSize)
+    ) {
+      return true
+    }
+    return (
+      rotation.interval !== undefined &&
+      Date.now() - this.openedAt >= parseInterval(rotation.interval)
+    )
   }
 
   private async maybeRotate(options: FileSinkOptions): Promise<void> {
     const rotation = options.logRotation
-    if (!rotation || rotation.maxSize === undefined) {
+    if (
+      !rotation ||
+      (rotation.maxSize === undefined && rotation.interval === undefined)
+    ) {
       return
     }
 
     try {
-      const maxSize = parseSize(rotation.maxSize)
-      if (this.bytesWritten <= maxSize) {
+      if (!this.shouldRotateNow(rotation)) {
         return
       }
 
       const { handle } = this
       this.handle = null
       this.bytesWritten = 0
+      this.openedAt = Date.now()
       await handle?.close()
       await performRotation(this.filePath, rotation, options.onRotationError)
     } catch (error) {

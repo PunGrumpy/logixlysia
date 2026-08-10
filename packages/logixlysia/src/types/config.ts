@@ -13,7 +13,9 @@ export interface LogRotationConfig {
   compress?: boolean
   compression?: 'gzip'
   /**
-   * Rotate at a fixed interval, e.g. '1d', '12h'.
+   * Rotate when the live file's age reaches a fixed interval, evaluated on
+   * write (an idle process rotates on its next write, not on a timer).
+   * Format: number + 'h' | 'd' | 'w', e.g. '12h', '1d', '1w'.
    */
   interval?: string
   /**
