@@ -3,7 +3,7 @@ title: Log Rotation
 description: Manage log file sizes and retention
 ---
 
-Automatically manage log file sizes, rotation intervals, compression, and retention policies.
+Automatically manage log file sizes, compression, and retention policies.
 
 ## Basic Configuration
 
@@ -34,13 +34,8 @@ Supported formats: `'1k'`, `'1m'`, `'1g'` or bytes (number)
 
 ### Time-based Rotation
 
-```ts
-logRotation: {
-  interval: '1d'    // Rotate daily
-}
-```
-
-Supported intervals: `'1h'`, `'1d'`, `'1w'` (or any number)
+> [!NOTE]
+> Interval-based rotation is not currently implemented. `interval` is accepted and format-validated (`/^(\d+)(h|d|w)$/i`, e.g. `'1h'`, `'1d'`, `'1w'`) for forward compatibility, but it does not trigger rotation yet — rotation currently triggers on `maxSize` only. An implementation following the accepted design is planned (see [PR #380](https://github.com/PunGrumpy/logixlysia/pull/380)); no date is set.
 
 ### Retention Policy
 
@@ -68,21 +63,25 @@ logRotation: {
 
 ## How Rotation Works
 
-When a log file is rotated, it's renamed with a timestamp:
+Rotation happens when the in-memory byte count for the file exceeds `maxSize`, checked on every write batch. Empty files are not rotated.
+
+When a log file is rotated, it's renamed with a timestamp and a high-resolution counter to guarantee uniqueness:
 
 ```
-app.log → app.log.2025-10-10-14-30-45
+app.log → app.log.2026-07-27-14-30-05-123-45678901234567
 ```
 
-If compression is enabled:
+The suffix is `<YYYY-MM-DD-HH-MM-SS-SSS>-<hrtime>`. If compression is enabled, a `.gz` extension is appended after rotation:
 
 ```
-app.log.2025-10-10-14-30-45 → app.log.2025-10-10-14-30-45.gz
+app.log.2026-07-27-14-30-05-123-45678901234567 → app.log.2026-07-27-14-30-05-123-45678901234567.gz
 ```
 
-Rotation occurs automatically when:
-- File size reaches `maxSize`
-- Time interval `interval` has elapsed
+### Retention
+
+`maxFiles` controls how many rotated files are kept:
+- A **number** (e.g. `10`) keeps that many most-recent rotated files, deleting older ones.
+- A **string** (e.g. `'7d'`) keeps rotated files younger than that age, deleting older ones.
 
 ## Example Configurations
 
@@ -91,7 +90,6 @@ Rotation occurs automatically when:
 ```ts
 logRotation: {
   maxSize: '100m',
-  interval: '1d',
   maxFiles: '30d',
   compress: true
 }
@@ -112,7 +110,6 @@ logRotation: {
 ```ts
 logRotation: {
   maxSize: '1g',
-  interval: '1h',
   maxFiles: '7d',
   compress: true
 }
