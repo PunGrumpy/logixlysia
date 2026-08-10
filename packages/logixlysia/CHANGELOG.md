@@ -1,5 +1,14 @@
 # Changelog
 
+### Correction (2026-08-10)
+
+The 5.3.0 entries "log-rotation: implement complete rotation with
+interval support" (673b800, 9016a51) added the `interval` config field
+and its format validation, but did not wire it to actually trigger
+rotation — `interval` was a no-op from 5.3.0 until the lazy-on-write
+implementation landed on 2026-08-10. See
+`plans/spikes/021-interval-rotation-decision.md` for the investigation.
+
 ## 6.6.1
 
 ### Patch Changes
