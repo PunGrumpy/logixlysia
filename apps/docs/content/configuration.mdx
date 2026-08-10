@@ -57,6 +57,8 @@ Enable colored output in console logs.
 useColors: true
 ```
 
+Colors require an interactive terminal: when `stdout` is not a TTY (Docker, CI, or output piped to a file), logs are printed uncolored even with `useColors: true`.
+
 ### `ip`
 
 Include client IP address in logs.
