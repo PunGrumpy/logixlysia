@@ -188,5 +188,7 @@ export const performRotation = async (
     await cleanupRotated(filePath, retention, onError)
   }
 
-  // Optional interval-based rotation cleanup (create interval directories / naming) is not required by tests.
+  // `config.interval` (fixed-interval rotation, e.g. '1d'/'12h') is not
+  // implemented here: rotation is currently only triggered by `maxSize`
+  // (see `FileSinkImpl.maybeRotate` in file-sink.ts).
 }
