@@ -332,7 +332,7 @@ maxSize: '10m'
 
 #### `logRotation.interval`
 
-Accepted and format-validated (`'1h'`, `'1d'`, `'1w'`), but not yet functional — it does not trigger rotation. Rotation currently triggers on `maxSize` only. See [Log Rotation](/docs/features/log-rotation) for details.
+Rotate when the live log file's age reaches the given interval. Evaluated on write — an idle process does not rotate until it logs again. See [Log Rotation](/docs/features/log-rotation) for details.
 
 - **Type:** `string`
 - **Format:** `'1h'`, `'1d'`, `'1w'`
