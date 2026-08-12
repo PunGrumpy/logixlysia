@@ -1,16 +1,16 @@
 ---
-import data from 'blume:data'
-import PageLayout from 'blume/components/layout/PageLayout.astro'
-import '../styles/home.css'
+import data from "blume:data";
+import PageLayout from "blume/components/layout/PageLayout.astro";
+import "../styles/home.css";
 
-import { getLatestVersion, getReleaseUrl } from '../lib/version'
+import { getLatestVersion, getReleaseUrl } from "../lib/version";
 
-const { config } = data
-const version = getLatestVersion()
-const releaseUrl = getReleaseUrl(version)
-const title = '2026 in review | Logixlysia'
+const { config } = data;
+const version = getLatestVersion();
+const releaseUrl = getReleaseUrl(version);
+const title = "2026 in review | Logixlysia";
 const description =
-  "The story of Logixlysia's 2026 is still being written — the full year in review lands here in December."
+  "The story of Logixlysia's 2026 is still being written — the full year in review lands here in December.";
 ---
 
 <PageLayout
@@ -89,12 +89,12 @@ const description =
 </PageLayout>
 
 <script>
-  for (const container of document.querySelectorAll('.t-stagger')) {
+  for (const container of document.querySelectorAll(".t-stagger")) {
     // Double rAF so the initial (hidden) styles paint before the transition.
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
-        container.classList.add('is-shown')
-      })
-    })
+        container.classList.add("is-shown");
+      });
+    });
   }
 </script>

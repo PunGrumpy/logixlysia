@@ -1,9 +1,9 @@
 ---
 interface Props {
-  command: string
+  command: string;
 }
 
-const { command } = Astro.props
+const { command } = Astro.props;
 ---
 
 <div
@@ -51,30 +51,30 @@ const { command } = Astro.props
 </div>
 
 <script>
-  for (const block of document.querySelectorAll('[data-copy]')) {
-    const button = block.querySelector('button')
-    const status = block.querySelector('[data-copy-status]')
+  for (const block of document.querySelectorAll("[data-copy]")) {
+    const button = block.querySelector("button");
+    const status = block.querySelector("[data-copy-status]");
     if (!button) {
-      continue
+      continue;
     }
-    let timeout: ReturnType<typeof setTimeout> | undefined
-    button.addEventListener('click', async () => {
-      const value = block.getAttribute('data-copy')
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+    button.addEventListener("click", async () => {
+      const value = block.getAttribute("data-copy");
       if (!value) {
-        return
+        return;
       }
-      await navigator.clipboard.writeText(value)
-      button.dataset.copied = ''
+      await navigator.clipboard.writeText(value);
+      button.dataset.copied = "";
       if (status) {
-        status.textContent = 'Copied'
+        status.textContent = "Copied";
       }
-      clearTimeout(timeout)
+      clearTimeout(timeout);
       timeout = setTimeout(() => {
-        delete button.dataset.copied
+        delete button.dataset.copied;
         if (status) {
-          status.textContent = ''
+          status.textContent = "";
         }
-      }, 1200)
-    })
+      }, 1200);
+    });
   }
 </script>

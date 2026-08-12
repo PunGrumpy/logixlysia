@@ -1,7 +1,5 @@
 {
   "permissions": {
-    "allow": [
-      "mcp__thinking__sequentialthinking"
-    ]
+    "allow": ["mcp__thinking__sequentialthinking"]
   }
 }

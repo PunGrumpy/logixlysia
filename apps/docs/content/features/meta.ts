@@ -1,19 +1,19 @@
-import { defineMeta } from 'blume'
+import { defineMeta } from "blume";
 
 export default defineMeta({
   collapsed: false,
   pages: [
-    'startup',
-    'presets',
-    'request-context',
-    'request-id',
-    'websocket',
-    'formatting',
-    'filtering',
-    'log-levels',
-    'file-logging',
-    'transports',
-    'log-rotation'
+    "startup",
+    "presets",
+    "request-context",
+    "request-id",
+    "websocket",
+    "formatting",
+    "filtering",
+    "log-levels",
+    "file-logging",
+    "transports",
+    "log-rotation",
   ],
-  title: 'Features'
-})
+  title: "Features",
+});

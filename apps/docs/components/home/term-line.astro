@@ -1,13 +1,13 @@
 ---
-import TermPart from './term-part.astro'
+import TermPart from "./term-part.astro";
 
 interface Props {
-  cls?: string
-  delay?: number
-  parts: [cls: string, text: string][]
+  cls?: string;
+  delay?: number;
+  parts: [cls: string, text: string][];
 }
 
-const { cls, delay, parts } = Astro.props
+const { cls, delay, parts } = Astro.props;
 ---
 
 <div data-delay={delay} class:list={['whitespace-pre', cls]}>

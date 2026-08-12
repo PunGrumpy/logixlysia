@@ -1,10 +1,10 @@
 ---
 interface Props {
-  cls?: string
-  text: string
+  cls?: string;
+  text: string;
 }
 
-const { cls, text } = Astro.props
+const { cls, text } = Astro.props;
 ---
 
 <span class={cls || undefined}>{text}</span>

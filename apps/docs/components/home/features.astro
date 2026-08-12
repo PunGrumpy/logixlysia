@@ -1,140 +1,140 @@
 ---
 // Log-line text lives in data (like demo.astro) so column spacing survives —
 // spans written directly in markup get their whitespace collapsed.
-import FileRow from './file-row.astro'
-import LegendChip from './legend-chip.astro'
-import LogLine from './log-line.astro'
-import TokenSpan from './token-span.astro'
+import FileRow from "./file-row.astro";
+import LegendChip from "./legend-chip.astro";
+import LogLine from "./log-line.astro";
+import TokenSpan from "./token-span.astro";
 
-type Part = [cls: string, text: string]
+type Part = [cls: string, text: string];
 
 // Dual-mode terminal palette: muted ink colors in light mode, vesper in dark.
 const c = {
-  blue: 'text-[#0550AE] dark:text-[#a5d6ff]',
-  bold: 'font-semibold',
-  fg: 'text-[#2D2D2D] dark:text-[#DADADA]',
-  foxError: 'rounded-sm bg-[#C9303C]/10 dark:bg-[#ff8080]/20',
-  foxInfo: 'rounded-sm bg-[#0550AE]/10 dark:bg-[#a5d6ff]/15',
-  foxWarn: 'rounded-sm bg-[#B26A00]/15 dark:bg-[#ffc799]/20',
-  mint: 'text-[#067647] dark:text-[#99ffe4]',
-  muted: 'text-black/45 dark:text-white/40',
-  orange: 'text-[#B26A00] dark:text-[#ffc799]',
-  red: 'text-[#C9303C] dark:text-[#ff8080]'
-}
+  blue: "text-[#0550AE] dark:text-[#a5d6ff]",
+  bold: "font-semibold",
+  fg: "text-[#2D2D2D] dark:text-[#DADADA]",
+  foxError: "rounded-sm bg-[#C9303C]/10 dark:bg-[#ff8080]/20",
+  foxInfo: "rounded-sm bg-[#0550AE]/10 dark:bg-[#a5d6ff]/15",
+  foxWarn: "rounded-sm bg-[#B26A00]/15 dark:bg-[#ffc799]/20",
+  mint: "text-[#067647] dark:text-[#99ffe4]",
+  muted: "text-black/45 dark:text-white/40",
+  orange: "text-[#B26A00] dark:text-[#ffc799]",
+  red: "text-[#C9303C] dark:text-[#ff8080]",
+};
 
 // Tokens get a data attribute so the spotlight loop can highlight each part
 // of the line in turn, synced with its legend chip.
 const requestLine: { cls: string; text: string; token?: string }[] = [
-  { cls: c.muted, text: '10:24:33.412', token: 'timestamp' },
-  { cls: '', text: ' ' },
-  { cls: c.fg, text: '[api-server]', token: 'service' },
-  { cls: c.foxInfo, text: ' 🦊 ' },
-  { cls: '', text: ' ' },
-  { cls: `${c.mint} ${c.bold}`, text: 'GET', token: 'method' },
-  { cls: '', text: ' ' },
-  { cls: c.fg, text: '/reports', token: 'path' },
-  { cls: '', text: ' ' },
-  { cls: c.mint, text: '200', token: 'status' },
-  { cls: '', text: ' ' },
-  { cls: c.orange, text: '613ms', token: 'duration' },
-  { cls: '', text: ' ' },
-  { cls: c.blue, text: '10.0.0.42', token: 'ip' }
-]
+  { cls: c.muted, text: "10:24:33.412", token: "timestamp" },
+  { cls: "", text: " " },
+  { cls: c.fg, text: "[api-server]", token: "service" },
+  { cls: c.foxInfo, text: " 🦊 " },
+  { cls: "", text: " " },
+  { cls: `${c.mint} ${c.bold}`, text: "GET", token: "method" },
+  { cls: "", text: " " },
+  { cls: c.fg, text: "/reports", token: "path" },
+  { cls: "", text: " " },
+  { cls: c.mint, text: "200", token: "status" },
+  { cls: "", text: " " },
+  { cls: c.orange, text: "613ms", token: "duration" },
+  { cls: "", text: " " },
+  { cls: c.blue, text: "10.0.0.42", token: "ip" },
+];
 
 const legend = [
-  { cls: c.muted, label: 'timestamp' },
-  { cls: c.fg, label: 'service' },
-  { cls: c.mint, label: 'method' },
-  { cls: c.fg, label: 'path' },
-  { cls: c.mint, label: 'status' },
-  { cls: c.orange, label: 'duration' },
-  { cls: c.blue, label: 'ip' }
-]
+  { cls: c.muted, label: "timestamp" },
+  { cls: c.fg, label: "service" },
+  { cls: c.mint, label: "method" },
+  { cls: c.fg, label: "path" },
+  { cls: c.mint, label: "status" },
+  { cls: c.orange, label: "duration" },
+  { cls: c.blue, label: "ip" },
+];
 
 interface LogLineData {
-  duration: string
-  fox: string
-  method: string
-  path: string
-  status: string
-  statusCls: string
+  duration: string;
+  fox: string;
+  method: string;
+  path: string;
+  status: string;
+  statusCls: string;
 }
 
 const logParts = (line: LogLineData): Part[] => [
-  [line.fox, ' 🦊 '],
-  ['', ' '],
+  [line.fox, " 🦊 "],
+  ["", " "],
   [`${c.mint} ${c.bold}`, line.method.padEnd(7)],
-  ['', ' '],
+  ["", " "],
   [c.fg, line.path],
-  ['', ' '],
+  ["", " "],
   [line.statusCls, line.status],
-  ['', ' '],
-  [c.mint, line.duration]
-]
+  ["", " "],
+  [c.mint, line.duration],
+];
 
 const filtered: { kept: boolean; parts: Part[] }[] = [
   {
     kept: false,
     parts: logParts({
-      duration: '1ms',
+      duration: "1ms",
       fox: c.foxInfo,
-      method: 'GET',
-      path: '/health',
-      status: '200',
-      statusCls: c.mint
-    })
+      method: "GET",
+      path: "/health",
+      status: "200",
+      statusCls: c.mint,
+    }),
   },
   {
     kept: false,
     parts: logParts({
-      duration: '3ms',
+      duration: "3ms",
       fox: c.foxInfo,
-      method: 'GET',
-      path: '/',
-      status: '200',
-      statusCls: c.mint
-    })
+      method: "GET",
+      path: "/",
+      status: "200",
+      statusCls: c.mint,
+    }),
   },
   {
     kept: true,
     parts: logParts({
-      duration: '1ms',
+      duration: "1ms",
       fox: c.foxWarn,
-      method: 'GET',
-      path: '/favicon.ico',
-      status: '404',
-      statusCls: c.orange
-    })
+      method: "GET",
+      path: "/favicon.ico",
+      status: "404",
+      statusCls: c.orange,
+    }),
   },
   {
     kept: false,
     parts: logParts({
-      duration: '38ms',
+      duration: "38ms",
       fox: c.foxInfo,
-      method: 'POST',
-      path: '/auth/login',
-      status: '201',
-      statusCls: c.mint
-    })
+      method: "POST",
+      path: "/auth/login",
+      status: "201",
+      statusCls: c.mint,
+    }),
   },
   {
     kept: true,
     parts: logParts({
-      duration: '2ms',
+      duration: "2ms",
       fox: c.foxError,
-      method: 'GET',
-      path: '/crash',
-      status: '500',
-      statusCls: c.red
-    })
-  }
-]
+      method: "GET",
+      path: "/crash",
+      status: "500",
+      statusCls: c.red,
+    }),
+  },
+];
 
 const files = [
-  { live: true, name: 'logs/api-2026-07-21.log', size: '2.1 MB' },
-  { live: false, name: 'logs/api-2026-07-20.log', size: '10.0 MB' },
-  { live: false, name: 'logs/api-2026-07-19.log.gz', size: '1.2 MB' }
-]
+  { live: true, name: "logs/api-2026-07-21.log", size: "2.1 MB" },
+  { live: false, name: "logs/api-2026-07-20.log", size: "10.0 MB" },
+  { live: false, name: "logs/api-2026-07-19.log.gz", size: "1.2 MB" },
+];
 ---
 
 <section class="grid gap-16 sm:gap-24">
@@ -296,173 +296,174 @@ const files = [
 </section>
 
 <script>
-  const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
+  const sleep = (ms: number) =>
+    new Promise((resolve) => setTimeout(resolve, ms));
 
   const reduceMotion = window.matchMedia(
-    '(prefers-reduced-motion: reduce)'
-  ).matches
+    "(prefers-reduced-motion: reduce)"
+  ).matches;
 
   // Resolves immediately while `el` is on screen; otherwise waits for it.
   const visibilityGate = (el: Element) => {
-    let visible = false
-    let onVisible: (() => void) | undefined
+    let visible = false;
+    let onVisible: (() => void) | undefined;
     new IntersectionObserver(
-      entries => {
-        visible = entries.some(entry => entry.isIntersecting)
+      (entries) => {
+        visible = entries.some((entry) => entry.isIntersecting);
         if (visible && onVisible) {
-          onVisible()
-          onVisible = undefined
+          onVisible();
+          onVisible = undefined;
         }
       },
       { threshold: 0.35 }
-    ).observe(el)
+    ).observe(el);
     return () =>
       visible
         ? Promise.resolve()
-        : new Promise<void>(resolve => {
-            onVisible = resolve
-          })
-  }
+        : new Promise<void>((resolve) => {
+            onVisible = resolve;
+          });
+  };
 
   // 01 · Spotlight each token of the log line, synced with its legend chip.
-  const anatomy = document.querySelector('[data-anatomy]')
+  const anatomy = document.querySelector("[data-anatomy]");
   if (anatomy && !reduceMotion) {
-    const tokens = [...anatomy.querySelectorAll<HTMLElement>('[data-token]')]
-    const chips = [...anatomy.querySelectorAll<HTMLElement>('[data-chip]')]
-    const waitUntilVisible = visibilityGate(anatomy)
+    const tokens = [...anatomy.querySelectorAll<HTMLElement>("[data-token]")];
+    const chips = [...anatomy.querySelectorAll<HTMLElement>("[data-chip]")];
+    const waitUntilVisible = visibilityGate(anatomy);
     const spotlight = async (token: HTMLElement) => {
-      await waitUntilVisible()
-      token.classList.add('bg-black/5', 'dark:bg-white/10')
+      await waitUntilVisible();
+      token.classList.add("bg-black/5", "dark:bg-white/10");
       for (const chip of chips) {
         chip.classList.toggle(
-          'opacity-40',
+          "opacity-40",
           chip.dataset.chip !== token.dataset.token
-        )
+        );
       }
-      await sleep(1100)
-      token.classList.remove('bg-black/5', 'dark:bg-white/10')
-    }
+      await sleep(1100);
+      token.classList.remove("bg-black/5", "dark:bg-white/10");
+    };
     const round = async () => {
       // Chain instead of an awaited loop: each token spotlights in turn.
       await tokens.reduce(
         (previous, token) => previous.then(() => spotlight(token)),
         Promise.resolve()
-      )
+      );
       for (const chip of chips) {
-        chip.classList.remove('opacity-40')
+        chip.classList.remove("opacity-40");
       }
-      await sleep(900)
-    }
+      await sleep(900);
+    };
     // Bounded replay (WCAG 2.2.2): stop after a few rounds instead of looping
     // forever; the resting state matches the static markup.
-    let rounds = 0
+    let rounds = 0;
     const loop = () => {
       round().then(() => {
-        rounds += 1
+        rounds += 1;
         if (rounds < 3) {
-          loop()
+          loop();
         }
-      })
-    }
-    loop()
+      });
+    };
+    loop();
   }
 
   // 02 · Replay the raw stream, then apply the filter and dim the noise.
-  const filterDemo = document.querySelector('[data-filter-demo]')
+  const filterDemo = document.querySelector("[data-filter-demo]");
   if (filterDemo && !reduceMotion) {
-    const lines = [...filterDemo.querySelectorAll<HTMLElement>('[data-log]')]
-    const chip = filterDemo.querySelector<HTMLElement>('[data-filter-chip]')
-    const waitUntilVisible = visibilityGate(filterDemo)
+    const lines = [...filterDemo.querySelectorAll<HTMLElement>("[data-log]")];
+    const chip = filterDemo.querySelector<HTMLElement>("[data-filter-chip]");
+    const waitUntilVisible = visibilityGate(filterDemo);
     // setTimeout chain instead of an awaited loop: lines reveal one by one.
     const revealLines = () =>
-      new Promise<void>(resolve => {
-        let index = 0
+      new Promise<void>((resolve) => {
+        let index = 0;
         const tick = () => {
-          const line = lines[index]
+          const line = lines[index];
           if (!line) {
-            resolve()
-            return
+            resolve();
+            return;
           }
-          index += 1
-          line.classList.remove('opacity-0')
-          setTimeout(tick, 180)
-        }
-        tick()
-      })
+          index += 1;
+          line.classList.remove("opacity-0");
+          setTimeout(tick, 180);
+        };
+        tick();
+      });
     const round = async () => {
-      await waitUntilVisible()
+      await waitUntilVisible();
       for (const line of lines) {
-        line.classList.add('opacity-0')
-        line.classList.remove('opacity-35')
+        line.classList.add("opacity-0");
+        line.classList.remove("opacity-35");
       }
-      await sleep(500)
-      await revealLines()
-      await sleep(800)
-      chip?.classList.add('bg-black/5', 'dark:bg-white/10')
+      await sleep(500);
+      await revealLines();
+      await sleep(800);
+      chip?.classList.add("bg-black/5", "dark:bg-white/10");
       for (const line of lines) {
         if (line.dataset.kept === undefined) {
-          line.classList.add('opacity-35')
+          line.classList.add("opacity-35");
         }
       }
-      await sleep(600)
-      chip?.classList.remove('bg-black/5', 'dark:bg-white/10')
-      await sleep(2800)
-    }
-    let rounds = 0
+      await sleep(600);
+      chip?.classList.remove("bg-black/5", "dark:bg-white/10");
+      await sleep(2800);
+    };
+    let rounds = 0;
     const loop = () => {
       round().then(() => {
-        rounds += 1
+        rounds += 1;
         if (rounds < 3) {
-          loop()
+          loop();
         }
-      })
-    }
-    loop()
+      });
+    };
+    loop();
   }
 
   // 03 · The live file grows until the size threshold, flashes, and rotates.
-  const rotation = document.querySelector('[data-rotation]')
+  const rotation = document.querySelector("[data-rotation]");
   if (rotation && !reduceMotion) {
-    const row = rotation.querySelector<HTMLElement>('[data-live-row]')
-    const size = rotation.querySelector<HTMLElement>('[data-live-size]')
-    const waitUntilVisible = visibilityGate(rotation)
+    const row = rotation.querySelector<HTMLElement>("[data-live-row]");
+    const size = rotation.querySelector<HTMLElement>("[data-live-size]");
+    const waitUntilVisible = visibilityGate(rotation);
     if (row && size) {
       // setTimeout chain instead of an awaited loop: the size ticks upward.
       const growFile = () =>
-        new Promise<void>(resolve => {
-          let megabytes = 0.1
+        new Promise<void>((resolve) => {
+          let megabytes = 0.1;
           const tick = () => {
             if (megabytes >= 10) {
-              resolve()
-              return
+              resolve();
+              return;
             }
-            size.textContent = `${megabytes.toFixed(1)} MB`
-            megabytes += 0.3
-            setTimeout(tick, 120)
-          }
-          tick()
-        })
+            size.textContent = `${megabytes.toFixed(1)} MB`;
+            megabytes += 0.3;
+            setTimeout(tick, 120);
+          };
+          tick();
+        });
       const round = async () => {
-        await waitUntilVisible()
-        await growFile()
-        size.textContent = '10.0 MB'
-        row.classList.add('bg-[#067647]/10', 'dark:bg-[#99ffe4]/10')
-        await sleep(700)
-        row.classList.remove('bg-[#067647]/10', 'dark:bg-[#99ffe4]/10')
-      }
-      const initialSize = size.textContent
-      let rounds = 0
+        await waitUntilVisible();
+        await growFile();
+        size.textContent = "10.0 MB";
+        row.classList.add("bg-[#067647]/10", "dark:bg-[#99ffe4]/10");
+        await sleep(700);
+        row.classList.remove("bg-[#067647]/10", "dark:bg-[#99ffe4]/10");
+      };
+      const initialSize = size.textContent;
+      let rounds = 0;
       const loop = () => {
         round().then(() => {
-          rounds += 1
+          rounds += 1;
           if (rounds < 3) {
-            loop()
-            return
+            loop();
+            return;
           }
-          size.textContent = initialSize
-        })
-      }
-      loop()
+          size.textContent = initialSize;
+        });
+      };
+      loop();
     }
   }
 </script>

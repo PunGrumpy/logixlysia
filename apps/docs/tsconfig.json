@@ -16,9 +16,5 @@
     "jsx": "preserve",
     "strict": true
   },
-  "exclude": [
-    "dist",
-    ".blume",
-    ".blume-verify"
-  ]
+  "exclude": ["dist", ".blume", ".blume-verify"]
 }

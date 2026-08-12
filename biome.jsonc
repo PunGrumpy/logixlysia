@@ -8,24 +8,6 @@
     "ultracite/biome/astro",
     "ultracite/biome/vitest"
   ],
-  "files": {
-    "ignoreUnknown": false,
-    "includes": [
-      "!node_modules",
-      "!.vercel",
-      "!dist",
-      "!**/components.d.ts",
-      "!**/auto-imports.d.ts",
-      "!**/volt",
-      "!**/*.vue",
-      "!.agents",
-      "!.claude",
-      "!scripts",
-      "!**/scripts",
-      "!**/script",
-      "!apps"
-    ]
-  },
   "linter": {
     "rules": {
       //  性能规则
@@ -86,11 +68,20 @@
     }
   },
   "files": {
-    "includes": ["**/*", "!__tests__", "!**/.blume", "!**/.astro", "!**/dist"]
+    "includes": [
+      "**/*",
+      "!__tests__",
+      "!**/.blume",
+      "!**/.astro",
+      "!**/dist",
+      "!.agents"
+    ]
   },
   "overrides": [
     {
-      "includes": ["**/*.astro"],
+      "includes": [
+        "**/*.astro"
+      ],
       "assist": {
         "actions": {
           "source": {

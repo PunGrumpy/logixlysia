@@ -1,12 +1,12 @@
 ---
-import InstallCommand from './install-command.astro'
+import InstallCommand from "./install-command.astro";
 
 interface Props {
-  releaseUrl: string
-  version: string
+  releaseUrl: string;
+  version: string;
 }
 
-const { version, releaseUrl } = Astro.props
+const { version, releaseUrl } = Astro.props;
 ---
 
 <section class="relative grid gap-8 sm:gap-20">
@@ -58,12 +58,12 @@ const { version, releaseUrl } = Astro.props
 </section>
 
 <script>
-  for (const container of document.querySelectorAll('.t-stagger')) {
+  for (const container of document.querySelectorAll(".t-stagger")) {
     // Double rAF so the initial (hidden) styles paint before the transition.
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
-        container.classList.add('is-shown')
-      })
-    })
+        container.classList.add("is-shown");
+      });
+    });
   }
 </script>

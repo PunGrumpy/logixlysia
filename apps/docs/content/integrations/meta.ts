@@ -1,7 +1,7 @@
-import { defineMeta } from 'blume'
+import { defineMeta } from "blume";
 
 export default defineMeta({
   collapsed: false,
-  pages: ['pino', 'otel', 'ai'],
-  title: 'Integrations'
-})
+  pages: ["pino", "otel", "ai"],
+  title: "Integrations",
+});

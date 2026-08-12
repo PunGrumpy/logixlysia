@@ -19,14 +19,18 @@ export const routers = new Elysia()
       },
     })
   )
-  .get("/", {
-    detail: {
-      summary: "Welcome to Basic Elysia with Logixlysia",
-      tags: ["welcome"],
+  .get(
+    "/",
+    {
+      detail: {
+        summary: "Welcome to Basic Elysia with Logixlysia",
+        tags: ["welcome"],
+      },
     },
-  }, () => ({
-    message: "Welcome to Basic Elysia with Logixlysia",
-  }))
+    () => ({
+      message: "Welcome to Basic Elysia with Logixlysia",
+    })
+  )
   .use(customRouter)
   .use(requestContextRouter)
   .use(aiMetricsRouter)
