@@ -7,6 +7,7 @@ import type {
 } from "../interfaces";
 import { logToTransports } from "../output";
 import { logToFile } from "../output/file";
+import { redact, redactRequest } from "../utils/redact";
 import {
   type FormatContext,
   formatLogOutput,
@@ -230,14 +231,13 @@ export const emit = ({
     // the reference, so a non-cloning peek is safe here.
     contextStore.peekContext ? contextStore.peekContext(request) : {}
   );
-  const logData =
-    config?.autoRedact === true
-      ? require("../utils/redact").redact(dataWithContext, config?.redactKeys)
-      : dataWithContext;
-  const logRequest =
-    config?.autoRedact === true
-      ? require("../utils/redact").redactRequest(request, config?.redactKeys)
-      : request;
+  const shouldRedact = config?.autoRedact === true;
+  const logData = shouldRedact
+    ? redact(dataWithContext, config?.redactKeys)
+    : dataWithContext;
+  const logRequest = shouldRedact
+    ? redactRequest(request, config?.redactKeys)
+    : request;
 
   const precomputed = computePrecomputedLogParts(
     store,
