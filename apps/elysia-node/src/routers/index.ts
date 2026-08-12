@@ -19,18 +19,14 @@ export const routers = new Elysia()
       },
     })
   )
-  .get(
-    "/",
-    () => ({
-      message: "Welcome to Basic Elysia Node with Logixlysia",
-    }),
-    {
-      detail: {
-        summary: "Welcome to Basic Elysia Node with Logixlysia",
-        tags: ["welcome"],
-      },
-    }
-  )
+  .get("/", {
+    detail: {
+      summary: "Welcome to Basic Elysia Node with Logixlysia",
+      tags: ["welcome"],
+    },
+  }, () => ({
+    message: "Welcome to Basic Elysia Node with Logixlysia",
+  }))
   .use(customRouter)
   .use(pinoRouter)
   .use(statusRouter)

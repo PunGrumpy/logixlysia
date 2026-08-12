@@ -32,5 +32,8 @@
   "workspaces": [
     "apps/*",
     "packages/*"
-  ]
+  ],
+  "dependencies": {
+    "elysia": "2.0.0@experimental"
+  }
 }

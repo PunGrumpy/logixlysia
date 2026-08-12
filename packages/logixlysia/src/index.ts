@@ -60,16 +60,16 @@ export const logixlysia = (options: Options = {}): Logixlysia => {
       .state("pino", logger.pino)
       .state("beforeTime", BigInt(0))
       .state("pathname", "")
-      .onStart(({ server }) => {
+      .setup(({ server }) => {
         if (server) {
           startServer(server, options);
         }
       })
-      .onRequest(({ request, store }) => {
+      .request(({ request, store }) => {
         store.beforeTime = process.hrtime.bigint();
         store.pathname = new URL(request.url).pathname;
       })
-      .onAfterHandle(({ request, set, store }) => {
+      .afterHandle(({ request, set, store }) => {
         if (didCustomLog.has(request)) {
           return;
         }
@@ -84,7 +84,7 @@ export const logixlysia = (options: Options = {}): Logixlysia => {
 
         logger.log(level, request, { status }, store);
       })
-      .onError(({ request, error, code, path, store, set }) => {
+      .error(({ request, error, code, path, store, set }) => {
         // ① 分层解析为 ProblemError
         const problem = normalizeToProblem(error, code, path, {
           typeBaseUrl: errorConfig?.typeBaseUrl,

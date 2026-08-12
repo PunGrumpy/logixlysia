@@ -1,4 +1,4 @@
-import { swagger } from "@elysiajs/swagger";
+import { swagger } from "@elysia/swagger";
 import { Elysia, env } from "elysia";
 import packageJson from "logixlysia/package.json";
 import { routers } from "./routers";
