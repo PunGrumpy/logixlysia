@@ -220,7 +220,21 @@ export interface LogixlysiaConfig {
   timestamp?: string | { format: string };
   /** Transport 错误节流窗口(ms) */
   transportThrottleMs?: number;
-  /** 启用 AsyncLocalStorage,让 useLogger() 在深调用栈拿得到 logger */
+  /**
+   * 启用 AsyncLocalStorage,让 `useLogger()` 在深调用栈拿得到 logger。
+   *
+   * **实现细节**:在 Elysia 2 的 `.request()` 钩子内用 `loggerStorage.enterWith(...)`
+   * 设置 scope。这会**透传**到后续的路由 handler / `.afterHandle()`(只要 Elysia
+   * 自己在它们之间不再额外 `als.run()`)。
+   *
+   * **限制**:
+   * - Elysia 2 升级后如果在内部多次 `als.run()`,此机制会失效,`useLogger()` 退回
+   *   NOOP_LOGGER,日志被吞。
+   * - `enterWith` 不影响"已在运行的 async 树",只影响"从此处之后"新发起的 async。
+   *
+   * **推荐**:深调用栈场景优先用 `({ log })` derive(Elysia 自己的 context 机制,
+   * 不依赖 ALS);`useLogger()` 仅在"想拿 logger 但不想改签名"的便利场景使用。
+   */
   useAsyncLocalStorage?: boolean;
   /** 启用彩色输出(默认 true 仅 TTY) */
   useColors?: boolean;

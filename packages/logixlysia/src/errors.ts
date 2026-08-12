@@ -105,12 +105,18 @@ export const extractErrorFields = (error: unknown) => {
  * 2. 注册 Elysia 内置具体类
  * 3. 注册用户提供的 LogixlysiaOptions.errors
  * 4. 兜底 onError:捕获所有未匹配错误
+ *
+ * `requestIdHeader` 决定回写到响应头的字段名(默认 `"X-Request-Id"`),
+ * 由调用方从 `resolveRequestIdConfig(options.config?.requestId)?.header` 传入。
+ * 之前错误路径硬编码 `"X-Request-Id"`,与成功路径不一致 —— 配 `requestId: { header: "X-Correlation-Id" }` 时
+ * 正常请求用 `X-Correlation-Id`,错误请求仍会写 `X-Request-Id`,现统一为同一来源。
  */
 export const applyErrorLogging = <T extends { error: any; onError?: any }>(
   app: T,
   logger: Logger,
   options: LogixlysiaOptions,
-  didCustomLog?: WeakSet<Request>
+  didCustomLog?: WeakSet<Request>,
+  requestIdHeader: string = "X-Request-Id"
 ): T => {
   const verbose = options.error?.verbose === true;
   const markLogged = (request: Request) => {
@@ -121,6 +127,9 @@ export const applyErrorLogging = <T extends { error: any; onError?: any }>(
   // Echo the request id header back on the response. Reads the bag via the
   // logixlysia context store; `peekContext` is non-mutating so we don't
   // accidentally keep the entry alive after the request finishes.
+  // The header name comes from the resolved requestId config (passed in
+  // by the caller) so the success path and the error path agree on which
+  // response header to set.
   const echoRequestId = (
     request: Request,
     set?: { headers?: Record<string, string> }
@@ -129,30 +138,67 @@ export const applyErrorLogging = <T extends { error: any; onError?: any }>(
     if (id && set) {
       set.headers = {
         ...(set.headers ?? {}),
-        "X-Request-Id": id,
+        [requestIdHeader]: id,
       };
     }
   };
 
+  /**
+   * Build a class-specific error handler.
+   *
+   * `withAll` controls whether to expand `error.all` (the array of field-level
+   * validation issues Elysia 2 attaches to ValidationError / ParseError):
+   * - `true`  → Elysia built-in classes (Validation/NotFound/Parse/ISE/InvalidCookie)
+   * - `false` → user-defined HTTPError subclasses + HTTPError universal handler
+   *
+   * Verbose error dump is currently only emitted for `withAll === true` cases
+   * to mirror the previous behavior; the fallback handler below intentionally
+   * never emits it.
+   */
+  const makeErrorHandler =
+    (withAll: boolean) =>
+      (ctx: any): undefined => {
+        const { request, error, store, set } = ctx;
+        markLogged(request);
+        const fields = extractErrorFields(error);
+        const status = fields.status ?? 500;
+        const data: Record<string, unknown> = {
+          status,
+          type: fields.type,
+          message: fields.message,
+        };
+        if (withAll && error && typeof error === "object" && "all" in error) {
+          const all = (error as { all?: unknown }).all;
+          if (Array.isArray(all)) {
+            data.errors = all.map((e) => {
+              const errObj = e as Record<string, unknown>;
+              return {
+                field:
+                  (typeof errObj.instancePath === "string"
+                    ? errObj.instancePath
+                    : typeof errObj.path === "string"
+                      ? errObj.path
+                      : ""
+                  ).replace(/^\//, "") || undefined,
+                message:
+                  (errObj.summary as string | undefined) ??
+                  (errObj.message as string | undefined) ??
+                  "Validation error",
+              };
+            });
+          }
+        }
+        logger.log(levelForStatus(status), request, data, store as StoreData);
+        if (withAll && verbose) {
+          const errStr = JSON.stringify(error, null, 2);
+          logger.warn(request, "Verbose error context", { error: errStr });
+        }
+        echoRequestId(request, set);
+        return undefined;
+      };
+
   // 1. HTTPError 通用 handler(任何 HTTPError 派生类)
-  app.error(HTTPError, (ctx: any) => {
-    const { request, error, store, set } = ctx;
-    markLogged(request);
-    const fields = extractErrorFields(error);
-    const status = fields.status ?? 500;
-    logger.log(
-      levelForStatus(status),
-      request,
-      {
-        status,
-        type: fields.type,
-        message: fields.message,
-      },
-      store as StoreData
-    );
-    echoRequestId(request, set);
-    return undefined;
-  });
+  app.error(HTTPError, makeErrorHandler(false));
 
   // 2. Elysia 内置具体类
   const builtInClasses: LogixlysiaErrorClass[] = [
@@ -164,67 +210,12 @@ export const applyErrorLogging = <T extends { error: any; onError?: any }>(
   ];
 
   for (const cls of builtInClasses) {
-    app.error(cls, (ctx: any) => {
-      const { request, error, store, set } = ctx;
-      markLogged(request);
-      const fields = extractErrorFields(error);
-      const status = fields.status ?? 500;
-      const data: Record<string, unknown> = {
-        status,
-        type: fields.type,
-        message: fields.message,
-      };
-      if (error && typeof error === "object" && "all" in error) {
-        const all = (error as { all?: unknown }).all;
-        if (Array.isArray(all)) {
-          data.errors = all.map((e) => {
-            const errObj = e as Record<string, unknown>;
-            return {
-              field:
-                (typeof errObj.instancePath === "string"
-                  ? errObj.instancePath
-                  : typeof errObj.path === "string"
-                    ? errObj.path
-                    : ""
-                ).replace(/^\//, "") || undefined,
-              message:
-                (errObj.summary as string | undefined) ??
-                (errObj.message as string | undefined) ??
-                "Validation error",
-            };
-          });
-        }
-      }
-      logger.log(levelForStatus(status), request, data, store as StoreData);
-      if (verbose) {
-        const errStr = JSON.stringify(error, null, 2);
-        logger.warn(request, "Verbose error context", { error: errStr });
-      }
-      echoRequestId(request, set);
-      return undefined;
-    });
+    app.error(cls, makeErrorHandler(true));
   }
 
   // 3. 用户提供的自定义 HTTPError 类
   for (const cls of options.errors ?? []) {
-    app.error(cls, (ctx: any) => {
-      const { request, error, store, set } = ctx;
-      markLogged(request);
-      const fields = extractErrorFields(error);
-      const status = fields.status ?? 500;
-      logger.log(
-        levelForStatus(status),
-        request,
-        {
-          status,
-          type: fields.type,
-          message: fields.message,
-        },
-        store as StoreData
-      );
-      echoRequestId(request, set);
-      return undefined;
-    });
+    app.error(cls, makeErrorHandler(false));
   }
 
   // 4. 兜底:捕获所有未匹配错误。

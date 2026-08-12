@@ -152,6 +152,21 @@ export const logixlysia = (options: LogixlysiaOptions = {}): LogixlysiaPlugin =>
       }
 
       // 如果启用 ALS，进入异步本地存储作用域
+      //
+      // Elysia 2 内部对每个请求会包一层自己的 `als.run()` scope(用来传递
+      // request / store / derive 的值)。我们的 `.request()` 钩子是在那个
+      // scope 内被回调的,所以这里 `enterWith` 设进去的值,会**透传**到后续
+      // 的路由 handler / `.afterHandle()`,只要 Elysia 自己在它们之间不再
+      // 重新起一个 `als.run()`(目前 Elysia 2.x 不会,但升级时要注意)。
+      //
+      // 取舍:我们没法在 Elysia 自己的 async 上下文之外拦截请求,所以**无法**
+      // 用 `loggerStorage.run()` 把整个请求包起来 —— 那是 Elysia 才能做的
+      // 事。一旦 Elysia 之后在内部多次 `als.run()`,这个 `enterWith` 就会被
+      // 切断,`useLogger()` 在深调用栈里会回到 NOOP_LOGGER。
+      //
+      // 推荐用法:深调用栈优先用 `({ log })` 的 derive(它走 Elysia 自己的
+      // context 机制,不依赖 ALS),`useLogger()` 仅用于"想拿到 logger 但
+      // 不想在签名里穿 ctx"的简单场景。
       if (useALS) {
         loggerStorage.enterWith(
           createRequestScopedLogger(logger, request, contextStore)
@@ -235,7 +250,8 @@ export const logixlysia = (options: LogixlysiaOptions = {}): LogixlysiaPlugin =>
     withStart,
     logger,
     resolvedOptions,
-    didCustomLog
+    didCustomLog,
+    requestIdConfig?.header ?? "X-Request-Id"
   );
 
   // ------------------------------------------------------------
