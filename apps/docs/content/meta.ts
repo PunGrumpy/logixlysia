@@ -11,9 +11,9 @@ export default defineMeta({
     "contributing",
     "usage",
     "configuration",
-    "api-reference",
     "features",
     "integrations",
+    "reference",
   ],
   title: "Documentation",
 });

@@ -1,0 +1,632 @@
+---
+title: Exports
+description: Public functions and values exported by `@pori15/logixlysia`.
+---
+
+
+本页是 [`@pori15/logixlysia`](https://www.npmjs.com/package/@pori15/logixlysia) 公共导出的自动生成参考。源代码变更后会重新生成。
+
+## Functions
+
+[__resetForTesting](#reset-for-testing) · [__resetPresetRegistry](#reset-preset-registry) · [applyErrorLogging](#apply-error-logging) · [buildDeriveSlot](#build-derive-slot) · [buildPinoRedactPaths](#build-pino-redact-paths) · [buildRequestHooks](#build-request-hooks) · [buildStartupHook](#build-startup-hook) · [createCore](#create-core) · [createRequestContextStore](#create-request-context-store) · [createRequestScopedLogger](#create-request-scoped-logger) · [createWsHandlerWrapper](#create-ws-handler-wrapper) · [errorMap](#error-map) · [extractErrorFields](#extract-error-fields) · [extractStatus](#extract-status) · [getOrCreateRequestId](#get-or-create-request-id) · [getPresetDefaults](#get-preset-defaults) · [getRotatedFiles](#get-rotated-files) · [getStatusCode](#get-status-code) · [httpError](#http-error) · [injectTraceContext](#inject-trace-context) · [isSensitiveKey](#is-sensitive-key) · [isStructuredError](#is-structured-error) · [levelForStatus](#level-for-status) · [listPresets](#list-presets) · [logixlysia](#logixlysia) · [mergeAIMetrics](#merge-aimetrics) · [mergeLogDataContext](#merge-log-data-context) · [normalizeLoggedError](#normalize-logged-error) · [pad2](#pad2) · [pad3](#pad3) · [parseError](#parse-error) · [parseInterval](#parse-interval) · [parseRetention](#parse-retention) · [parseSize](#parse-size) · [redact](#redact) · [redactRequest](#redact-request) · [redactString](#redact-string) · [registerPreset](#register-preset) · [resolveOptions](#resolve-options) · [resolveRequestIdConfig](#resolve-request-id-config) · [sanitizeLogText](#sanitize-log-text) · [shouldRotateBySize](#should-rotate-by-size) · [useLogger](#use-logger)
+
+
+## Variables
+
+[DEFAULT_REDACT_KEYS](#default-redact-keys) · [loggerStorage](#logger-storage)
+
+
+## Functions
+
+### `__resetForTesting`
+
+Reset the cached OTel API reference. Only intended for tests.
+
+```ts
+function __resetForTesting() => void;
+```
+### `__resetPresetRegistry`
+
+测试用 —— 重置整个 preset 注册表(连同内置 preset)。
+生产代码**不应**调用,会丢失 ``dev`` / ``prod`` / ``json``。
+
+注意命名:``__resetPresetRegistry`` 而**不**是 ``__resetForTesting`` —— 跟
+``otel.ts:__resetForTesting`` 区分,避免 api-gen 生成的 barrel 里重复标识符。
+
+```ts
+function __resetPresetRegistry() => void;
+```
+### `applyErrorLogging`
+
+给一个 Elysia app 装上 logixlysia 错误日志。
+
+工作方式:
+1. 注册 HTTPError 通用 handler → 任何 HTTPError 派生类都自动写日志
+2. 注册 Elysia 内置具体类
+3. 注册用户提供的 LogixlysiaOptions.errors
+4. 兜底 onError:捕获所有未匹配错误
+
+``requestIdHeader`` 决定回写到响应头的字段名(默认 ``"X-Request-Id"``),
+由调用方从 ``resolveRequestIdConfig(options.config?.requestId)?.header`` 传入。
+之前错误路径硬编码 ``"X-Request-Id"``,与成功路径不一致 —— 配 ``requestId: { header: "X-Correlation-Id" }`` 时
+正常请求用 ``X-Correlation-Id``,错误请求仍会写 ``X-Request-Id``,现统一为同一来源。
+
+```ts
+function applyErrorLogging<T>(app: T, logger: Logger, options: LogixlysiaOptions, didCustomLog?: WeakSet<Request>, requestIdHeader: string) => T;
+```
+
+**Parameters**
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `app` | `T` |  |
+| `logger` | `Logger` |  |
+| `options` | `LogixlysiaOptions` |  |
+| `didCustomLog` | `WeakSet<Request>` |  |
+| `requestIdHeader` | `string` |  |
+
+### `buildDeriveSlot`
+
+```ts
+function buildDeriveSlot(app: any, core: LogixlysiaCore) => any;
+```
+
+**Parameters**
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `app` | `any` |  |
+| `core` | `LogixlysiaCore` |  |
+
+### `buildPinoRedactPaths`
+
+为Pino日志框架生成脱敏路径
+支持一层嵌套：顶级和通配符路径
+
+```ts
+function buildPinoRedactPaths(extraKeys?: readonly string[]) => string[];
+```
+
+**Parameters**
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `extraKeys` | `readonly string[]` | 用户自定义敏感字段 |
+
+### `buildRequestHooks`
+
+```ts
+function buildRequestHooks(app: any, core: LogixlysiaCore) => any;
+```
+
+**Parameters**
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `app` | `any` |  |
+| `core` | `LogixlysiaCore` |  |
+
+### `buildStartupHook`
+
+```ts
+function buildStartupHook(app: any, core: LogixlysiaCore) => any;
+```
+
+**Parameters**
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `app` | `any` |  |
+| `core` | `LogixlysiaCore` |  |
+
+### `createCore`
+
+```ts
+function createCore(options: LogixlysiaOptions) => LogixlysiaCore;
+```
+
+**Parameters**
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `options` | `LogixlysiaOptions` |  |
+
+### `createRequestContextStore`
+
+```ts
+function createRequestContextStore() => RequestContextStore;
+```
+### `createRequestScopedLogger`
+
+Builds a RequestScopedLogger that delegates to the underlying Logger but
+pre-binds the request — so deep call sites can ``log.info('msg')`` without
+threading the Request through every signature.
+
+```ts
+function createRequestScopedLogger(logger: Logger, request: Request, contextStore: object) => RequestScopedLogger;
+```
+
+**Parameters**
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `logger` | `Logger` |  |
+| `request` | `Request` |  |
+| `contextStore` | `object` |  |
+
+### `createWsHandlerWrapper`
+
+```ts
+function createWsHandlerWrapper(options: LogixlysiaOptions, logger: Logger, contextStore: RequestContextStore) => (path: string, hooks: THooks) => THooks;
+```
+
+**Parameters**
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `options` | `LogixlysiaOptions` |  |
+| `logger` | `Logger` |  |
+| `contextStore` | `RequestContextStore` |  |
+
+### `errorMap`
+
+数据库错误码 → HTTPError 类的工厂
+
+保留 1.x ``ErrorMapping.errorMap`` 的语义,但用 Elysia 2.0 原生类表达。
+
+```ts
+function errorMap(map: Record<string, object>) => LogixlysiaErrorClass[];
+```
+
+**Parameters**
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `map` | `Record<string, object>` |  |
+
+### `extractErrorFields`
+
+内部:从 error 提取 RFC 9457 友好字段
+
+```ts
+function extractErrorFields(error: unknown) => object;
+```
+
+**Parameters**
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `error` | `unknown` |  |
+
+### `extractStatus`
+
+内部:从任意 error 中提取 status 数字
+
+```ts
+function extractStatus(error: unknown) => number;
+```
+
+**Parameters**
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `error` | `unknown` |  |
+
+### `getOrCreateRequestId`
+
+Reads an existing request ID from the incoming request header, or generates a
+new one using the configured generator.
+
+Inbound values are validated against ``VALID_REQUEST_ID`` (alphanumeric plus
+``.``, ``_``, ``-``, 1-128 chars) before being trusted — request IDs flow into log
+lines, response headers, and context trees, so malformed or oversized
+values are replaced with a freshly generated one rather than echoed back.
+
+```ts
+function getOrCreateRequestId(request: Request, config: ResolvedRequestIdConfig) => string;
+```
+
+**Parameters**
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `request` | `Request` |  |
+| `config` | `ResolvedRequestIdConfig` |  |
+
+### `getPresetDefaults`
+
+取一个 preset 的默认配置(不区分内置 / 用户注册)。
+``resolveOptions`` 在这一步查表。
+
+```ts
+function getPresetDefaults(name: string) => LogixlysiaConfig;
+```
+
+**Parameters**
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `name` | `string` |  |
+
+### `getRotatedFiles`
+
+```ts
+function getRotatedFiles(filePath: string) => Promise<string[]>;
+```
+
+**Parameters**
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `filePath` | `string` |  |
+
+### `getStatusCode`
+
+```ts
+function getStatusCode(value: unknown) => number;
+```
+
+**Parameters**
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `value` | `unknown` |  |
+
+### `httpError`
+
+创建一个 HTTPError 实例,匿名类继承避免污染全局命名空间。
+
+```ts
+function httpError(status: number | "Continue" | "Switching Protocols" | "Processing" | "Early Hints" | "OK" | "Created" | "Accepted" | "Non-Authoritative Information" | "No Content" | "Reset Content" | "Partial Content" | "Multi-Status" | "Already Reported" | "Multiple Choices" | "Moved Permanently" | "Found" | "See Other" | "Not Modified" | "Temporary Redirect" | "Permanent Redirect" | "Bad Request" | "Unauthorized" | "Payment Required" | "Forbidden" | "Not Found" | "Method Not Allowed" | "Not Acceptable" | "Proxy Authentication Required" | "Request Timeout" | "Conflict" | "Gone" | "Length Required" | "Precondition Failed" | "Payload Too Large" | "URI Too Long" | "Unsupported Media Type" | "Range Not Satisfiable" | "Expectation Failed" | "I'm a teapot" | "Enhance Your Calm" | "Misdirected Request" | "Unprocessable Content" | "Locked" | "Failed Dependency" | "Too Early" | "Upgrade Required" | "Precondition Required" | "Too Many Requests" | "Request Header Fields Too Large" | "Unavailable For Legal Reasons" | "Internal Server Error" | "Not Implemented" | "Bad Gateway" | "Service Unavailable" | "Gateway Timeout" | "HTTP Version Not Supported" | "Variant Also Negotiates" | "Insufficient Storage" | "Loop Detected" | "Not Extended" | "Network Authentication Required", detail?: string, extensions?: Record<string, unknown>) => HTTPError;
+```
+
+**Parameters**
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `status` | `number | "Continue" | "Switching Protocols" | "Processing" | "Early Hints" | "OK" | "Created" | "Accepted" | "Non-Authoritative Information" | "No Content" | "Reset Content" | "Partial Content" | "Multi-Status" | "Already Reported" | "Multiple Choices" | "Moved Permanently" | "Found" | "See Other" | "Not Modified" | "Temporary Redirect" | "Permanent Redirect" | "Bad Request" | "Unauthorized" | "Payment Required" | "Forbidden" | "Not Found" | "Method Not Allowed" | "Not Acceptable" | "Proxy Authentication Required" | "Request Timeout" | "Conflict" | "Gone" | "Length Required" | "Precondition Failed" | "Payload Too Large" | "URI Too Long" | "Unsupported Media Type" | "Range Not Satisfiable" | "Expectation Failed" | "I'm a teapot" | "Enhance Your Calm" | "Misdirected Request" | "Unprocessable Content" | "Locked" | "Failed Dependency" | "Too Early" | "Upgrade Required" | "Precondition Required" | "Too Many Requests" | "Request Header Fields Too Large" | "Unavailable For Legal Reasons" | "Internal Server Error" | "Not Implemented" | "Bad Gateway" | "Service Unavailable" | "Gateway Timeout" | "HTTP Version Not Supported" | "Variant Also Negotiates" | "Insufficient Storage" | "Loop Detected" | "Not Extended" | "Network Authentication Required"` |  |
+| `detail` | `string` |  |
+| `extensions` | `Record<string, unknown>` |  |
+
+### `injectTraceContext`
+
+Injects active OpenTelemetry span IDs into the request context bag when
+``@opentelemetry/api`` is installed and a span is active.
+
+```ts
+function injectTraceContext(logger: Pick<Logger, "mergeContext">, request: Request) => Promise<TraceContextFields>;
+```
+
+**Parameters**
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `logger` | `Pick<Logger, "mergeContext">` |  |
+| `request` | `Request` |  |
+
+### `isSensitiveKey`
+
+判断字段是否为敏感字段
+
+```ts
+function isSensitiveKey(key: string, extraKeys?: readonly string[]) => boolean;
+```
+
+**Parameters**
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `key` | `string` | 字段名 |
+| `extraKeys` | `readonly string[]` | 用户自定义敏感字段列表 |
+
+### `isStructuredError`
+
+```ts
+function isStructuredError(value: unknown) => undefined value;
+```
+
+**Parameters**
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `value` | `unknown` |  |
+
+### `levelForStatus`
+
+Elysia 错误实例 → logixlysia 日志级别
+4xx → WARNING,5xx → ERROR,其他 → INFO
+
+```ts
+function levelForStatus(status?: number | "Continue" | "Switching Protocols" | "Processing" | "Early Hints" | "OK" | "Created" | "Accepted" | "Non-Authoritative Information" | "No Content" | "Reset Content" | "Partial Content" | "Multi-Status" | "Already Reported" | "Multiple Choices" | "Moved Permanently" | "Found" | "See Other" | "Not Modified" | "Temporary Redirect" | "Permanent Redirect" | "Bad Request" | "Unauthorized" | "Payment Required" | "Forbidden" | "Not Found" | "Method Not Allowed" | "Not Acceptable" | "Proxy Authentication Required" | "Request Timeout" | "Conflict" | "Gone" | "Length Required" | "Precondition Failed" | "Payload Too Large" | "URI Too Long" | "Unsupported Media Type" | "Range Not Satisfiable" | "Expectation Failed" | "I'm a teapot" | "Enhance Your Calm" | "Misdirected Request" | "Unprocessable Content" | "Locked" | "Failed Dependency" | "Too Early" | "Upgrade Required" | "Precondition Required" | "Too Many Requests" | "Request Header Fields Too Large" | "Unavailable For Legal Reasons" | "Internal Server Error" | "Not Implemented" | "Bad Gateway" | "Service Unavailable" | "Gateway Timeout" | "HTTP Version Not Supported" | "Variant Also Negotiates" | "Insufficient Storage" | "Loop Detected" | "Not Extended" | "Network Authentication Required") => LogLevel;
+```
+
+**Parameters**
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `status` | `number | "Continue" | "Switching Protocols" | "Processing" | "Early Hints" | "OK" | "Created" | "Accepted" | "Non-Authoritative Information" | "No Content" | "Reset Content" | "Partial Content" | "Multi-Status" | "Already Reported" | "Multiple Choices" | "Moved Permanently" | "Found" | "See Other" | "Not Modified" | "Temporary Redirect" | "Permanent Redirect" | "Bad Request" | "Unauthorized" | "Payment Required" | "Forbidden" | "Not Found" | "Method Not Allowed" | "Not Acceptable" | "Proxy Authentication Required" | "Request Timeout" | "Conflict" | "Gone" | "Length Required" | "Precondition Failed" | "Payload Too Large" | "URI Too Long" | "Unsupported Media Type" | "Range Not Satisfiable" | "Expectation Failed" | "I'm a teapot" | "Enhance Your Calm" | "Misdirected Request" | "Unprocessable Content" | "Locked" | "Failed Dependency" | "Too Early" | "Upgrade Required" | "Precondition Required" | "Too Many Requests" | "Request Header Fields Too Large" | "Unavailable For Legal Reasons" | "Internal Server Error" | "Not Implemented" | "Bad Gateway" | "Service Unavailable" | "Gateway Timeout" | "HTTP Version Not Supported" | "Variant Also Negotiates" | "Insufficient Storage" | "Loop Detected" | "Not Extended" | "Network Authentication Required"` |  |
+
+### `listPresets`
+
+列出当前所有已注册的 preset 名(用于调试 / ``--help`` 输出)。
+
+```ts
+function listPresets() => string[];
+```
+### `logixlysia`
+
+```ts
+function logixlysia(options: LogixlysiaOptions) => LogixlysiaPlugin;
+```
+
+**Parameters**
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `options` | `LogixlysiaOptions` |  |
+
+### `mergeAIMetrics`
+
+Merges AI SDK / LLM usage metrics into the request context bag so they appear
+on the final access log (evlog-style ``ai`` object).
+
+```ts
+function mergeAIMetrics(logger: Pick<Logger, "mergeContext">, request: Request, metrics: AIMetrics) => void;
+```
+
+**Parameters**
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `logger` | `Pick<Logger, "mergeContext">` |  |
+| `request` | `Request` |  |
+| `metrics` | `AIMetrics` |  |
+
+### `mergeLogDataContext`
+
+Accumulated request context first; explicit ``data.context`` wins on key collision.
+
+```ts
+function mergeLogDataContext(data: Record<string, unknown>, accumulated: Readonly<Record<string, unknown>>) => Record<string, unknown>;
+```
+
+**Parameters**
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `data` | `Record<string, unknown>` |  |
+| `accumulated` | `Readonly<Record<string, unknown>>` |  |
+
+### `normalizeLoggedError`
+
+```ts
+function normalizeLoggedError(error: unknown, logErrorPayload: boolean) => NormalizedLoggedError;
+```
+
+**Parameters**
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `error` | `unknown` |  |
+| `logErrorPayload` | `boolean` |  |
+
+### `pad2`
+
+```ts
+function pad2(value: number) => string;
+```
+
+**Parameters**
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `value` | `number` |  |
+
+### `pad3`
+
+```ts
+function pad3(value: number) => string;
+```
+
+**Parameters**
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `value` | `number` |  |
+
+### `parseError`
+
+```ts
+function parseError(error: unknown) => string;
+```
+
+**Parameters**
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `error` | `unknown` |  |
+
+### `parseInterval`
+
+```ts
+function parseInterval(value: string) => number;
+```
+
+**Parameters**
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `value` | `string` |  |
+
+### `parseRetention`
+
+```ts
+function parseRetention(value: string | number) => object;
+```
+
+**Parameters**
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `value` | `string | number` |  |
+
+### `parseSize`
+
+```ts
+function parseSize(value: string | number) => number;
+```
+
+**Parameters**
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `value` | `string | number` |  |
+
+### `redact`
+
+对任意值进行PII脱敏
+
+```ts
+function redact<T>(value: T, extraKeys?: readonly string[]) => T;
+```
+
+**Parameters**
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `value` | `T` | 需要脱敏的数据（可以是任何类型） |
+| `extraKeys` | `readonly string[]` | 额外的敏感字段名 |
+
+### `redactRequest`
+
+脱敏HTTP Request对象
+
+处理内容：
+- URL中的用户名/密码/主机名/路径/查询参数
+- Headers中的敏感字段
+- HTTP方法
+
+注意：故意不处理Body，避免消费原始请求流
+
+```ts
+function redactRequest(request: Request, extraKeys?: readonly string[]) => Request;
+```
+
+**Parameters**
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `request` | `Request` | 原始Request对象 |
+| `extraKeys` | `readonly string[]` | 额外的敏感Header名 |
+
+### `redactString`
+
+对字符串进行全面的PII脱敏
+同时处理：邮箱、IP、信用卡号、JWT令牌
+
+```ts
+function redactString(text: string) => string;
+```
+
+**Parameters**
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `text` | `string` | 原始文本 |
+
+### `registerPreset`
+
+注册一个用户 preset。重复同名 → 抛错。
+
+```ts
+function registerPreset(name: string, defaults: LogixlysiaConfig) => void;
+```
+
+**Parameters**
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `name` | `string` |  |
+| `defaults` | `LogixlysiaConfig` |  |
+
+### `resolveOptions`
+
+Applies preset defaults; explicit ``config`` keys override preset values.
+
+```ts
+function resolveOptions(options: LogixlysiaOptions) => LogixlysiaOptions;
+```
+
+**Parameters**
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `options` | `LogixlysiaOptions` |  |
+
+### `resolveRequestIdConfig`
+
+Normalises the ``requestId`` option into a concrete config object.
+
+- ``undefined`` / ``false`` → ``null`` (disabled)
+- ``true`` → default config
+- ``RequestIdConfig`` → merged with defaults; ``enabled: false`` inside the object disables the feature
+
+```ts
+function resolveRequestIdConfig(raw?: boolean | RequestIdConfig) => ResolvedRequestIdConfig;
+```
+
+**Parameters**
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `raw` | `boolean | RequestIdConfig` |  |
+
+### `sanitizeLogText`
+
+Strips C0/C1 control chars (keeps none -- \n and \r become visible escapes) and bounds length.
+
+```ts
+function sanitizeLogText(value: string, maxLength: number) => string;
+```
+
+**Parameters**
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `value` | `string` |  |
+| `maxLength` | `number` |  |
+
+### `shouldRotateBySize`
+
+```ts
+function shouldRotateBySize(filePath: string, maxSizeBytes: number) => Promise<boolean>;
+```
+
+**Parameters**
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `filePath` | `string` |  |
+| `maxSizeBytes` | `number` |  |
+
+### `useLogger`
+
+```ts
+function useLogger() => RequestScopedLogger;
+```
+## Variables
+
+### `DEFAULT_REDACT_KEYS`
+
+默认敏感字段列表（不区分大小写）
+这些字段名的值将被自动脱敏
+
+```ts
+const DEFAULT_REDACT_KEYS: readonly string[];
+```
+
+### `loggerStorage`
+
+```ts
+const loggerStorage: AsyncLocalStorage<RequestScopedLogger>;
+```

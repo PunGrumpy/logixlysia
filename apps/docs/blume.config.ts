@@ -3,8 +3,11 @@ import { defineConfig } from "blume";
 // The pre-blume site (Next.js + Fumadocs) served every docs page from the
 // root, e.g. /introduction and /features/log-levels. Those URLs are indexed
 // and linked externally, so each one 301s to its /docs counterpart.
+//
+// `api-reference` was a hand-written page before the auto-generated
+// `/reference/*` set landed; we keep the legacy redirect for SEO so external
+// links still resolve.
 const legacyDocsPaths = [
-  "api-reference",
   "comparison",
   "configuration",
   "contributing",
@@ -104,6 +107,7 @@ export default defineConfig({
       from: `/${path}`,
       to: `/docs/${path}`,
     })),
+    { from: "/api-reference", to: "/docs/reference" },
     { from: "/rss.xml", to: "/changelog/rss.xml" },
     { from: "/2025", to: "/2026" },
   ],

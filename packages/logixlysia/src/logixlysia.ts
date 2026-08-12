@@ -96,5 +96,3 @@ export const logixlysia = (options: LogixlysiaOptions = {}): LogixlysiaPlugin =>
 
   return Object.assign(plugin, { wrapWs }) as LogixlysiaPlugin;
 };
-
-export default logixlysia;
