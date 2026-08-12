@@ -96,14 +96,14 @@ function buildPinoRedactPaths(extraKeys?: readonly string[]) => string[];
 ### `buildRequestHooks`
 
 ```ts
-function buildRequestHooks(app: any, core: LogixlysiaCore) => any;
+function buildRequestHooks(app: AnyElysia, core: LogixlysiaCore) => AnyElysia;
 ```
 
 **Parameters**
 
 | Name | Type | Description |
 | --- | --- | --- |
-| `app` | `any` |  |
+| `app` | `AnyElysia` |  |
 | `core` | `LogixlysiaCore` |  |
 
 ### `buildStartupHook`
@@ -356,7 +356,7 @@ function listPresets() => string[];
 ### `logixlysia`
 
 ```ts
-function logixlysia(options: LogixlysiaOptions) => LogixlysiaPlugin;
+function logixlysia(options: LogixlysiaOptions) => AnyElysia & object;
 ```
 
 **Parameters**

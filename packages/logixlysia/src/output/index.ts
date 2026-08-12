@@ -68,10 +68,11 @@ export const logToTransports = (input: LogToTransportsInput): void => {
     meta["pathname"] = precomputed.pathname;
   } else {
     // Fall back to a derived duration when caller didn't precompute.
+    const before = store.beforeTime ?? BigInt(0);
     meta["durationMs"] =
-      store.beforeTime === BigInt(0)
+      before === BigInt(0)
         ? 0
-        : Number(process.hrtime.bigint() - store.beforeTime) / 1_000_000;
+        : Number(process.hrtime.bigint() - before) / 1_000_000;
   }
 
   for (const transport of transports) {

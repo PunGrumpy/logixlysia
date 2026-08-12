@@ -281,11 +281,12 @@ export const formatLogOutput = ({
       return null;
     }
   })();
+  const before = store.beforeTime ?? BigInt(0);
   const durationMs =
     precomputed?.durationMs ??
-    (store.beforeTime === BigInt(0)
+    (before === BigInt(0)
       ? 0
-      : Number(process.hrtime.bigint() - store.beforeTime) / 1_000_000);
+      : Number(process.hrtime.bigint() - before) / 1_000_000);
   const pathname =
     precomputed?.pathname ||
     store.pathname ||

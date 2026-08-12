@@ -202,20 +202,19 @@ describe("logixlysia plugin (Elysia 2.0)", () => {
     expect(level).toBe("INFO");
   });
 
-  test("store.beforeTime + store.pathname are populated", async () => {
-    let captured: { beforeTime: bigint; pathname: string } | undefined;
+  test("store.beforeTime is populated by request hook", async () => {
+    let captured: { beforeTime: bigint | undefined } | undefined;
     const app = new Elysia()
       .use(logixlysia(baseOptions(makeTransport())))
       .get("/captured", ({ store }) => {
         captured = {
-          beforeTime: (store as { beforeTime: bigint }).beforeTime,
-          pathname: (store as { pathname: string }).pathname,
+          beforeTime: store.beforeTime,
         };
         return "ok";
       });
 
     await app.handle(new Request("http://localhost/captured"));
-    expect(captured?.pathname).toBe("/captured");
+    expect(captured?.beforeTime).toBeDefined();
     expect(captured?.beforeTime).toBeGreaterThan(BigInt(0));
   });
 

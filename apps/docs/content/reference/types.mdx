@@ -179,7 +179,7 @@ Logixlysia 插件配置
 
 ### `LogixlysiaSingleton`
 
-插件单例接口 - 定义插件注入到 Elysia 的内容
+插件单例接口 - 描述 logixlysia 注入到 Elysia 的 store / derive 形状
 
 | Field | Type | Optional | Description |
 | --- | --- | --- | --- |
@@ -363,10 +363,15 @@ type EmptyElysiaSlot = Record<string, never>;
 
 ### `Logixlysia`
 
-完整插件类型 - 合并了 Elysia 和插件自定义能力
+demo 路由用 ``<App extends Logixlysia>(app: App)`` 给 ``app`` 加上
+logixlysia 的 singleton 约束(``store.logger`` / ``store.pino`` 等)。
+
+这是**独立的类型**,跟 ``logixlysia()`` 的实际返回类型解耦:
+- 主函数返回 ``Elysia<any, ...>``(满足 brand check,能 ``.use()``)
+- ``Logixlysia`` 是给 demo / 用户做约束用的"logixlysia 后的 Elysia"形态
 
 ```ts
-type Logixlysia = Elysia<"", "local", LogixlysiaSingleton>;
+type Logixlysia = Elysia<"", "plugin", LogixlysiaSingleton>;
 ```
 
 ### `LogixlysiaErrorClass`
@@ -392,7 +397,11 @@ type LogixlysiaErrorClasses = TaggedHTTPError<string, any>[];
 
 ### `LogixlysiaPlugin`
 
-插件返回类型 - 包含 WebSocket 包装器
+插件返回类型,带 ``wrapWs`` 辅助方法。
+
+同样**不**用作 ``logixlysia()`` 的显式返回类型(会 brand 失败);
+实际返回值由 Elysia 推断,本类型仅在用户拿到返回值后用 ``as LogixlysiaPlugin``
+重新声明 ``wrapWs`` 字段时有用,或者写 helper 时强类型。
 
 ```ts
 type LogixlysiaPlugin = Logixlysia & object;

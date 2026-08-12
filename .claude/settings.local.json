@@ -1,5 +1,11 @@
 {
   "permissions": {
-    "allow": ["mcp__thinking__sequentialthinking"]
+    "allow": [
+      "mcp__thinking__sequentialthinking",
+      "Bash(git stash *)",
+      "Bash(bunx tsc *)",
+      "Bash(git checkout *)",
+      "Bash(bun test *)"
+    ]
   }
 }

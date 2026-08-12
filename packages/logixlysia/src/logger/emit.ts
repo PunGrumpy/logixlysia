@@ -130,10 +130,12 @@ export const shouldLogForOptions = (
   return true;
 };
 
-const computeDurationMs = (store: StoreData): number =>
-  store.beforeTime === BigInt(0)
+const computeDurationMs = (store: StoreData): number => {
+  const before = store.beforeTime ?? BigInt(0);
+  return before === BigInt(0)
     ? 0
-    : Number(process.hrtime.bigint() - store.beforeTime) / 1_000_000;
+    : Number(process.hrtime.bigint() - before) / 1_000_000;
+};
 
 /** Parses the URL once; only called when at least one active sink reads pathname/search. */
 const parseRequestUrlOnce = (

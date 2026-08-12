@@ -41,7 +41,7 @@ export type LogLevel = "DEBUG" | "INFO" | "WARNING" | "ERROR";
 /** 单次请求携带的计时和路径数据 */
 export interface StoreData {
   /** 请求开始的纳秒时间戳（hrtime） */
-  beforeTime: bigint;
+  beforeTime?: bigint;
   /** 缓存的 URL pathname，避免重复解析 */
   pathname?: string;
 }

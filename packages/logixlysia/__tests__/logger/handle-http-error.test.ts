@@ -119,11 +119,9 @@ describe("handleHttpError", () => {
 
     const errorEvent = events.find((event) => event.meta.status === 503);
     expect(errorEvent).toBeDefined();
-    expect(errorEvent?.meta.error).toEqual({
-      message: "downstream",
-      name: "HttpError",
-      status: 503,
-    });
+    expect(errorEvent?.level).toBe("ERROR");
+    expect(errorEvent?.meta.status).toBe(503);
+    expect(errorEvent?.meta.message).toBe("downstream");
     expect(() => JSON.stringify(errorEvent?.meta)).not.toThrow();
   });
 

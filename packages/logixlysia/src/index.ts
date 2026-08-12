@@ -2,8 +2,6 @@
 
 export { mergeAIMetrics } from "./ai";
 export type { AIMetrics } from "./ai";
-export { buildDeriveSlot, buildRequestHooks, buildStartupHook, createCore } from "./build";
-export type { LogixlysiaCore } from "./build";
 export { registerPreset, getPresetDefaults, listPresets, __resetPresetRegistry, resolveOptions } from "./config";
 export type { PresetConfig, LogPreset } from "./config";
 export { createRequestContextStore, mergeLogDataContext, loggerStorage, useLogger, createRequestScopedLogger } from "./context";
@@ -14,7 +12,7 @@ export { getStatusCode } from "./helpers";
 export { HttpError } from "./interfaces";
 export type { Pino, LogLevel, StoreData, LogixlysiaStore, Transport, LogRotationConfig, RequestIdConfig, LogFilter, PinoConfig, StartupConfig, FormatConfig, FileConfig, TransportsConfig, ErrorConfig, LogixlysiaErrorClasses, LogixlysiaConfig, LogixlysiaOptions, Logger, RequestScopedLogger, LogixlysiaContext } from "./interfaces";
 export { logixlysia } from "./logixlysia";
-export type { EmptyElysiaSlot, LogixlysiaSingleton, Logixlysia, LogixlysiaPlugin } from "./logixlysia";
+export type { LogixlysiaSingleton, Logixlysia } from "./logixlysia";
 export { resolveRequestIdConfig, getOrCreateRequestId } from "./middleware";
 export type { ResolvedRequestIdConfig } from "./middleware";
 export { injectTraceContext, __resetForTesting } from "./otel";

@@ -12,9 +12,7 @@ export const routers = new Elysia()
   .use(
     logixlysia({
       config: {
-        timestamp: {
-          translateTime: "yyyy-mm-dd HH:MM:ss",
-        },
+        timestamp: "yyyy-mm-dd HH:MM:ss",
         customLogFormat:
           "🦊 {now} {level} {duration} {method} {pathname} {status} {message} {ip} {context}",
         logFilePath: "./logs/example.log",
