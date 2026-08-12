@@ -1,5 +1,46 @@
 # Changelog
 
+## 7.1.0
+
+### Minor Changes
+
+- 吸收上游 `PunGrumpy/logixlysia` (b173c44) 8 个 PR 的 A+B+C 档改进，Elysia 2.0 适配保持不变：
+
+  ### Added
+  - **`feat(logger)`**: 统一 emit 管道(单次过滤 + 共享 sample token 模式 + hot-path 削减)。`emit.ts` 集中处理 filter → context merge → redact → transports → file → console 顺序，所有 sink 共享一次 `process.hrtime` / URL parse。
+  - **`feat(output)`**: `FileSink` 句柄缓存 + `queueMicrotask` 批写 + `flushChain` 串行化，避免每次 `logToFile` 触发 `open`/`close`。
+  - **`feat(output)`**: Transport 错误 5s 窗口节流(`lastErrorAt` WeakMap + `shouldThrottle`)，防止 sink 故障刷屏。
+  - **`feat(output)`**: 轮转 `interval` 支持(`parseInterval` + `Date.now() - openedAt >= interval` 分支)，与原 `maxSize` 并存。
+  - **`feat(output)`**: `KeyedMutex` FIFO 同 key 串行 + tail-only map cleanup，跨 key 独立(`compressFile` 用此锁避免并发 gzip 写同一文件)。
+  - **`feat(perf)`**: Lazy Pino via `Proxy` — 首次访问 `.info/.error/.warn/.debug` 才构造 Pino 实例;`pino.enabled === false` 短路为 silent mock。`config.pino` 已设时立即 `getPino()` 让 invalid options fail-fast。
+  - **`feat(logger)`**: `createFormatContext(options)` 一次性 hoist per-logger 常量(模板、tokens、slow/verySlow threshold、useColors)，每条 emit 直接读，避免重复 `padStart`/颜色开关判断。
+  - **`feat(logger)`**: `Logger` 接口扩展为 9 个方法:`debug / info / warn / error / log / handleHttpError / getContext / mergeContext / pino`。
+  - **`feat(types)`**: `LogixlysiaSingleton = { decorator, derive: { log }, resolve, store }` + `EmptyElysiaSlot = Record<string, never>` + `LogixlysiaPlugin = Logixlysia & { wrapWs }`。
+  - **`feat(errors)`**: `error-map.ts` + `evelyn-error.ts` 合并为单一 `src/errors.ts`，功能全部保留(`applyErrorLogging` 4 层注册、`errorMap`、`httpError`、`levelForStatus`、`extractStatus`、`extractErrorFields`、Verbose 模式、`application/problem+json` 兜底)。
+  - **`feat(wire)`**: `requestStartTimes` WeakMap 取代 Elysia store 的 `beforeTime`，避免并发请求串扰。
+  - **`feat(wire)`**: 启动 banner 真实触发(`.setup((instance) => startServer(instance.server, options))`)。
+  - **`feat(wire)`**: `AsyncLocalStorage` + `loggerStorage.enterWith(createRequestScopedLogger(...))` + `useLogger()` 深调用栈支持。
+  - **`feat(wire)`**: Request-Id 中间件(`X-Request-Id` header 校验 + UUID v4 生成器 + 上下文合并 + 响应回显)。`{requestId}` token 加到默认 format。
+  - **`feat(wire)`**: 错误 hook 也回显 `X-Request-Id` 响应 header(原 afterHandle 才有)。
+  - **`feat(wire)`**: `preset: 'dev' | 'prod' | 'json'` 解析(mergeConfig)，`prod` 默认开 `requestId: true`。
+  - **`feat(wire)`**: `logLevel?: LogLevel[]` root-level alias(等价 `config.logFilter.level`)。
+  - **`feat(types)`**: 全套上游 `types/*` 字段(`slowThreshold` / `verySlowThreshold` / `showContextTree` / `contextDepth` / `logQueryParams` / `disableWebSocketLogging` / `logErrorPayload` / `useAsyncLocalStorage` / `startupMessageFormat` / `LogFilter` / `PinoConfig` / `RequestIdConfig` / `Transport` / `LogRotationConfig` / `StartupConfig` / `FormatConfig` / `FileConfig` / `TransportsConfig`)。
+  - **`feat(otel)`**: 动态 `import("@opentelemetry/api")`(可选 peer dep)，`injectTraceContext` 改为 async 让 `bun mock.module` 可拦截。
+
+  ### Fixed
+  - `meta.beforeTime` BigInt 改为 `durationMs` Number(JSON-serializable)。
+  - `extractErrorFields` 加显式 return type(Biome)。
+  - `output/index.ts` 节流从全局 `let` 改为 `WeakMap<Transport, number>`(per-transport 独立窗口)。
+  - `output/index.ts` transport 错误报告从 `console.error` 升级为 `reportTransportError(transport, error)` per-transport。
+  - `output/file-sink.ts` 文件模式 `0o600`、目录模式 `0o700` 默认值。
+  - `errors.ts` 兜底 `.error()` hook 改用 `normalizeLoggedError` 而不是 raw `error.message`，让 transport meta `error` 字段是结构化对象。
+
+  ### Changed
+  - `createLogger` 接受 0-1-3 参数(0-arg = 默认配置 / 1-arg = options / 3-arg = `{ options, pinoFactory?, contextStore? }`)。
+  - `emit.ts` 共享 `resolveSinks(options)` 取代 `resolveSinks(config)`，让 `options.transports` (root-level `Transport[] | TransportsConfig`) 也被识别。
+  - `index.ts` 启动 hook 用 `.setup()` (Elysia 2.0.0-exp.62 重命名,非 `.start()`)。
+  - `index.ts` `.derive()` 总是添加 `{ log: RequestScopedLogger }`(原 useALS 门控),`useLogger()` 仅在 `useAsyncLocalStorage: true` 时真正工作。
+
 ## 6.1.0
 
 ### Minor Changes

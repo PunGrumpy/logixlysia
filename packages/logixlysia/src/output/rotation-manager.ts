@@ -2,15 +2,34 @@ import { promises as fs } from "node:fs";
 import { promisify } from "node:util";
 import { gzip } from "node:zlib";
 import type { LogRotationConfig } from "../interfaces";
-import { pad2 } from "../utils/format";
+import { pad2, pad3 } from "../utils/format";
 import {
   getRotatedFiles,
   parseRetention,
   parseSize,
   shouldRotateBySize,
 } from "../utils/rotation";
+import { createKeyedMutex } from "./keyed-mutex";
 
 const gzipAsync = promisify(gzip);
+
+// Prevents concurrent compression of the same file (keyed by filePath).
+const compressionLock = createKeyedMutex();
+
+/** Reports a sink failure; when omitted, the caller falls back to stderr. */
+export type RotationErrorReporter = (error: unknown) => void;
+
+const reportRotationError = (
+  message: string,
+  error: unknown,
+  onError?: RotationErrorReporter
+): void => {
+  if (onError) {
+    onError(error);
+    return;
+  }
+  console.error(message, error);
+};
 
 export const getRotatedFileName = (filePath: string, date: Date): string => {
   const yyyy = date.getFullYear();
@@ -19,7 +38,8 @@ export const getRotatedFileName = (filePath: string, date: Date): string => {
   const HH = pad2(date.getHours());
   const MM = pad2(date.getMinutes());
   const ss = pad2(date.getSeconds());
-  return `${filePath}.${yyyy}-${mm}-${dd}-${HH}-${MM}-${ss}`;
+  const SSS = pad3(date.getMilliseconds());
+  return `${filePath}.${yyyy}-${mm}-${dd}-${HH}-${MM}-${ss}-${SSS}`;
 };
 
 export const rotateFile = async (filePath: string): Promise<string> => {
@@ -32,16 +52,41 @@ export const rotateFile = async (filePath: string): Promise<string> => {
     return "";
   }
 
-  const rotated = getRotatedFileName(filePath, new Date());
+  const baseRotated = getRotatedFileName(filePath, new Date());
+  // Append hrtime nanoseconds for collision safety under concurrent rotations
+  const rotated = `${baseRotated}-${process.hrtime.bigint()}`;
   await fs.rename(filePath, rotated);
   return rotated;
 };
 
-export const compressFile = async (filePath: string): Promise<void> => {
-  const content = await fs.readFile(filePath);
-  const compressed = await gzipAsync(content);
-  await fs.writeFile(`${filePath}.gz`, compressed);
-  await fs.rm(filePath, { force: true });
+export const compressFile = async (
+  filePath: string,
+  onError?: RotationErrorReporter
+): Promise<void> => {
+  const release = await compressionLock.acquire(filePath);
+  try {
+    // Check if file still exists (might have been compressed by another process)
+    try {
+      await fs.access(filePath);
+    } catch {
+      // File doesn't exist, already compressed or deleted
+      return;
+    }
+
+    const content = await fs.readFile(filePath);
+    const compressed = await gzipAsync(content);
+    await fs.writeFile(`${filePath}.gz`, compressed);
+    await fs.rm(filePath, { force: true });
+  } catch (error) {
+    reportRotationError(
+      `[logixlysia] Failed to compress file ${filePath}:`,
+      error,
+      onError
+    );
+    throw error;
+  } finally {
+    release();
+  }
 };
 
 export const shouldRotate = async (
@@ -93,7 +138,8 @@ const cleanupByTime = async (
 
 export const performRotation = async (
   filePath: string,
-  config: LogRotationConfig
+  config: LogRotationConfig,
+  onError?: RotationErrorReporter
 ): Promise<void> => {
   const rotated = await rotateFile(filePath);
   if (!rotated) {
@@ -104,7 +150,11 @@ export const performRotation = async (
   if (shouldCompress) {
     const algo = config.compression ?? "gzip";
     if (algo === "gzip") {
-      await compressFile(rotated);
+      try {
+        await compressFile(rotated, onError);
+      } catch {
+        // compressFile already reported via onError
+      }
     }
   }
 
@@ -116,6 +166,4 @@ export const performRotation = async (
       await cleanupByTime(filePath, retention.value);
     }
   }
-
-  // Optional interval-based rotation cleanup (create interval directories / naming) is not required by tests.
 };

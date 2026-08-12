@@ -43,7 +43,10 @@ describe("logToTransports", () => {
     expect(messageValue).toBe("Test message");
     expect(metaValue).toBeTypeOf("object");
     const meta = metaValue as unknown as Record<string, unknown>;
-    expect(meta.beforeTime).toBe(store.beforeTime);
+    // BigInt is not JSON-serializable, so the meta carries `durationMs`
+    // (number) and `pathname` (string) instead of the raw `beforeTime`
+    // BigInt from upstream main.
+    expect(meta.durationMs).toBe(0);
 
     const req = meta.request as { method?: unknown; url?: unknown } | undefined;
     expect(req?.method).toBe("GET");

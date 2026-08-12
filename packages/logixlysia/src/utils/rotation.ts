@@ -3,16 +3,29 @@ import { basename, dirname } from "node:path";
 
 const SIZE_REGEX = /^(\d+(?:\.\d+)?)(k|kb|m|mb|g|gb)$/i;
 const INTERVAL_REGEX = /^(\d+)(h|d|w)$/i;
-const ROTATED_REGEX = /\.(\d{4}-\d{2}-\d{2}-\d{2}-\d{2}-\d{2})(?:\.gz)?$/;
+// Matches both 6-component (no ms) and 7-component (with ms) timestamps,
+// with an optional hrtime suffix and an optional .gz extension. Anything
+// else (e.g. `.backup`, `.tmp`) is excluded.
+const ROTATED_REGEX = /\.(\d{4}-\d{2}-\d{2}-\d{2}-\d{2}-\d{2}(?:-\d{3})?)(?:-\d+)?(?:\.gz)?$/;
 
 export const parseSize = (value: number | string): number => {
   if (typeof value === "number") {
+    if (!Number.isFinite(value) || value <= 0) {
+      throw new Error(`Invalid size: ${value}`);
+    }
     return value;
   }
 
   const trimmed = value.trim();
+  if (trimmed === "") {
+    throw new Error(`Invalid size: ${value}`);
+  }
+
   const asNumber = Number(trimmed);
-  if (Number.isFinite(asNumber)) {
+  if (trimmed.startsWith("-")) {
+    throw new Error(`Invalid size: ${value}`);
+  }
+  if (Number.isFinite(asNumber) && asNumber > 0) {
     return asNumber;
   }
 
@@ -22,6 +35,9 @@ export const parseSize = (value: number | string): number => {
   }
 
   const amount = Number(match[1]);
+  if (amount <= 0) {
+    throw new Error(`Invalid size: ${value}`);
+  }
   const unit = match[2].toLowerCase();
 
   let base = 1024;

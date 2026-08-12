@@ -1,173 +1,78 @@
 /**
  * logixlysia 2.0 — HTTP 错误日志处理
  *
- * 接受任意 `unknown` 错误(不再依赖自建 ProblemError),
- * 内部从 error.status / error.message / error.type / HTTPError.toResponse() 推断字段。
+ * 接受任意 `unknown` 错误(不再依赖自建 ProblemError),通过
+ * `utils/error.ts:normalizeLoggedError` 提取安全结构化字段,再走单 emit 管道
+ * (filter→context merge→redact→transports→file→console)输出。
+ *
+ * 4xx 走 `WARNING`,5xx 走 `ERROR` —— `consoleForLevel` 会把 `WARNING` 路由到 `console.warn`、
+ * `ERROR` 到 `console.error`,无需在这里直接调 console。
  */
 
 import type {
   LogixlysiaOptions,
   LogLevel,
   StoreData,
-  Transport,
-  TransportsConfig,
 } from "../interfaces";
-import { logToTransports } from "../output";
-import { logToFile } from "../output/file";
-
-const normalizeTransports = (
-  transports?: Transport[] | TransportsConfig
-): { targets: Transport[]; only: boolean } => {
-  if (!transports) return { targets: [], only: false };
-  if (Array.isArray(transports)) return { targets: transports, only: false };
-  return { targets: transports.targets, only: transports.only === true };
-};
-
-const extractStatus = (error: unknown): number => {
-  if (typeof error !== "object" || error === null) return 500;
-  const e = error as { status?: unknown };
-  if (typeof e.status === "number") return e.status;
-  return 500;
-};
-
-const extractErrorBody = (
-  error: unknown
-): { type?: string; title?: string; detail?: string; [k: string]: unknown } => {
-  if (typeof error !== "object" || error === null) return {};
-  const e = error as Record<string, unknown>;
-  const out: Record<string, unknown> = {};
-  if (typeof e.type === "string") out.type = e.type;
-  if (typeof e.problemTitle === "string") out.title = e.problemTitle;
-  if (typeof e.title === "string" && out.title === undefined)
-    out.title = e.title;
-  if (typeof e.detail === "string") out.detail = e.detail;
-  // HTTPError.toResponse() 可用时,优先取其 body
-  const toResp = (e as { toResponse?: () => Response }).toResponse;
-  if (typeof toResp === "function") {
-    // toResponse 是 Response 对象,无法 sync 取 body;跳过
-  }
-  return out;
-};
+import { isStructuredError, normalizeLoggedError } from "../utils/error";
+import { extractStatus, levelForStatus } from "../errors";
+import type { RequestContextStore } from "../context/request-context";
+import { computePrecomputedLogParts, emit, resolveSinks } from "./emit";
+import { createFormatContext } from "./create-logger";
 
 /**
- * 统一输出管道:transports → file → console
- * handleHttpError 和 log 共用同一管道,不再重复判断配置
+ * 旧版 entry — 直接调用,不依赖 RequestContextStore(用于 createLogger 的 fallback 路径)。
  */
-const outputPipeline = (
-  level: LogLevel,
-  request: Request,
-  data: Record<string, unknown>,
-  store: StoreData,
-  options: LogixlysiaOptions,
-  consoleMessage?: string
-): void => {
-  const { targets, only: transportsOnly } = normalizeTransports(
-    options.transports
-  );
-
-  // 1. Transports
-  logToTransports({ level, request, data, store, transports: targets });
-
-  // 2. File
-  const fileConfig = options.file;
-  const hasFile = fileConfig !== false && fileConfig !== undefined;
-  if (!transportsOnly && hasFile) {
-    logToFile({
-      filePath: fileConfig.path,
-      level,
-      request,
-      data,
-      store,
-      options,
-    }).catch((e) => {
-      console.error(e);
-    });
-  }
-
-  // 3. Console
-  if (transportsOnly) return;
-
-  if (consoleMessage) {
-    switch (level) {
-      case "DEBUG":
-        console.debug(consoleMessage);
-        break;
-      case "INFO":
-        console.info(consoleMessage);
-        break;
-      case "WARNING":
-        console.warn(consoleMessage);
-        break;
-      case "ERROR":
-        console.error(consoleMessage);
-        break;
-      default:
-        console.log(consoleMessage);
-    }
-  }
-};
-
 export const handleHttpError = (
   request: Request,
   error: unknown,
   store: StoreData,
   options: LogixlysiaOptions
 ): void => {
-  const status = extractStatus(error);
-  const level: LogLevel = status >= 500 ? "ERROR" : "WARNING";
-  const body = extractErrorBody(error);
-  const message =
-    (body.detail as string | undefined) ??
-    (typeof error === "object" && error !== null && "message" in error
-      ? ((error as { message?: string }).message ?? "")
-      : "");
+  const status = extractStatus(error) ?? 500;
+  const level: LogLevel = levelForStatus(status);
+  const logErrorPayload = options.config?.logErrorPayload === true;
+  const normalized = normalizeLoggedError(error, logErrorPayload);
 
-  const data = {
+  const data: Record<string, unknown> = {
+    error: normalized.error,
+    message: normalized.message,
     status,
-    message,
-    ...body,
   };
-
-  // 构建 console 消息
-  const { only: transportsOnly } = normalizeTransports(options.transports);
-  let consoleMessage = "";
-  if (!transportsOnly) {
-    let timestamp = "";
-    if (options.format?.timestamp) {
-      timestamp = `[${new Date().toISOString()}] `;
-    }
-    const pathname = store.pathname || new URL(request.url).pathname;
-    consoleMessage = `${timestamp}${level} ${request.method} ${pathname} ${status} - ${body.title ?? message}`;
-
-    // 详细错误日志
-    if (options.error?.verbose) {
-      const parts = [consoleMessage];
-      if (body.detail) parts.push(`  Detail: ${body.detail}`);
-      if (body.instance) parts.push(`  Instance: ${body.instance}`);
-      if (body.type && body.type !== "about:blank")
-        parts.push(`  Type: ${body.type}`);
-      const extensions = Object.entries(body).filter(
-        ([key]) =>
-          !["type", "title", "status", "detail", "instance"].includes(key)
-      );
-      if (extensions.length > 0) {
-        parts.push("  Extensions:");
-        for (const [key, value] of extensions) {
-          parts.push(`    ${key}: ${JSON.stringify(value)}`);
-        }
+  // Structured error (why/fix/link/internal) at top level for downstream readers
+  if (isStructuredError(error)) {
+    for (const key of ["why", "fix", "link", "internal"] as const) {
+      if (error[key] !== undefined) {
+        data[key] = error[key];
       }
-      consoleMessage = parts.join("\n");
     }
   }
 
-  outputPipeline(
-    level,
-    request,
-    data,
+  const formatContext = createFormatContext(options);
+  const sinks = resolveSinks(options);
+  const precomputed = computePrecomputedLogParts(
     store,
-    options,
-    consoleMessage || undefined
+    request,
+    sinks.needsUrlParts
   );
+  const noopStore: RequestContextStore = {
+    clearContext: () => undefined,
+    getContext: () => ({}),
+    mergeContext: () => undefined,
+    peekContext: () => ({}),
+  };
+  emit({
+    contextStore: noopStore,
+    data,
+    formatContext,
+    level,
+    options,
+    precomputed,
+    request,
+    store,
+    sinks,
+  });
 };
 
-export { outputPipeline };
+// Re-export for callers that still need a small surface
+export { extractStatus, levelForStatus };

@@ -1,10 +1,14 @@
 /**
  * logixlysia 2.0 — 公共类型
  *
- * 重写于 Elysia 2.0(2.0.0-exp.62)适配:
- * - 删除:ErrorConfig / ErrorMapping / ErrorResolver / Code / HttpErrorConstructor / ProblemConfig / ProblemDocument / ErrorMeta
- * - 简化:Logger.handleHttpError 第二个参数从 ProblemError 改为 unknown
- * - 新增:LogixlysiaOptions.errors 数组(用户自定义 HTTPError 类)
+ * 适配 Elysia 2.0(2.0.0-exp.62) + 上游 main (b173c44) 吸收:
+ * - 单 emit 管道 (filter→context merge→redact→transports→file→console)
+ * - FileSink 句柄缓存 + 批写
+ * - lazy pino via Proxy
+ * - requestStartTimes WeakMap(per-request 时序)
+ * - AsyncLocalStorage request-scoped logger
+ * - request-id 中间件
+ * - RFC 9457 错误桥接
  */
 
 import type { TaggedHTTPError } from "elysia";
@@ -16,6 +20,21 @@ import type {
 /** Pino Logger 实例类型 */
 export type Pino = PinoLogger<never, boolean>;
 
+/**
+ * Minimal HTTP-aware Error used by logixlysia for non-Elysia call sites
+ * (re-export pipeline, redact tests, integration helpers). Independent of
+ * Elysia 2's `HTTPError` (note the capitalisation) — that one lives in
+ * `elysia` and is the type the framework actually responds with.
+ */
+export class HttpError extends Error {
+  readonly status: number;
+  constructor(status: number, message: string) {
+    super(message);
+    this.name = "HttpError";
+    this.status = status;
+  }
+}
+
 /** 日志级别 */
 export type LogLevel = "DEBUG" | "INFO" | "WARNING" | "ERROR";
 
@@ -24,7 +43,7 @@ export interface StoreData {
   /** 请求开始的纳秒时间戳（hrtime） */
   beforeTime: bigint;
   /** 缓存的 URL pathname，避免重复解析 */
-  pathname: string;
+  pathname?: string;
 }
 
 /** Elysia store 中挂载的 logixlysia 状态 */
@@ -66,9 +85,31 @@ export interface LogRotationConfig {
   maxSize?: string | number;
 }
 
-// ==========================================
-// Options
-// ==========================================
+/** request-id 中间件配置 */
+export interface RequestIdConfig {
+  /** 显式启用/禁用(默认 true) */
+  enabled?: boolean;
+  /** 自定义生成器(默认 UUID v4) */
+  generator?: () => string;
+  /** HTTP header 名,默认 `'X-Request-Id'` */
+  header?: string;
+}
+
+/** 日志级别过滤 */
+export interface LogFilter {
+  /** 只输出这些级别;空数组表示不过滤 */
+  level?: LogLevel[];
+}
+
+/** Pino 配置(logixlysia 透传) */
+export interface PinoConfig {
+  /** 显式禁用 pino(测试中常用) */
+  enabled?: boolean;
+  /** Pretty 打印(pino-pretty) */
+  prettyPrint?: boolean;
+  /** 其他 pino options 透传 */
+  [key: string]: unknown;
+}
 
 /** 启动消息配置 */
 export interface StartupConfig {
@@ -78,19 +119,19 @@ export interface StartupConfig {
   show?: boolean;
 }
 
-/** 日志格式配置 */
+/** 日志格式配置(legacy root-level;新代码用 `config.*`) */
 export interface FormatConfig {
   /** 是否启用彩色输出，默认 `true`（仅 TTY） */
   colors?: boolean;
   /** 是否在日志中显示请求 IP，默认 `false` */
   showIp?: boolean;
-  /** 自定义日志模板，如 `'🦊 {now} {level} {method} {pathname} {status}'` */
+  /** 自定义日志模板 */
   template?: string;
   /** 时间戳格式，如 `'yyyy-mm-dd HH:MM:ss.SSS'` */
   timestamp?: string;
 }
 
-/** 文件日志配置 */
+/** 文件日志配置(legacy root-level) */
 export interface FileConfig {
   /** 日志文件路径（必填） */
   path: string;
@@ -98,7 +139,7 @@ export interface FileConfig {
   rotation?: LogRotationConfig;
 }
 
-/** 自定义传输配置 */
+/** 自定义传输配置(legacy root-level) */
 export interface TransportsConfig {
   /** 设为 `true` 时只使用 transports，禁用控制台和文件输出 */
   only?: boolean;
@@ -122,32 +163,104 @@ export interface ErrorConfig {
  */
 export type LogixlysiaErrorClasses = TaggedHTTPError<string, any>[];
 
-/** Logixlysia 插件配置 */
+/**
+ * 新版(上游 main)配置 — 所有 logixlysia 行为参数集中在 `config` 字段下。
+ * 同时保留 root-level 字段(legacy + 旧测试)以便向后兼容。
+ */
+export interface LogixlysiaConfig {
+  /** 自动 redact 敏感信息(headers, body, query string) */
+  autoRedact?: boolean;
+  /** 上下文树展开深度(默认 1) */
+  contextDepth?: number;
+  /** 自定义日志格式模板,支持 token:`{now}` `{level}` `{duration}` `{method}` `{pathname}` `{status}` `{message}` `{ip}` `{context}` `{query}` `{statusText}` `{requestId}` `{service}` `{speed}` 等 */
+  customLogFormat?: string;
+  /** 禁用文件日志(即使有 logFilePath) */
+  disableFileLogging?: boolean;
+  /** 禁用内置控制台 logger */
+  disableInternalLogger?: boolean;
+  /** 禁用 WebSocket 日志 */
+  disableWebSocketLogging?: boolean;
+  /** 在日志中显示 IP(x-forwarded-for / x-real-ip) */
+  ip?: boolean;
+  /** 把错误对象的 payload(可能是用户输入)写入 meta,默认 false(防泄露) */
+  logErrorPayload?: boolean;
+  /** 日志文件路径 */
+  logFilePath?: string;
+  /** 目录模式(默认 0o700) */
+  logDirMode?: number;
+  /** 文件模式(默认 0o600) */
+  logFileMode?: number;
+  /** 日志级别过滤 */
+  logFilter?: LogFilter;
+  /** 在 pathname 中包含 query string */
+  logQueryParams?: boolean;
+  /** 日志轮转 */
+  logRotation?: LogRotationConfig;
+  /** Pino 配置 */
+  pino?: PinoConfig;
+  /** 透传 transport 列表(emit 用;`transports` 也可以在 root,但 emit 只看 config) */
+  transports?: Transport[];
+  /** 自定义 redact key 列表(合并到默认敏感 key) */
+  redactKeys?: string[];
+  /** request-id 跟踪 */
+  requestId?: boolean | RequestIdConfig;
+  /** 服务名(显示在日志中) */
+  service?: string;
+  /** 显示上下文树(默认 true) */
+  showContextTree?: boolean;
+  /** 显示 IP(等价于 ip) */
+  showIp?: boolean;
+  /** 是否显示启动消息 */
+  showStartupMessage?: boolean;
+  /** 慢请求阈值(ms),超过显示慢请求标记 */
+  slowThreshold?: number;
+  /** 启动消息格式 */
+  startupMessageFormat?: "simple" | "banner";
+  /** 时间戳格式或 { format } */
+  timestamp?: string | { format: string };
+  /** Transport 错误节流窗口(ms) */
+  transportThrottleMs?: number;
+  /** 启用 AsyncLocalStorage,让 useLogger() 在深调用栈拿得到 logger */
+  useAsyncLocalStorage?: boolean;
+  /** 启用彩色输出(默认 true 仅 TTY) */
+  useColors?: boolean;
+  /** 只使用 transports,禁用控制台 + 文件 */
+  useTransportsOnly?: boolean;
+  /** 极慢请求阈值(ms),超过显示更严重标记 */
+  verySlowThreshold?: number;
+}
+
+/**
+ * Logixlysia 插件配置
+ *
+ * 新版推荐:`{ config: {...}, preset?: 'dev' | 'prod' | 'json' }`
+ * 同时兼容 root-level 字段(legacy tests)
+ */
 export interface LogixlysiaOptions {
   /** 错误处理配置 */
   error?: ErrorConfig;
-  /**
-   * 用户自定义 HTTPError 类（Elysia 2.0 原生）
-   * 抛这些类的实例会被 logixlysia 记录 + Elysia 自动以 application/problem+json 响应
-   */
+  /** 新版配置块 */
+  config?: LogixlysiaConfig;
+  /** 用户自定义 HTTPError 类 */
   errors?: LogixlysiaErrorClasses;
-  /** 文件日志配置，设为 `false` 禁用文件日志 */
+  /** 文件日志配置(legacy) */
   file?: false | FileConfig;
-  /** 日志格式配置 */
+  /** 日志格式配置(legacy) */
   format?: FormatConfig;
-  /** 日志级别过滤，接受单个级别或级别数组 */
-  logLevel?: LogLevel | LogLevel[];
-  /** Pino Logger 原生配置透传 */
+  /** 日志级别过滤 (root-level 别名,等价于 `config.logFilter.level`) */
+  logLevel?: LogLevel[];
+  /** Pino Logger 原生配置透传(legacy) */
   pino?: PinoLoggerOptions;
-  /** 启动消息配置 */
+  /** 预设,应用一组默认 config 值 */
+  preset?: "dev" | "prod" | "json";
+  /** 启动消息配置(legacy) */
   startup?: StartupConfig;
-  /** 自定义传输（数组或带 `only` 选项的对象） */
+  /** 自定义传输(legacy) */
   transports?: Transport[] | TransportsConfig;
 }
 
 /**
  * 向后兼容别名 —— logixlysia 内部模块继续用 `Options` 这个短名
- * @deprecated 推荐使用 `LogixlysiaOptions`
  */
 export type Options = LogixlysiaOptions;
 
@@ -155,7 +268,16 @@ export type Options = LogixlysiaOptions;
 // Logger
 // ==========================================
 
-/** Logger 实例，可通过 `store.logger` 访问 */
+/**
+ * Logger 实例,可通过 `store.logger` 访问
+ *
+ * 9 个方法:
+ * - debug / info / warn / error: 便利级别快捷方法
+ * - log: 显式 level + data 入口
+ * - handleHttpError: 错误处理入口
+ * - getContext / mergeContext: per-request 累积 context
+ * - pino: 底层 Pino Logger
+ */
 export interface Logger {
   /** 记录 DEBUG 级别日志 */
   debug: (
@@ -169,16 +291,16 @@ export interface Logger {
     message: string,
     context?: Record<string, unknown>
   ) => void;
+  /** 获取累积的 per-request context */
+  getContext: (request: Request) => Readonly<Record<string, unknown>>;
   /**
    * 处理 HTTP 错误并输出日志
-   *
-   * 2.0 接受 `unknown`（任意错误对象）；logixlysia 内部从 error.status / error.message / HTTPError.toResponse() 推断
    */
   handleHttpError: (
     request: Request,
     error: unknown,
     store: StoreData,
-    options: LogixlysiaOptions
+    options?: LogixlysiaOptions
   ) => void;
   /** 记录 INFO 级别日志 */
   info: (
@@ -193,6 +315,11 @@ export interface Logger {
     data: Record<string, unknown>,
     store: StoreData
   ) => void;
+  /** 合并 per-request context(后续 access log 带上) */
+  mergeContext: (
+    request: Request,
+    partial: Record<string, unknown>
+  ) => void;
   /** 底层 Pino Logger 实例 */
   pino: Pino;
   /** 记录 WARNING 级别日志 */
@@ -201,6 +328,23 @@ export interface Logger {
     message: string,
     context?: Record<string, unknown>
   ) => void;
+}
+
+/**
+ * Request-scoped Logger,挂在 `context.log` 上,不需要传 request 参数。
+ * 由 AsyncLocalStorage `useLogger()` 也能拿到(深调用栈场景)。
+ */
+export interface RequestScopedLogger {
+  /** 记录 DEBUG 级别日志 */
+  debug: (message: string, context?: Record<string, unknown>) => void;
+  /** 记录 ERROR 级别日志 */
+  error: (message: string, context?: Record<string, unknown>) => void;
+  /** 记录 INFO 级别日志 */
+  info: (message: string, context?: Record<string, unknown>) => void;
+  /** 合并 context(无 request 参数,因为已绑定) */
+  mergeContext: (partial: Record<string, unknown>) => void;
+  /** 记录 WARNING 级别日志 */
+  warn: (message: string, context?: Record<string, unknown>) => void;
 }
 
 /** Logixlysia 请求上下文 */
