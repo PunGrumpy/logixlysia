@@ -2,28 +2,23 @@
 
 export { mergeAIMetrics } from "./ai";
 export type { AIMetrics } from "./ai";
-export { resolveOptions } from "./config";
-export {
-  registerPreset,
-  getPresetDefaults,
-  listPresets,
-  __resetForTesting as __resetPresetRegistry,
-} from "./config/preset-registry";
-export type { PresetConfig } from "./config/preset-registry";
-export type { LogPreset } from "./config/resolve-options";
+export { buildDeriveSlot, buildRequestHooks, buildStartupHook, createCore } from "./build";
+export type { LogixlysiaCore } from "./build";
+export { registerPreset, getPresetDefaults, listPresets, __resetPresetRegistry, resolveOptions } from "./config";
+export type { PresetConfig, LogPreset } from "./config";
 export { createRequestContextStore, mergeLogDataContext, loggerStorage, useLogger, createRequestScopedLogger } from "./context";
 export type { ContextKey, RequestContextStore, RequestScopedLoggerOptions } from "./context";
 export { levelForStatus, extractStatus, extractErrorFields, applyErrorLogging, errorMap, httpError } from "./errors";
 export type { LogixlysiaErrorClass } from "./errors";
 export { getStatusCode } from "./helpers";
 export { HttpError } from "./interfaces";
-export type { Pino, LogLevel, StoreData, LogixlysiaStore, Transport, LogRotationConfig, RequestIdConfig, LogFilter, PinoConfig, StartupConfig, FormatConfig, FileConfig, TransportsConfig, ErrorConfig, LogixlysiaErrorClasses, LogixlysiaConfig, LogixlysiaOptions, LogixlysiaOptions as Options, Logger, RequestScopedLogger, LogixlysiaContext } from "./interfaces";
+export type { Pino, LogLevel, StoreData, LogixlysiaStore, Transport, LogRotationConfig, RequestIdConfig, LogFilter, PinoConfig, StartupConfig, FormatConfig, FileConfig, TransportsConfig, ErrorConfig, LogixlysiaErrorClasses, LogixlysiaConfig, LogixlysiaOptions, Logger, RequestScopedLogger, LogixlysiaContext } from "./interfaces";
+export { logixlysia } from "./logixlysia";
+export type { EmptyElysiaSlot, LogixlysiaSingleton, Logixlysia, LogixlysiaPlugin } from "./logixlysia";
 export { resolveRequestIdConfig, getOrCreateRequestId } from "./middleware";
 export type { ResolvedRequestIdConfig } from "./middleware";
 export { injectTraceContext, __resetForTesting } from "./otel";
 export type { TraceContextFields } from "./otel";
-export { tee, sample, filter, tap, batch } from "./output/composers";
-export type { LogEntry } from "./output/composers";
 export { parseError, isStructuredError, normalizeLoggedError, pad2, pad3, DEFAULT_REDACT_KEYS, isSensitiveKey, buildPinoRedactPaths, redactString, redact, redactRequest, parseSize, parseInterval, parseRetention, shouldRotateBySize, getRotatedFiles, sanitizeLogText } from "./utils";
 export type { StructuredError, NormalizedLoggedError } from "./utils";
 export { createWsHandlerWrapper } from "./websocket";

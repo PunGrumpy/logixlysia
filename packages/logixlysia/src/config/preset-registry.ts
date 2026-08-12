@@ -56,10 +56,13 @@ export const getPresetDefaults = (name: string): PresetConfig | undefined =>
 export const listPresets = (): string[] => Array.from(registry.keys());
 
 /**
- * 测试用 —— 重置整个注册表(连同内置 preset)。
+ * 测试用 —— 重置整个 preset 注册表(连同内置 preset)。
  * 生产代码**不应**调用,会丢失 `dev` / `prod` / `json`。
+ *
+ * 注意命名:`__resetPresetRegistry` 而**不**是 `__resetForTesting` —— 跟
+ * `otel.ts:__resetForTesting` 区分,避免 api-gen 生成的 barrel 里重复标识符。
  */
-export const __resetForTesting = (): void => {
+export const __resetPresetRegistry = (): void => {
   registry.clear();
 };
 
