@@ -79,9 +79,7 @@
   },
   "overrides": [
     {
-      "includes": [
-        "**/*.astro"
-      ],
+      "includes": ["**/*.astro"],
       "assist": {
         "actions": {
           "source": {
