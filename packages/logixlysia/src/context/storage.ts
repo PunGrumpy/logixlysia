@@ -1,5 +1,5 @@
 import { AsyncLocalStorage } from "node:async_hooks";
-import type { LogixlysiaOptions, RequestScopedLogger } from "../interfaces";
+import type { RequestScopedLogger } from "../interfaces";
 
 export const loggerStorage: AsyncLocalStorage<RequestScopedLogger> =
   new AsyncLocalStorage<RequestScopedLogger>();
@@ -60,7 +60,3 @@ export const createRequestScopedLogger = (
     },
   };
 };
-
-// Re-export to keep backward-compat with code that does
-//   import type { Options } from '../interfaces';
-export type { LogixlysiaOptions };

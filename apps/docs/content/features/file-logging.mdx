@@ -1,11 +1,11 @@
 ---
 title: File Logging
-description: Save logs to files for persistence
+description: 把日志写入文件以便持久化
 ---
 
-Save your logs to files for persistence and analysis using Logixlysia's file sink.
+用 Logixlysia 的 file sink 把日志写入文件,持久化和分析都用得上。
 
-## Basic usage
+## 基本用法
 
 ```ts
 logixlysia({
@@ -15,36 +15,36 @@ logixlysia({
 })
 ```
 
-## Configuration
+## 配置项
 
-| Option | Type | Description | Default |
+| 选项 | 类型 | 描述 | 默认 |
 | --- | --- | --- | --- |
-| `logFilePath` | `string` | Path to the log file | `undefined` |
-| `logFileMode` | `number` | File permission bits (chmod) | `0o600` |
-| `logDirMode` | `number` | Directory permission bits (chmod) | `0o700` |
-| `logRotation` | `LogRotationConfig` | Rotation policy | `undefined` |
+| `logFilePath` | `string` | 日志文件路径 | `undefined` |
+| `logFileMode` | `number` | 文件权限位 (chmod) | `0o600` |
+| `logDirMode` | `number` | 目录权限位 (chmod) | `0o700` |
+| `logRotation` | `LogRotationConfig` | rotation 策略 | `undefined` |
 
-## How it works
+## 工作机制
 
-The file sink:
+file sink:
 
-1. **Caches the file handle** in a per-path map — repeated writes to the same file reuse the open handle, so `writeFile` is not invoked on every log line.
-2. **Batches writes** through `queueMicrotask` so multiple log lines in the same tick are coalesced into a single `writev` call.
-3. **Serializes rotation** through a keyed mutex — rotating file A does not block writes to file B.
-4. **Creates files with `0o600` and directories with `0o700`** by default. Override via `logFileMode` / `logDirMode`.
+1. **缓存文件句柄** —— 按路径缓存,重复写入同一文件复用句柄,不必每次 `writeFile`。
+2. **批写** —— 通过 `queueMicrotask` 批处理,同一 tick 内的多条日志合并成单次 `writev`。
+3. **跨文件 rotation 串行** —— keyed mutex 串行,rotate 文件 A 不会阻塞文件 B 的写入。
+4. **文件 `0o600`、目录 `0o700`** —— 默认权限。可通过 `logFileMode` / `logDirMode` 覆盖。
 
-## File format
+## 文件格式
 
-Logs are written in the same format used for the console (per the `customLogFormat` token set, or the built-in default):
+日志用跟 console 一样的格式(根据 `customLogFormat` token 集合,或内置默认):
 
 ```
 🦊 2025-04-13 15:00:19.225 INFO  123.45ms GET /api/users 200
 🦊 2025-04-13 15:00:20.225 ERROR 234.56ms POST /api/users 500 Error creating user
 ```
 
-## Examples
+## 示例
 
-### Production
+### 生产
 
 ```ts
 logixlysia({
@@ -60,7 +60,7 @@ logixlysia({
 })
 ```
 
-### Development
+### 开发
 
 ```ts
 logixlysia({
@@ -70,7 +70,7 @@ logixlysia({
 })
 ```
 
-### Custom file mode
+### 自定义文件权限
 
 ```ts
 logixlysia({
@@ -82,21 +82,21 @@ logixlysia({
 })
 ```
 
-### Disable file output
+### 关闭文件输出
 
 ```ts
 logixlysia({
   config: {
-    logFilePath: './logs/app.log', // configured
-    disableFileLogging: true,      // ...but disabled
+    logFilePath: './logs/app.log', // 配置了
+    disableFileLogging: true,      // ...但关闭
   },
 })
 ```
 
-## Best practices
+## 最佳实践
 
-- Use descriptive file names
-- Organize logs by type/level (separate access logs and error logs)
-- Set appropriate file permissions — the default `0o600`/`0o700` is right for most production setups
-- Avoid logging sensitive data — enable `autoRedact` so PII is replaced before reaching the file
-- Pair with [Log Rotation](/docs/features/log-rotation) for long-running services
+- 用有描述性的文件名
+- 按类型 / 级别拆分日志(access log、error log 分开)
+- 设置合适的文件权限 —— `0o600`/`0o700` 是大多数生产的合理选择
+- 避免记录敏感数据 —— 开启 `autoRedact`,让 PII 在到达文件前就替换
+- 长时间运行的服务搭配 [Log Rotation](/docs/features/log-rotation) 一起用

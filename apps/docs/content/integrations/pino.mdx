@@ -1,22 +1,22 @@
 ---
 title: Pino
-description: High-performance structured logging with Pino
+description: 用 Pino 做高性能结构化日志
 ---
 
-Logixlysia integrates with [Pino](https://github.com/pinojs/pino) as its underlying logging engine. Pino is constructed lazily on first access — invalid Pino options only fail when you actually log.
+Logixlysia 集成了 [Pino](https://github.com/pinojs/pino) 作为底层日志引擎。Pino 在首次访问时按需构造 —— 错误的 Pino 选项只在真正 log 时才报错。
 
-## Why Pino?
+## 为什么选 Pino
 
-- **High performance** — one of the fastest Node.js loggers
-- **Structured logging** — JSON-first
-- **Battle-tested** — production-grade
-- **Flexible** — extensive options and transport support
+- **高性能** —— 业界最快的 Node.js logger 之一
+- **结构化日志** —— JSON 优先
+- **生产验证** —— 大规模生产环境使用
+- **灵活** —— 丰富的选项和 transport 支持
 
-## Basic usage
+## 基本用法
 
-### In Elysia routes
+### 在 Elysia route 里
 
-Access Pino through the store in route handlers:
+在 route handler 里通过 store 拿 Pino:
 
 ```ts
 app.get('/users/:id', ({ store, params }) => {
@@ -31,7 +31,7 @@ app.get('/users/:id', ({ store, params }) => {
 })
 ```
 
-Or via the request-scoped `log` (when `useAsyncLocalStorage: true`):
+或者通过请求作用域 `log`(`useAsyncLocalStorage: true` 时):
 
 ```ts
 app.get('/users/:id', ({ log, params }) => {
@@ -40,9 +40,9 @@ app.get('/users/:id', ({ log, params }) => {
 })
 ```
 
-### Outside Elysia routes (standalone)
+### 在 Elysia route 之外(standalone)
 
-Use Pino in services, background jobs, or any code outside of HTTP request context:
+在服务、后台任务、或任何 HTTP 请求上下文外的地方用 Pino:
 
 ```ts
 // logger.ts
@@ -61,7 +61,7 @@ export const logixlysiaIns = logixlysia({
   },
 })
 
-// Export Pino instance for standalone use
+// 导出 Pino 实例给 standalone 用
 export const logger = logixlysiaIns.store.pino
 ```
 
@@ -74,7 +74,7 @@ export class OrderService {
     logger.info({ orderId }, 'Processing order')
 
     try {
-      // ... business logic
+      // ... 业务逻辑
       logger.info({ orderId }, 'Order processed successfully')
     } catch (error) {
       logger.error({ orderId, error }, 'Order processing failed')
@@ -101,11 +101,11 @@ new Elysia()
   .listen(3000)
 ```
 
-**Note:** When using Pino outside of routes, you will not have access to HTTP context (method, pathname, IP, etc.). For HTTP request logging, use `store.logger` inside route handlers.
+**注意:** 在 route 外用 Pino 没有 HTTP context(method、pathname、IP 等)。HTTP 请求日志请在 route handler 里用 `store.logger`。
 
-## Configuration
+## 配置
 
-### Log level
+### 日志级别
 
 ```ts
 logixlysia({
@@ -117,7 +117,7 @@ logixlysia({
 })
 ```
 
-### Pretty printing
+### 美化输出
 
 ```ts
 logixlysia({
@@ -129,7 +129,7 @@ logixlysia({
 })
 ```
 
-Or with custom options:
+或者自定义:
 
 ```ts
 logixlysia({
@@ -145,23 +145,23 @@ logixlysia({
 })
 ```
 
-`prettyPrint` is a passthrough to [pino-pretty](https://github.com/pinojs/pino-pretty). Install `pino-pretty` as a peer dep if you use it.
+`prettyPrint` 透传给 [pino-pretty](https://github.com/pinojs/pino-pretty)。用的话装一下 `pino-pretty` peer dep。
 
-### Redacting sensitive data
+### 脱敏
 
-Pino's own `redact` is independent of Logixlysia's `autoRedact` — both can run side by side:
+Pino 自己的 `redact` 跟 Logixlysia 的 `autoRedact` 独立,可以同时跑:
 
 ```ts
 logixlysia({
   config: {
-    autoRedact: true,                 // Logixlysia: rewrites meta + headers
-    pino: { redact: ['password'] },   // Pino: scrubs the JSON output
+    autoRedact: true,                 // Logixlysia: 改写 meta + headers
+    pino: { redact: ['password'] },   // Pino: 擦掉 JSON 输出
   },
 })
 ```
 
 ```ts
-// Or with paths and removal:
+// 用 paths 和 remove:
 pino: {
   redact: {
     paths: ['user.password', 'req.headers.authorization'],
@@ -170,7 +170,7 @@ pino: {
 },
 ```
 
-### Base fields
+### base 字段
 
 ```ts
 logixlysia({
@@ -186,9 +186,9 @@ logixlysia({
 })
 ```
 
-### Pino transports
+### Pino transport
 
-Pino has its own transport system for advanced logging destinations. Configure Pino transports with the `transport` option:
+Pino 有自己的 transport 体系,处理高级日志目标。用 `transport` 选项配置:
 
 ```ts
 logixlysia({
@@ -203,33 +203,33 @@ logixlysia({
 })
 ```
 
-**Important:** Pino transports and Logixlysia transports are independent:
+**重要:** Pino transport 和 Logixlysia transport 是独立的:
 
-- **Pino transports** (`pino.transport`) — affect logs written through `store.pino.info()`, `store.pino.error()`, etc.
-- **Logixlysia transports** (`config.transports`) — affect the HTTP access log pipeline
+- **Pino transport**(`pino.transport`)—— 影响 `store.pino.info()`、`store.pino.error()` 等写出的日志
+- **Logixlysia transport**(`config.transports`)—— 影响 HTTP access log 管道
 
 ```ts
 logixlysia({
   config: {
-    // Pino transport — only for store.pino.* logs
+    // Pino transport —— 只对 store.pino.* 日志生效
     pino: {
       transport: { target: 'pino/file', options: { destination: './logs/pino.log' } },
     },
-    // Logixlysia transport — only for HTTP access logs
+    // Logixlysia transport —— 只对 HTTP access log 生效
     transports: [customTransport],
   },
 })
 
 app.get('/example', ({ store }) => {
   store.pino.info({ feature: 'pino' }, 'pino log example')
-  // → goes to pino/file transport
-  // The HTTP access log goes to the Logixlysia transport
+  // → 走 pino/file transport
+  // HTTP access log 走 Logixlysia transport
 })
 ```
 
-## Advanced usage
+## 进阶用法
 
-### Structured logging
+### 结构化日志
 
 ```ts
 app.get('/users/:id', ({ store, params }) => {
@@ -245,9 +245,9 @@ app.get('/users/:id', ({ store, params }) => {
 })
 ```
 
-### Child loggers
+### Child logger
 
-Create child loggers with bound context:
+派生绑定 context 的 child logger:
 
 ```ts
 app.get('/api/orders/:id', ({ store, params }) => {
@@ -265,7 +265,7 @@ app.get('/api/orders/:id', ({ store, params }) => {
 })
 ```
 
-### Error logging
+### 错误日志
 
 ```ts
 app.get('/api/risky', ({ store }) => {
@@ -280,9 +280,9 @@ app.get('/api/risky', ({ store }) => {
 })
 ```
 
-## Lazy initialization
+## Lazy 初始化
 
-Pino is constructed lazily on first access. This means:
+Pino 在首次访问时才构造。这意味着:
 
 ```ts
 const plugin = logixlysia({
@@ -291,13 +291,13 @@ const plugin = logixlysia({
   },
 })
 
-// ... plugin constructed, no error yet
-// ... first call to plugin.store.pino.info() throws
+// ... 插件构造完成,还不会报错
+// ... 第一次 plugin.store.pino.info() 调用时 throw
 ```
 
-To force eager initialization (so bad Pino options fail at startup), set `config.pino` to any truthy value. The Pino instance is created when the plugin is built.
+想强制启动时立即初始化(让错误的 Pino 选项 fail-fast),把 `config.pino` 设为真值。Pino 实例在插件构建时就创建。
 
-## Environment-based configuration
+## 按环境配置
 
 ```ts
 const isDev = process.env.NODE_ENV === 'development'
@@ -317,9 +317,9 @@ logixlysia({
 })
 ```
 
-## Best practices
+## 最佳实践
 
-1. **Use structured logging** — pass objects instead of string interpolation
+1. **用结构化日志** —— 传对象,不要字符串拼接
    ```ts
    // ✅
    pino.info({ userId: 123, action: 'login' }, 'User logged in')
@@ -327,30 +327,30 @@ logixlysia({
    pino.info(`User ${userId} logged in`)
    ```
 
-2. **Create child loggers** for scoped context
+2. **派生 child logger** 来绑 context
 
-3. **Log performance metrics** — track important operations
+3. **记性能指标** —— 关键操作
    ```ts
    pino.info({ duration: 150, operation: 'db_query' }, 'Query completed')
    ```
 
-4. **Redact sensitive data** — use both `autoRedact` (Logixlysia) and `pino.redact` (Pino)
+4. **脱敏** —— `autoRedact`(Logixlysia)和 `pino.redact`(Pino)都开
 
-5. **Use the right level:**
-   - `fatal` — application is about to crash
-   - `error` — error that needs attention
-   - `warn` — warning, application continues
-   - `info` — general information (default)
-   - `debug` — detailed debugging
-   - `trace` — very detailed debugging
+5. **正确选级别:**
+   - `fatal` —— 应用即将崩溃
+   - `error` —— 需要关注的错误
+   - `warn` —— 警告,应用继续
+   - `info` —— 一般信息(默认)
+   - `debug` —— 详细调试
+   - `trace` —— 极详细调试
 
-6. **Export Pino for standalone use** in services, jobs, and utilities
+6. **导出 Pino 给 standalone 用** —— 在服务、job、工具里
    ```ts
    export const logger = logixlysiaIns.store.pino
    ```
 
-## Additional resources
+## 扩展阅读
 
-- [Pino Documentation](https://github.com/pinojs/pino)
+- [Pino 文档](https://github.com/pinojs/pino)
 - [pino-pretty](https://github.com/pinojs/pino-pretty)
 - [Pino Transports](https://github.com/pinojs/pino/blob/master/transports.md)

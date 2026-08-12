@@ -117,9 +117,10 @@ export default defineConfig({
       light: "oklch(1 0 0)",
     },
     fonts: {
-      body: "geist",
-      mono: "geist-mono",
-    },
+      display: "inter-tight",   // 标题 (h1-h6)
+      body: "inter",            // 正文、UI、散文
+      mono: "ibm-plex-mono",    // 代码块、行内代码
+    }
   },
   title: "Logixlysia",
 });

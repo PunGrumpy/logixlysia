@@ -1,21 +1,21 @@
 ---
 title: Log Levels
-description: Control log verbosity
+description: 控制日志详细程度
 ---
 
-Control the verbosity of log output with Logixlysia's level system. Levels are case-insensitive strings: `DEBUG`, `INFO`, `WARNING`, `ERROR`.
+用 Logixlysia 的级别系统控制日志输出的详细程度。级别是大小写不敏感的字符串:`DEBUG`、`INFO`、`WARNING`、`ERROR`。
 
-## Available levels
+## 可用级别
 
 ```
 DEBUG > INFO > WARNING > ERROR
 ```
 
-Logixlysia uses **allowlist filtering**, not hierarchy. Setting `logFilter.level: ['ERROR']` outputs only `ERROR`; setting it to `['ERROR', 'WARNING']` outputs both. The order of levels in the array does not matter.
+Logixlysia 用的是**白名单过滤**,不是层级。`logFilter.level: ['ERROR']` 只输出 `ERROR`;`['ERROR', 'WARNING']` 输出这两个。数组里的顺序无关紧要。
 
-## Configuration
+## 配置
 
-### Single level
+### 单个级别
 
 ```ts
 logixlysia({
@@ -25,7 +25,7 @@ logixlysia({
 })
 ```
 
-### Multiple levels
+### 多个级别
 
 ```ts
 logixlysia({
@@ -35,17 +35,17 @@ logixlysia({
 })
 ```
 
-### Root shorthand
+### 根级简写
 
-`logLevel` at the root of the options object is equivalent to `config.logFilter.level`:
+`logLevel` 在 options 根级,等价于 `config.logFilter.level`:
 
 ```ts
 logixlysia({ logLevel: ['ERROR', 'WARNING'] })
 ```
 
-Both forms are merged: if you set both, `logLevel` wins (root shorthand takes precedence when set).
+两种形式都会合并:同时设置时 `logLevel` 胜出(根级简写优先)。
 
-### Environment-based
+### 按环境配置
 
 ```ts
 logixlysia({
@@ -59,21 +59,21 @@ logixlysia({
 })
 ```
 
-## Status-derived level
+## 状态派生的级别
 
-In addition to explicit `logFilter.level`, every access log gets a level derived from the response status code:
+除了 `logFilter.level`,每条 access log 还会按响应状态码派生出级别:
 
-| Status range | Level |
+| 状态码范围 | 级别 |
 | --- | --- |
 | `200`–`399` | `INFO` |
 | `400`–`499` | `WARNING` |
 | `500`–`599` | `ERROR` |
 
-The status-derived level is filtered through `logFilter.level` (or `logLevel`) just like explicit calls — a 404 will not produce output if `level: ['ERROR']`.
+派生出来的级别也会被 `logFilter.level`(或 `logLevel`)过滤 —— `level: ['ERROR']` 时 404 不会产生输出。
 
-## Pino log levels
+## Pino 自己的级别
 
-Pino has its own level system (`fatal`, `error`, `warn`, `info`, `debug`, `trace`). `config.pino.level` controls Pino's gate and is independent of `logFilter.level`:
+Pino 也有自己的级别系统(`fatal`、`error`、`warn`、`info`、`debug`、`trace`)。`config.pino.level` 控制 Pino 的门槛,跟 `logFilter.level` 相互独立:
 
 ```ts
 logixlysia({
@@ -83,11 +83,11 @@ logixlysia({
 })
 ```
 
-Pino is constructed lazily on first access. Set `config.pino` to a truthy value if you want invalid Pino options to fail at startup.
+Pino 在首次访问时按需构造。把 `config.pino` 设为真值可以让错误的 Pino 选项在启动时 fail-fast。
 
-## Best practices
+## 最佳实践
 
-- **Development:** `['DEBUG', 'INFO', 'WARNING', 'ERROR']` — all four
-- **Staging:** `['INFO', 'WARNING', 'ERROR']` — drop DEBUG
-- **Production:** `['ERROR', 'WARNING']` — drop INFO and DEBUG
-- **Alerting:** `['ERROR']` — alerts only on errors
+- **开发:** `['DEBUG', 'INFO', 'WARNING', 'ERROR']` —— 全部四个
+- **Staging:** `['INFO', 'WARNING', 'ERROR']` —— 去掉 DEBUG
+- **生产:** `['ERROR', 'WARNING']` —— 去掉 INFO 和 DEBUG
+- **告警:** `['ERROR']` —— 只在错误时告警

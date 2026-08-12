@@ -1,26 +1,26 @@
 ---
 title: Custom Transports
-description: Send logs to external services
+description: 把日志发到外部服务
 ---
 
-Send logs to external services using custom transports. Transports run alongside built-in console and file logging and are invoked from the single emit pipeline.
+用自定义 transport 把日志发到外部服务。transport 跟内置的 console / file 日志并行,统一从 emit 管道调用。
 
-## Output behavior
+## 输出行为
 
-Logixlysia supports three output destinations:
+Logixlysia 支持三种输出目标:
 
-1. **Console logging** — built-in console output
-2. **File logging** — built-in file output via the file sink
-3. **Transport logging** — custom external services
+1. **Console 日志** —— 内置控制台输出
+2. **File 日志** —— 通过 file sink 输出
+3. **Transport 日志** —— 自定义外部服务
 
-### Controlling outputs
+### 输出控制
 
-- **Default:** console + file (if `logFilePath` is set) + transports
-- **`disableInternalLogger: true`:** disables console logging only
-- **`disableFileLogging: true`:** disables file logging only
-- **`useTransportsOnly: true`:** disables both console and file, uses only transports
+- **默认:** console + file(如果设置了 `logFilePath`)+ transports
+- **`disableInternalLogger: true`:** 只关 console
+- **`disableFileLogging: true`:** 只关 file
+- **`useTransportsOnly: true`:** 同时关 console 和 file,只走 transport
 
-## Basic transport
+## 基本 transport
 
 ```ts
 import type { Transport } from '@pori15/logixlysia'
@@ -40,9 +40,9 @@ app.use(
 )
 ```
 
-The signature is `(level: LogLevel, message: string, meta?: Record<string, unknown>) => void | Promise<void>`. Return a promise for async transports; sync transports return `void`.
+签名是 `(level: LogLevel, message: string, meta?: Record<string, unknown>) => void | Promise<void>`。异步 transport 返回 promise,同步 transport 返回 `void`。
 
-## External services
+## 外部服务
 
 ### Elasticsearch
 
@@ -98,7 +98,7 @@ const slackTransport: Transport = {
 }
 ```
 
-## Multiple transports
+## 多个 transport
 
 ```ts
 app.use(
@@ -110,9 +110,9 @@ app.use(
 )
 ```
 
-All transports in the array are invoked in order. Each one runs independently — a slow Elasticsearch does not block a fast Slack.
+数组里的 transport 顺序调用,各自独立 —— Elasticsearch 慢不会阻塞 Slack。
 
-## Transport-only logging
+## 只用 transport
 
 ```ts
 app.use(
@@ -125,29 +125,29 @@ app.use(
 )
 ```
 
-## Error handling & throttling
+## 错误处理 & 节流
 
-Sync throws and async rejections from transports are caught and logged to `console.error`. To prevent a broken transport from spamming stderr on every request, the same error from the same transport is **throttled** for `transportThrottleMs` (default 5 s) — only one `console.error` per transport per window.
+transport 抛出的同步异常和异步 reject 都会被捕获并打印到 `console.error`。为了防止坏掉的 transport 每个请求都刷一屏 stderr,同一 transport 的同一错误在 `transportThrottleMs`(默认 5s)窗口内合并为一条 `console.error`。
 
 ```ts
 logixlysia({
   config: {
-    transportThrottleMs: 10_000, // 10 s window
+    transportThrottleMs: 10_000, // 10s 窗口
   },
 })
 ```
 
-This is a safety valve for production. You should still handle transport errors inside the transport itself and surface them to your monitoring.
+这是生产环境的安全阀。你仍然应该在 transport 内部自己处理错误,接到自己的监控系统。
 
-## Best practices
+## 最佳实践
 
-- **Handle errors inside the transport** — logixlysia catches the throw, but it logs to `console.error`, not your destination.
-- **Use `Promise<void>` for async work** — logixlysia awaits the return value of async transports.
-- **Avoid logging secrets or PII** in `meta` — redaction applies to messages and key fields, but the contract of a transport is "I receive whatever the pipeline gave me."
-- **Use `useTransportsOnly: true` in production** when your only destination is an external aggregator.
-- **Order transports by criticality** — put alerting first, batch writes last.
+- **在 transport 内部处理错误** —— logixlysia 捕获了 throw,但只打印到 `console.error`,不会送回你的目标。
+- **异步用 `Promise<void>`** —— logixlysia 会 await 异步 transport 的返回值。
+- **避免在 `meta` 里写 secret / PII** —— 脱敏会处理 message 和 key 字段,但 transport 拿到的就是管道给的原始数据。
+- **生产只接外部聚合器时,设 `useTransportsOnly: true`**
+- **按重要性排 transport 顺序** —— 告警放最前,批写放最后
 
-## Transport interface
+## Transport 接口
 
 ```ts
 export interface Transport {

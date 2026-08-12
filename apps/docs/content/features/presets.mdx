@@ -1,9 +1,9 @@
 ---
 title: Presets
-description: Opinionated dev, prod, and json logging defaults
+description: 现成的 dev、prod、json 日志默认值
 ---
 
-Use `preset` for one-line environment defaults. Explicit `config` fields always override the preset.
+用 `preset` 一行设好环境默认。显式 `config` 字段永远覆盖 preset。
 
 ```ts
 import { Elysia } from 'elysia'
@@ -20,17 +20,17 @@ const app = new Elysia().use(
 )
 ```
 
-## Available presets
+## 可用 preset
 
-| Preset | Startup banner | Pretty print | Context tree | `autoRedact` | `requestId` |
-| ------ | -------------- | ------------ | ------------ | ------------ | ----------- |
-| `dev` | Yes (banner) | Yes | Yes | No | No |
-| `prod` | No | No | No | Yes | Yes |
-| `json` | No | No | No | No | No |
+| Preset | 启动 banner | 美化输出 | context 树 | `autoRedact` | `requestId` |
+| --- | --- | --- | --- | --- | --- |
+| `dev` | 是(banner) | 是 | 是 | 否 | 否 |
+| `prod` | 否 | 否 | 否 | 是 | 是 |
+| `json` | 否 | 否 | 否 | 否 | 否 |
 
-`json` is the minimal setup for log aggregators (Datadog, Loki, Elasticsearch) — it disables everything decorative so the JSON output is the only payload. Use it when you do not need human-friendly formatting and the downstream is parsing line-delimited JSON.
+`json` 是日志聚合器(Datadog、Loki、Elasticsearch)的最小配置 —— 关掉所有装饰性输出,JSON 是唯一 payload。下游需要解析行分隔 JSON、又不需要人类可读格式时用它。
 
-## Override example
+## 覆盖示例
 
 ```ts
 logixlysia({
@@ -42,16 +42,16 @@ logixlysia({
 })
 ```
 
-## Programmatic resolution
+## 程序化解析
 
-If you need to inspect the resolved options before passing them on, use `resolveOptions`:
+如果想先看解析后的 options 再往下传,用 `resolveOptions`:
 
 ```ts
 import { resolveOptions } from '@pori15/logixlysia'
 
 const options = resolveOptions({ preset: 'dev', config: { service: 'api' } })
 // options.config.service === 'api'
-// options.config.showStartupMessage === true (from dev preset)
+// options.config.showStartupMessage === true (来自 dev preset)
 ```
 
-`resolveOptions` is the same merge function the plugin calls internally, so behavior is identical to passing the same input directly to `logixlysia()`.
+`resolveOptions` 就是插件内部用的同一个 merge 函数,行为跟直接传给 `logixlysia()` 完全一致。

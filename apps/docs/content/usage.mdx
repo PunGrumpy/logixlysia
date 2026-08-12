@@ -1,17 +1,17 @@
 ---
 title: Usage
-description: Learn how to use Logixlysia in your Elysia applications
+description: 在 Elysia 应用中使用 Logixlysia
 ---
 
-## Installation
+## 安装
 
 ```bash
 bun add @pori15/logixlysia elysia@next
 ```
 
-The `next` tag tracks the [Elysia 2 open beta](/docs/elysia-2). For Elysia 1.4, install the upstream `logixlysia` package from the `latest` tag.
+`next` 标签对应 [Elysia 2 open beta](/docs/elysia-2)。如果你还在 Elysia 1.4,装上游的 `logixlysia` 包(`latest` 标签)。
 
-## Basic usage
+## 基本用法
 
 ```ts
 import { Elysia } from 'elysia'
@@ -23,23 +23,23 @@ const app = new Elysia()
   .listen(3000)
 ```
 
-`logixlysia()` returns a plugin. The `Logger` is mounted on the Elysia store as `store.logger` and a request-scoped `log` is derived on the handler context. The plugin also registers `.request`, `.afterHandle`, `.error`, and `.start` hooks; you do not need to wire any of them manually.
+`logixlysia()` 返回一个插件。`Logger` 挂在 Elysia store 上,可以通过 `store.logger` 访问;请求作用域的 `log` 也会派生到 handler context 上。插件同时注册 `.request`、`.afterHandle`、`.error` 和 `.start` 钩子,你不需要手动接线。
 
-## Presets
+## 预设
 
-Three preset values set sensible defaults in one line. Explicit `config` fields always override the preset.
+三个 preset 一行设好环境默认。显式 `config` 字段永远覆盖 preset。
 
 ```ts
-logixlysia({ preset: 'dev' })   // pretty console + startup banner
+logixlysia({ preset: 'dev' })   // 美化 console + 启动 banner
 logixlysia({ preset: 'prod' })  // JSON console + autoRedact + requestId
-logixlysia({ preset: 'json' })  // minimal JSON console, no extras
+logixlysia({ preset: 'json' })  // 极简 JSON console,无附加
 ```
 
-See [Presets](/docs/features/presets) for the full defaults table.
+完整默认值见 [Presets](/docs/features/presets)。
 
-## Configuration
+## 配置
 
-### Minimal
+### 最小化
 
 ```ts
 logixlysia({
@@ -51,9 +51,9 @@ logixlysia({
 })
 ```
 
-### Per-request context
+### 请求作用域 context
 
-Accumulate fields during a request; they are merged into the final access log under `context`:
+在请求过程中累积字段,最终合并到 access log 的 `context` 下:
 
 ```ts
 .get('/users/:id', ({ request, store, params }) => {
@@ -62,21 +62,21 @@ Accumulate fields during a request; they are merged into the final access log un
 })
 ```
 
-See [Request context](/docs/features/request-context) for the full API, including `useLogger()` for deep call stacks.
+完整 API 含深调用栈用的 `useLogger()`,见 [Request context](/docs/features/request-context)。
 
 ### Request ID
 
-Enable `X-Request-Id` header propagation with `requestId: true`. The plugin reads the header on the way in, generates one if missing, and echoes it on the response — including for error responses.
+开启 `X-Request-Id` 头透传用 `requestId: true`。插件入口读这个头,缺失时自动生成,出口回显——包括错误响应。
 
 ```ts
 logixlysia({ config: { requestId: true } })
 ```
 
-See [Request ID](/docs/features/request-id).
+见 [Request ID](/docs/features/request-id)。
 
-### Custom log format
+### 自定义日志格式
 
-Customize the access log via `customLogFormat`:
+通过 `customLogFormat` 自定义 access log:
 
 ```ts
 logixlysia({
@@ -86,30 +86,30 @@ logixlysia({
 })
 ```
 
-Available placeholders:
+可用的占位符:
 
-| Placeholder | Description | Example |
-| ----------- | ----------- | ----------- |
-| `{now}` | Current timestamp | `2025-12-21 10:00:00` |
-| `{epoch}` | Unix timestamp | `1734729600` |
-| `{level}` | Log level (`DEBUG`, `INFO`, `WARNING`, `ERROR`) | `INFO` |
-| `{duration}` | Request duration (formatted) | `12ms`, `1.5s` |
-| `{method}` | HTTP method | `GET` |
-| `{pathname}` | Request path (alias: `{path}`); includes query if `logQueryParams: true` | `/users` |
-| `{query}` | Raw query string | `?id=123` |
-| `{status}` | Response status code | `200` |
-| `{statusText}` | HTTP status text | `Not Found` |
-| `{message}` | Custom message | `User profile accessed` |
-| `{icon}` | Logixlysia fox `🦊` (level-colored chip when colors + TTY) | `🦊` |
-| `{speed}` | Slow-request badge when duration ≥ `verySlowThreshold` | ` ⚡ slow` |
-| `{service}` | Service prefix from `config.service` | `[my-api] ` |
-| `{ip}` | Client IP address | `127.0.0.1` |
-| `{context}` | Context JSON on main line when tree is off / empty | `{"id":1}` |
-| `{requestId}` | `X-Request-Id` value (empty if not enabled) | `8c2f…` |
+| 占位符 | 描述 | 示例 |
+| --- | --- | --- |
+| `{now}` | 当前时间戳 | `2025-12-21 10:00:00` |
+| `{epoch}` | Unix 时间戳 | `1734729600` |
+| `{level}` | 日志级别(`DEBUG`、`INFO`、`WARNING`、`ERROR`) | `INFO` |
+| `{duration}` | 请求耗时(已格式化) | `12ms`、`1.5s` |
+| `{method}` | HTTP 方法 | `GET` |
+| `{pathname}` | 请求路径(别名: `{path}`);`logQueryParams: true` 时带 query | `/users` |
+| `{query}` | 原始 query 字符串 | `?id=123` |
+| `{status}` | 响应状态码 | `200` |
+| `{statusText}` | HTTP 状态文本 | `Not Found` |
+| `{message}` | 自定义消息 | `User profile accessed` |
+| `{icon}` | Logixlysia 狐狸 `🦊`(颜色 + TTY 时为级别色块) | `🦊` |
+| `{speed}` | 慢请求徽章(耗时 ≥ `verySlowThreshold`) | ` ⚡ slow` |
+| `{service}` | `config.service` 服务名前缀 | `[my-api] ` |
+| `{ip}` | 客户端 IP 地址 | `127.0.0.1` |
+| `{context}` | context 的 JSON 表示(树关掉或空时显示在主行) | `{"id":1}` |
+| `{requestId}` | `X-Request-Id` 值(未开启时为空) | `8c2f…` |
 
-## Log filtering
+## 日志过滤
 
-`logFilter.level` accepts a single level or an array:
+`logFilter.level` 接受单个级别或数组:
 
 ```ts
 logixlysia({
@@ -119,17 +119,17 @@ logixlysia({
 })
 ```
 
-A shorthand `logLevel` array lives at the root of options and works the same way:
+根级有一个等价的 `logLevel` 简写:
 
 ```ts
 logixlysia({ logLevel: ['ERROR', 'WARNING'] })
 ```
 
-See [Log Levels](/docs/features/log-levels).
+见 [Log Levels](/docs/features/log-levels)。
 
-## Pino integration
+## Pino 集成
 
-Logixlysia is powered by Pino. The Pino instance is available at `store.pino` and on the request-scoped `log` handle:
+Logixlysia 由 Pino 驱动。Pino 实例可以通过 `store.pino` 访问,也可以从请求作用域 `log` 拿到:
 
 ```ts
 app.get('/users/:id', ({ log, params }) => {
@@ -138,7 +138,7 @@ app.get('/users/:id', ({ log, params }) => {
 })
 ```
 
-Configure Pino options:
+配置 Pino 选项:
 
 ```ts
 logixlysia({
@@ -152,11 +152,11 @@ logixlysia({
 })
 ```
 
-Pino is constructed lazily on first access — invalid Pino options only fail when you actually log. If you need eager validation, set `config.pino` and the proxy initializes immediately.
+Pino 在首次访问时按需构造 —— 错误的 Pino 选项只在真正 log 时才报错。如果想启动时立即校验,把 `config.pino` 设为真值,proxy 就会立刻初始化。
 
-See [Pino](/docs/integrations/pino).
+见 [Pino](/docs/integrations/pino)。
 
-## File logging
+## 文件日志
 
 ```ts
 logixlysia({
@@ -172,9 +172,9 @@ logixlysia({
 })
 ```
 
-The file sink batches writes through `queueMicrotask`, caches the file handle per path, and serializes rotation through a keyed mutex so concurrent rotations on different files do not block each other. Files are created with `0o600` (logs) and `0o700` (directories); override via `logFileMode` and `logDirMode`.
+文件 sink 通过 `queueMicrotask` 批写、缓存文件句柄,跨文件 rotation 用 keyed mutex 串行,不同文件之间不会互相阻塞。文件创建时默认 `0o600`(文件)和 `0o700`(目录);可以用 `logFileMode` / `logDirMode` 覆盖。
 
-See [File Logging](/docs/features/file-logging) and [Log Rotation](/docs/features/log-rotation).
+见 [File Logging](/docs/features/file-logging) 和 [Log Rotation](/docs/features/log-rotation)。
 
 ## Transports
 
@@ -192,9 +192,9 @@ logixlysia({
 })
 ```
 
-Sync throws and async rejections from transports are caught and logged to `console.error` with a 5 s throttle per transport, so a broken target never blocks the request path.
+transport 抛出的同步异常和异步 reject 会被捕获并打印到 `console.error`,同一 transport 5s 窗口内只输出一次,坏的 target 不会拖慢请求路径。
 
-See [Transports](/docs/features/transports).
+见 [Transports](/docs/features/transports)。
 
 ## OpenTelemetry
 
@@ -210,17 +210,17 @@ app.request(({ request, store }) => {
 })
 ```
 
-When an active span exists, `trace_id` and `span_id` are merged into the request context bag and appear on the access log. Logixlysia does not start an OpenTelemetry SDK — you bring your own tracer provider and instrumentation.
+当存在 active span 时,`trace_id` 和 `span_id` 会合并进请求 context 包,出现在 access log 上。Logixlysia 不启动 OpenTelemetry SDK —— 你需要自己装 tracer provider 和 instrumentation。
 
-See [OpenTelemetry](/docs/integrations/otel).
+见 [OpenTelemetry](/docs/integrations/otel)。
 
-## AI SDK metrics
+## AI SDK 指标
 
 ```ts
 import { mergeAIMetrics } from '@pori15/logixlysia/ai'
 
 app.post('/chat', async ({ request, store }) => {
-  // After your AI SDK call:
+  // 在 AI SDK 调用之后:
   mergeAIMetrics(store.logger, request, {
     model: 'claude-sonnet',
     provider: 'anthropic',
@@ -234,18 +234,18 @@ app.post('/chat', async ({ request, store }) => {
 })
 ```
 
-The access log `context.ai` field mirrors evlog's wide-event shape, so a side-by-side migration of dashboards stays straightforward.
+access log 的 `context.ai` 字段沿用 evlog wide event 形态,方便两边仪表盘直接对比迁移。
 
-See [AI SDK](/docs/integrations/ai).
+见 [AI SDK](/docs/integrations/ai)。
 
 ## AsyncLocalStorage
 
-For deep call stacks (service layers, helpers, jobs inside a request), enable ALS propagation so `useLogger()` returns the request-scoped logger without prop-drilling:
+深调用栈(服务层、helper、请求里的子任务)想拿到请求作用域 logger,不用逐层传 `request`,开启 ALS 即可:
 
 ```ts
 logixlysia({ config: { useAsyncLocalStorage: true } })
 
-// Anywhere in the call stack:
+// 在任意位置:
 import { useLogger } from '@pori15/logixlysia'
 
 const log = useLogger()
@@ -253,24 +253,24 @@ log.mergeContext({ stage: 'db' })
 log.info('query started')
 ```
 
-See [Request context](/docs/features/request-context#async-localstorage).
+见 [Request context](/docs/features/request-context#async-localstorage)。
 
-## Output control
+## 输出控制
 
 ```ts
 logixlysia({
   config: {
-    disableInternalLogger: false, // console output
-    disableFileLogging: false,     // logFilePath output
-    useTransportsOnly: false,      // disables both, transport-only
+    disableInternalLogger: false, // console 输出
+    disableFileLogging: false,     // logFilePath 输出
+    useTransportsOnly: false,      // 同时禁用上面两个,只走 transport
     transports: [/* ... */],
   },
 })
 ```
 
-## Examples
+## 示例
 
-### Production setup
+### 生产配置
 
 ```ts
 const app = new Elysia().use(
@@ -287,7 +287,7 @@ const app = new Elysia().use(
 )
 ```
 
-### Development setup
+### 开发配置
 
 ```ts
 const app = new Elysia().use(

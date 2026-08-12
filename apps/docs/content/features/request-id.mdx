@@ -1,13 +1,13 @@
 ---
 title: Request ID
-description: Generate or honor unique request identifiers across requests and responses
+description: 在请求和响应之间生成或透传唯一标识
 ---
 
-Logixlysia automatically generates or retrieves unique request identifiers (request IDs) and attaches them to the request context, response headers, and log outputs.
+Logixlysia 自动生成或读取唯一请求标识(request ID),挂到请求 context、响应头和日志输出上。
 
-## Basic usage
+## 基本用法
 
-Enable the request ID feature with `requestId: true`. The default configuration uses the `X-Request-Id` header and a UUID v4 generator.
+用 `requestId: true` 开启。默认配置使用 `X-Request-Id` 头和 UUID v4 生成器。
 
 ```ts
 import { Elysia } from 'elysia'
@@ -22,30 +22,30 @@ const app = new Elysia().use(
 )
 ```
 
-## Production preset
+## 生产 preset
 
-The `prod` preset enables `requestId` automatically:
+`prod` preset 自动开启 `requestId`:
 
 ```ts
 const app = new Elysia().use(
   logixlysia({
-    preset: 'prod', // requestId is enabled automatically
+    preset: 'prod', // 自动开启 requestId
   })
 )
 ```
 
-## Custom configuration
+## 自定义配置
 
-For advanced use cases, pass a configuration object instead of a boolean:
+需要更细的控制时,传配置对象:
 
 ```ts
 const app = new Elysia().use(
   logixlysia({
     config: {
       requestId: {
-        // Custom header name to read from / write to
+        // 自定义读取 / 写入的 header 名
         header: 'X-Correlation-Id',
-        // Custom request ID generator function
+        // 自定义 request ID 生成函数
         generator: () => `req-${crypto.randomUUID()}`,
       },
     },
@@ -53,25 +53,25 @@ const app = new Elysia().use(
 )
 ```
 
-### Options
+### 选项
 
-| Option | Type | Default | Description |
+| 选项 | 类型 | 默认 | 描述 |
 | --- | --- | --- | --- |
-| `enabled` | `boolean` | `true` | Turn request ID generation on or off when using object configuration. |
-| `header` | `string` | `'X-Request-Id'` | The header key to read on incoming requests and to set on responses. |
-| `generator` | `() => string` | `crypto.randomUUID` | A function that returns a unique string to use as the request ID. |
+| `enabled` | `boolean` | `true` | 用对象配置时,显式开关 request ID 生成 |
+| `header` | `string` | `'X-Request-Id'` | 入口读、出口写的 header 名 |
+| `generator` | `() => string` | `crypto.randomUUID` | 返回唯一字符串的生成函数 |
 
-## How it works
+## 工作机制
 
-1. On the request, the plugin reads the configured header (default `X-Request-Id`) from the incoming `Request`.
-2. If absent, the `generator` function produces a fresh ID.
-3. The ID is stored in the per-request context bag under `requestId`.
-4. On the response (`afterHandle` hook), the ID is echoed back in the response header.
-5. On error responses, the same ID is included in the response header and in the error log context — enabling trace correlation for failed requests.
+1. 请求进入时,插件从入站 `Request` 读配置的 header(默认 `X-Request-Id`)。
+2. 如果缺失,用 `generator` 生成一个。
+3. ID 存到请求作用域 context 包的 `requestId` 字段。
+4. 响应阶段(`afterHandle` 钩子)把 ID 写回响应 header。
+5. 错误响应同样在响应 header 和错误日志 context 里带上 ID —— 方便失败请求的 trace 关联。
 
-## Log formatting
+## 日志格式化
 
-Output the request ID in your custom log format using the `{requestId}` placeholder:
+在自定义日志格式里用 `{requestId}` 占位符输出 request ID:
 
 ```ts
 const app = new Elysia().use(
@@ -84,11 +84,11 @@ const app = new Elysia().use(
 )
 ```
 
-If request ID is disabled or not present, the token renders as an empty string.
+request ID 没开启或缺失时,token 渲染为空字符串。
 
-## Cross-service tracing
+## 跨服务追踪
 
-Pair the request ID with `autoRedact: true` so the `authorization` and `cookie` headers are scrubbed from the access log, but the request ID is still attached for grep-ability:
+把 request ID 跟 `autoRedact: true` 配对,让 `authorization` 和 `cookie` 头在 access log 里被脱敏,但 request ID 仍能 grep:
 
 ```ts
 logixlysia({
@@ -100,4 +100,4 @@ logixlysia({
 })
 ```
 
-For distributed tracing, layer OpenTelemetry on top with `injectTraceContext` (see [OpenTelemetry](/docs/integrations/otel)). Request IDs and trace IDs are independent — the request ID is your application-level correlation key, and the trace ID is the OTel-level one.
+分布式追踪场景,再叠一层 OpenTelemetry(见 [OpenTelemetry](/docs/integrations/otel))。request ID 和 trace ID 是独立的 —— request ID 是你的应用层关联键,trace ID 是 OTel 那一层的。

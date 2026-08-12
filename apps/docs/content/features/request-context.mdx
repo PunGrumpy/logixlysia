@@ -1,11 +1,11 @@
 ---
 title: Request context
-description: Accumulate request-scoped fields into a single access log line
+description: 把请求作用域的字段累积到一条 access log
 ---
 
-Logixlysia accumulates context during a request and merges it into the automatic access log — similar to evlog wide events, without replacing your existing `logger.info()` API.
+Logixlysia 在请求过程中累积 context,合并到最终的 access log —— 类似 evlog 的 wide event,但不替换你已有的 `logger.info()` API。
 
-## Basic usage
+## 基本用法
 
 ```ts
 import { Elysia } from 'elysia'
@@ -20,46 +20,46 @@ const app = new Elysia()
   })
 ```
 
-The final `INFO` access log includes a `context` object with `userId` and `cartTotal` (and renders as a context tree when `showContextTree` is enabled).
+最终的 `INFO` access log 里包含一个 `context` 对象,带 `userId` 和 `cartTotal`(`showContextTree` 开启时显示为树)。
 
 ## Logger API
 
-`store.logger` exposes nine methods:
+`store.logger` 暴露 9 个方法:
 
-| Method | Purpose |
+| 方法 | 用途 |
 | --- | --- |
-| `debug(request, message, context?)` | Log at DEBUG |
-| `info(request, message, context?)` | Log at INFO |
-| `warn(request, message, context?)` | Log at WARNING |
-| `error(request, message, context?)` | Log at ERROR |
-| `log(level, request, data, store)` | Explicit level + structured data entry |
-| `handleHttpError(request, error, store, options?)` | Process a thrown error and emit a leveled log |
-| `getContext(request)` | Read the accumulated per-request context bag |
-| `mergeContext(request, partial)` | Merge a partial into the per-request context bag |
-| `pino` | Underlying Pino Logger instance |
+| `debug(request, message, context?)` | 记录 DEBUG |
+| `info(request, message, context?)` | 记录 INFO |
+| `warn(request, message, context?)` | 记录 WARNING |
+| `error(request, message, context?)` | 记录 ERROR |
+| `log(level, request, data, store)` | 显式级别 + 结构化数据入口 |
+| `handleHttpError(request, error, store, options?)` | 处理抛出的错误,输出 level 派生日志 |
+| `getContext(request)` | 读累积的请求作用域 context |
+| `mergeContext(request, partial)` | 合并部分字段到请求作用域 context |
+| `pino` | 底层 Pino Logger 实例 |
 
-## Precedence
+## 优先级
 
-When you call `logger.info(request, message, { ...explicit })`, keys in the explicit context **override** accumulated values. Non-colliding keys from both sources are kept.
+调用 `logger.info(request, message, { ...explicit })` 时,显式 context 里的 key **覆盖** 累积值。不冲突的 key 双方都保留。
 
 ```ts
 store.logger.mergeContext(request, { userId: 'usr_123', role: 'guest' })
 store.logger.info(request, 'fetched user', { role: 'admin', email: 'a@b.co' })
-// Final context: { userId: 'usr_123', role: 'admin', email: 'a@b.co' }
+// 最终 context: { userId: 'usr_123', role: 'admin', email: 'a@b.co' }
 ```
 
-## Reading context
+## 读 context
 
 ```ts
 const ctx = store.logger.getContext(request)
 // Readonly<Record<string, unknown>>
 ```
 
-The returned object is a frozen view; mutating it has no effect. Use `mergeContext` to add more fields.
+返回的对象是冻结的视图,改它没效果。要加字段用 `mergeContext`。
 
-## Request-scoped logger & AsyncLocalStorage
+## 请求作用域 logger & AsyncLocalStorage
 
-Instead of manually passing the `request` object to `store.logger` methods (e.g. `store.logger.info(request, message)`), enable `AsyncLocalStorage` propagation so a request-scoped `log` is derived on the Elysia handler context:
+不想手动传 `request` 给 `store.logger` 方法(比如 `store.logger.info(request, message)`),可以开启 `AsyncLocalStorage` 透传,这样 Elysia handler context 上会自动派生一个请求作用域的 `log`:
 
 ```ts
 logixlysia({
@@ -69,9 +69,9 @@ logixlysia({
 })
 ```
 
-### 1. Handler context (`log`)
+### 1. Handler context(`log`)
 
-Destructure `log` directly in route handlers:
+在 route handler 里直接解构 `log`:
 
 ```ts
 app.get('/user/:id', ({ log, params }) => {
@@ -81,11 +81,11 @@ app.get('/user/:id', ({ log, params }) => {
 })
 ```
 
-The `log` handle has no `request` parameter — it is bound to the active request through `AsyncLocalStorage`. The same `log.mergeContext` / `log.info` / `log.warn` / `log.error` / `log.debug` shape as `store.logger`, minus the request.
+`log` 没有 `request` 参数 —— 通过 `AsyncLocalStorage` 绑定到当前请求。`log.mergeContext` / `log.info` / `log.warn` / `log.error` / `log.debug` 跟 `store.logger` 一样,只是少了 `request`。
 
-### 2. Global hook (`useLogger()`)
+### 2. 全局 hook(`useLogger()`)
 
-In nested service layers or helper functions, import `useLogger()` to log or merge context from any depth in the call stack:
+在嵌套的服务层或 helper 函数里,导入 `useLogger()` 在任意深度拿 logger:
 
 ```ts
 import { useLogger } from '@pori15/logixlysia'
@@ -95,14 +95,14 @@ async function findUser(id: string) {
   log.mergeContext({ action: 'db_query' })
   log.info('Executing database lookup…')
 
-  // Database lookup logic…
+  // 数据库查询逻辑…
   return { id, name: 'John Doe' }
 }
 ```
 
-`useLogger()` returns the same `RequestScopedLogger` shape as the handler `log`. Outside a request (during startup, in a worker, in a cron tick) it returns `undefined`-safe no-ops; calls become inert.
+`useLogger()` 返回跟 handler `log` 一样的 `RequestScopedLogger`。在请求外(启动时、worker 里、cron 任务里)调用会返回 no-op,所有调用静默无效。
 
-### Caveats
+### 注意事项
 
-- ALS propagation only works inside a request that flowed through the logixlysia plugin's `.request()` hook. Background work scheduled outside a request lifecycle will get the no-op `log` and emit nothing.
-- ALS is opt-in. Default behavior keeps the explicit `store.logger` API only — turn ALS on for new code that wants deep call-stack logging.
+- ALS 透传只在经过 logixlysia 插件 `.request()` 钩子的请求内生效。在请求生命周期外调度的后台任务会拿到 no-op `log`,不输出任何东西。
+- ALS 是 opt-in。默认行为只保留显式 `store.logger` API —— 想要深调用栈日志的新代码再开 ALS。

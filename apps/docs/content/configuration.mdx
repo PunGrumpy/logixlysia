@@ -1,89 +1,91 @@
 ---
 title: Configuration
-description: Complete configuration reference for Logixlysia
+description: Logixlysia 完整配置参考
 ---
 
-Complete reference for all Logixlysia configuration options. All fields are passed under the `config` key of `logixlysia({...})`, with one shorthand (`logLevel`) at the root.
+完整 Logixlysia 配置选项参考。所有字段都放在 `logixlysia({...})` 的 `config` 键下,根级有一个 `logLevel` 简写。
 
 ```ts
 logixlysia({
-  preset: 'prod',  // optional: 'dev' | 'prod' | 'json'
+  preset: 'prod',  // 可选: 'dev' | 'prod' | 'json'
   config: {
-    // ... configuration options (override preset)
+    // ... 配置项(覆盖 preset)
   },
 })
 ```
 
-See [Presets](/docs/features/presets) for defaults per environment.
+各环境默认见 [Presets](/docs/features/presets)。
 
 ## Preset
 
 ### `preset`
 
-One-line environment defaults. Explicit `config` fields always win.
+一行设好环境默认。显式 `config` 字段永远覆盖 preset。
 
-- **Type:** `'dev' | 'prod' | 'json'`
-- **Default:** `undefined` (no preset)
+- **类型:** `'dev' | 'prod' | 'json'`
+- **默认:** `undefined`(无 preset)
 
 ```ts
 logixlysia({ preset: 'prod' })
 ```
 
-## Startup
+## 启动
 
 ### `showStartupMessage`
 
-Whether to display the startup message when the server starts.
+服务器启动时是否显示启动消息。
 
-- **Type:** `boolean`
-- **Default:** `true`
+- **类型:** `boolean`
+- **默认:** `true`
 
 ### `startupMessageFormat`
 
-Format of the startup message.
+启动消息的格式。
 
-- **Type:** `'simple' | 'banner'`
-- **Default:** `'banner'`
+- **类型:** `'simple' | 'banner'`
+- **默认:** `'banner'`
 
-The startup message is emitted from the `.start()` hook, reading `instance.server` (Elysia 2) or the `PORT` / `HOST` env vars as a fallback.
+启动消息从 `.start()` 钩子发出,优先读 `instance.server`(Elysia 2),回退到 `PORT` / `HOST` 环境变量。
 
-## Display
+## 显示
 
 ### `useColors`
 
-Enable colored output in console logs.
+控制台日志是否启用彩色输出。
 
-- **Type:** `boolean`
-- **Default:** `true` (auto-disabled when `!process.stdout.isTTY`)
+- **类型:** `boolean`
+- **默认:** `true`(`!process.stdout.isTTY` 时自动关闭)
 
 ### `ip`
 
-Include client IP address in logs.
+日志中是否包含客户端 IP。
 
-- **Type:** `boolean`
-- **Default:** `false`
+- **类型:** `boolean`
+- **默认:** `false`
 
-**How IP is resolved:** the client IP is read from HTTP headers in this order:
+**IP 解析顺序:**
 
-1. `x-forwarded-for` — first (leftmost) IP in the comma-separated list
-2. `x-real-ip` — fallback when `x-forwarded-for` is not present
+1. `x-forwarded-for` — 逗号分隔的列表中取第一个(最左)IP
+2. `x-real-ip` — 上面没有时回退
+
+这些头通常由反向代理(nginx、Caddy、Cloudflare)和负载均衡器设置。本地无代理测试时 `{ip}` 占位符通常为空。
 
 ### `autoRedact`
 
-Automatically redacts sensitive data from log messages, context objects, errors, and request headers. Redaction runs in two ways:
+自动脱敏日志消息、context 对象、错误、请求头中的敏感信息。脱敏分两层:
 
-1. **By key/header name** — a built-in, case-insensitive denylist (`authorization`, `cookie`, `x-api-key`, `password`, `secret`, `token`, `session`, and more) wholly redacts the value of any matching object key or request header.
-2. **By value pattern** — emails, IP addresses, Luhn-valid payment card numbers, and JWTs are redacted wherever they appear in strings.
+1. **按 key/header 名字** — 内置大小写不敏感的 denylist(`authorization`、`cookie`、`x-api-key`、`password`、`secret`、`token`、`session` 等),完全替换匹配到的对象 key 或请求头。`-`、`_`、camelCase 变体(`x-api-key`、`x_api_key`、`xApiKey`)都匹配。
+2. **按值模式** — 邮箱、IP 地址、Luhn 校验通过的信用卡号、JWT,只要在字符串里出现就替换。
 
-- **Type:** `boolean`
-- **Default:** `false`
+- **类型:** `boolean`
+- **默认:** `false`
 
 ### `redactKeys`
 
-Additional key/header names to redact when `autoRedact` is enabled, extending the built-in denylist.
+`autoRedact` 开启时,补充到内置 denylist 的额外 key/header 名。
 
-- **Type:** `string[]`
-- **Default:** `undefined`
+- **类型:** `string[]`
+- **默认:** `undefined`
 
 ```ts
 autoRedact: true,
@@ -92,119 +94,119 @@ redactKeys: ['x-internal-token', 'customerSsn']
 
 ### `logErrorPayload`
 
-Log the offending payload (`found` / `errors`) from validation errors. Off by default.
+把 validation 错误的 payload(`found` / `errors`)写进日志。默认关闭 —— 失败的 schema validation 会把整个请求 body(密码、token、卡号)塞到错误消息里,关掉能保证这些值不进入日志和 transport。
 
-- **Type:** `boolean`
-- **Default:** `false`
+- **类型:** `boolean`
+- **默认:** `false`
 
 ### `logQueryParams`
 
-Include query parameters in the logged URL path.
+是否把 query 参数包含进日志的 URL 路径。
 
-- **Type:** `boolean`
-- **Default:** `false`
+- **类型:** `boolean`
+- **默认:** `false`
 
-## Formatting
+## 格式
 
 ### `customLogFormat`
 
-Custom log message format using placeholders.
+用占位符自定义日志消息格式。
 
-- **Type:** `string`
-- **Default:** `undefined` (built-in default includes `{now}`, `{service}`, `{icon}`, `{method}`, `{pathname}`, `{status}`, `{duration}`, `{message}`, `{speed}`)
+- **类型:** `string`
+- **默认:** `undefined`(内置默认包含 `{now}`、`{service}`、`{icon}`、`{method}`、`{pathname}`、`{status}`、`{duration}`、`{message}`、`{speed}`)
 
 ```ts
 customLogFormat: '{now} {level} {duration}ms {method} {pathname} {status}'
 ```
 
-Available placeholders:
+可用的占位符:
 
-| Placeholder | Description |
-| ----------- | ----------- |
-| `{now}` | Current timestamp |
-| `{epoch}` | Unix timestamp (seconds) |
-| `{level}` | Log level |
-| `{duration}` | Request duration, formatted (e.g. `12ms`, `1.5s`) |
-| `{method}` | HTTP method |
-| `{pathname}` | Request path (alias: `{path}`) |
-| `{query}` | Raw query string |
-| `{status}` | Response status code |
-| `{statusText}` | HTTP status text (e.g. `Not Found` for 404) |
-| `{message}` | Custom message |
-| `{icon}` | Logixlysia fox `🦊` (level-colored chip when colors + TTY) |
-| `{speed}` | Slow-request badge when duration ≥ `verySlowThreshold` |
-| `{service}` | Service label from `config.service` |
-| `{ip}` | Client IP (from `x-forwarded-for` or `x-real-ip`) |
-| `{context}` | Context JSON on main line when tree is off / empty |
-| `{requestId}` | `X-Request-Id` value (empty if not enabled) |
+| 占位符 | 描述 |
+| --- | --- |
+| `{now}` | 当前时间戳 |
+| `{epoch}` | Unix 时间戳(秒) |
+| `{level}` | 日志级别 |
+| `{duration}` | 请求耗时(已格式化,例如 `12ms`、`1.5s`) |
+| `{method}` | HTTP 方法 |
+| `{pathname}` | 请求路径(别名 `{path}`) |
+| `{query}` | 原始 query 字符串 |
+| `{status}` | 响应状态码 |
+| `{statusText}` | HTTP 状态文本(例如 404 对应 `Not Found`) |
+| `{message}` | 自定义消息 |
+| `{icon}` | Logixlysia 狐狸 `🦊`(颜色 + TTY 时为级别色块) |
+| `{speed}` | 慢请求徽章(耗时 ≥ `verySlowThreshold`) |
+| `{service}` | `config.service` 服务名 |
+| `{ip}` | 客户端 IP(从 `x-forwarded-for` 或 `x-real-ip`) |
+| `{context}` | context 的 JSON(树关掉或空时显示在主行) |
+| `{requestId}` | `X-Request-Id` 值(未开启时为空) |
 
 ### `service`
 
-Service name used by the `{service}` placeholder.
+`{service}` 占位符显示的服务名。
 
-- **Type:** `string`
-- **Default:** `undefined`
+- **类型:** `string`
+- **默认:** `undefined`
 
 ### `slowThreshold`
 
-Duration threshold (ms) for **green** duration text when colors are enabled. Between this value and `verySlowThreshold`, duration is **yellow**.
+启动色(绿色)的耗时阈值(ms)。在 `slowThreshold` 与 `verySlowThreshold` 之间为黄色。
 
-- **Type:** `number`
-- **Default:** `500`
+- **类型:** `number`
+- **默认:** `500`
 
 ### `verySlowThreshold`
 
-Duration threshold (ms) at or above which duration is **red** and the `{speed}` token adds `⚡ slow`.
+耗时达到这个值(ms)及以上时显示为红色,且 `{speed}` 占位符会加 `⚡ slow`。
 
-- **Type:** `number`
-- **Default:** `1000`
+- **类型:** `number`
+- **默认:** `1000`
 
 ### `showContextTree`
 
-When `true`, structured `context` is printed as **tree lines** under the main log line.
+为 `true` 时,logger helper 传入的结构化 `context` 会作为主日志下方的**树形行**打印,而不是塞进 `{message}` 同一行。
 
-- **Type:** `boolean`
-- **Default:** `true`
+- **类型:** `boolean`
+- **默认:** `true`
 
 ### `contextDepth`
 
-How many levels of nested objects to expand in the context tree.
+context 树里嵌套对象的展开层数。
 
-- **Type:** `number`
-- **Default:** `1`
+- **类型:** `number`
+- **默认:** `1`
 
 ### `timestamp`
 
-Timestamp format.
+时间戳格式。接受字符串或 `{ format }` 形式。
 
-- **Type:** `string | { format: string }`
-- **Default:** `undefined`
+- **类型:** `string | { format: string }`
+- **默认:** `undefined`
 
 ```ts
 timestamp: 'yyyy-mm-dd HH:MM:ss.SSS'
-// or
+// 或
 timestamp: { format: 'yyyy-mm-dd HH:MM:ss' }
 ```
 
-## Filtering
+## 过滤
 
 ### `logFilter`
 
-Log level filter. Accepts a single level or an array.
+日志级别过滤。接受单个级别或数组。
 
-- **Type:** `{ level?: LogLevel | LogLevel[] }`
-- **Default:** `{ level: ['DEBUG', 'INFO', 'WARNING', 'ERROR'] }` (all levels)
+- **类型:** `{ level?: LogLevel | LogLevel[] }`
+- **默认:** `{ level: ['DEBUG', 'INFO', 'WARNING', 'ERROR'] }`(全部级别)
 
 ```ts
 logFilter: { level: ['ERROR', 'WARNING'] }
 ```
 
-### `logLevel` (root shorthand)
+### `logLevel`(根级简写)
 
-Equivalent to `config.logFilter.level`.
+等价于 `config.logFilter.level`。
 
-- **Type:** `LogLevel[]`
-- **Default:** `undefined` (all levels)
+- **类型:** `LogLevel[]`
+- **默认:** `undefined`(全部级别)
 
 ```ts
 logixlysia({ logLevel: ['ERROR', 'WARNING'] })
@@ -214,62 +216,62 @@ logixlysia({ logLevel: ['ERROR', 'WARNING'] })
 
 ### `requestId`
 
-- **Type:** `boolean | RequestIdConfig`
-- **Default:** `false`
+- **类型:** `boolean | RequestIdConfig`
+- **默认:** `false`
 
 ```ts
 requestId: true
-// or
+// 或
 requestId: {
   header: 'X-Correlation-Id',
   generator: () => crypto.randomUUID(),
 }
 ```
 
-See [Request ID](/docs/features/request-id).
+见 [Request ID](/docs/features/request-id)。
 
 ## AsyncLocalStorage
 
 ### `useAsyncLocalStorage`
 
-Enable AsyncLocalStorage propagation so `useLogger()` returns the request-scoped logger from any depth in the call stack.
+开启 AsyncLocalStorage 透传,让 `useLogger()` 在任意调用栈深度都能拿到请求作用域 logger。
 
-- **Type:** `boolean`
-- **Default:** `false`
+- **类型:** `boolean`
+- **默认:** `false`
 
 ```ts
 useAsyncLocalStorage: true
 ```
 
-## File logging
+## 文件日志
 
 ### `logFilePath`
 
-Path to the log file. When set, the file sink writes batched output to this path with `0o600` (file) / `0o700` (directory) permissions by default.
+日志文件路径。设置后,文件 sink 用 `0o600`(文件)/ `0o700`(目录)默认权限写入批处理输出。
 
-- **Type:** `string`
-- **Default:** `undefined`
+- **类型:** `string`
+- **默认:** `undefined`
 
 ### `logFileMode`
 
-File permission bits used when creating the log file.
+创建日志文件时使用的文件权限位。
 
-- **Type:** `number`
-- **Default:** `0o600`
+- **类型:** `number`
+- **默认:** `0o600`
 
 ### `logDirMode`
 
-Directory permission bits used when creating the log directory.
+创建日志目录时使用的目录权限位。
 
-- **Type:** `number`
-- **Default:** `0o700`
+- **类型:** `number`
+- **默认:** `0o700`
 
 ### `logRotation`
 
-Log rotation configuration.
+日志 rotation 配置。
 
-- **Type:** `LogRotationConfig`
-- **Default:** `undefined`
+- **类型:** `LogRotationConfig`
+- **默认:** `undefined`
 
 ```ts
 logRotation: {
@@ -280,63 +282,63 @@ logRotation: {
 }
 ```
 
-| Field | Type | Description |
+| 字段 | 类型 | 描述 |
 | --- | --- | --- |
-| `maxSize` | `string \| number` | Rotate when file exceeds this size (`'10m'`, `'5k'`, or bytes) |
-| `interval` | `string` | Rotate on a time interval (`'1h'`, `'12h'`, `'1d'`) |
-| `maxFiles` | `number \| string` | Max files to keep (count) or retention period (`'7d'`, `'30d'`) |
-| `compress` | `boolean` | Gzip-compress rotated files |
-| `compression` | `'gzip'` | Compression algorithm (default `gzip`) |
+| `maxSize` | `string \| number` | 文件超过这个大小就 rotate(`'10m'`、`'5k'`、或字节数) |
+| `interval` | `string` | 按时间间隔 rotate(`'1h'`、`'12h'`、`'1d'`) |
+| `maxFiles` | `number \| string` | 保留的最大文件数(数字)或保留时长(`'7d'`、`'30d'`) |
+| `compress` | `boolean` | gzip 压缩 rotate 后的文件 |
+| `compression` | `'gzip'` | 压缩算法(默认 `gzip`) |
 
-Rotation across files is serialized by a keyed mutex, so rotating file A does not block writes to file B.
+跨文件 rotation 用 keyed mutex 串行,rotate 文件 A 不会阻塞文件 B 的写入。
 
-## Output
+## 输出
 
 ### `transports`
 
-Array of custom transport implementations.
+自定义 transport 实现数组。
 
-- **Type:** `Transport[]`
-- **Default:** `[]`
+- **类型:** `Transport[]`
+- **默认:** `[]`
 
 ### `useTransportsOnly`
 
-Use only transports; disable console and file logging.
+只用 transports,关闭 console 和 file 日志。
 
-- **Type:** `boolean`
-- **Default:** `false`
+- **类型:** `boolean`
+- **默认:** `false`
 
 ### `disableInternalLogger`
 
-Disable console logging.
+关闭 console 日志。
 
-- **Type:** `boolean`
-- **Default:** `false`
+- **类型:** `boolean`
+- **默认:** `false`
 
 ### `disableFileLogging`
 
-Disable file logging.
+关闭 file 日志。
 
-- **Type:** `boolean`
-- **Default:** `false`
+- **类型:** `boolean`
+- **默认:** `false`
 
 ## WebSocket
 
 ### `disableWebSocketLogging`
 
-Suppress automatic logs for `app.ws(...)` routes that pass through `plugin.wrapWs(...)`.
+关闭 `app.ws(...)` 路由通过 `plugin.wrapWs(...)` 时的自动日志。
 
-- **Type:** `boolean`
-- **Default:** `false`
+- **类型:** `boolean`
+- **默认:** `false`
 
 ## Pino
 
 ### `pino`
 
-Pino logger configuration. Accepts all [Pino options](https://github.com/pinojs/pino/blob/master/docs/api.md#options).
+Pino logger 配置。接受所有 [Pino 选项](https://github.com/pinojs/pino/blob/master/docs/api.md#options)。
 
-- **Type:** `PinoLoggerOptions & { prettyPrint?: boolean | object }`
-- **Default:** `undefined`
+- **类型:** `PinoLoggerOptions & { prettyPrint?: boolean | object }`
+- **默认:** `undefined`
 
 ```ts
 pino: {
@@ -347,7 +349,7 @@ pino: {
 }
 ```
 
-Pino is constructed lazily on first access. Set `config.pino` (truthy) to force eager initialization when you want invalid Pino options to fail at startup.
+Pino 在首次访问时按需构造。把 `config.pino` 设为真值可以强制启动时立即初始化(让错误的 Pino 选项在启动时 fail-fast)。
 
 #### `pino.prettyPrint`
 
@@ -361,16 +363,18 @@ pino: {
 }
 ```
 
-| Option | Type | Description |
+| 选项 | 类型 | 描述 |
 | --- | --- | --- |
-| `colorize` | `boolean` | Enable colors in output |
-| `translateTime` | `string \| boolean` | Format timestamps |
-| `ignore` | `string` | Comma-separated keys to exclude |
-| `singleLine` | `boolean` | Print each log on one line |
-| `messageFormat` | `string` | Custom message format |
-| `levelFirst` | `boolean` | Show level before timestamp |
-| `messageKey` | `string` | Key containing log message |
-| `errorKey` | `string` | Key containing error info |
+| `colorize` | `boolean` | 启用颜色输出 |
+| `translateTime` | `string \| boolean` | 时间戳格式 |
+| `ignore` | `string` | 逗号分隔要排除的 key |
+| `singleLine` | `boolean` | 每条日志单行 |
+| `messageFormat` | `string` | 自定义消息格式 |
+| `levelFirst` | `boolean` | 级别在时间戳之前 |
+| `messageKey` | `string` | 包含日志消息的 key |
+| `errorKey` | `string` | 包含错误信息的 key |
+
+完整参考见 [pino-pretty 文档](https://github.com/pinojs/pino-pretty#options)。
 
 #### `pino.redact`
 
@@ -395,31 +399,31 @@ pino: {
 }
 ```
 
-## Transport throttling
+## Transport 节流
 
 ### `transportThrottleMs`
 
-Window (ms) during which repeated transport errors for the same transport are coalesced into a single `console.error` line.
+同一 transport 的错误在多少毫秒窗口内合并到一条 `console.error`。
 
-- **Type:** `number`
-- **Default:** `5000`
+- **类型:** `number`
+- **默认:** `5000`
 
-## Error handling
+## 错误处理
 
 ### `error`
 
-Error-handling configuration.
+错误处理配置。
 
-- **Type:** `{ verbose?: boolean }`
-- **Default:** `{ verbose: false }`
+- **类型:** `{ verbose?: boolean }`
+- **默认:** `{ verbose: false }`
 
 ```ts
 error: { verbose: true }
 ```
 
-When `verbose` is enabled, logixlysia writes a structured warn with the full error context on top of the level-derived log.
+`verbose` 开启时,logixlysia 会在 level 派生的日志之上,再写一条结构化 warn,带上完整错误上下文。
 
-## Complete example
+## 完整示例
 
 ```ts
 logixlysia({

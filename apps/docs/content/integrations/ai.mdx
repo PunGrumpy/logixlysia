@@ -1,9 +1,9 @@
 ---
 title: AI SDK metrics
-description: Attach LLM usage metrics to request logs
+description: 把 LLM 用量指标挂到请求日志
 ---
 
-Import from the `@pori15/logixlysia/ai` subpath (no required peer dependency):
+从 `@pori15/logixlysia/ai` 子路径导入(无必需 peer 依赖):
 
 ```ts
 import logixlysia from '@pori15/logixlysia'
@@ -14,7 +14,7 @@ const plugin = logixlysia()
 const app = new Elysia()
   .use(plugin)
   .post('/chat', async ({ request, store }) => {
-    // After your AI SDK call:
+    // 在 AI SDK 调用之后:
     mergeAIMetrics(store.logger, request, {
       model: 'claude-sonnet',
       provider: 'anthropic',
@@ -28,7 +28,7 @@ const app = new Elysia()
   })
 ```
 
-The final access log `context.ai` object mirrors evlog's wide-event `ai` field for easier migration.
+最终的 access log `context.ai` 对象沿用 evlog wide event 的 `ai` 字段,方便两边对照迁移。
 
 ## API
 
@@ -46,17 +46,17 @@ interface AIMetrics {
   outputTokens: number
   totalTokens: number
   msToFinish: number
-  // Optional cost estimate (USD)
+  // 可选费用估算(美元)
   costUsd?: number
-  // Optional cache hit/miss breakdown
+  // 可选 cache 命中/未命中分布
   cacheReadTokens?: number
   cacheWriteTokens?: number
 }
 ```
 
-`mergeAIMetrics` calls `logger.mergeContext(request, { ai: { ...metrics } })`. The metrics are merged (not replaced), so a follow-up call with a different model overrides only the `model` key.
+`mergeAIMetrics` 调用 `logger.mergeContext(request, { ai: { ...metrics } })`。指标是合并(不是替换),后续用不同 model 调用只覆盖 `model` key。
 
-## Example with cost tracking
+## 带费用追踪的示例
 
 ```ts
 app.post('/chat', async ({ request, store }) => {
@@ -78,7 +78,7 @@ app.post('/chat', async ({ request, store }) => {
 })
 ```
 
-## Example with cache breakdown (Anthropic prompt caching)
+## 带 cache 分布(Anthropic prompt caching)
 
 ```ts
 mergeAIMetrics(store.logger, request, {
@@ -93,7 +93,7 @@ mergeAIMetrics(store.logger, request, {
 })
 ```
 
-The access log includes:
+access log 里会显示:
 
 ```
 context: {
@@ -110,9 +110,9 @@ context: {
 }
 ```
 
-## Aggregation-friendly
+## 易于聚合
 
-Because the `ai` field is structured and consistent, you can aggregate it in any log backend:
+`ai` 字段结构稳定,可以在任何日志后端聚合:
 
 ```
 SELECT

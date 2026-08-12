@@ -1,15 +1,15 @@
 ---
 title: OpenTelemetry
-description: Correlate logs with active trace and span IDs
+description: 把日志跟活动 trace 和 span 关联起来
 ---
 
-Install the optional peer dependency:
+安装可选 peer 依赖:
 
 ```bash
 bun add @opentelemetry/api
 ```
 
-Import from the `@pori15/logixlysia/otel` subpath:
+从 `@pori15/logixlysia/otel` 子路径导入:
 
 ```ts
 import logixlysia from '@pori15/logixlysia'
@@ -25,14 +25,14 @@ const app = new Elysia()
   .get('/', () => 'ok')
 ```
 
-When an active span exists, `trace_id` and `span_id` are merged into the request context bag and appear on the access log:
+当存在 active span 时,`trace_id` 和 `span_id` 合并到请求 context 包,出现在 access log:
 
 ```
 🦊 2025-12-21 10:00:00.225 INFO  12.34ms GET / 200
 └─ trace: { trace_id: '8c2f…', span_id: '4a1d…' }
 ```
 
-Logixlysia does not start an OpenTelemetry SDK — you bring your own tracer provider and instrumentation.
+Logixlysia 不启动 OpenTelemetry SDK —— 你需要自己装 tracer provider 和 instrumentation。
 
 ## API
 
@@ -45,24 +45,24 @@ function injectTraceContext(
 interface TraceContextFields {
   trace_id: string
   span_id: string
-  // optional parent and trace flags, when available
+  // 可选,有时会带上 parent 和 trace flags
   parent_span_id?: string
   trace_flags?: string
 }
 ```
 
-`injectTraceContext` is async because it does a dynamic `import('@opentelemetry/api')` to keep `@opentelemetry/api` as an optional peer dep — the import only happens if you call this function. If the module is not installed, the function returns `undefined` and emits nothing.
+`injectTraceContext` 是 async 的,因为它要动态 `import('@opentelemetry/api')` 来保持 `@opentelemetry/api` 的可选 peer dep 地位 —— 只有调用这个函数时才会发生 import。模块没装时,函数返回 `undefined`,什么都不输出。
 
-## How it works
+## 工作机制
 
-1. The function looks up the current active span from the OpenTelemetry context API (`trace.getSpan(context.active())`).
-2. If a span exists, it reads `spanContext().traceId` and `spanContext().spanId`.
-3. The pair is merged into the request context under `trace: { trace_id, span_id }`.
-4. The merged context appears in the final access log, alongside any user-merged context (e.g. `context.userId`).
+1. 函数从 OpenTelemetry context API 查当前 active span(`trace.getSpan(context.active())`)。
+2. 如果有 span,读 `spanContext().traceId` 和 `spanContext().spanId`。
+3. 这一对字段合并到请求 context 的 `trace: { trace_id, span_id }`。
+4. 合并后的 context 出现在最终 access log,跟用户合并的 context(比如 `context.userId`)并列。
 
-## Full setup
+## 完整 setup
 
-A minimal OpenTelemetry setup looks like this:
+最小的 OpenTelemetry setup 长这样:
 
 ```ts
 // tracing.ts
@@ -78,14 +78,14 @@ const sdk = new NodeSDK({
 sdk.start()
 ```
 
-Then in your Elysia app:
+然后在 Elysia app 里:
 
 ```ts
 // app.ts
 import { Elysia } from 'elysia'
 import logixlysia from '@pori15/logixlysia'
 import { injectTraceContext } from '@pori15/logixlysia/otel'
-import './tracing' // start the OTel SDK first
+import './tracing' // 先启动 OTel SDK
 
 const app = new Elysia()
   .use(logixlysia())
@@ -96,14 +96,14 @@ const app = new Elysia()
   .listen(3000)
 ```
 
-## Pairing with request ID
+## 跟 request ID 配合
 
-Request IDs and trace IDs are independent correlation keys:
+request ID 和 trace ID 是独立的关联键:
 
-- `requestId` is your application-level correlation ID (the `X-Request-Id` header). Easy to grep in plain-text logs.
-- `trace_id` is the OpenTelemetry trace ID. Surfaces in distributed tracing UIs (Jaeger, Honeycomb, etc.).
+- `requestId` 是你的应用层关联 ID(`X-Request-Id` header)。在纯文本日志里好 grep。
+- `trace_id` 是 OpenTelemetry 的 trace ID。在分布式追踪 UI(Jaeger、Honeycomb 等)里用。
 
-You can include both in your `customLogFormat`:
+两个都放进 `customLogFormat`:
 
 ```ts
 logixlysia({
@@ -115,4 +115,4 @@ logixlysia({
 })
 ```
 
-Or render them as a context tree under the access log by leaving `customLogFormat` unset and letting `showContextTree` print the full `context` object.
+或者不设 `customLogFormat`,让 `showContextTree` 把整个 `context` 对象作为树形行打印。
