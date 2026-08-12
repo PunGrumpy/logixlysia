@@ -1,11 +1,11 @@
-import type { Options } from "../interfaces";
+import type { LogixlysiaOptions } from "../interfaces";
 import { parseInterval, parseRetention, parseSize } from "../utils/rotation";
 
 export type LogPreset = "dev" | "prod" | "json";
 
 const VALID_PRESETS: readonly LogPreset[] = ["dev", "prod", "json"];
 
-const validateLogRotation = (config: Options["config"]): void => {
+const validateLogRotation = (config: LogixlysiaOptions["config"]): void => {
   const logRotation = config?.logRotation;
   if (!logRotation) {
     return;
@@ -37,7 +37,7 @@ const validateLogRotation = (config: Options["config"]): void => {
   }
 };
 
-const PRESET_DEFAULTS: Record<LogPreset, NonNullable<Options["config"]>> = {
+const PRESET_DEFAULTS: Record<LogPreset, NonNullable<LogixlysiaOptions["config"]>> = {
   dev: {
     pino: {
       prettyPrint: true,
@@ -68,24 +68,24 @@ const PRESET_DEFAULTS: Record<LogPreset, NonNullable<Options["config"]>> = {
 };
 
 const mergeConfig = (
-  base: NonNullable<Options["config"]>,
-  override?: Options["config"]
-): NonNullable<Options["config"]> => {
+  base: NonNullable<LogixlysiaOptions["config"]>,
+  override?: LogixlysiaOptions["config"]
+): NonNullable<LogixlysiaOptions["config"]> => {
   if (!override) {
     return base;
   }
 
-  const merged: NonNullable<Options["config"]> = { ...base, ...override };
+  const merged: NonNullable<LogixlysiaOptions["config"]> = { ...base, ...override };
 
   if (base.pino || override.pino) {
     merged.pino = {
       ...base.pino,
       ...override.pino,
       ...(base.pino?.prettyPrint !== undefined ||
-      override.pino?.prettyPrint !== undefined
+        override.pino?.prettyPrint !== undefined
         ? {
-            prettyPrint: override.pino?.prettyPrint ?? base.pino?.prettyPrint,
-          }
+          prettyPrint: override.pino?.prettyPrint ?? base.pino?.prettyPrint,
+        }
         : {}),
     };
   }
@@ -110,14 +110,14 @@ const mergeConfig = (
     merged.timestamp = {
       ...baseTs,
       ...overrideTs,
-    } as NonNullable<Options["config"]>["timestamp"];
+    } as NonNullable<LogixlysiaOptions["config"]>["timestamp"];
   }
 
   return merged;
 };
 
 /** Applies preset defaults; explicit `config` keys override preset values. */
-export const resolveOptions = (options: Options = {}): Options => {
+export const resolveOptions = (options: LogixlysiaOptions = {}): LogixlysiaOptions => {
   const { preset } = options;
   if (preset && !VALID_PRESETS.includes(preset)) {
     throw new Error(`logixlysia: invalid preset — ${preset}`);
@@ -125,9 +125,9 @@ export const resolveOptions = (options: Options = {}): Options => {
 
   const resolved = preset
     ? {
-        ...options,
-        config: mergeConfig(PRESET_DEFAULTS[preset], options.config),
-      }
+      ...options,
+      config: mergeConfig(PRESET_DEFAULTS[preset], options.config),
+    }
     : options;
 
   validateLogRotation(resolved.config);

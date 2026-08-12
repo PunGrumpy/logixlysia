@@ -1,7 +1,7 @@
 import { mergeLogDataContext, type RequestContextStore } from "../context/request-context";
 import type {
   LogLevel,
-  Options,
+  LogixlysiaOptions,
   StoreData,
   Transport,
 } from "../interfaces";
@@ -33,7 +33,7 @@ export interface Sinks {
  * supporting both legacy shape (`transports: Transport[]`) and
  * the `TransportsConfig` envelope (`{ targets, only }`).
  */
-export const resolveTransports = (options: Options): Transport[] => {
+export const resolveTransports = (options: LogixlysiaOptions): Transport[] => {
   const configTransports = options.config?.transports;
   if (configTransports && configTransports.length > 0) {
     return configTransports;
@@ -53,7 +53,7 @@ export const resolveTransports = (options: Options): Transport[] => {
  * `config` (via `useTransportsOnly`) or on the legacy root-level
  * `transports: { only: true }` envelope.
  */
-export const resolveTransportsOnly = (options: Options): boolean => {
+export const resolveTransportsOnly = (options: LogixlysiaOptions): boolean => {
   if (options.config?.useTransportsOnly === true) {
     return true;
   }
@@ -68,7 +68,7 @@ export const resolveTransportsOnly = (options: Options): boolean => {
   return false;
 };
 
-export const resolveSinks = (options: Options): Sinks => {
+export const resolveSinks = (options: LogixlysiaOptions): Sinks => {
   const config = options.config;
   const useTransportsOnly =
     resolveTransportsOnly(options) || config?.useTransportsOnly === true;
@@ -112,7 +112,7 @@ export const shouldLog = (
  */
 export const shouldLogForOptions = (
   level: LogLevel,
-  options: Options
+  options: LogixlysiaOptions
 ): boolean => {
   const configLevel = options.config?.logFilter?.level;
   if (configLevel && configLevel.length > 0) {
@@ -191,7 +191,7 @@ export interface EmitInput {
   /** Hoisted per-logger constants for `formatLogOutput`; only read when the internal console logger is active. */
   formatContext: FormatContext;
   level: LogLevel;
-  options: Options;
+  options: LogixlysiaOptions;
   /** Pre-sampled duration/pathname/search. If absent, emit falls back to store. */
   precomputed?: PrecomputedLogParts;
   request: Request;

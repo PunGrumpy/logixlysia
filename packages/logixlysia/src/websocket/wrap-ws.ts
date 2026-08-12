@@ -1,5 +1,5 @@
 import type { RequestContextStore } from "../context/request-context";
-import type { Logger, Options, StoreData } from "../interfaces";
+import type { Logger, LogixlysiaOptions, StoreData } from "../interfaces";
 
 export interface WebSocketLike {
   readonly data?: { store?: { logger?: Logger } };
@@ -19,7 +19,7 @@ const wsSyntheticRequest = (path: string): Request =>
   new Request(`http://logixlysia.local${path}`, { method: "WS" });
 
 export const createWsHandlerWrapper = (
-  options: Options,
+  options: LogixlysiaOptions,
   logger: Logger,
   contextStore: RequestContextStore
 ) => {

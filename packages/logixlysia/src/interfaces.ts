@@ -259,10 +259,7 @@ export interface LogixlysiaOptions {
   transports?: Transport[] | TransportsConfig;
 }
 
-/**
- * 向后兼容别名 —— logixlysia 内部模块继续用 `Options` 这个短名
- */
-export type Options = LogixlysiaOptions;
+
 
 // ==========================================
 // Logger

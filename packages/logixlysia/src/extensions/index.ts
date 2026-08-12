@@ -1,9 +1,9 @@
-import type { Options } from "../interfaces";
+import type { LogixlysiaOptions } from "../interfaces";
 import { renderBanner } from "./banner";
 
 export const startServer = (
   server: { port?: number; hostname?: string; protocol?: string | null },
-  options: Options
+  options: LogixlysiaOptions
 ): void => {
   const showStartupMessage = options.startup?.show ?? true;
   if (!showStartupMessage) {

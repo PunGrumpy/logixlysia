@@ -10,7 +10,7 @@ export { levelForStatus, extractStatus, extractErrorFields, applyErrorLogging, e
 export type { LogixlysiaErrorClass } from "./errors";
 export { getStatusCode } from "./helpers";
 export { HttpError } from "./interfaces";
-export type { Pino, LogLevel, StoreData, LogixlysiaStore, Transport, LogRotationConfig, RequestIdConfig, LogFilter, PinoConfig, StartupConfig, FormatConfig, FileConfig, TransportsConfig, ErrorConfig, LogixlysiaErrorClasses, LogixlysiaConfig, LogixlysiaOptions, Options, Logger, RequestScopedLogger, LogixlysiaContext } from "./interfaces";
+export type { Pino, LogLevel, StoreData, LogixlysiaStore, Transport, LogRotationConfig, RequestIdConfig, LogFilter, PinoConfig, StartupConfig, FormatConfig, FileConfig, TransportsConfig, ErrorConfig, LogixlysiaErrorClasses, LogixlysiaConfig, LogixlysiaOptions, LogixlysiaOptions as Options, Logger, RequestScopedLogger, LogixlysiaContext } from "./interfaces";
 export { resolveRequestIdConfig, getOrCreateRequestId } from "./middleware";
 export type { ResolvedRequestIdConfig } from "./middleware";
 export { injectTraceContext, __resetForTesting } from "./otel";

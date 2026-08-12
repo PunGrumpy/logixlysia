@@ -1,18 +1,15 @@
 /**
- * logixlysia 2.0 — 插件入口
+ * logixlysia 2.0 — 日志插件主入口
  *
- * 适配 Elysia 2.0 (>=2.0.0-exp.62):
- * - 删除自建 ProblemError/createProblem/HttpError 命名空间
- * - 错误分发改用 .error(Class, handler) 逐类注册
- * - RFC 9457 envelope 由 Elysia 原生 HTTPError/problem() 处理
- * - logixlysia 的核心价值:日志管道(transports + file + console)
+ * 核心职责：为 Elysia 框架提供企业级日志能力
  *
- * 上游 main (b173c44) 吸收:
- * - `EmptyElysiaSlot` + `LogixlysiaSingleton` 类型模式
- * - `requestStartTimes` WeakMap(per-request 时序,避免并发串扰)
- * - `AsyncLocalStorage` + `useLogger()` 深调用栈
- * - request-id 中间件
- * - 启动 banner 真实触发(`.start()` 钩子)
+ * 主要功能：
+ * - ✅ 请求/响应自动日志记录
+ * - ✅ 请求ID追踪（支持header传递）
+ * - ✅ 性能计时（请求耗时统计）
+ * - ✅ WebSocket日志支持
+ * - ✅ 异步本地存储（深度调用链日志）
+ * - ✅ 多种预设模式（dev/prod/json）
  */
 
 import { Elysia } from "elysia";
@@ -25,52 +22,78 @@ import { createLogger } from "./logger";
 import { getOrCreateRequestId, resolveRequestIdConfig } from "./middleware";
 import { createWsHandlerWrapper } from "./websocket";
 
+// ============================================================
+// 1. 类型定义 - 描述插件对外暴露的能力
+// ============================================================
 
 /**
- * 哨兵类型 — Elysia 2 的 SingletonBase 模板要求各槽位为 object。
- * 我们用空对象 `{}` 表达"这个槽位不暴露任何东西" —— 用 `Record<string, never>`
- * 会让 `Context['decorator']` 等所有 key 变 never(上游 main 注释明确警告)。
+ * 空插槽类型 - Elysia 2 要求所有插槽必须是对象类型
+ * 用空对象表示"这个槽位不暴露任何内容"
  */
 export type EmptyElysiaSlot = Record<string, never>;
 
+/**
+ * 插件单例接口 - 定义插件注入到 Elysia 的内容
+ */
 export interface LogixlysiaSingleton {
-  decorator: Record<string, unknown>;
-  derive: { log: RequestScopedLogger };
-  resolve: Record<string, never>;
-  store: LogixlysiaStore;
+  decorator: Record<string, unknown>;      // 装饰器（扩展函数）
+  derive: { log: RequestScopedLogger };    // 派生属性（每个请求的logger）
+  resolve: Record<string, never>;          // 解析器（无）
+  store: LogixlysiaStore;                  // 存储状态
 }
 
+/**
+ * 完整插件类型 - 合并了 Elysia 和插件自定义能力
+ */
 export type Logixlysia = Elysia<"", "local", LogixlysiaSingleton>;
 
+/**
+ * 插件返回类型 - 包含 WebSocket 包装器
+ */
 export type LogixlysiaPlugin = Logixlysia & {
   wrapWs: ReturnType<typeof createWsHandlerWrapper>;
 };
 
+// ============================================================
+// 2. 主函数 - 插件入口
+// ============================================================
+
 export const logixlysia = (options: LogixlysiaOptions = {}): LogixlysiaPlugin => {
-  // Apply preset defaults (dev/prod/json). This MUST happen before any
-  // downstream code reads `options.config` so that `requestId: true` from
-  // `preset: "prod"` etc. is honored.
+  // ------------------------------------------------------------
+  // 第一步：解析配置（支持预设模式 dev/prod/json）
+  // ------------------------------------------------------------
   const resolvedOptions = resolveOptions(options);
+
+  // ------------------------------------------------------------
+  // 第二步：创建核心状态容器
+  // ------------------------------------------------------------
+
+  // 2.1 请求开始时间映射（使用 WeakMap 避免内存泄漏）
   const requestStartTimes = new WeakMap<Request, bigint>();
+
+  // 2.2 自定义日志标记（避免重复记录）
   const didCustomLog = new WeakSet<Request>();
+
+  // 2.3 请求上下文存储（存放 requestId 等）
   const contextStore = createRequestContextStore();
 
+  // ------------------------------------------------------------
+  // 第三步：创建日志核心
+  // ------------------------------------------------------------
+
+  // 3.1 创建基础日志器
   const baseLogger = createLogger(resolvedOptions, undefined, contextStore);
+
+  // 3.2 包装日志方法 - 标记"已自定义记录"
   const wrap = (
-    fn: (
-      request: Request,
-      message: string,
-      context?: Record<string, unknown>
-    ) => void
-  ): ((
-    request: Request,
-    message: string,
-    context?: Record<string, unknown>
-  ) => void) =>
+    fn: (request: Request, message: string, context?: Record<string, unknown>) => void
+  ): ((request: Request, message: string, context?: Record<string, unknown>) => void) =>
     (request, message, context) => {
-      didCustomLog.add(request);
+      didCustomLog.add(request);  // 标记该请求已手动记录
       fn(request, message, context);
     };
+
+  // 3.3 构建完整的日志器（包装了 debug/error/info/warn）
   const logger: Logger = {
     ...baseLogger,
     debug: wrap(baseLogger.debug),
@@ -79,75 +102,88 @@ export const logixlysia = (options: LogixlysiaOptions = {}): LogixlysiaPlugin =>
     warn: wrap(baseLogger.warn),
   };
 
+  // ------------------------------------------------------------
+  // 第四步：解析其他配置项
+  // ------------------------------------------------------------
+
+  // 4.1 请求ID配置
   const requestIdConfig = resolveRequestIdConfig(
     resolvedOptions.config?.requestId ?? false
   );
+
+  // 4.2 是否启用异步本地存储（深度调用链支持）
   const useALS = resolvedOptions.config?.useAsyncLocalStorage === true;
 
+  // ------------------------------------------------------------
+  // 第五步：构建 Elysia 插件
+  // ------------------------------------------------------------
+
+  // 5.1 创建插件实例
   const app = new Elysia({ name: "Logixlysia" });
 
+  // 5.2 注册中间件 - 请求阶段
+  // 职责：记录开始时间、设置 requestId、进入异步上下文
   const withLogger = app
+    // 存储状态
     .state("logger", logger)
     .state("pino", logger.pino)
     .state("beforeTime", BigInt(0))
     .state("pathname", "")
-    // Elysia 2: onRequest → request (no body parse, just timing + context).
-    // We populate BOTH the WeakMap (per-request safe timing) AND the Elysia
-    // store fields so route handlers can read `store.beforeTime/pathname`
-    // (the legacy public surface some tests / consumers depend on).
+
+    // 【请求中间件】请求进入时执行
     .request(({ request, store }) => {
+      // 记录请求开始时间
       const now = process.hrtime.bigint();
       requestStartTimes.set(request, now);
-      const storeObj = store as {
-        beforeTime: bigint;
-        pathname: string;
-      };
+
+      // 存储到 Elysia store（兼容老版本）
+      const storeObj = store as { beforeTime: bigint; pathname: string };
       storeObj.beforeTime = now;
       try {
         storeObj.pathname = new URL(request.url).pathname;
       } catch {
         storeObj.pathname = "/";
       }
+
+      // 生成/提取请求ID
       if (requestIdConfig) {
         const id = getOrCreateRequestId(request, requestIdConfig);
         contextStore.mergeContext(request, { requestId: id });
       }
+
+      // 如果启用 ALS，进入异步本地存储作用域
       if (useALS) {
-        // Enter the AsyncLocalStorage scope for `useLogger()` in deep call stacks
         loggerStorage.enterWith(
           createRequestScopedLogger(logger, request, contextStore)
         );
       }
     })
-    // Elysia 2: onAfterHandle → afterHandle
+
+    // 【响应中间件】响应返回时执行
+    // 职责：回写 requestId header、记录日志、清理状态
     .afterHandle(({ request, set, store }) => {
-      // Echo the request id header back on the response (always, regardless
-      // of whether we log a custom message below)
+      // 5.2.1 响应头回写 requestId
       if (requestIdConfig) {
-        const id = contextStore.getContext(request).requestId as
-          | string
-          | undefined;
+        const id = contextStore.getContext(request).requestId as string | undefined;
         if (id) {
           set.headers[requestIdConfig.header] = id;
         }
       }
+
+      // 5.2.2 如果已自定义记录，跳过自动记录
       if (didCustomLog.has(request)) {
         return;
       }
+
+      // 5.2.3 根据状态码确定日志级别
       const status = typeof set.status === "number" ? set.status : 200;
       let level: "INFO" | "WARNING" | "ERROR" = "INFO";
-      if (status >= 500) {
-        level = "ERROR";
-      } else if (status >= 400) {
-        level = "WARNING";
-      }
+      if (status >= 500) level = "ERROR";
+      else if (status >= 400) level = "WARNING";
 
-      // Build a synthetic store with the per-request start time from the
-      // WeakMap — this fixes the cross-request timing race that the previous
-      // Elysia-store-based implementation had under concurrent traffic.
+      // 5.2.4 构建请求上下文（包含开始时间用于计算耗时）
       const beforeTime = requestStartTimes.get(request) ?? BigInt(0);
-      const pathname =
-        (store as { pathname?: string }).pathname ||
+      const pathname = (store as { pathname?: string }).pathname ||
         (() => {
           try {
             return new URL(request.url).pathname;
@@ -155,29 +191,30 @@ export const logixlysia = (options: LogixlysiaOptions = {}): LogixlysiaPlugin =>
             return "/";
           }
         })();
+
       const syntheticStore = {
         ...(store as object),
         beforeTime,
         pathname,
       } as Parameters<typeof logger.log>[3];
 
+      // 5.2.5 记录日志
       logger.log(level, request, { status }, syntheticStore);
 
-      // Cleanup per-request state
+      // 5.2.6 清理请求相关的状态（防止内存泄漏）
       requestStartTimes.delete(request);
       contextStore.clearContext(request);
     });
 
-  // Elysia 2: onStart → setup (Elysia 2.0.0-exp.62 uses `setup()`, not `start()`).
-  // We pull the listening server info from the Elysia instance and pass it
-  // to startServer() so the banner prints.
+  // ------------------------------------------------------------
+  // 第六步：注册启动钩子（启动时打印 banner）
+  // ------------------------------------------------------------
   const withStart = (
     withLogger as unknown as {
-      setup: (
-        fn: (instance: unknown) => void
-      ) => typeof withLogger;
+      setup: (fn: (instance: unknown) => void) => typeof withLogger;
     }
   ).setup((instance: unknown) => {
+    // 获取服务器信息
     const candidate = (instance as { server?: unknown }).server;
     let server: { port?: number; hostname?: string; protocol?: string | null };
     if (candidate && typeof candidate === "object") {
@@ -187,12 +224,13 @@ export const logixlysia = (options: LogixlysiaOptions = {}): LogixlysiaPlugin =>
       const hostname = process.env["HOST"] || "localhost";
       server = { hostname, port, protocol: "http" };
     }
+    // 打印启动 banner
     startServer(server, resolvedOptions);
   });
 
-  // Error registration: HTTPError universal + Elysia built-in specific classes
-  // + user custom + catch-all fallback. Pass didCustomLog so error handlers
-  // mark the request as logged and afterHandle skips duplicates.
+  // ------------------------------------------------------------
+  // 第七步：注册错误处理
+  // ------------------------------------------------------------
   const withErrors = applyErrorLogging(
     withStart,
     logger,
@@ -200,16 +238,12 @@ export const logixlysia = (options: LogixlysiaOptions = {}): LogixlysiaPlugin =>
     didCustomLog
   );
 
-  // Always derive a RequestScopedLogger so `context.log` is available in
-  // route handlers (the `({ log })` signature). AsyncLocalStorage scoping for
-  // `useLogger()` is only activated when `config.useAsyncLocalStorage === true`;
-  // without it, `useLogger()` returns the no-op fallback. Elysia 2's `.derive`
-  // takes a function `(ctx) => record` (not a plain object).
+  // ------------------------------------------------------------
+  // 第八步：派生请求级日志器（让路由通过 ({ log }) 使用）
+  // ------------------------------------------------------------
   const withDerive = (
     withErrors as unknown as {
-      derive: <T extends Record<string, unknown>>(
-        fn: (ctx: unknown) => T
-      ) => typeof withErrors;
+      derive: <T extends Record<string, unknown>>(fn: (ctx: unknown) => T) => typeof withErrors;
     }
   ).derive((ctx: unknown) => {
     const request = (ctx as { request?: Request }).request;
@@ -221,40 +255,26 @@ export const logixlysia = (options: LogixlysiaOptions = {}): LogixlysiaPlugin =>
     };
   });
 
-  // Elysia 2: `.as("global")` makes the plugin's hooks apply to the parent
-  // app (not just the plugin's own routes). Local fork choice; upstream main
-  // doesn't have a public `as()` selector here.
+  // ------------------------------------------------------------
+  // 第九步：应用到全局（使钩子生效于所有路由）
+  // ------------------------------------------------------------
   const plugin = (withDerive as unknown as { as: (s: string) => Logixlysia }).as(
     "global"
   ) as Logixlysia;
 
-  // WebSocket wrapper: `plugin.wrapWs(path, hooks)` returns wrapped hooks
-  // that auto-log open/message/close. The wrapper needs the same logger +
-  // contextStore so the same access-log pipeline applies to WS frames.
+  // ------------------------------------------------------------
+  // 第十步：扩展 WebSocket 支持
+  // ------------------------------------------------------------
   const wrapWs = createWsHandlerWrapper(resolvedOptions, logger, contextStore);
 
-  // Bind the RequestScopedLogger factory into the derive slot now that we
-  // have access to a Request-aware hook. We do this by intercepting `request`
-  // to enterWith a per-request logger.
-  const finalPlugin = useALS
-    ? (Object.assign(plugin, {
-      wrapWs,
-    }) as LogixlysiaPlugin)
-    : (Object.assign(plugin, {
-      wrapWs,
-    }) as LogixlysiaPlugin);
-
-  if (useALS) {
-    // Add a `.request` hook that creates a per-request scoped logger and
-    // enters it in the AsyncLocalStorage. We can't add hooks to `plugin` after
-    // `.as("global")`, so we re-issue the request hook on the original app
-    // instance — but it would double-merge context, so we only enterWith here.
-    // (No-op if not active.)
-    (finalPlugin as unknown as {
-      onRequest?: (fn: (ctx: unknown) => void) => typeof finalPlugin;
-    });
-  }
+  // ------------------------------------------------------------
+  // 第十一步：返回最终插件
+  // ------------------------------------------------------------
+  const finalPlugin = Object.assign(plugin, {
+    wrapWs,  // 附加 WebSocket 包装器
+  }) as LogixlysiaPlugin;
 
   return finalPlugin;
 };
+
 export default logixlysia;
