@@ -1,9 +1,12 @@
 import Elysia from "elysia";
-import { logixlysia } from "logixlysia";
+import { logixlysia } from "@pori15/logixlysia";
 import { boomRouter } from "./boom";
 import { customRouter } from "./custom";
 import { pinoRouter } from "./pino";
 import { statusRouter } from "./status";
+import { otelRouter } from "./otel";
+import { aiMetricsRouter } from "./ai-metrics";
+import { requestContextRouter } from "./request-context";
 
 export const routers = new Elysia()
   .use(

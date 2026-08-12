@@ -3,43 +3,47 @@ title: Log Levels
 description: Control log verbosity
 ---
 
-Control the verbosity of your logging output with Logixlysia's log level system.
+Control the verbosity of log output with Logixlysia's level system. Levels are case-insensitive strings: `DEBUG`, `INFO`, `WARNING`, `ERROR`.
 
-## Available Levels
-
-Log levels follow a hierarchy from most to least verbose:
+## Available levels
 
 ```
 DEBUG > INFO > WARNING > ERROR
 ```
 
-When you set a log level, all higher levels will also be logged. For example, setting the level to `WARNING` will log both `WARNING` and `ERROR` messages.
+Logixlysia uses **allowlist filtering**, not hierarchy. Setting `logFilter.level: ['ERROR']` outputs only `ERROR`; setting it to `['ERROR', 'WARNING']` outputs both. The order of levels in the array does not matter.
 
 ## Configuration
 
-### Single Level
+### Single level
 
 ```ts
 logixlysia({
   config: {
-    logFilter: {
-      level: 'ERROR'
-    }
-  }
+    logFilter: { level: 'ERROR' },
+  },
 })
 ```
 
-### Multiple Levels
+### Multiple levels
 
 ```ts
 logixlysia({
   config: {
-    logFilter: {
-      level: ['INFO', 'ERROR']
-    }
-  }
+    logFilter: { level: ['INFO', 'ERROR'] },
+  },
 })
 ```
+
+### Root shorthand
+
+`logLevel` at the root of the options object is equivalent to `config.logFilter.level`:
+
+```ts
+logixlysia({ logLevel: ['ERROR', 'WARNING'] })
+```
+
+Both forms are merged: if you set both, `logLevel` wins (root shorthand takes precedence when set).
 
 ### Environment-based
 
@@ -47,57 +51,43 @@ logixlysia({
 logixlysia({
   config: {
     logFilter: {
-      level: process.env.NODE_ENV === 'production' 
+      level: process.env.NODE_ENV === 'production'
         ? ['ERROR', 'WARNING']
-        : ['DEBUG', 'INFO', 'WARNING', 'ERROR']
-    }
-  }
+        : ['DEBUG', 'INFO', 'WARNING', 'ERROR'],
+    },
+  },
 })
 ```
 
-## Pino Log Levels
+## Status-derived level
 
-When using Pino integration, you can also configure Pino's log levels:
+In addition to explicit `logFilter.level`, every access log gets a level derived from the response status code:
+
+| Status range | Level |
+| --- | --- |
+| `200`–`399` | `INFO` |
+| `400`–`499` | `WARNING` |
+| `500`–`599` | `ERROR` |
+
+The status-derived level is filtered through `logFilter.level` (or `logLevel`) just like explicit calls — a 404 will not produce output if `level: ['ERROR']`.
+
+## Pino log levels
+
+Pino has its own level system (`fatal`, `error`, `warn`, `info`, `debug`, `trace`). `config.pino.level` controls Pino's gate and is independent of `logFilter.level`:
 
 ```ts
 logixlysia({
   config: {
-    pino: {
-      level: 'debug' // 'fatal', 'error', 'warn', 'info', 'debug', 'trace'
-    }
-  }
+    pino: { level: 'debug' },
+  },
 })
 ```
 
-## Best Practices
+Pino is constructed lazily on first access. Set `config.pino` to a truthy value if you want invalid Pino options to fail at startup.
 
-- **Development**: Use `DEBUG` for detailed debugging
-- **Staging**: Use `INFO` for normal operation
-- **Production**: Use `WARNING` or `ERROR` for normal operation
-- **Monitoring**: Set up alerts for `ERROR` level
+## Best practices
 
-## Example Configurations
-
-### Development
-
-```ts
-logFilter: {
-  level: ['DEBUG', 'INFO', 'WARNING', 'ERROR']
-}
-```
-
-### Production
-
-```ts
-logFilter: {
-  level: ['WARNING', 'ERROR']
-}
-```
-
-### Monitoring
-
-```ts
-logFilter: {
-  level: ['ERROR']
-}
-```
+- **Development:** `['DEBUG', 'INFO', 'WARNING', 'ERROR']` — all four
+- **Staging:** `['INFO', 'WARNING', 'ERROR']` — drop DEBUG
+- **Production:** `['ERROR', 'WARNING']` — drop INFO and DEBUG
+- **Alerting:** `['ERROR']` — alerts only on errors

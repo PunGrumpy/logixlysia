@@ -1,4 +1,4 @@
-import type { Logixlysia } from "logixlysia";
+import { Logixlysia, logixlysia } from "@pori15/logixlysia";
 
 const BASE64URL_PAD_STRIP = /[=]+$/;
 
@@ -26,6 +26,12 @@ const mockCreditCard = () =>
 export const autoRedactRouter = <App extends Logixlysia>(app: App) =>
   app.get(
     "/auto-redact",
+    {
+      detail: {
+        summary: "Auto redact example",
+        tags: ["auto-redact"],
+      },
+    },
     ({ request, store }) => {
       store.logger.info(request, "Hello, world!", {
         creditCard: mockCreditCard(),
@@ -35,10 +41,5 @@ export const autoRedactRouter = <App extends Logixlysia>(app: App) =>
       });
       return { message: "Hello, world!" };
     },
-    {
-      detail: {
-        summary: "Auto redact example",
-        tags: ["auto-redact"],
-      },
-    }
+
   );

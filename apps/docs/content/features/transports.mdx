@@ -3,144 +3,160 @@ title: Custom Transports
 description: Send logs to external services
 ---
 
-Send logs to external services using custom transports. Transports work alongside built-in console and file logging.
+Send logs to external services using custom transports. Transports run alongside built-in console and file logging and are invoked from the single emit pipeline.
 
-## Output Behavior
+## Output behavior
 
-Logixlysia supports three types of logging outputs:
+Logixlysia supports three output destinations:
 
-1. **Console Logging** - Built-in console output
-2. **File Logging** - Built-in file output
-3. **Transport Logging** - Custom external services
+1. **Console logging** — built-in console output
+2. **File logging** — built-in file output via the file sink
+3. **Transport logging** — custom external services
 
-### Controlling Outputs
+### Controlling outputs
 
-- **Default**: Console + File (if `logFilePath` is set) + Transports
-- **`disableInternalLogger: true`**: Disables console logging only
-- **`disableFileLogging: true`**: Disables file logging only
-- **`useTransportsOnly: true`**: Disables both console and file, uses only transports
+- **Default:** console + file (if `logFilePath` is set) + transports
+- **`disableInternalLogger: true`:** disables console logging only
+- **`disableFileLogging: true`:** disables file logging only
+- **`useTransportsOnly: true`:** disables both console and file, uses only transports
 
-## Basic Transport
+## Basic transport
 
 ```ts
-type Transport = {
-  log: (level: LogLevel, message: string, meta?: Record<string, unknown>) => void | Promise<void>
-}
+import type { Transport } from '@pori15/logixlysia'
 
 const consoleTransport: Transport = {
   log: (level, message, meta) => {
     console.log(`[${level}] ${message}`, meta)
-  }
+  },
 }
 
-app.use(logixlysia({
-  config: {
-    transports: [consoleTransport]
-  }
-}))
+app.use(
+  logixlysia({
+    config: {
+      transports: [consoleTransport],
+    },
+  })
+)
 ```
 
-## External Services
+The signature is `(level: LogLevel, message: string, meta?: Record<string, unknown>) => void | Promise<void>`. Return a promise for async transports; sync transports return `void`.
+
+## External services
 
 ### Elasticsearch
 
 ```ts
-const elasticsearchTransport = {
+const elasticsearchTransport: Transport = {
   log: async (level, message, meta) => {
-    try {
-      await fetch('http://elasticsearch:9200/logs/_doc', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          level,
-          message,
-          ...meta,
-          timestamp: new Date().toISOString()
-        })
-      })
-    } catch (err) {
-      console.error('Elasticsearch transport error', err)
-    }
-  }
+    await fetch('http://elasticsearch:9200/logs/_doc', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        level,
+        message,
+        ...meta,
+        timestamp: new Date().toISOString(),
+      }),
+    })
+  },
 }
 ```
 
 ### MongoDB
 
 ```ts
-const mongodbTransport = {
+const mongodbTransport: Transport = {
   log: async (level, message, meta) => {
-    try {
-      await db.collection('logs').insertOne({
-        level,
-        message,
-        ...meta,
-        timestamp: new Date()
-      })
-    } catch (err) {
-      console.error('MongoDB transport error', err)
-    }
-  }
+    await db.collection('logs').insertOne({
+      level,
+      message,
+      ...meta,
+      timestamp: new Date(),
+    })
+  },
 }
 ```
 
 ### Slack
 
 ```ts
-const slackTransport = {
+const slackTransport: Transport = {
   log: async (level, message, meta) => {
-    if (level.toLowerCase() === 'error') {
-      const webhook = process.env.SLACK_WEBHOOK_URL
-      if (!webhook) return
-      
-      try {
-        await fetch(webhook, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            text: `[${level}] ${message}\n${JSON.stringify(meta, null, 2)}`
-          })
-        })
-      } catch (err) {
-        console.error('Slack transport error', err)
-      }
-    }
-  }
+    if (level !== 'ERROR') return
+    const webhook = process.env.SLACK_WEBHOOK_URL
+    if (!webhook) return
+
+    await fetch(webhook, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        text: `[${level}] ${message}\n\`\`\`${JSON.stringify(meta, null, 2)}\`\`\``,
+      }),
+    })
+  },
 }
 ```
 
-## Multiple Transports
+## Multiple transports
 
 ```ts
-app.use(logixlysia({
-  config: {
-    transports: [
-      elasticsearchTransport,
-      slackTransport
-    ]
-  }
-}))
+app.use(
+  logixlysia({
+    config: {
+      transports: [elasticsearchTransport, slackTransport],
+    },
+  })
+)
 ```
 
-## Transport-Only Logging
+All transports in the array are invoked in order. Each one runs independently — a slow Elasticsearch does not block a fast Slack.
+
+## Transport-only logging
 
 ```ts
-app.use(logixlysia({
-  config: {
-    useTransportsOnly: true,
-    transports: [
-      elasticsearchTransport,
-      slackTransport
-    ]
-  }
-}))
+app.use(
+  logixlysia({
+    config: {
+      useTransportsOnly: true,
+      transports: [elasticsearchTransport, slackTransport],
+    },
+  })
+)
 ```
 
-## Best Practices
+## Error handling & throttling
 
-- Handle transport errors gracefully
-- Implement retry logic for critical transports
-- Use async transports for better performance
-- Secure transport credentials
-- Avoid logging secrets or PII
-- Use `useTransportsOnly` for production environments where you only want external logging
+Sync throws and async rejections from transports are caught and logged to `console.error`. To prevent a broken transport from spamming stderr on every request, the same error from the same transport is **throttled** for `transportThrottleMs` (default 5 s) — only one `console.error` per transport per window.
+
+```ts
+logixlysia({
+  config: {
+    transportThrottleMs: 10_000, // 10 s window
+  },
+})
+```
+
+This is a safety valve for production. You should still handle transport errors inside the transport itself and surface them to your monitoring.
+
+## Best practices
+
+- **Handle errors inside the transport** — logixlysia catches the throw, but it logs to `console.error`, not your destination.
+- **Use `Promise<void>` for async work** — logixlysia awaits the return value of async transports.
+- **Avoid logging secrets or PII** in `meta` — redaction applies to messages and key fields, but the contract of a transport is "I receive whatever the pipeline gave me."
+- **Use `useTransportsOnly: true` in production** when your only destination is an external aggregator.
+- **Order transports by criticality** — put alerting first, batch writes last.
+
+## Transport interface
+
+```ts
+export interface Transport {
+  log: (
+    level: LogLevel,
+    message: string,
+    meta?: Record<string, unknown>
+  ) => void | Promise<void>
+}
+
+export type LogLevel = 'DEBUG' | 'INFO' | 'WARNING' | 'ERROR'
+```

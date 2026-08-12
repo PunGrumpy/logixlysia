@@ -3,11 +3,11 @@ title: AI SDK metrics
 description: Attach LLM usage metrics to request logs
 ---
 
-Import from the `logixlysia/ai` subpath (no required peer dependency):
+Import from the `@pori15/logixlysia/ai` subpath (no required peer dependency):
 
 ```ts
-import logixlysia from 'logixlysia'
-import { mergeAIMetrics } from 'logixlysia/ai'
+import logixlysia from '@pori15/logixlysia'
+import { mergeAIMetrics } from '@pori15/logixlysia/ai'
 
 const plugin = logixlysia()
 
@@ -21,11 +21,105 @@ const app = new Elysia()
       inputTokens: 1200,
       outputTokens: 400,
       totalTokens: 1600,
-      msToFinish: 2300
+      msToFinish: 2300,
     })
 
     return { ok: true }
   })
 ```
 
-The final access log `context.ai` object mirrors evlog’s wide-event `ai` field for easier migration.
+The final access log `context.ai` object mirrors evlog's wide-event `ai` field for easier migration.
+
+## API
+
+```ts
+function mergeAIMetrics(
+  logger: Pick<Logger, 'mergeContext'>,
+  request: Request,
+  metrics: AIMetrics
+): void
+
+interface AIMetrics {
+  model: string
+  provider: string
+  inputTokens: number
+  outputTokens: number
+  totalTokens: number
+  msToFinish: number
+  // Optional cost estimate (USD)
+  costUsd?: number
+  // Optional cache hit/miss breakdown
+  cacheReadTokens?: number
+  cacheWriteTokens?: number
+}
+```
+
+`mergeAIMetrics` calls `logger.mergeContext(request, { ai: { ...metrics } })`. The metrics are merged (not replaced), so a follow-up call with a different model overrides only the `model` key.
+
+## Example with cost tracking
+
+```ts
+app.post('/chat', async ({ request, store }) => {
+  const start = performance.now()
+  const response = await anthropic.messages.create({ /* ... */ })
+
+  mergeAIMetrics(store.logger, request, {
+    model: response.model,
+    provider: 'anthropic',
+    inputTokens: response.usage.input_tokens,
+    outputTokens: response.usage.output_tokens,
+    totalTokens:
+      response.usage.input_tokens + response.usage.output_tokens,
+    msToFinish: performance.now() - start,
+    costUsd: estimateCost(response.model, response.usage),
+  })
+
+  return { ok: true }
+})
+```
+
+## Example with cache breakdown (Anthropic prompt caching)
+
+```ts
+mergeAIMetrics(store.logger, request, {
+  model: 'claude-sonnet',
+  provider: 'anthropic',
+  inputTokens: response.usage.input_tokens,
+  outputTokens: response.usage.output_tokens,
+  totalTokens: response.usage.input_tokens + response.usage.output_tokens,
+  cacheReadTokens: response.usage.cache_read_input_tokens ?? 0,
+  cacheWriteTokens: response.usage.cache_creation_input_tokens ?? 0,
+  msToFinish: 2300,
+})
+```
+
+The access log includes:
+
+```
+context: {
+  ai: {
+    model: 'claude-sonnet',
+    provider: 'anthropic',
+    inputTokens: 1200,
+    outputTokens: 400,
+    totalTokens: 1600,
+    msToFinish: 2300,
+    cacheReadTokens: 900,
+    cacheWriteTokens: 200,
+  }
+}
+```
+
+## Aggregation-friendly
+
+Because the `ai` field is structured and consistent, you can aggregate it in any log backend:
+
+```
+SELECT
+  context->'ai'->>'model' AS model,
+  AVG((context->'ai'->>'totalTokens')::int) AS avg_tokens,
+  AVG((context->'ai'->>'msToFinish')::float) AS avg_latency_ms
+FROM logs
+WHERE context->'ai' IS NOT NULL
+GROUP BY model
+```

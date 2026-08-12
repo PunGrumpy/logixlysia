@@ -3,24 +3,33 @@ title: Configuration
 description: Complete configuration reference for Logixlysia
 ---
 
-Complete reference for all Logixlysia configuration options.
-
-## Configuration Object
-
-All configuration options are passed through the `config` property:
+Complete reference for all Logixlysia configuration options. All fields are passed under the `config` key of `logixlysia({...})`, with one shorthand (`logLevel`) at the root.
 
 ```ts
 logixlysia({
-  preset: 'prod', // optional: 'dev' | 'prod' | 'json'
+  preset: 'prod',  // optional: 'dev' | 'prod' | 'json'
   config: {
     // ... configuration options (override preset)
-  }
+  },
 })
 ```
 
 See [Presets](/docs/features/presets) for defaults per environment.
 
-## Startup Options
+## Preset
+
+### `preset`
+
+One-line environment defaults. Explicit `config` fields always win.
+
+- **Type:** `'dev' | 'prod' | 'json'`
+- **Default:** `undefined` (no preset)
+
+```ts
+logixlysia({ preset: 'prod' })
+```
+
+## Startup
 
 ### `showStartupMessage`
 
@@ -29,10 +38,6 @@ Whether to display the startup message when the server starts.
 - **Type:** `boolean`
 - **Default:** `true`
 
-```ts
-showStartupMessage: true
-```
-
 ### `startupMessageFormat`
 
 Format of the startup message.
@@ -40,22 +45,16 @@ Format of the startup message.
 - **Type:** `'simple' | 'banner'`
 - **Default:** `'banner'`
 
-```ts
-startupMessageFormat: 'simple' // or 'banner'
-```
+The startup message is emitted from the `.start()` hook, reading `instance.server` (Elysia 2) or the `PORT` / `HOST` env vars as a fallback.
 
-## Display Options
+## Display
 
 ### `useColors`
 
 Enable colored output in console logs.
 
 - **Type:** `boolean`
-- **Default:** `true`
-
-```ts
-useColors: true
-```
+- **Default:** `true` (auto-disabled when `!process.stdout.isTTY`)
 
 ### `ip`
 
@@ -64,35 +63,24 @@ Include client IP address in logs.
 - **Type:** `boolean`
 - **Default:** `false`
 
-```ts
-ip: true
-```
+**How IP is resolved:** the client IP is read from HTTP headers in this order:
 
-**How IP is resolved:** The client IP is read from HTTP headers in this order:
-1. `x-forwarded-for` — uses the first (leftmost) IP in the comma-separated list (the original client when behind proxies)
+1. `x-forwarded-for` — first (leftmost) IP in the comma-separated list
 2. `x-real-ip` — fallback when `x-forwarded-for` is not present
-
-These headers are typically set by reverse proxies (nginx, Caddy, Cloudflare, etc.) and load balancers. When testing locally (localhost or LAN) without a proxy, these headers are usually absent, so the `{ip}` placeholder will be empty. To test IP logging locally, you can pass a header manually, e.g. `curl -H 'x-real-ip: 1.2.3.4' http://localhost:3000/`.
 
 ### `autoRedact`
 
-Automatically redacts sensitive data from log messages, context objects, errors, and request headers before they are outputted. Redaction runs in two ways:
+Automatically redacts sensitive data from log messages, context objects, errors, and request headers. Redaction runs in two ways:
 
-1. **By key/header name** — a built-in, case-insensitive denylist (`authorization`, `cookie`, `x-api-key`, `password`, `secret`, `token`, `session`, and more) wholly redacts the value of any matching object key or request header, regardless of what the value looks like. `-`, `_`, and camelCase variants (`x-api-key`, `x_api_key`, `xApiKey`) all match.
-2. **By value pattern** — emails, IP addresses, Luhn-valid payment card numbers, and JWTs are redacted wherever they appear in strings, even in fields not covered by the key denylist.
-
-Value-pattern redaction is best-effort — it only catches values matching those specific shapes. Always prefer key-based redaction (`redactKeys`) for known sensitive fields instead of relying on their value happening to match a pattern.
+1. **By key/header name** — a built-in, case-insensitive denylist (`authorization`, `cookie`, `x-api-key`, `password`, `secret`, `token`, `session`, and more) wholly redacts the value of any matching object key or request header.
+2. **By value pattern** — emails, IP addresses, Luhn-valid payment card numbers, and JWTs are redacted wherever they appear in strings.
 
 - **Type:** `boolean`
 - **Default:** `false`
 
-```ts
-autoRedact: true
-```
-
 ### `redactKeys`
 
-Additional key/header names to redact when `autoRedact` is enabled, extending the built-in denylist. Matching is case-insensitive and normalizes `-`, `_`, and camelCase variants.
+Additional key/header names to redact when `autoRedact` is enabled, extending the built-in denylist.
 
 - **Type:** `string[]`
 - **Default:** `undefined`
@@ -104,14 +92,10 @@ redactKeys: ['x-internal-token', 'customerSsn']
 
 ### `logErrorPayload`
 
-Log the offending payload (`found`/`errors`) from validation errors. Off by default — a failed schema validation embeds the entire request body (passwords, tokens, card fields) in the error message, so leaving this off keeps those values out of your logs and transports.
+Log the offending payload (`found` / `errors`) from validation errors. Off by default.
 
 - **Type:** `boolean`
 - **Default:** `false`
-
-```ts
-logErrorPayload: true
-```
 
 ### `logQueryParams`
 
@@ -120,65 +104,46 @@ Include query parameters in the logged URL path.
 - **Type:** `boolean`
 - **Default:** `false`
 
-```ts
-logQueryParams: true
-```
-
-## Timestamp Options
-
-### `timestamp`
-
-Timestamp configuration.
-
-- **Type:** `{ translateTime?: string }`
-- **Default:** `undefined`
-
-```ts
-timestamp: {
-  translateTime: 'yyyy-mm-dd HH:MM:ss'
-}
-```
-
-## Formatting Options
+## Formatting
 
 ### `customLogFormat`
 
 Custom log message format using placeholders.
 
 - **Type:** `string`
-- **Default:** `undefined`
+- **Default:** `undefined` (built-in default includes `{now}`, `{service}`, `{icon}`, `{method}`, `{pathname}`, `{status}`, `{duration}`, `{message}`, `{speed}`)
 
 ```ts
 customLogFormat: '{now} {level} {duration}ms {method} {pathname} {status}'
 ```
 
-When `customLogFormat` is omitted, Logixlysia uses a built-in default that includes `{now}`, `{service}`, `{icon}`, `{method}`, `{pathname}`, `{status}`, `{duration}`, `{message}`, and `{speed}`.
-
 Available placeholders:
-- `{now}` - Current timestamp
-- `{level}` - Log level
-- `{duration}` - Request duration (formatted, e.g. `12ms`, `1.5s`)
-- `{method}` - HTTP method
-- `{pathname}` - Request path
-- `{status}` - Response status code
-- `{statusText}` - HTTP status text from Node’s `http.STATUS_CODES` (e.g. `Not Found` for 404)
-- `{message}` - Custom message
-- `{icon}` - Logixlysia fox (`🦊`); with colors enabled, a level-colored background chip around the emoji
-- `{speed}` - When duration is at or above `verySlowThreshold`, appends `⚡ slow` (yellow when colors are on)
-- `{service}` - Service label from the `service` config option, shown as `[name] ` (dim when colors are on); empty if unset
-- `{ip}` - Client IP (from `x-forwarded-for` or `x-real-ip`; see `ip` option)
-- `{epoch}` - Unix timestamp
+
+| Placeholder | Description |
+| ----------- | ----------- |
+| `{now}` | Current timestamp |
+| `{epoch}` | Unix timestamp (seconds) |
+| `{level}` | Log level |
+| `{duration}` | Request duration, formatted (e.g. `12ms`, `1.5s`) |
+| `{method}` | HTTP method |
+| `{pathname}` | Request path (alias: `{path}`) |
+| `{query}` | Raw query string |
+| `{status}` | Response status code |
+| `{statusText}` | HTTP status text (e.g. `Not Found` for 404) |
+| `{message}` | Custom message |
+| `{icon}` | Logixlysia fox `🦊` (level-colored chip when colors + TTY) |
+| `{speed}` | Slow-request badge when duration ≥ `verySlowThreshold` |
+| `{service}` | Service label from `config.service` |
+| `{ip}` | Client IP (from `x-forwarded-for` or `x-real-ip`) |
+| `{context}` | Context JSON on main line when tree is off / empty |
+| `{requestId}` | `X-Request-Id` value (empty if not enabled) |
 
 ### `service`
 
-Service name used by the `{service}` placeholder (evlog-style `[my-app]` prefix).
+Service name used by the `{service}` placeholder.
 
 - **Type:** `string`
-- **Default:** `undefined` (no prefix)
-
-```ts
-service: 'my-api'
-```
+- **Default:** `undefined`
 
 ### `slowThreshold`
 
@@ -187,31 +152,19 @@ Duration threshold (ms) for **green** duration text when colors are enabled. Bet
 - **Type:** `number`
 - **Default:** `500`
 
-```ts
-slowThreshold: 500
-```
-
 ### `verySlowThreshold`
 
-Duration threshold (ms) at or above which duration is **red** (bold when colors are on) and the `{speed}` token adds `⚡ slow`.
+Duration threshold (ms) at or above which duration is **red** and the `{speed}` token adds `⚡ slow`.
 
 - **Type:** `number`
 - **Default:** `1000`
 
-```ts
-verySlowThreshold: 1000
-```
-
 ### `showContextTree`
 
-When `true`, structured `context` passed to logger helpers is printed as **tree lines** under the main log line instead of being crammed into `{message}` on the same line.
+When `true`, structured `context` is printed as **tree lines** under the main log line.
 
 - **Type:** `boolean`
 - **Default:** `true`
-
-```ts
-showContextTree: true
-```
 
 ### `contextDepth`
 
@@ -220,74 +173,96 @@ How many levels of nested objects to expand in the context tree.
 - **Type:** `number`
 - **Default:** `1`
 
-```ts
-contextDepth: 2
-```
+### `timestamp`
 
-## Output Options
+Timestamp format.
 
-### `transports`
-
-Array of custom transport implementations.
-
-- **Type:** `Transport[]`
-- **Default:** `[]`
+- **Type:** `string | { format: string }`
+- **Default:** `undefined`
 
 ```ts
-transports: [
-  {
-    log: async (level, message, meta) => {
-      // Custom transport logic
-    }
-  }
-]
+timestamp: 'yyyy-mm-dd HH:MM:ss.SSS'
+// or
+timestamp: { format: 'yyyy-mm-dd HH:MM:ss' }
 ```
 
-### `useTransportsOnly`
+## Filtering
 
-Use only transports, disable console and file logging.
+### `logFilter`
+
+Log level filter. Accepts a single level or an array.
+
+- **Type:** `{ level?: LogLevel | LogLevel[] }`
+- **Default:** `{ level: ['DEBUG', 'INFO', 'WARNING', 'ERROR'] }` (all levels)
+
+```ts
+logFilter: { level: ['ERROR', 'WARNING'] }
+```
+
+### `logLevel` (root shorthand)
+
+Equivalent to `config.logFilter.level`.
+
+- **Type:** `LogLevel[]`
+- **Default:** `undefined` (all levels)
+
+```ts
+logixlysia({ logLevel: ['ERROR', 'WARNING'] })
+```
+
+## Request ID
+
+### `requestId`
+
+- **Type:** `boolean | RequestIdConfig`
+- **Default:** `false`
+
+```ts
+requestId: true
+// or
+requestId: {
+  header: 'X-Correlation-Id',
+  generator: () => crypto.randomUUID(),
+}
+```
+
+See [Request ID](/docs/features/request-id).
+
+## AsyncLocalStorage
+
+### `useAsyncLocalStorage`
+
+Enable AsyncLocalStorage propagation so `useLogger()` returns the request-scoped logger from any depth in the call stack.
 
 - **Type:** `boolean`
 - **Default:** `false`
 
 ```ts
-useTransportsOnly: true
+useAsyncLocalStorage: true
 ```
 
-### `disableInternalLogger`
-
-Disable console logging.
-
-- **Type:** `boolean`
-- **Default:** `false`
-
-```ts
-disableInternalLogger: true
-```
-
-### `disableFileLogging`
-
-Disable file logging.
-
-- **Type:** `boolean`
-- **Default:** `false`
-
-```ts
-disableFileLogging: true
-```
-
-## File Logging Options
+## File logging
 
 ### `logFilePath`
 
-Path to the log file.
+Path to the log file. When set, the file sink writes batched output to this path with `0o600` (file) / `0o700` (directory) permissions by default.
 
 - **Type:** `string`
 - **Default:** `undefined`
 
-```ts
-logFilePath: './logs/app.log'
-```
+### `logFileMode`
+
+File permission bits used when creating the log file.
+
+- **Type:** `number`
+- **Default:** `0o600`
+
+### `logDirMode`
+
+Directory permission bits used when creating the log directory.
+
+- **Type:** `number`
+- **Default:** `0o700`
 
 ### `logRotation`
 
@@ -301,66 +276,60 @@ logRotation: {
   maxSize: '10m',
   interval: '1d',
   maxFiles: '7d',
-  compress: true
+  compress: true,
 }
 ```
 
-#### `logRotation.maxSize`
+| Field | Type | Description |
+| --- | --- | --- |
+| `maxSize` | `string \| number` | Rotate when file exceeds this size (`'10m'`, `'5k'`, or bytes) |
+| `interval` | `string` | Rotate on a time interval (`'1h'`, `'12h'`, `'1d'`) |
+| `maxFiles` | `number \| string` | Max files to keep (count) or retention period (`'7d'`, `'30d'`) |
+| `compress` | `boolean` | Gzip-compress rotated files |
+| `compression` | `'gzip'` | Compression algorithm (default `gzip`) |
 
-Maximum file size before rotation.
+Rotation across files is serialized by a keyed mutex, so rotating file A does not block writes to file B.
 
-- **Type:** `string | number`
-- **Format:** `'1k'`, `'1m'`, `'1g'` or bytes
+## Output
 
-```ts
-maxSize: '10m'
-```
+### `transports`
 
-#### `logRotation.interval`
+Array of custom transport implementations.
 
-Time interval for rotation.
+- **Type:** `Transport[]`
+- **Default:** `[]`
 
-- **Type:** `string`
-- **Format:** `'1h'`, `'1d'`, `'1w'`
+### `useTransportsOnly`
 
-```ts
-interval: '1d'
-```
-
-#### `logRotation.maxFiles`
-
-Maximum number of files or retention period.
-
-- **Type:** `number | string`
-- **Format:** Number or `'7d'`, `'30d'`
-
-```ts
-maxFiles: '7d' // or 10
-```
-
-#### `logRotation.compress`
-
-Enable compression for rotated logs.
+Use only transports; disable console and file logging.
 
 - **Type:** `boolean`
 - **Default:** `false`
 
-```ts
-compress: true
-```
+### `disableInternalLogger`
 
-#### `logRotation.compression`
+Disable console logging.
 
-Compression algorithm.
+- **Type:** `boolean`
+- **Default:** `false`
 
-- **Type:** `'gzip'`
-- **Default:** `'gzip'`
+### `disableFileLogging`
 
-```ts
-compression: 'gzip'
-```
+Disable file logging.
 
-## Pino Options
+- **Type:** `boolean`
+- **Default:** `false`
+
+## WebSocket
+
+### `disableWebSocketLogging`
+
+Suppress automatic logs for `app.ws(...)` routes that pass through `plugin.wrapWs(...)`.
+
+- **Type:** `boolean`
+- **Default:** `false`
+
+## Pino
 
 ### `pino`
 
@@ -374,57 +343,26 @@ pino: {
   level: 'info',
   prettyPrint: true,
   redact: ['password', 'token'],
-  base: {
-    service: 'my-api',
-    version: '1.0.0'
-  }
+  base: { service: 'my-api' },
 }
 ```
 
-### Common Pino Options
-
-#### `pino.level`
-
-Minimum log level.
-
-- **Type:** `'fatal' | 'error' | 'warn' | 'info' | 'debug' | 'trace'`
-- **Default:** `'info'`
-
-```ts
-pino: {
-  level: 'debug'
-}
-```
+Pino is constructed lazily on first access. Set `config.pino` (truthy) to force eager initialization when you want invalid Pino options to fail at startup.
 
 #### `pino.prettyPrint`
-
-Enable pretty printing for development.
-
-- **Type:** `boolean | object`
-- **Default:** `false`
-
-```ts
-pino: {
-  prettyPrint: true
-}
-```
-
-Or with options:
 
 ```ts
 pino: {
   prettyPrint: {
     colorize: true,
     translateTime: 'HH:MM:ss Z',
-    ignore: 'pid,hostname'
-  }
+    ignore: 'pid,hostname',
+  },
 }
 ```
 
-#### Common prettyPrint Options
-
 | Option | Type | Description |
-|--------|------|-------------|
+| --- | --- | --- |
 | `colorize` | `boolean` | Enable colors in output |
 | `translateTime` | `string \| boolean` | Format timestamps |
 | `ignore` | `string` | Comma-separated keys to exclude |
@@ -434,96 +372,102 @@ pino: {
 | `messageKey` | `string` | Key containing log message |
 | `errorKey` | `string` | Key containing error info |
 
-See [pino-pretty documentation](https://github.com/pinojs/pino-pretty#options) for complete reference.
-
 #### `pino.redact`
-
-Redact sensitive fields from logs.
-
-- **Type:** `string[] | object`
-- **Default:** `undefined`
-
-```ts
-pino: {
-  redact: ['password', 'token', 'apiKey']
-}
-```
-
-Or with paths:
 
 ```ts
 pino: {
   redact: {
     paths: ['user.password', 'req.headers.authorization'],
-    remove: true
-  }
+    remove: true,
+  },
 }
 ```
 
 #### `pino.base`
-
-Base fields added to all logs.
-
-- **Type:** `object`
-- **Default:** `undefined`
 
 ```ts
 pino: {
   base: {
     service: 'my-api',
     version: '1.0.0',
-    environment: process.env.NODE_ENV
-  }
+    environment: process.env.NODE_ENV,
+  },
 }
 ```
 
-## Complete Example
+## Transport throttling
+
+### `transportThrottleMs`
+
+Window (ms) during which repeated transport errors for the same transport are coalesced into a single `console.error` line.
+
+- **Type:** `number`
+- **Default:** `5000`
+
+## Error handling
+
+### `error`
+
+Error-handling configuration.
+
+- **Type:** `{ verbose?: boolean }`
+- **Default:** `{ verbose: false }`
+
+```ts
+error: { verbose: true }
+```
+
+When `verbose` is enabled, logixlysia writes a structured warn with the full error context on top of the level-derived log.
+
+## Complete example
 
 ```ts
 logixlysia({
+  preset: 'prod',
   config: {
-    // Startup
-    showStartupMessage: true,
-    startupMessageFormat: 'banner',
-    
-    // Display
+    showStartupMessage: false,
+    startupMessageFormat: 'simple',
+
     useColors: true,
     ip: true,
-    autoRedact: false,
+    autoRedact: true,
+    redactKeys: ['x-internal-token'],
     logQueryParams: false,
-    
-    // Formatting
-    timestamp: {
-      translateTime: 'yyyy-mm-dd HH:MM:ss'
-    },
-    customLogFormat: '{now} {level} {duration}ms {method} {pathname} {status}',
-    
-    // File Logging
-    logFilePath: './logs/app.log',
+    logErrorPayload: false,
+
+    customLogFormat:
+      '{now} {level} {method} {pathname} {status} {duration}ms {requestId}',
+    service: 'my-api',
+    slowThreshold: 500,
+    verySlowThreshold: 1000,
+    showContextTree: true,
+    contextDepth: 1,
+
+    logFilter: { level: ['INFO', 'WARNING', 'ERROR'] },
+
+    requestId: true,
+
+    logFilePath: './logs/production.log',
+    logFileMode: 0o600,
+    logDirMode: 0o700,
     logRotation: {
       maxSize: '100m',
       interval: '1d',
       maxFiles: '30d',
-      compress: true
+      compress: true,
     },
-    
-    // Output Control
+
     disableInternalLogger: false,
     disableFileLogging: false,
     useTransportsOnly: false,
     transports: [],
-    
-    // Pino
+
     pino: {
       level: 'info',
       prettyPrint: false,
-      redact: ['password', 'token'],
-      base: {
-        service: 'my-api',
-        version: '1.0.0'
-      }
-    }
-  }
+      redact: ['password', 'token', 'apiKey'],
+      base: { service: 'my-api', version: '1.0.0' },
+    },
+  },
 })
 ```
-

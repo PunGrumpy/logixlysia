@@ -6,16 +6,16 @@ description: Learn how to use Logixlysia in your Elysia applications
 ## Installation
 
 ```bash
-bun add logixlysia@next elysia@next
+bun add @pori15/logixlysia elysia@next
 ```
 
-The `next` tag tracks the [Elysia 2 open beta](/docs/elysia-2). For Elysia 1.4, install `logixlysia` from the default `latest` tag instead.
+The `next` tag tracks the [Elysia 2 open beta](/docs/elysia-2). For Elysia 1.4, install the upstream `logixlysia` package from the `latest` tag.
 
-## Basic Usage
+## Basic usage
 
 ```ts
 import { Elysia } from 'elysia'
-import logixlysia from 'logixlysia'
+import logixlysia from '@pori15/logixlysia'
 
 const app = new Elysia()
   .use(logixlysia())
@@ -23,9 +23,37 @@ const app = new Elysia()
   .listen(3000)
 ```
 
-## Request context
+`logixlysia()` returns a plugin. The `Logger` is mounted on the Elysia store as `store.logger` and a request-scoped `log` is derived on the handler context. The plugin also registers `.request`, `.afterHandle`, `.error`, and `.start` hooks; you do not need to wire any of them manually.
 
-Accumulate fields during a request; they are merged into the automatic access log:
+## Presets
+
+Three preset values set sensible defaults in one line. Explicit `config` fields always override the preset.
+
+```ts
+logixlysia({ preset: 'dev' })   // pretty console + startup banner
+logixlysia({ preset: 'prod' })  // JSON console + autoRedact + requestId
+logixlysia({ preset: 'json' })  // minimal JSON console, no extras
+```
+
+See [Presets](/docs/features/presets) for the full defaults table.
+
+## Configuration
+
+### Minimal
+
+```ts
+logixlysia({
+  config: {
+    showStartupMessage: true,
+    ip: true,
+    autoRedact: false,
+  },
+})
+```
+
+### Per-request context
+
+Accumulate fields during a request; they are merged into the final access log under `context`:
 
 ```ts
 .get('/users/:id', ({ request, store, params }) => {
@@ -34,44 +62,27 @@ Accumulate fields during a request; they are merged into the automatic access lo
 })
 ```
 
-See [Request context](/docs/features/request-context) for details.
+See [Request context](/docs/features/request-context) for the full API, including `useLogger()` for deep call stacks.
 
-## Presets
+### Request ID
+
+Enable `X-Request-Id` header propagation with `requestId: true`. The plugin reads the header on the way in, generates one if missing, and echoes it on the response — including for error responses.
 
 ```ts
-logixlysia({ preset: 'dev' })   // pretty console + banner
-logixlysia({ preset: 'prod' })  // JSON logs + autoRedact
-logixlysia({ preset: 'json' })  // minimal JSON console
+logixlysia({ config: { requestId: true } })
 ```
 
-Explicit `config` overrides preset defaults. Details: [Presets](/docs/features/presets).
+See [Request ID](/docs/features/request-id).
 
-## Configuration
+### Custom log format
 
-### Basic Options
+Customize the access log via `customLogFormat`:
 
 ```ts
 logixlysia({
   config: {
-    showStartupMessage: true,
-    startupMessageFormat: 'simple', // or 'banner'
-    ip: true,
-    autoRedact: false, // Set to true to auto-redact sensitive PII (emails, IPs, credit cards, JWTs)
-    logQueryParams: true,
-    logFilePath: './logs/app.log'
-  }
-})
-```
-
-### Custom Log Format
-
-Customize log messages using placeholders:
-
-```ts
-logixlysia({
-  config: {
-    customLogFormat: '{now} {level} {duration}ms {method} {pathname}{query} {status}'
-  }
+    customLogFormat: '{now} {level} {duration}ms {method} {pathname} {status} {requestId}',
+  },
 })
 ```
 
@@ -80,6 +91,7 @@ Available placeholders:
 | Placeholder | Description | Example |
 | ----------- | ----------- | ----------- |
 | `{now}` | Current timestamp | `2025-12-21 10:00:00` |
+| `{epoch}` | Unix timestamp | `1734729600` |
 | `{level}` | Log level (`DEBUG`, `INFO`, `WARNING`, `ERROR`) | `INFO` |
 | `{duration}` | Request duration (formatted) | `12ms`, `1.5s` |
 | `{method}` | HTTP method | `GET` |
@@ -91,39 +103,37 @@ Available placeholders:
 | `{icon}` | Logixlysia fox `🦊` (level-colored chip when colors + TTY) | `🦊` |
 | `{speed}` | Slow-request badge when duration ≥ `verySlowThreshold` | ` ⚡ slow` |
 | `{service}` | Service prefix from `config.service` | `[my-api] ` |
-| `{context}` | Context JSON on main line when tree is off / empty | `{"id":1}` |
 | `{ip}` | Client IP address | `127.0.0.1` |
-| `{epoch}` | Unix timestamp | `1734729600` |
+| `{context}` | Context JSON on main line when tree is off / empty | `{"id":1}` |
+| `{requestId}` | `X-Request-Id` value (empty if not enabled) | `8c2f…` |
 
-### Log Filtering
+## Log filtering
 
-Filter logs by level, status, or method:
+`logFilter.level` accepts a single level or an array:
 
 ```ts
 logixlysia({
   config: {
-    logFilter: {
-      level: ['ERROR', 'WARNING'],
-      status: [500, 404],
-      method: 'GET'
-    }
-  }
+    logFilter: { level: ['ERROR', 'WARNING'] },
+  },
 })
 ```
 
-## Pino Integration
-
-Logixlysia is powered by Pino. Access the Pino instance directly:
+A shorthand `logLevel` array lives at the root of options and works the same way:
 
 ```ts
-app.get('/users/:id', ({ store, params }) => {
-  const { pino } = store
-  
-  pino.info({
-    userId: params.id,
-    action: 'view_profile'
-  }, 'User profile accessed')
-  
+logixlysia({ logLevel: ['ERROR', 'WARNING'] })
+```
+
+See [Log Levels](/docs/features/log-levels).
+
+## Pino integration
+
+Logixlysia is powered by Pino. The Pino instance is available at `store.pino` and on the request-scoped `log` handle:
+
+```ts
+app.get('/users/:id', ({ log, params }) => {
+  log.pino.info({ userId: params.id, action: 'view_profile' }, 'profile accessed')
   return { user: 'data' }
 })
 ```
@@ -136,18 +146,17 @@ logixlysia({
     pino: {
       level: 'debug',
       prettyPrint: true,
-      redact: ['password', 'token'],
-      base: { service: 'my-api' }
-    }
-  }
+      base: { service: 'my-api' },
+    },
+  },
 })
 ```
 
-Learn more in the [Pino Integration](/docs/integrations/pino) guide.
+Pino is constructed lazily on first access — invalid Pino options only fail when you actually log. If you need eager validation, set `config.pino` and the proxy initializes immediately.
 
-## File Logging
+See [Pino](/docs/integrations/pino).
 
-Save logs to files:
+## File logging
 
 ```ts
 logixlysia({
@@ -157,92 +166,137 @@ logixlysia({
       maxSize: '10m',
       interval: '1d',
       maxFiles: '7d',
-      compress: true
-    }
-  }
+      compress: true,
+    },
+  },
 })
 ```
 
-See [File Logging](/docs/features/file-logging) and [Log Rotation](/docs/features/log-rotation) for details.
+The file sink batches writes through `queueMicrotask`, caches the file handle per path, and serializes rotation through a keyed mutex so concurrent rotations on different files do not block each other. Files are created with `0o600` (logs) and `0o700` (directories); override via `logFileMode` and `logDirMode`.
 
-## Output Control
+See [File Logging](/docs/features/file-logging) and [Log Rotation](/docs/features/log-rotation).
 
-Control where logs are sent:
+## Transports
+
+```ts
+const consoleTransport = {
+  log: (level, message, meta) => {
+    console.log(`[${level}] ${message}`, meta)
+  },
+}
+
+logixlysia({
+  config: {
+    transports: [consoleTransport],
+  },
+})
+```
+
+Sync throws and async rejections from transports are caught and logged to `console.error` with a 5 s throttle per transport, so a broken target never blocks the request path.
+
+See [Transports](/docs/features/transports).
+
+## OpenTelemetry
+
+```bash
+bun add @opentelemetry/api
+```
+
+```ts
+import { injectTraceContext } from '@pori15/logixlysia/otel'
+
+app.request(({ request, store }) => {
+  injectTraceContext(store.logger, request)
+})
+```
+
+When an active span exists, `trace_id` and `span_id` are merged into the request context bag and appear on the access log. Logixlysia does not start an OpenTelemetry SDK — you bring your own tracer provider and instrumentation.
+
+See [OpenTelemetry](/docs/integrations/otel).
+
+## AI SDK metrics
+
+```ts
+import { mergeAIMetrics } from '@pori15/logixlysia/ai'
+
+app.post('/chat', async ({ request, store }) => {
+  // After your AI SDK call:
+  mergeAIMetrics(store.logger, request, {
+    model: 'claude-sonnet',
+    provider: 'anthropic',
+    inputTokens: 1200,
+    outputTokens: 400,
+    totalTokens: 1600,
+    msToFinish: 2300,
+  })
+
+  return { ok: true }
+})
+```
+
+The access log `context.ai` field mirrors evlog's wide-event shape, so a side-by-side migration of dashboards stays straightforward.
+
+See [AI SDK](/docs/integrations/ai).
+
+## AsyncLocalStorage
+
+For deep call stacks (service layers, helpers, jobs inside a request), enable ALS propagation so `useLogger()` returns the request-scoped logger without prop-drilling:
+
+```ts
+logixlysia({ config: { useAsyncLocalStorage: true } })
+
+// Anywhere in the call stack:
+import { useLogger } from '@pori15/logixlysia'
+
+const log = useLogger()
+log.mergeContext({ stage: 'db' })
+log.info('query started')
+```
+
+See [Request context](/docs/features/request-context#async-localstorage).
+
+## Output control
 
 ```ts
 logixlysia({
   config: {
-    // Disable console output
-    disableInternalLogger: false,
-    
-    // Disable file output
-    disableFileLogging: false,
-    
-    // Use only transports (disable console and file)
-    useTransportsOnly: false,
-    
-    // Custom transports
-    transports: [customTransport]
-  }
+    disableInternalLogger: false, // console output
+    disableFileLogging: false,     // logFilePath output
+    useTransportsOnly: false,      // disables both, transport-only
+    transports: [/* ... */],
+  },
 })
 ```
-
-## Error Handling
-
-Logixlysia automatically captures and logs errors:
-
-```ts
-app.get('/error', () => {
-  throw new Error('Something went wrong!')
-})
-```
-
-Errors are automatically logged with stack traces and request details.
 
 ## Examples
 
-### Production Setup
+### Production setup
 
 ```ts
-const app = new Elysia()
-  .use(
-    logixlysia({
-      config: {
-        logFilePath: './logs/production.log',
-        logRotation: {
-          maxSize: '100m',
-          interval: '1d',
-          maxFiles: '30d',
-          compress: true
-        },
-        logFilter: {
-          level: ['ERROR', 'WARNING']
-        },
-        pino: {
-          level: 'info',
-          redact: ['password', 'token', 'apiKey']
-        }
-      }
-    })
-  )
-  .listen(3000)
+const app = new Elysia().use(
+  logixlysia({
+    preset: 'prod',
+    config: {
+      service: 'my-api',
+      logFilePath: './logs/production.log',
+      logRotation: { maxSize: '100m', interval: '1d', maxFiles: '30d', compress: true },
+      logFilter: { level: ['ERROR', 'WARNING'] },
+      pino: { level: 'info', redact: ['password', 'token', 'apiKey'] },
+    },
+  })
+)
 ```
 
-### Development Setup
+### Development setup
 
 ```ts
-const app = new Elysia()
-  .use(
-    logixlysia({
-      config: {
-        showStartupMessage: true,
-        startupMessageFormat: 'banner',
-        pino: {
-          level: 'debug',
-          prettyPrint: true
-        }
-      }
-    })
-  )
-  .listen(3000)
+const app = new Elysia().use(
+  logixlysia({
+    preset: 'dev',
+    config: {
+      service: 'my-api',
+      pino: { level: 'debug', prettyPrint: true },
+    },
+  })
+)
 ```

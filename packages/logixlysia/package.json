@@ -52,7 +52,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://https://github.com/pori15/logixlysia.git"
+    "url": "git+https://github.com/eastgold15/logixlysia.git"
   },
   "dependencies": {
     "chalk": "^5.6.2",

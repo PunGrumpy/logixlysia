@@ -3,53 +3,62 @@ title: Pino
 description: High-performance structured logging with Pino
 ---
 
-Logixlysia can integrate with [Pino](https://github.com/pinojs/pino), a high-performance JSON-first logging library, as an optional logging backend.
+Logixlysia integrates with [Pino](https://github.com/pinojs/pino) as its underlying logging engine. Pino is constructed lazily on first access — invalid Pino options only fail when you actually log.
 
 ## Why Pino?
 
-- **High Performance** - One of the fastest Node.js loggers available
-- **Structured Logging** - JSON-first approach for better log parsing
-- **Production Ready** - Battle-tested in production environments
-- **Flexible** - Extensive configuration options and transport support
+- **High performance** — one of the fastest Node.js loggers
+- **Structured logging** — JSON-first
+- **Battle-tested** — production-grade
+- **Flexible** — extensive options and transport support
 
-## Basic Usage
+## Basic usage
 
-### In Elysia Routes
+### In Elysia routes
 
-Access Pino through the store in your route handlers:
+Access Pino through the store in route handlers:
 
 ```ts
 app.get('/users/:id', ({ store, params }) => {
   const { pino } = store
-  
+
   pino.info({
     userId: params.id,
-    action: 'view_profile'
+    action: 'view_profile',
   }, 'User profile accessed')
-  
+
   return { user: 'data' }
 })
 ```
 
-### Outside Elysia Routes (Standalone)
+Or via the request-scoped `log` (when `useAsyncLocalStorage: true`):
+
+```ts
+app.get('/users/:id', ({ log, params }) => {
+  log.pino.info({ userId: params.id, action: 'view_profile' }, 'profile accessed')
+  return { user: 'data' }
+})
+```
+
+### Outside Elysia routes (standalone)
 
 Use Pino in services, background jobs, or any code outside of HTTP request context:
 
 ```ts
 // logger.ts
-import logixlysia from 'logixlysia'
+import logixlysia from '@pori15/logixlysia'
 
 export const logixlysiaIns = logixlysia({
   config: {
     logFilePath: './logs/app.log',
     pino: {
       level: 'info',
-      base: { 
+      base: {
         service: 'my-api',
-        version: '1.0.0'
-      }
-    }
-  }
+        version: '1.0.0',
+      },
+    },
+  },
 })
 
 // Export Pino instance for standalone use
@@ -63,7 +72,7 @@ import { logger } from '../logger'
 export class OrderService {
   async processOrder(orderId: string) {
     logger.info({ orderId }, 'Processing order')
-    
+
     try {
       // ... business logic
       logger.info({ orderId }, 'Order processed successfully')
@@ -92,31 +101,31 @@ new Elysia()
   .listen(3000)
 ```
 
-**Note:** When using Pino outside of routes, you won't have access to HTTP context (method, pathname, IP, etc.). For HTTP request logging, use `store.logger` inside route handlers.
+**Note:** When using Pino outside of routes, you will not have access to HTTP context (method, pathname, IP, etc.). For HTTP request logging, use `store.logger` inside route handlers.
 
 ## Configuration
 
-### Log Level
+### Log level
 
 ```ts
 logixlysia({
   config: {
     pino: {
-      level: 'debug' // 'fatal', 'error', 'warn', 'info', 'debug', 'trace'
-    }
-  }
+      level: 'debug', // 'fatal' | 'error' | 'warn' | 'info' | 'debug' | 'trace'
+    },
+  },
 })
 ```
 
-### Pretty Printing
+### Pretty printing
 
 ```ts
 logixlysia({
   config: {
     pino: {
-      prettyPrint: true
-    }
-  }
+      prettyPrint: true,
+    },
+  },
 })
 ```
 
@@ -129,41 +138,39 @@ logixlysia({
       prettyPrint: {
         colorize: true,
         translateTime: 'HH:MM:ss Z',
-        ignore: 'pid,hostname'
-      }
-    }
-  }
+        ignore: 'pid,hostname',
+      },
+    },
+  },
 })
 ```
 
-### Redacting Sensitive Data
+`prettyPrint` is a passthrough to [pino-pretty](https://github.com/pinojs/pino-pretty). Install `pino-pretty` as a peer dep if you use it.
+
+### Redacting sensitive data
+
+Pino's own `redact` is independent of Logixlysia's `autoRedact` — both can run side by side:
 
 ```ts
 logixlysia({
   config: {
-    pino: {
-      redact: ['password', 'token', 'apiKey']
-    }
-  }
+    autoRedact: true,                 // Logixlysia: rewrites meta + headers
+    pino: { redact: ['password'] },   // Pino: scrubs the JSON output
+  },
 })
 ```
-
-Or with paths:
 
 ```ts
-logixlysia({
-  config: {
-    pino: {
-      redact: {
-        paths: ['user.password', 'req.headers.authorization'],
-        remove: true
-      }
-    }
-  }
-})
+// Or with paths and removal:
+pino: {
+  redact: {
+    paths: ['user.password', 'req.headers.authorization'],
+    remove: true,
+  },
+},
 ```
 
-### Base Fields
+### Base fields
 
 ```ts
 logixlysia({
@@ -172,148 +179,125 @@ logixlysia({
       base: {
         service: 'my-api',
         version: '1.0.0',
-        environment: process.env.NODE_ENV
-      }
-    }
-  }
-})
-```
-
-### Pino Transports
-
-Pino supports its own transport system for advanced logging destinations. You can configure Pino transports using the `transport` option:
-
-```ts
-logixlysia({
-  config: {
-    pino: {
-      transport: {
-        target: 'pino/file',
-        options: {
-          destination: './logs/pino-example.log'
-        }
-      }
-    }
-  }
-})
-```
-
-**Important:** Pino transports are **separate** from Logixlysia's transport system:
-
-- **Pino transports** (`pino.transport`) - Only affect logs written through `store.pino.info()`, `store.pino.error()`, etc.
-- **Logixlysia transports** (`config.transports`) - Only affect Logixlysia's internal HTTP request logging
-
-For example:
-
-```ts
-logixlysia({
-  config: {
-    // Pino transport - only for store.pino.* logs
-    pino: {
-      transport: {
-        target: 'pino/file',
-        options: {
-          destination: './logs/pino-example.log'
-        }
-      }
+        environment: process.env.NODE_ENV,
+      },
     },
-    // Logixlysia transports - only for HTTP request logs
-    transports: [customTransport]
-  }
+  },
+})
+```
+
+### Pino transports
+
+Pino has its own transport system for advanced logging destinations. Configure Pino transports with the `transport` option:
+
+```ts
+logixlysia({
+  config: {
+    pino: {
+      transport: {
+        target: 'pino/file',
+        options: { destination: './logs/pino-example.log' },
+      },
+    },
+  },
+})
+```
+
+**Important:** Pino transports and Logixlysia transports are independent:
+
+- **Pino transports** (`pino.transport`) — affect logs written through `store.pino.info()`, `store.pino.error()`, etc.
+- **Logixlysia transports** (`config.transports`) — affect the HTTP access log pipeline
+
+```ts
+logixlysia({
+  config: {
+    // Pino transport — only for store.pino.* logs
+    pino: {
+      transport: { target: 'pino/file', options: { destination: './logs/pino.log' } },
+    },
+    // Logixlysia transport — only for HTTP access logs
+    transports: [customTransport],
+  },
 })
 
 app.get('/example', ({ store }) => {
-  // This log goes to pino/file transport
   store.pino.info({ feature: 'pino' }, 'pino log example')
-  
-  // HTTP request logs go to Logixlysia transports (if configured)
-  // or to console/file based on logixlysia config
+  // → goes to pino/file transport
+  // The HTTP access log goes to the Logixlysia transport
 })
 ```
 
-This separation allows you to:
-- Use Pino transports for structured application logs (`store.pino.*`)
-- Use Logixlysia transports for HTTP request/response logs
-- Configure different destinations for different log types
+## Advanced usage
 
-## Advanced Usage
-
-### Structured Logging
+### Structured logging
 
 ```ts
 app.get('/users/:id', ({ store, params }) => {
   const { pino } = store
-  
+
   pino.info({
     userId: params.id,
     action: 'view_profile',
-    timestamp: Date.now()
+    timestamp: Date.now(),
   }, 'User profile viewed')
-  
+
   return user
 })
 ```
 
-### Child Loggers
+### Child loggers
 
-Create child loggers with context:
+Create child loggers with bound context:
 
 ```ts
 app.get('/api/orders/:id', ({ store, params }) => {
   const { pino } = store
-  
-  const orderLogger = pino.child({ 
+
+  const orderLogger = pino.child({
     orderId: params.id,
-    module: 'order-service' 
+    module: 'order-service',
   })
-  
+
   orderLogger.info('Fetching order details')
   orderLogger.debug({ query: 'SELECT * FROM orders WHERE id = ?' })
-  
+
   return order
 })
 ```
 
-### Performance Logging
-
-```ts
-app.post('/api/process', async ({ store, body }) => {
-  const { pino } = store
-  const startTime = Date.now()
-  
-  const result = await processData(body)
-  
-  pino.info({
-    operation: 'process_data',
-    duration: Date.now() - startTime,
-    itemsProcessed: result.count,
-    success: true
-  }, 'Data processing completed')
-  
-  return result
-})
-```
-
-### Error Logging
+### Error logging
 
 ```ts
 app.get('/api/risky', ({ store }) => {
   const { pino } = store
-  
+
   try {
     performRiskyOperation()
   } catch (error) {
-    pino.error({
-      err: error,
-      operation: 'risky_operation'
-    }, 'Operation failed')
-    
+    pino.error({ err: error, operation: 'risky_operation' }, 'Operation failed')
     throw error
   }
 })
 ```
 
-## Environment-based Configuration
+## Lazy initialization
+
+Pino is constructed lazily on first access. This means:
+
+```ts
+const plugin = logixlysia({
+  config: {
+    pino: { level: 'invalid-level' as any },
+  },
+})
+
+// ... plugin constructed, no error yet
+// ... first call to plugin.store.pino.info() throws
+```
+
+To force eager initialization (so bad Pino options fail at startup), set `config.pino` to any truthy value. The Pino instance is created when the plugin is built.
+
+## Environment-based configuration
 
 ```ts
 const isDev = process.env.NODE_ENV === 'development'
@@ -326,79 +310,47 @@ logixlysia({
       redact: isDev ? [] : ['password', 'token', 'apiKey'],
       base: {
         service: 'my-api',
-        environment: process.env.NODE_ENV
-      }
-    }
-  }
+        environment: process.env.NODE_ENV,
+      },
+    },
+  },
 })
 ```
 
-## Best Practices
+## Best practices
 
-1. **Use Structured Logging** - Pass objects instead of string interpolation
+1. **Use structured logging** — pass objects instead of string interpolation
    ```ts
-   // ✅ Good
+   // ✅
    pino.info({ userId: 123, action: 'login' }, 'User logged in')
-   
-   // ❌ Avoid
+   // ❌
    pino.info(`User ${userId} logged in`)
    ```
 
-2. **Create Child Loggers** - For scoped logging with context
-   ```ts
-   const requestLogger = pino.child({ requestId: generateId() })
-   ```
+2. **Create child loggers** for scoped context
 
-3. **Log Performance Metrics** - Track important metrics
+3. **Log performance metrics** — track important operations
    ```ts
    pino.info({ duration: 150, operation: 'db_query' }, 'Query completed')
    ```
 
-4. **Redact Sensitive Data** - Always redact sensitive information
-   ```ts
-   logixlysia({
-     config: {
-       pino: {
-         redact: ['password', 'token', 'apiKey']
-       }
-     }
-   })
-   ```
+4. **Redact sensitive data** — use both `autoRedact` (Logixlysia) and `pino.redact` (Pino)
 
-5. **Use Appropriate Log Levels** - Follow log level guidelines
-   - `fatal` - Application is about to crash
-   - `error` - Error that needs attention
-   - `warn` - Warning but application continues
-   - `info` - General information (default)
-   - `debug` - Detailed debugging information
-   - `trace` - Very detailed debugging
+5. **Use the right level:**
+   - `fatal` — application is about to crash
+   - `error` — error that needs attention
+   - `warn` — warning, application continues
+   - `info` — general information (default)
+   - `debug` — detailed debugging
+   - `trace` — very detailed debugging
 
-6. **Environment-based Configuration** - Configure differently per environment
+6. **Export Pino for standalone use** in services, jobs, and utilities
    ```ts
-   const isDev = process.env.NODE_ENV === 'development'
-   
-   logixlysia({
-     config: {
-       pino: {
-         level: isDev ? 'debug' : 'info',
-         prettyPrint: isDev
-       }
-     }
-   })
-   ```
-
-7. **Export Pino for Standalone Use** - Use in services, jobs, and utilities
-   ```ts
-   // logger.ts
    export const logger = logixlysiaIns.store.pino
-   
-   // services/user.service.ts
-   import { logger } from '../logger'
-   logger.info({ userId }, 'User updated')
    ```
 
-## Additional Resources
+## Additional resources
 
 - [Pino Documentation](https://github.com/pinojs/pino)
-- [Pino Pretty](https://github.com/pinojs/pino-pretty)
+- [pino-pretty](https://github.com/pinojs/pino-pretty)
 - [Pino Transports](https://github.com/pinojs/pino/blob/master/transports.md)

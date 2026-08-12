@@ -3,54 +3,100 @@ title: File Logging
 description: Save logs to files for persistence
 ---
 
-Save your logs to files for persistence and analysis using Logixlysia's file logging system.
+Save your logs to files for persistence and analysis using Logixlysia's file sink.
 
-## Basic Usage
+## Basic usage
 
 ```ts
 logixlysia({
   config: {
-    logFilePath: './logs/app.log'
-  }
+    logFilePath: './logs/app.log',
+  },
 })
 ```
 
 ## Configuration
 
 | Option | Type | Description | Default |
-|--------|------|-------------|---------|
+| --- | --- | --- | --- |
 | `logFilePath` | `string` | Path to the log file | `undefined` |
+| `logFileMode` | `number` | File permission bits (chmod) | `0o600` |
+| `logDirMode` | `number` | Directory permission bits (chmod) | `0o700` |
+| `logRotation` | `LogRotationConfig` | Rotation policy | `undefined` |
 
-## File Format
+## How it works
 
-Logs are written in a structured format:
+The file sink:
+
+1. **Caches the file handle** in a per-path map — repeated writes to the same file reuse the open handle, so `writeFile` is not invoked on every log line.
+2. **Batches writes** through `queueMicrotask` so multiple log lines in the same tick are coalesced into a single `writev` call.
+3. **Serializes rotation** through a keyed mutex — rotating file A does not block writes to file B.
+4. **Creates files with `0o600` and directories with `0o700`** by default. Override via `logFileMode` / `logDirMode`.
+
+## File format
+
+Logs are written in the same format used for the console (per the `customLogFormat` token set, or the built-in default):
 
 ```
-🦊 2025-04-13 15:00:19.225 INFO  123.45ms GET /api/users 200 
+🦊 2025-04-13 15:00:19.225 INFO  123.45ms GET /api/users 200
 🦊 2025-04-13 15:00:20.225 ERROR 234.56ms POST /api/users 500 Error creating user
 ```
-
-## Best Practices
-
-- Use descriptive file names
-- Organize logs by type/level
-- Consider using date-based directories
-- Set appropriate file permissions
-- Avoid logging sensitive data
-- Regular log review and cleanup
 
 ## Examples
 
 ### Production
 
 ```ts
-logFilePath: './logs/production.log'
+logixlysia({
+  config: {
+    logFilePath: './logs/production.log',
+    logRotation: {
+      maxSize: '100m',
+      interval: '1d',
+      maxFiles: '30d',
+      compress: true,
+    },
+  },
+})
 ```
 
 ### Development
 
 ```ts
-logFilePath: './logs/development.log'
+logixlysia({
+  config: {
+    logFilePath: './logs/development.log',
+  },
+})
 ```
 
-For advanced file management, see [Log Rotation](/docs/features/log-rotation).
+### Custom file mode
+
+```ts
+logixlysia({
+  config: {
+    logFilePath: '/var/log/myapp/app.log',
+    logFileMode: 0o640,
+    logDirMode: 0o750,
+  },
+})
+```
+
+### Disable file output
+
+```ts
+logixlysia({
+  config: {
+    logFilePath: './logs/app.log', // configured
+    disableFileLogging: true,      // ...but disabled
+  },
+})
+```
+
+## Best practices
+
+- Use descriptive file names
+- Organize logs by type/level (separate access logs and error logs)
+- Set appropriate file permissions — the default `0o600`/`0o700` is right for most production setups
+- Avoid logging sensitive data — enable `autoRedact` so PII is replaced before reaching the file
+- Pair with [Log Rotation](/docs/features/log-rotation) for long-running services

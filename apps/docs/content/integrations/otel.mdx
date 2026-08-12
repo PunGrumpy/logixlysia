@@ -9,11 +9,11 @@ Install the optional peer dependency:
 bun add @opentelemetry/api
 ```
 
-Import from the `logixlysia/otel` subpath:
+Import from the `@pori15/logixlysia/otel` subpath:
 
 ```ts
-import logixlysia from 'logixlysia'
-import { injectTraceContext } from 'logixlysia/otel'
+import logixlysia from '@pori15/logixlysia'
+import { injectTraceContext } from '@pori15/logixlysia/otel'
 
 const plugin = logixlysia()
 
@@ -25,4 +25,94 @@ const app = new Elysia()
   .get('/', () => 'ok')
 ```
 
-When an active span exists, `trace_id` and `span_id` are merged into the request context bag and appear on the access log. Logixlysia does not start an OpenTelemetry SDK—you bring your own tracer provider and instrumentation.
+When an active span exists, `trace_id` and `span_id` are merged into the request context bag and appear on the access log:
+
+```
+🦊 2025-12-21 10:00:00.225 INFO  12.34ms GET / 200
+└─ trace: { trace_id: '8c2f…', span_id: '4a1d…' }
+```
+
+Logixlysia does not start an OpenTelemetry SDK — you bring your own tracer provider and instrumentation.
+
+## API
+
+```ts
+function injectTraceContext(
+  logger: Pick<Logger, 'mergeContext'>,
+  request: Request
+): Promise<TraceContextFields | undefined>
+
+interface TraceContextFields {
+  trace_id: string
+  span_id: string
+  // optional parent and trace flags, when available
+  parent_span_id?: string
+  trace_flags?: string
+}
+```
+
+`injectTraceContext` is async because it does a dynamic `import('@opentelemetry/api')` to keep `@opentelemetry/api` as an optional peer dep — the import only happens if you call this function. If the module is not installed, the function returns `undefined` and emits nothing.
+
+## How it works
+
+1. The function looks up the current active span from the OpenTelemetry context API (`trace.getSpan(context.active())`).
+2. If a span exists, it reads `spanContext().traceId` and `spanContext().spanId`.
+3. The pair is merged into the request context under `trace: { trace_id, span_id }`.
+4. The merged context appears in the final access log, alongside any user-merged context (e.g. `context.userId`).
+
+## Full setup
+
+A minimal OpenTelemetry setup looks like this:
+
+```ts
+// tracing.ts
+import { NodeSDK } from '@opentelemetry/sdk-node'
+import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentations-node'
+import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http'
+
+const sdk = new NodeSDK({
+  traceExporter: new OTLPTraceExporter(),
+  instrumentations: [getNodeAutoInstrumentations()],
+})
+
+sdk.start()
+```
+
+Then in your Elysia app:
+
+```ts
+// app.ts
+import { Elysia } from 'elysia'
+import logixlysia from '@pori15/logixlysia'
+import { injectTraceContext } from '@pori15/logixlysia/otel'
+import './tracing' // start the OTel SDK first
+
+const app = new Elysia()
+  .use(logixlysia())
+  .request(({ request, store }) => {
+    injectTraceContext(store.logger, request)
+  })
+  .get('/', () => 'ok')
+  .listen(3000)
+```
+
+## Pairing with request ID
+
+Request IDs and trace IDs are independent correlation keys:
+
+- `requestId` is your application-level correlation ID (the `X-Request-Id` header). Easy to grep in plain-text logs.
+- `trace_id` is the OpenTelemetry trace ID. Surfaces in distributed tracing UIs (Jaeger, Honeycomb, etc.).
+
+You can include both in your `customLogFormat`:
+
+```ts
+logixlysia({
+  config: {
+    requestId: true,
+    customLogFormat:
+      '{now} {level} {method} {pathname} {status} {duration}ms req={requestId} trace={context.trace.trace_id}',
+  },
+})
+```
+
+Or render them as a context tree under the access log by leaving `customLogFormat` unset and letting `showContextTree` print the full `context` object.

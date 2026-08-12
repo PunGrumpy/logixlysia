@@ -3,24 +3,26 @@ title: Introduction
 description: Get started with Logixlysia, a high-performance logging plugin for Elysia.js
 ---
 
-Logixlysia is a powerful logging plugin for [Elysia.js](https://elysiajs.com/) that provides structured, high-performance logging integrated with [Pino](https://github.com/pinojs/pino). Built for production environments, it offers flexible configuration, file logging, and seamless integration with your Elysia applications.
+Logixlysia is a logging plugin for [Elysia.js](https://elysiajs.com/) built on [Pino](https://github.com/pinojs/pino). It targets Elysia 2's open-beta line and ships a request-scoped context API, a per-request `X-Request-Id` header pipeline, OpenTelemetry trace correlation, AI-SDK metrics, WebSocket logging, and a single emit pipeline that fans out to console, file, and arbitrary transports.
 
 ![Preview](./preview.png)
 
-## Features
+## Why Logixlysia
 
-- **High Performance** - Powered by Pino, one of the fastest Node.js loggers
-- **Structured Logging** - JSON-first approach for better log analysis
-- **Flexible Configuration** - Customize format, level, and output destinations
-- **File Logging** - Save logs to files with automatic rotation
-- **Transport Support** - Send logs to external services
-- **Type Safe** - Full TypeScript support
+- **One emit pipeline** — every log line flows through a single filter → context-merge → redact → transport → file → console path. The format, level, and destination are decided once, per request, not per output.
+- **Per-request context** — `logger.mergeContext(request, {...})` accumulates fields during a request and merges them into the final access log. The same context is reachable from any depth via `useLogger()` when `useAsyncLocalStorage: true`.
+- **WeakMap-scoped timing** — concurrent requests each get their own `beforeTime` and pathname; access-log durations never get cross-contaminated.
+- **File sink with handle cache** — the `logFilePath` writer batches writes through `queueMicrotask`, caches file handles, and writes with `0o600` / `0o700` modes by default.
+- **Request ID propagation** — `X-Request-Id` (or any custom header) is read on the way in, validated, and echoed on the response — even for error responses.
+- **OpenTelemetry correlation** — when `@opentelemetry/api` is installed, `injectTraceContext` merges the active `trace_id` and `span_id` into the access log.
+- **AI-SDK metrics** — `mergeAIMetrics` attaches model / provider / token counts / latency in a single `context.ai` field, the same shape evlog uses for wide events.
+- **Transport pipeline** — drop in any `{ log: (level, message, meta) => void | Promise<void> }` target; sync and async errors are throttled to 5 s windows to keep the hot path clean.
 
-## Quick Start
+## Quick start
 
 ```ts
 import { Elysia } from 'elysia'
-import logixlysia from 'logixlysia'
+import logixlysia from '@pori15/logixlysia'
 
 const app = new Elysia()
   .use(logixlysia())
@@ -30,22 +32,14 @@ const app = new Elysia()
 
 ## Installation
 
-This release line targets the [Elysia 2 open beta](https://elysiajs.com/blog/elysia-20) and is published under the `next` dist-tag:
-
 ```bash
-bun add logixlysia@next elysia@next
+bun add @pori15/logixlysia elysia@next
 ```
 
-Still on Elysia 1.4? Stay on the `latest` tag (`bun add logixlysia`) — see [Elysia 2 support](/docs/elysia-2).
+This release line targets the [Elysia 2 open beta](https://elysiajs.com/blog/elysia-20). Still on Elysia 1.4? Stay on the upstream `logixlysia` package — see [Elysia 2 support](/docs/elysia-2).
 
-## Why Logixlysia?
-
-Logixlysia combines the simplicity of Elysia's plugin system with Pino's high-performance logging engine. It provides a clean API for logging requests, responses, and custom events while maintaining minimal overhead.
-
-Whether you're building a small API or a large-scale application, Logixlysia scales with your needs—from simple console logging to complex multi-transport setups.
-
-## Next Steps
+## Next steps
 
 - [Get started with basic usage](/docs/usage)
+- [Browse the configuration reference](/docs/configuration)
 - [Explore features](/docs/features/startup)
-- [Learn about configuration options](/docs/usage#configuration)

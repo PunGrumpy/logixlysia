@@ -3,85 +3,101 @@ title: Request ID
 description: Generate or honor unique request identifiers across requests and responses
 ---
 
-Logixlysia can automatically generate or retrieve unique request identifiers (Request IDs) and attach them to the request context, response headers, and log outputs.
+Logixlysia automatically generates or retrieves unique request identifiers (request IDs) and attaches them to the request context, response headers, and log outputs.
 
-## Basic Usage
+## Basic usage
 
-You can enable the request ID feature using the `requestId` config option. When set to `true`, it uses the default configuration (`X-Request-Id` header and UUID v4 generator).
+Enable the request ID feature with `requestId: true`. The default configuration uses the `X-Request-Id` header and a UUID v4 generator.
 
 ```ts
 import { Elysia } from 'elysia'
-import logixlysia from 'logixlysia'
+import logixlysia from '@pori15/logixlysia'
 
-const app = new Elysia()
-  .use(
-    logixlysia({
-      config: {
-        requestId: true
-      }
-    })
-  )
+const app = new Elysia().use(
+  logixlysia({
+    config: {
+      requestId: true,
+    },
+  })
+)
 ```
 
-## Production Preset
+## Production preset
 
-The `prod` preset enables `requestId` automatically by default:
+The `prod` preset enables `requestId` automatically:
 
 ```ts
-const app = new Elysia()
-  .use(
-    logixlysia({
-      preset: 'prod' // requestId is enabled automatically
-    })
-  )
+const app = new Elysia().use(
+  logixlysia({
+    preset: 'prod', // requestId is enabled automatically
+  })
+)
 ```
 
-## Custom Configuration
+## Custom configuration
 
-For advanced use cases, you can pass a configuration object instead of a boolean:
+For advanced use cases, pass a configuration object instead of a boolean:
 
 ```ts
-const app = new Elysia()
-  .use(
-    logixlysia({
-      config: {
-        requestId: {
-          // Custom header name to read from / write to
-          header: 'X-Correlation-Id',
-          // Custom request ID generator function
-          generator: () => `req-${crypto.randomUUID()}`
-        }
-      }
-    })
-  )
+const app = new Elysia().use(
+  logixlysia({
+    config: {
+      requestId: {
+        // Custom header name to read from / write to
+        header: 'X-Correlation-Id',
+        // Custom request ID generator function
+        generator: () => `req-${crypto.randomUUID()}`,
+      },
+    },
+  })
+)
 ```
 
 ### Options
 
 | Option | Type | Default | Description |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `enabled` | `boolean` | `true` | Turn request ID generation on or off when using object configuration. |
-| `header` | `string` | `'X-Request-Id'` | The header key to check on incoming requests (honoring upstream proxies) and to set on responses. |
+| `header` | `string` | `'X-Request-Id'` | The header key to read on incoming requests and to set on responses. |
 | `generator` | `() => string` | `crypto.randomUUID` | A function that returns a unique string to use as the request ID. |
 
-## Log Formatting
+## How it works
 
-When Request ID is enabled, you can output it in your custom log format using the `{requestId}` token:
+1. On the request, the plugin reads the configured header (default `X-Request-Id`) from the incoming `Request`.
+2. If absent, the `generator` function produces a fresh ID.
+3. The ID is stored in the per-request context bag under `requestId`.
+4. On the response (`afterHandle` hook), the ID is echoed back in the response header.
+5. On error responses, the same ID is included in the response header and in the error log context — enabling trace correlation for failed requests.
+
+## Log formatting
+
+Output the request ID in your custom log format using the `{requestId}` placeholder:
 
 ```ts
-const app = new Elysia()
-  .use(
-    logixlysia({
-      config: {
-        requestId: true,
-        customLogFormat: '{method} {pathname} - Request ID: {requestId}'
-      }
-    })
-  )
+const app = new Elysia().use(
+  logixlysia({
+    config: {
+      requestId: true,
+      customLogFormat: '{method} {pathname} - Request ID: {requestId}',
+    },
+  })
+)
 ```
 
-If Request ID is disabled or not present, the token will render as an empty string.
+If request ID is disabled or not present, the token renders as an empty string.
 
-## Error Responses
+## Cross-service tracing
 
-If a request fails (e.g. throws an exception), the request ID is still propagated in the response headers (like `X-Request-Id`) and is correctly logged in the HTTP error telemetry context, allowing trace correlation for failed requests.
+Pair the request ID with `autoRedact: true` so the `authorization` and `cookie` headers are scrubbed from the access log, but the request ID is still attached for grep-ability:
+
+```ts
+logixlysia({
+  config: {
+    requestId: true,
+    autoRedact: true,
+    customLogFormat: '[{requestId}] {method} {pathname} {status} {duration}ms',
+  },
+})
+```
+
+For distributed tracing, layer OpenTelemetry on top with `injectTraceContext` (see [OpenTelemetry](/docs/integrations/otel)). Request IDs and trace IDs are independent — the request ID is your application-level correlation key, and the trace ID is the OTel-level one.

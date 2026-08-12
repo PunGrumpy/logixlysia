@@ -1,4 +1,4 @@
-import type { Logixlysia } from "logixlysia";
+import { Logixlysia, logixlysia } from "@pori15/logixlysia";
 
 export const boomRouter = <App extends Logixlysia>(app: App) =>
   app.get(

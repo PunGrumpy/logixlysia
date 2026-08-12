@@ -7,26 +7,28 @@ Use `preset` for one-line environment defaults. Explicit `config` fields always 
 
 ```ts
 import { Elysia } from 'elysia'
-import logixlysia from 'logixlysia'
+import logixlysia from '@pori15/logixlysia'
 
 const app = new Elysia().use(
   logixlysia({
     preset: 'prod',
     config: {
       service: 'api',
-      logFilePath: './logs/app.log'
-    }
+      logFilePath: './logs/app.log',
+    },
   })
 )
 ```
 
 ## Available presets
 
-| Preset | Startup banner | Pretty print | Context tree | `autoRedact` |
-| ------ | -------------- | ------------ | ------------ | ------------ |
-| `dev` | Yes (banner) | Yes | Yes | No |
-| `prod` | No | No | No | Yes |
-| `json` | No | No | No | No |
+| Preset | Startup banner | Pretty print | Context tree | `autoRedact` | `requestId` |
+| ------ | -------------- | ------------ | ------------ | ------------ | ----------- |
+| `dev` | Yes (banner) | Yes | Yes | No | No |
+| `prod` | No | No | No | Yes | Yes |
+| `json` | No | No | No | No | No |
+
+`json` is the minimal setup for log aggregators (Datadog, Loki, Elasticsearch) — it disables everything decorative so the JSON output is the only payload. Use it when you do not need human-friendly formatting and the downstream is parsing line-delimited JSON.
 
 ## Override example
 
@@ -35,15 +37,21 @@ logixlysia({
   preset: 'prod',
   config: {
     autoRedact: false,
-    showStartupMessage: true
-  }
+    showStartupMessage: true,
+  },
 })
 ```
 
-You can also resolve options programmatically:
+## Programmatic resolution
+
+If you need to inspect the resolved options before passing them on, use `resolveOptions`:
 
 ```ts
-import { resolveOptions } from 'logixlysia'
+import { resolveOptions } from '@pori15/logixlysia'
 
 const options = resolveOptions({ preset: 'dev', config: { service: 'api' } })
+// options.config.service === 'api'
+// options.config.showStartupMessage === true (from dev preset)
 ```
+
+`resolveOptions` is the same merge function the plugin calls internally, so behavior is identical to passing the same input directly to `logixlysia()`.

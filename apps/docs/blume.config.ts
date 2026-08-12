@@ -54,7 +54,7 @@ export default defineConfig({
       // (each release is a type:changelog entry). Set GITHUB_TOKEN in CI to
       // avoid rate limits; a failed fetch degrades to an empty changelog.
       {
-        owner: "PunGrumpy",
+        owner: "eastgold15",
         prefix: "changelog",
         repo: "logixlysia",
         type: "github-releases",
@@ -67,7 +67,7 @@ export default defineConfig({
   description:
     "The logger for Elysia.js — simple and easy to use, beautiful and powerful",
   github: {
-    owner: "PunGrumpy",
+    owner: "eastgold15",
     repo: "logixlysia",
   },
   lastModified: true,

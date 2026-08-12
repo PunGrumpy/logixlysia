@@ -5,7 +5,7 @@
   "scripts": {
     "clean": "git clean -xdf .turbo logs node_modules",
     "dev": "bun run --watch --port 3001 src/index.ts",
-    "typecheck": "tsc --noEmit --emitDeclarationOnly false"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@pori15/logixlysia": "workspace:*"
