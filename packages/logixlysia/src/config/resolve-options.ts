@@ -100,7 +100,7 @@ export const resolveOptions = (options: LogixlysiaOptions = {}): LogixlysiaOptio
         config: mergeConfig(
           getPresetDefaults(preset) ??
             (() => {
-              throw new Error(`logixlysia: unknown preset — ${preset}`);
+              throw new Error(`logixlysia: invalid preset — ${preset}`);
             })(),
           options.config
         ),
