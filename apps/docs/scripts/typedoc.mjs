@@ -405,8 +405,15 @@ const fmtClass = (node) => {
 
 mkdirSync(OUT_DIR, { recursive: true });
 
+// YAML single-quote strings: only `'` itself needs escaping (double it).
+// Without this, descriptions containing `:` + `{` (e.g. `` `logixlysia({ config: { ... } })` ``)
+// get parsed as flow mappings and blume dies with "bad indentation of a
+// mapping entry" at frontmatter parse time.
+const yamlSingleQuoted = (s) =>
+  `'${String(s ?? "").replace(/'/g, "''")}'`;
+
 const frontmatter = (title, description) =>
-  `---\ntitle: ${title}\ndescription: ${description}\n---\n\n`;
+  `---\ntitle: ${yamlSingleQuoted(title)}\ndescription: ${yamlSingleQuoted(description)}\n---\n\n`;
 
 const referencesMd = (sigs) =>
   sigs.map((s) => `[${s.name}](#${anchor(s.name)})`).join(" · ");
