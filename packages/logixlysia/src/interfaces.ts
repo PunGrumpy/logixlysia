@@ -1,10 +1,17 @@
+/**
+ * logixlysia 2.0 — 公共类型
+ *
+ * 重写于 Elysia 2.0(2.0.0-exp.62)适配:
+ * - 删除:ErrorConfig / ErrorMapping / ErrorResolver / Code / HttpErrorConstructor / ProblemConfig / ProblemDocument / ErrorMeta
+ * - 简化:Logger.handleHttpError 第二个参数从 ProblemError 改为 unknown
+ * - 新增:LogixlysiaOptions.errors 数组(用户自定义 HTTPError 类)
+ */
+
+import type { TaggedHTTPError } from "elysia";
 import type {
   Logger as PinoLogger,
   LoggerOptions as PinoLoggerOptions,
 } from "pino";
-import type { ProblemError } from "./error/errors";
-import type { Code } from "./error/type";
-import type { ErrorMeta } from "./utils/get-error-code";
 
 /** Pino Logger 实例类型 */
 export type Pino = PinoLogger<never, boolean>;
@@ -60,30 +67,6 @@ export interface LogRotationConfig {
 }
 
 // ==========================================
-// Error Mapping
-// ==========================================
-
-/** 错误码到 HTTP 响应的映射条目 */
-export interface ErrorMapping {
-  /** 错误详情，支持静态文案或根据数据库错误元数据动态生成 */
-  detail?: string | ((meta: ErrorMeta) => string);
-  /** HTTP 状态码 */
-  status: number;
-  /** 错误标题 */
-  title: string;
-}
-
-/**
- * 自定义错误解析回调
- *
- * 返回 `ProblemError` 表示已处理，返回 `void` 交给下一层处理
- */
-export type ErrorResolver = (
-  error: unknown,
-  context: { code: Code; path: string; request: Request }
-) => ProblemError | void;
-
-// ==========================================
 // Options
 // ==========================================
 
@@ -123,22 +106,31 @@ export interface TransportsConfig {
   targets: Transport[];
 }
 
-/** 错误处理配置 */
+/** 错误处理配置（logixlysia 2.0 极简版） */
 export interface ErrorConfig {
-  /** 错误码映射表（Postgres / MySQL / 自定义错误码） */
-  errorMap?: Record<string, ErrorMapping>;
-  /** 自定义错误解析回调 */
-  resolve?: ErrorResolver;
-  /** 自定义错误类型的 Base URL（RFC 9457） */
-  typeBaseUrl?: string;
-  /** 是否在控制台显示完整错误详情（detail、extensions），默认 `false` */
+  /** 是否在控制台显示完整错误详情，默认 `false` */
   verbose?: boolean;
 }
 
+/**
+ * 用户自定义 HTTPError 类列表
+ *
+ * 这些类会通过 Elysia 2.0 的 `.error(Class, handler)` 逐个注册,
+ * logixlysia 在 handler 内写日志,响应交还给 Elysia(自动 application/problem+json)。
+ *
+ * 用 `logixlysia.errorMap(...)` 工厂可以快速从 `{ code: { status, title } }` 字典生成。
+ */
+export type LogixlysiaErrorClasses = TaggedHTTPError<string, any>[];
+
 /** Logixlysia 插件配置 */
-export interface Options {
+export interface LogixlysiaOptions {
   /** 错误处理配置 */
   error?: ErrorConfig;
+  /**
+   * 用户自定义 HTTPError 类（Elysia 2.0 原生）
+   * 抛这些类的实例会被 logixlysia 记录 + Elysia 自动以 application/problem+json 响应
+   */
+  errors?: LogixlysiaErrorClasses;
   /** 文件日志配置，设为 `false` 禁用文件日志 */
   file?: false | FileConfig;
   /** 日志格式配置 */
@@ -152,6 +144,12 @@ export interface Options {
   /** 自定义传输（数组或带 `only` 选项的对象） */
   transports?: Transport[] | TransportsConfig;
 }
+
+/**
+ * 向后兼容别名 —— logixlysia 内部模块继续用 `Options` 这个短名
+ * @deprecated 推荐使用 `LogixlysiaOptions`
+ */
+export type Options = LogixlysiaOptions;
 
 // ==========================================
 // Logger
@@ -171,12 +169,16 @@ export interface Logger {
     message: string,
     context?: Record<string, unknown>
   ) => void;
-  /** 处理 HTTP 错误并输出日志 */
+  /**
+   * 处理 HTTP 错误并输出日志
+   *
+   * 2.0 接受 `unknown`（任意错误对象）；logixlysia 内部从 error.status / error.message / HTTPError.toResponse() 推断
+   */
   handleHttpError: (
     request: Request,
-    error: ProblemError,
+    error: unknown,
     store: StoreData,
-    options: Options
+    options: LogixlysiaOptions
   ) => void;
   /** 记录 INFO 级别日志 */
   info: (

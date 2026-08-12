@@ -33,7 +33,7 @@
     "apps/*",
     "packages/*"
   ],
-  "dependencies": {
-    "elysia": "2.0.0@experimental"
+  "peerDependencies": {
+    "elysia": "2.0.0-exp.62"
   }
 }

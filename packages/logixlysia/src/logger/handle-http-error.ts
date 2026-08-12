@@ -1,7 +1,13 @@
-import type { ProblemError } from "../error/errors";
+/**
+ * logixlysia 2.0 — HTTP 错误日志处理
+ *
+ * 接受任意 `unknown` 错误(不再依赖自建 ProblemError),
+ * 内部从 error.status / error.message / error.type / HTTPError.toResponse() 推断字段。
+ */
+
 import type {
+  LogixlysiaOptions,
   LogLevel,
-  Options,
   StoreData,
   Transport,
   TransportsConfig,
@@ -17,16 +23,42 @@ const normalizeTransports = (
   return { targets: transports.targets, only: transports.only === true };
 };
 
+const extractStatus = (error: unknown): number => {
+  if (typeof error !== "object" || error === null) return 500;
+  const e = error as { status?: unknown };
+  if (typeof e.status === "number") return e.status;
+  return 500;
+};
+
+const extractErrorBody = (
+  error: unknown
+): { type?: string; title?: string; detail?: string; [k: string]: unknown } => {
+  if (typeof error !== "object" || error === null) return {};
+  const e = error as Record<string, unknown>;
+  const out: Record<string, unknown> = {};
+  if (typeof e.type === "string") out.type = e.type;
+  if (typeof e.problemTitle === "string") out.title = e.problemTitle;
+  if (typeof e.title === "string" && out.title === undefined)
+    out.title = e.title;
+  if (typeof e.detail === "string") out.detail = e.detail;
+  // HTTPError.toResponse() 可用时,优先取其 body
+  const toResp = (e as { toResponse?: () => Response }).toResponse;
+  if (typeof toResp === "function") {
+    // toResponse 是 Response 对象,无法 sync 取 body;跳过
+  }
+  return out;
+};
+
 /**
- * 统一输出管道：transports → file → console
- * handleHttpError 和 log 共用同一管道，不再重复判断配置
+ * 统一输出管道:transports → file → console
+ * handleHttpError 和 log 共用同一管道,不再重复判断配置
  */
 const outputPipeline = (
   level: LogLevel,
   request: Request,
   data: Record<string, unknown>,
   store: StoreData,
-  options: Options,
+  options: LogixlysiaOptions,
   consoleMessage?: string
 ): void => {
   const { targets, only: transportsOnly } = normalizeTransports(
@@ -77,16 +109,23 @@ const outputPipeline = (
 
 export const handleHttpError = (
   request: Request,
-  problem: ProblemError,
+  error: unknown,
   store: StoreData,
-  options: Options
+  options: LogixlysiaOptions
 ): void => {
-  const level: LogLevel = problem.status >= 500 ? "ERROR" : "WARNING";
-  const rfcData = problem.toJSON();
+  const status = extractStatus(error);
+  const level: LogLevel = status >= 500 ? "ERROR" : "WARNING";
+  const body = extractErrorBody(error);
+  const message =
+    (body.detail as string | undefined) ??
+    (typeof error === "object" && error !== null && "message" in error
+      ? ((error as { message?: string }).message ?? "")
+      : "");
+
   const data = {
-    status: problem.status,
-    message: problem.detail || problem.title,
-    ...rfcData,
+    status,
+    message,
+    ...body,
   };
 
   // 构建 console 消息
@@ -98,16 +137,16 @@ export const handleHttpError = (
       timestamp = `[${new Date().toISOString()}] `;
     }
     const pathname = store.pathname || new URL(request.url).pathname;
-    consoleMessage = `${timestamp}${level} ${request.method} ${pathname} ${problem.status} - ${problem.title}`;
+    consoleMessage = `${timestamp}${level} ${request.method} ${pathname} ${status} - ${body.title ?? message}`;
 
     // 详细错误日志
     if (options.error?.verbose) {
       const parts = [consoleMessage];
-      if (rfcData.detail) parts.push(`  Detail: ${rfcData.detail}`);
-      if (rfcData.instance) parts.push(`  Instance: ${rfcData.instance}`);
-      if (rfcData.type && rfcData.type !== "about:blank")
-        parts.push(`  Type: ${rfcData.type}`);
-      const extensions = Object.entries(rfcData).filter(
+      if (body.detail) parts.push(`  Detail: ${body.detail}`);
+      if (body.instance) parts.push(`  Instance: ${body.instance}`);
+      if (body.type && body.type !== "about:blank")
+        parts.push(`  Type: ${body.type}`);
+      const extensions = Object.entries(body).filter(
         ([key]) =>
           !["type", "title", "status", "detail", "instance"].includes(key)
       );

@@ -27,8 +27,7 @@ export const logToFile = async (input: LogToFileInput): Promise<void> => {
   await ensureDir(dirname(filePath));
   await appendFile(filePath, line, { encoding: "utf-8" });
 
-  const rotation =
-    options.file && options.file !== false ? options.file.rotation : undefined;
+  const rotation = options.file ? options.file.rotation : undefined;
   if (!rotation) {
     return;
   }

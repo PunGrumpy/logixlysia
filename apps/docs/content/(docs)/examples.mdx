@@ -46,7 +46,7 @@ const app = new Elysia()
       config: {
         // Disable startup message in production
         showStartupMessage: false,
-        
+
         // File logging with rotation
         logFilePath: './logs/production.log',
         logRotation: {
@@ -55,12 +55,12 @@ const app = new Elysia()
           maxFiles: '30d',
           compress: true
         },
-        
+
         // Filter to important logs only
         logFilter: {
           level: ['ERROR', 'WARNING']
         },
-        
+
         // Pino configuration
         pino: {
           level: 'info',
@@ -71,7 +71,7 @@ const app = new Elysia()
             environment: 'production'
           }
         },
-        
+
         // Use transports for external services
         useTransportsOnly: false,
         transports: [
@@ -95,7 +95,7 @@ const app = new Elysia()
       config: {
         showStartupMessage: true,
         startupMessageFormat: 'banner',
-        
+
         // Pretty printing for development
         pino: {
           level: 'debug',
@@ -118,20 +118,20 @@ const app = new Elysia()
 ```ts
 app.get('/users/:id', ({ store, params }) => {
   const { logger, pino } = store
-  
+
   // Using logger helper
   logger.info(request, 'User profile accessed', {
     userId: params.id,
     timestamp: Date.now()
   })
-  
+
   // Or using Pino directly
   pino.info({
     userId: params.id,
     action: 'view_profile',
     timestamp: Date.now()
   }, 'User profile accessed')
-  
+
   return getUserById(params.id)
 })
 ```
@@ -141,16 +141,16 @@ app.get('/users/:id', ({ store, params }) => {
 ```ts
 app.get('/api/orders/:id', ({ store, params }) => {
   const { pino } = store
-  
+
   // Create scoped logger
   const orderLogger = pino.child({
     orderId: params.id,
     module: 'order-service'
   })
-  
+
   orderLogger.debug('Fetching order details')
   orderLogger.info({ status: 'processing' }, 'Order retrieved')
-  
+
   return getOrder(params.id)
 })
 ```
@@ -161,9 +161,9 @@ app.get('/api/orders/:id', ({ store, params }) => {
 app.post('/api/process', async ({ store, body }) => {
   const { pino } = store
   const startTime = Date.now()
-  
+
   const result = await processData(body)
-  
+
   pino.info({
     operation: 'process_data',
     duration: Date.now() - startTime,
@@ -171,7 +171,7 @@ app.post('/api/process', async ({ store, body }) => {
     memory: process.memoryUsage().heapUsed / 1024 / 1024,
     success: true
   }, 'Data processing completed')
-  
+
   return result
 })
 ```
@@ -183,7 +183,7 @@ app.post('/api/process', async ({ store, body }) => {
 ```ts
 app.get('/api/risky', ({ store }) => {
   const { pino } = store
-  
+
   try {
     performRiskyOperation()
   } catch (error) {
@@ -195,7 +195,7 @@ app.get('/api/risky', ({ store }) => {
         timestamp: Date.now()
       }
     }, 'Operation failed')
-    
+
     throw error
   }
 })
@@ -204,15 +204,15 @@ app.get('/api/risky', ({ store }) => {
 ### Custom Error Handler
 
 ```ts
-app.onError(({ code, error, store }) => {
+app.error(({ code, error, store }) => {
   const { pino } = store
-  
+
   pino.error({
     err: error,
     status: code,
     timestamp: Date.now()
   }, 'Request failed')
-  
+
   return {
     error: error.message,
     status: code
@@ -281,7 +281,7 @@ const slackTransport = {
     if (level === 'ERROR') {
       const webhook = process.env.SLACK_WEBHOOK_URL
       if (!webhook) return
-      
+
       try {
         await fetch(webhook, {
           method: 'POST',
@@ -336,7 +336,7 @@ app.use(
     config: {
       showStartupMessage: isDev,
       startupMessageFormat: isDev ? 'banner' : 'simple',
-      
+
       logFilePath: isProd ? './logs/production.log' : undefined,
       logRotation: isProd ? {
         maxSize: '100m',
@@ -344,7 +344,7 @@ app.use(
         maxFiles: '30d',
         compress: true
       } : undefined,
-      
+
       pino: {
         level: isDev ? 'debug' : 'info',
         prettyPrint: isDev,
@@ -355,7 +355,7 @@ app.use(
           environment: process.env.NODE_ENV
         }
       },
-      
+
       transports: isProd ? [
         elasticsearchTransport,
         slackTransport
@@ -410,4 +410,3 @@ const app = new Elysia()
   })
   .listen(3000)
 ```
-
