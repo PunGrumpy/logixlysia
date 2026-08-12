@@ -265,8 +265,12 @@ export interface LogixlysiaOptions {
   logLevel?: LogLevel[];
   /** Pino Logger 原生配置透传(legacy) */
   pino?: PinoLoggerOptions;
-  /** 预设,应用一组默认 config 值 */
-  preset?: "dev" | "prod" | "json";
+  /**
+   * 预设,应用一组默认 config 值。
+   * 内置:`"dev"` / `"prod"` / `"json"`(IDE 自动补全)。
+   * 任意字符串都行 —— 通过 `registerPreset(name, defaults)` 加自己的。
+   */
+  preset?: "dev" | "prod" | "json" | (string & {});
   /** 启动消息配置(legacy) */
   startup?: StartupConfig;
   /** 自定义传输(legacy) */

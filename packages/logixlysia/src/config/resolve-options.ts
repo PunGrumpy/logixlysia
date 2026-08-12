@@ -1,9 +1,13 @@
+import { getPresetDefaults } from "./preset-registry";
 import type { LogixlysiaOptions } from "../interfaces";
 import { parseInterval, parseRetention, parseSize } from "../utils/rotation";
 
-export type LogPreset = "dev" | "prod" | "json";
-
-const VALID_PRESETS: readonly LogPreset[] = ["dev", "prod", "json"];
+/**
+ * 内置 preset 名 —— 给 IDE 自动补全。
+ * 任意字符串都能传,运行时从 registry 查表(用户可以通过
+ * `registerPreset` 加自己的 preset)。
+ */
+export type LogPreset = "dev" | "prod" | "json" | (string & {});
 
 const validateLogRotation = (config: LogixlysiaOptions["config"]): void => {
   const logRotation = config?.logRotation;
@@ -35,36 +39,6 @@ const validateLogRotation = (config: LogixlysiaOptions["config"]): void => {
       cause: error,
     });
   }
-};
-
-const PRESET_DEFAULTS: Record<LogPreset, NonNullable<LogixlysiaOptions["config"]>> = {
-  dev: {
-    pino: {
-      prettyPrint: true,
-    },
-    showContextTree: true,
-    showStartupMessage: true,
-    startupMessageFormat: "banner",
-    useColors: true,
-  },
-  json: {
-    pino: {
-      prettyPrint: false,
-    },
-    showContextTree: false,
-    showStartupMessage: false,
-    useColors: false,
-  },
-  prod: {
-    autoRedact: true,
-    pino: {
-      prettyPrint: false,
-    },
-    requestId: true,
-    showContextTree: false,
-    showStartupMessage: false,
-    useColors: false,
-  },
 };
 
 const mergeConfig = (
@@ -119,15 +93,18 @@ const mergeConfig = (
 /** Applies preset defaults; explicit `config` keys override preset values. */
 export const resolveOptions = (options: LogixlysiaOptions = {}): LogixlysiaOptions => {
   const { preset } = options;
-  if (preset && !VALID_PRESETS.includes(preset)) {
-    throw new Error(`logixlysia: invalid preset — ${preset}`);
-  }
 
   const resolved = preset
     ? {
-      ...options,
-      config: mergeConfig(PRESET_DEFAULTS[preset], options.config),
-    }
+        ...options,
+        config: mergeConfig(
+          getPresetDefaults(preset) ??
+            (() => {
+              throw new Error(`logixlysia: unknown preset — ${preset}`);
+            })(),
+          options.config
+        ),
+      }
     : options;
 
   validateLogRotation(resolved.config);

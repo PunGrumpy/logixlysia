@@ -31,6 +31,8 @@ import type {
   Pino,
   StoreData,
 } from "../interfaces";
+import { redact, redactRequest } from "../utils/redact";
+import { handleHttpError } from "./handle-http-error";
 import {
   type FormatContext,
   type PrecomputedLogParts,
@@ -186,11 +188,11 @@ export const createLogger = (
     );
     const logData =
       config.autoRedact === true
-        ? require("../utils/redact").redact(dataWithContext, config.redactKeys)
+        ? redact(dataWithContext, config.redactKeys)
         : dataWithContext;
     const logRequest =
       config.autoRedact === true
-        ? require("../utils/redact").redactRequest(request, config.redactKeys)
+        ? redactRequest(request, config.redactKeys)
         : request;
 
     const precomputed: PrecomputedLogParts = computePrecomputedLogParts(
@@ -240,9 +242,7 @@ export const createLogger = (
       logWithContext("ERROR", request, message, context),
     getContext: (request) => fallbackStore.getContext(request),
     handleHttpError: (request, error, store) => {
-      // Lazy import to avoid a circular dep
-      const { handleHttpError: impl } = require("./handle-http-error");
-      impl(request, error, store, options);
+      handleHttpError(request, error, store, options);
     },
     info: (request, message, context) =>
       logWithContext("INFO", request, message, context),
