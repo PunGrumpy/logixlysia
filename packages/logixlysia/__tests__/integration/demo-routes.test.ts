@@ -7,7 +7,7 @@ import { describe, expect, mock, test } from "bun:test";
 // app under Bun (the supported runtime for the 2.0-exp series).
 import { Elysia } from "elysia";
 
-import logixlysia from "../../src";
+import { logixlysia } from "../../src";
 import {
   createDemoApp,
   silentTestOptions,

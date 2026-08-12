@@ -2,7 +2,7 @@ import { describe, expectTypeOf, test } from "bun:test";
 import { Elysia } from "elysia";
 import { websocket } from "elysia/websocket";
 
-import logixlysia from "../../src";
+import { logixlysia } from "../../src";
 
 describe("logixlysia WebSocket typing (#220)", () => {
   test("infers plugin store on ws.data when .ws follows .use(logixlysia()) on a bare Elysia", () => {

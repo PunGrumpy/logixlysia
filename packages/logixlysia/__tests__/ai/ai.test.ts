@@ -1,7 +1,7 @@
 import { describe, expect, mock, test } from "bun:test";
 import { Elysia } from "elysia";
 
-import logixlysia from "../../src";
+import { logixlysia } from "../../src";
 import { mergeAIMetrics } from "../../src/ai";
 
 describe("logixlysia/ai", () => {

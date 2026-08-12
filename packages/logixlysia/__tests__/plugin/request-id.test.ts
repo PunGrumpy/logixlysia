@@ -1,8 +1,8 @@
 import { describe, expect, mock, test } from "bun:test";
 import { Elysia } from "elysia";
 
-import logixlysia from "../../src";
-import type { Options } from "../../src/interfaces";
+import { logixlysia } from "../../src";
+import type { LogixlysiaOptions } from "../../src/interfaces";
 
 const UUID_V4_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -14,7 +14,7 @@ describe("request ID plugin integration", () => {
     >(() => {
       /* noop */
     });
-    const options: Options = {
+    const options: LogixlysiaOptions = {
       config: {
         disableFileLogging: true,
         disableInternalLogger: true,
@@ -38,7 +38,7 @@ describe("request ID plugin integration", () => {
   });
 
   test("sets X-Request-Id response header", async () => {
-    const options: Options = {
+    const options: LogixlysiaOptions = {
       config: {
         disableFileLogging: true,
         disableInternalLogger: true,
@@ -61,7 +61,7 @@ describe("request ID plugin integration", () => {
     >(() => {
       /* noop */
     });
-    const options: Options = {
+    const options: LogixlysiaOptions = {
       config: {
         disableFileLogging: true,
         disableInternalLogger: true,
@@ -95,7 +95,7 @@ describe("request ID plugin integration", () => {
     >(() => {
       /* noop */
     });
-    const options: Options = {
+    const options: LogixlysiaOptions = {
       config: {
         disableFileLogging: true,
         disableInternalLogger: true,
@@ -118,7 +118,7 @@ describe("request ID plugin integration", () => {
   });
 
   test("uses custom header name from RequestIdConfig", async () => {
-    const options: Options = {
+    const options: LogixlysiaOptions = {
       config: {
         disableFileLogging: true,
         disableInternalLogger: true,
@@ -138,7 +138,7 @@ describe("request ID plugin integration", () => {
 
   test("uses custom generator from RequestIdConfig", async () => {
     let counter = 0;
-    const options: Options = {
+    const options: LogixlysiaOptions = {
       config: {
         disableFileLogging: true,
         disableInternalLogger: true,
@@ -173,7 +173,7 @@ describe("request ID plugin integration", () => {
     >(() => {
       /* noop */
     });
-    const options: Options = {
+    const options: LogixlysiaOptions = {
       config: {
         customLogFormat: "{method} {pathname} {requestId}",
         disableFileLogging: true,
@@ -201,7 +201,7 @@ describe("request ID plugin integration", () => {
     >(() => {
       /* noop */
     });
-    const options: Options = {
+    const options: LogixlysiaOptions = {
       config: {
         disableFileLogging: true,
         disableInternalLogger: true,
@@ -222,7 +222,7 @@ describe("request ID plugin integration", () => {
   });
 
   test("sets X-Request-Id response header on errors", async () => {
-    const options: Options = {
+    const options: LogixlysiaOptions = {
       config: {
         disableFileLogging: true,
         disableInternalLogger: true,

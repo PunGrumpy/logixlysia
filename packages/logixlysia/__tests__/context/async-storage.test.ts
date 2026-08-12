@@ -1,14 +1,14 @@
 import { describe, expect, mock, test } from "bun:test";
 import { Elysia } from "elysia";
-import logixlysia, { useLogger } from "../../src";
-import type { Options } from "../../src/interfaces";
+import { logixlysia, useLogger } from "../../src";
+import type { LogixlysiaOptions } from "../../src/interfaces";
 
 describe("AsyncLocalStorage & useLogger() context integration", () => {
   test("derived log object is available on context and logs to transport", async () => {
     const transport = mock<(lvl: any, msg: any, meta?: any) => void>(
       () => undefined
     );
-    const options: Options = {
+    const options: LogixlysiaOptions = {
       config: {
         disableFileLogging: true,
         disableInternalLogger: true,
@@ -41,7 +41,7 @@ describe("AsyncLocalStorage & useLogger() context integration", () => {
     const transport = mock<(lvl: any, msg: any, meta?: any) => void>(
       () => undefined
     );
-    const options: Options = {
+    const options: LogixlysiaOptions = {
       config: {
         disableFileLogging: true,
         disableInternalLogger: true,
@@ -84,7 +84,7 @@ describe("AsyncLocalStorage & useLogger() context integration", () => {
     const transport = mock<(lvl: any, msg: any, meta?: any) => void>(
       () => undefined
     );
-    const options: Options = {
+    const options: LogixlysiaOptions = {
       config: {
         disableFileLogging: true,
         disableInternalLogger: true,

@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { Elysia } from "elysia";
 
-import logixlysia from "../../src";
-import type { Options } from "../../src/interfaces";
+import { logixlysia } from "../../src";
+import type { LogixlysiaOptions } from "../../src/interfaces";
 
 const sleep = (ms: number): Promise<void> =>
   new Promise((resolve) => setTimeout(resolve, ms));
@@ -22,7 +22,7 @@ describe("logixlysia plugin - per-request timing under concurrency", () => {
       });
     };
 
-    const options: Options = {
+    const options: LogixlysiaOptions = {
       config: {
         disableFileLogging: true,
         disableInternalLogger: true,

@@ -1,8 +1,8 @@
 import { describe, expect, mock, test } from "bun:test";
 import { Elysia } from "elysia";
 
-import logixlysia from "../../src";
-import type { Options } from "../../src/interfaces";
+import { logixlysia } from "../../src";
+import type { LogixlysiaOptions } from "../../src/interfaces";
 
 describe("logixlysia request context", () => {
   test("merges accumulated context into auto access log", async () => {
@@ -11,7 +11,7 @@ describe("logixlysia request context", () => {
     >(() => {
       /* noop */
     });
-    const options: Options = {
+    const options: LogixlysiaOptions = {
       config: {
         disableFileLogging: true,
         disableInternalLogger: true,
@@ -41,7 +41,7 @@ describe("logixlysia request context", () => {
     >(() => {
       /* noop */
     });
-    const options: Options = {
+    const options: LogixlysiaOptions = {
       config: {
         disableFileLogging: true,
         disableInternalLogger: true,
@@ -75,7 +75,7 @@ describe("logixlysia request context", () => {
     >(() => {
       /* noop */
     });
-    const options: Options = {
+    const options: LogixlysiaOptions = {
       config: {
         autoRedact: true,
         disableFileLogging: true,
@@ -107,7 +107,7 @@ describe("logixlysia request context", () => {
     >(() => {
       /* noop */
     });
-    const options: Options = {
+    const options: LogixlysiaOptions = {
       config: {
         disableFileLogging: true,
         disableInternalLogger: true,

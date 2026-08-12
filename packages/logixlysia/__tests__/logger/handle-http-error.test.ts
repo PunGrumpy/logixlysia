@@ -1,8 +1,8 @@
 import { describe, expect, mock, test } from "bun:test";
 import { Elysia, t } from "elysia";
 
-import logixlysia from "../../src";
-import { HttpError, type Options } from "../../src/interfaces";
+import { logixlysia } from "../../src";
+import { HttpError, type LogixlysiaOptions } from "../../src/interfaces";
 import { normalizeLoggedError } from "../../src/utils/error";
 
 interface CapturedEvent {
@@ -25,7 +25,7 @@ const createCaptureTransport = () => {
 
 const SECRET_PASSWORD = "hunter2-secret-value";
 
-const buildLoginApp = (options: Options) =>
+const buildLoginApp = (options: LogixlysiaOptions) =>
   new Elysia().use(logixlysia(options)).post("/login", () => "ok", {
     body: t.Object({
       email: t.String(),
@@ -103,7 +103,7 @@ describe("handleHttpError", () => {
 
   test("normalizes a thrown HttpError into a serializable, minimal shape", async () => {
     const { events, transport } = createCaptureTransport();
-    const options: Options = {
+    const options: LogixlysiaOptions = {
       config: {
         disableFileLogging: true,
         disableInternalLogger: true,
@@ -150,7 +150,7 @@ describe("handleHttpError", () => {
   // `code === 'VALIDATION'` is the minification-safe discriminant; simulate
   // a mangled class to prove detection still works.
   test("detects a validation error by code when class names are minified", () => {
-    class MangledClassName extends Error {}
+    class MangledClassName extends Error { }
     const mangled = Object.assign(
       new MangledClassName('{"found":{"password":"leak-me"}}'),
       {
