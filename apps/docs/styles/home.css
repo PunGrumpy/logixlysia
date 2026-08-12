@@ -1,0 +1,123 @@
+/* Homepage-only presentational CSS (imported by pages/index.astro). Plain CSS
+   only — no @theme/@apply here; token utilities live in ../theme.css. */
+
+/* Tailwind v4 makes the bare `border`/`divide-*` utilities fall back to
+   currentColor (black in light mode). Restore a token default — inside
+   @layer base so Tailwind's own utilities layer (border-accent on the active
+   tab, border-white/10, …) still wins. The `:root` prefix outweighs
+   preflight's zero-specificity `border: 0 solid` reset, which is required:
+   Astro inlines this sheet into the page BEFORE the linked Tailwind
+   stylesheet, so with equal specificity preflight would win on source order.
+   Scoped to the homepage (this file only loads there). */
+@layer base {
+  :root *,
+  :root ::before,
+  :root ::after {
+    border-color: var(--color-border);
+  }
+}
+
+/* Crisper, thinner text on macOS; other platforms ignore these. The
+   horizontal clip keeps the footer's full-bleed `w-screen` breakout from
+   adding a horizontal scrollbar when the vertical scrollbar is visible. */
+html {
+  overflow-x: clip;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Dual-theme homepage code block (github-light / vesper). Same swap Blume
+   applies inside .prose, scoped to the standalone <Code> on the homepage:
+   shiki inlines the light color and exposes the dark one via --shiki-dark. */
+.hp-code-dual pre.astro-code {
+  color: var(--shiki-light, var(--blume-foreground)) !important;
+  background: transparent !important;
+}
+:root[data-theme="dark"] .hp-code-dual pre.astro-code {
+  color: var(--shiki-dark, var(--blume-foreground)) !important;
+}
+.hp-code-dual pre.astro-code span {
+  color: var(--shiki-light, inherit);
+  background: transparent !important;
+}
+:root[data-theme="dark"] .hp-code-dual pre.astro-code span {
+  color: var(--shiki-dark, inherit);
+}
+
+/* Terminal block cursor, referenced from the Tailwind
+   animate-[term-blink_...] utilities in demo.astro. steps(1) makes it
+   snap on/off like a real terminal instead of fading. */
+@keyframes term-blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+/* User-paused demo terminal (`data-term-paused` is toggled by its pause
+   button): freeze the caret blink along with the scripted replay. The
+   `:root` prefix outweighs the animate-[…] utility's shorthand, which would
+   otherwise win on source order (this sheet loads before Tailwind's). */
+:root [data-term-paused] * {
+  animation-play-state: paused;
+}
+
+/* Animated FAQ disclosure. Pure CSS via ::details-content +
+   interpolate-size; browsers without support (and reduced-motion users)
+   keep the native instant toggle. Easing matches the stagger entrance. */
+@media (prefers-reduced-motion: no-preference) {
+  .faq-item {
+    interpolate-size: allow-keywords;
+  }
+  .faq-item::details-content {
+    block-size: 0;
+    overflow-y: clip;
+    transition:
+      content-visibility 0.25s allow-discrete,
+      block-size 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .faq-item[open]::details-content {
+    block-size: auto;
+  }
+}
+
+/* Staggered text entrance. Lines start shifted and
+   blurred; a script marks the `.t-stagger` container `.is-shown` after the
+   first paint and each line transitions in, offset by --stagger-stagger. */
+.t-stagger-line {
+  --stagger-dur: 0.6s;
+  --stagger-distance: 12px;
+  --stagger-stagger: 70ms;
+  --stagger-blur: 3px;
+  --stagger-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  opacity: 0;
+  filter: blur(var(--stagger-blur));
+  transform: translateY(var(--stagger-distance));
+  transition:
+    opacity var(--stagger-dur) var(--stagger-ease),
+    transform var(--stagger-dur) var(--stagger-ease),
+    filter var(--stagger-dur) var(--stagger-ease);
+  will-change: transform, opacity, filter;
+}
+
+.t-stagger-line--2 {
+  transition-delay: var(--stagger-stagger);
+}
+
+.t-stagger-line--3 {
+  transition-delay: calc(2 * var(--stagger-stagger));
+}
+
+.t-stagger.is-shown .t-stagger-line {
+  opacity: 1;
+  filter: blur(0);
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .t-stagger-line {
+    opacity: 1;
+    filter: none;
+    transform: none;
+    transition: none !important;
+  }
+}

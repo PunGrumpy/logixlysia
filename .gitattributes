@@ -1,2 +1,5 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# GitHub Agentic Workflows
+.github/workflows/*.lock.yml linguist-generated=true merge=ours

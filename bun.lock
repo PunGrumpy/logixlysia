@@ -76,8 +76,8 @@
         "elysia": "latest",
       },
     },
-    "apps/elysia-node": {
-      "name": "elysia-node-example",
+    "packages/bench": {
+      "name": "@repo/bench",
       "version": "0.0.0",
       "dependencies": {
         "@elysiajs/node": "^1.4.5",
@@ -893,7 +893,7 @@
 
     "elysia-example": ["elysia-example@workspace:apps/elysia"],
 
-    "elysia-node-example": ["elysia-node-example@workspace:apps/elysia-node"],
+    "emmet": ["emmet@2.4.11", "", { "dependencies": { "@emmetio/abbreviation": "^2.3.3", "@emmetio/css-abbreviation": "^2.1.8" } }, "sha512-23QPJB3moh/U9sT4rQzGgeyyGIrcM+GH5uVYg2C6wZIxAIJq7Ng3QLT79tl8FUwDXhyq9SusfknOrofAKqvgyQ=="],
 
     "embla-carousel": ["embla-carousel@8.6.0", "https://mirrors.cloud.tencent.com/npm/embla-carousel/-/embla-carousel-8.6.0.tgz", {}, "sha512-SjWyZBHJPbqxHOzckOfo8lHisEaJWmwd23XppYFYVh10bU66/Pn5tkVkbkCMZVdbUE5eTCI2nD8OyIP4Z+uwkA=="],
 

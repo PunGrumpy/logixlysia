@@ -28,6 +28,9 @@ export const routers = new Elysia()
     message: "Welcome to Basic Elysia with Logixlysia",
   }))
   .use(customRouter)
+  .use(requestContextRouter)
+  .use(aiMetricsRouter)
+  .use(otelRouter)
   .use(pinoRouter)
   .use(statusRouter)
   .use(boomRouter);

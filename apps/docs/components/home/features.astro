@@ -1,0 +1,468 @@
+---
+// Log-line text lives in data (like demo.astro) so column spacing survives —
+// spans written directly in markup get their whitespace collapsed.
+import FileRow from './file-row.astro'
+import LegendChip from './legend-chip.astro'
+import LogLine from './log-line.astro'
+import TokenSpan from './token-span.astro'
+
+type Part = [cls: string, text: string]
+
+// Dual-mode terminal palette: muted ink colors in light mode, vesper in dark.
+const c = {
+  blue: 'text-[#0550AE] dark:text-[#a5d6ff]',
+  bold: 'font-semibold',
+  fg: 'text-[#2D2D2D] dark:text-[#DADADA]',
+  foxError: 'rounded-sm bg-[#C9303C]/10 dark:bg-[#ff8080]/20',
+  foxInfo: 'rounded-sm bg-[#0550AE]/10 dark:bg-[#a5d6ff]/15',
+  foxWarn: 'rounded-sm bg-[#B26A00]/15 dark:bg-[#ffc799]/20',
+  mint: 'text-[#067647] dark:text-[#99ffe4]',
+  muted: 'text-black/45 dark:text-white/40',
+  orange: 'text-[#B26A00] dark:text-[#ffc799]',
+  red: 'text-[#C9303C] dark:text-[#ff8080]'
+}
+
+// Tokens get a data attribute so the spotlight loop can highlight each part
+// of the line in turn, synced with its legend chip.
+const requestLine: { cls: string; text: string; token?: string }[] = [
+  { cls: c.muted, text: '10:24:33.412', token: 'timestamp' },
+  { cls: '', text: ' ' },
+  { cls: c.fg, text: '[api-server]', token: 'service' },
+  { cls: c.foxInfo, text: ' 🦊 ' },
+  { cls: '', text: ' ' },
+  { cls: `${c.mint} ${c.bold}`, text: 'GET', token: 'method' },
+  { cls: '', text: ' ' },
+  { cls: c.fg, text: '/reports', token: 'path' },
+  { cls: '', text: ' ' },
+  { cls: c.mint, text: '200', token: 'status' },
+  { cls: '', text: ' ' },
+  { cls: c.orange, text: '613ms', token: 'duration' },
+  { cls: '', text: ' ' },
+  { cls: c.blue, text: '10.0.0.42', token: 'ip' }
+]
+
+const legend = [
+  { cls: c.muted, label: 'timestamp' },
+  { cls: c.fg, label: 'service' },
+  { cls: c.mint, label: 'method' },
+  { cls: c.fg, label: 'path' },
+  { cls: c.mint, label: 'status' },
+  { cls: c.orange, label: 'duration' },
+  { cls: c.blue, label: 'ip' }
+]
+
+interface LogLineData {
+  duration: string
+  fox: string
+  method: string
+  path: string
+  status: string
+  statusCls: string
+}
+
+const logParts = (line: LogLineData): Part[] => [
+  [line.fox, ' 🦊 '],
+  ['', ' '],
+  [`${c.mint} ${c.bold}`, line.method.padEnd(7)],
+  ['', ' '],
+  [c.fg, line.path],
+  ['', ' '],
+  [line.statusCls, line.status],
+  ['', ' '],
+  [c.mint, line.duration]
+]
+
+const filtered: { kept: boolean; parts: Part[] }[] = [
+  {
+    kept: false,
+    parts: logParts({
+      duration: '1ms',
+      fox: c.foxInfo,
+      method: 'GET',
+      path: '/health',
+      status: '200',
+      statusCls: c.mint
+    })
+  },
+  {
+    kept: false,
+    parts: logParts({
+      duration: '3ms',
+      fox: c.foxInfo,
+      method: 'GET',
+      path: '/',
+      status: '200',
+      statusCls: c.mint
+    })
+  },
+  {
+    kept: true,
+    parts: logParts({
+      duration: '1ms',
+      fox: c.foxWarn,
+      method: 'GET',
+      path: '/favicon.ico',
+      status: '404',
+      statusCls: c.orange
+    })
+  },
+  {
+    kept: false,
+    parts: logParts({
+      duration: '38ms',
+      fox: c.foxInfo,
+      method: 'POST',
+      path: '/auth/login',
+      status: '201',
+      statusCls: c.mint
+    })
+  },
+  {
+    kept: true,
+    parts: logParts({
+      duration: '2ms',
+      fox: c.foxError,
+      method: 'GET',
+      path: '/crash',
+      status: '500',
+      statusCls: c.red
+    })
+  }
+]
+
+const files = [
+  { live: true, name: 'logs/api-2026-07-21.log', size: '2.1 MB' },
+  { live: false, name: 'logs/api-2026-07-20.log', size: '10.0 MB' },
+  { live: false, name: 'logs/api-2026-07-19.log.gz', size: '1.2 MB' }
+]
+---
+
+<section class="grid gap-16 sm:gap-24">
+  <!-- 01 · Request context -->
+  <div
+    class="t-stagger grid items-center gap-8 lg:grid-cols-2 lg:gap-12"
+    data-reveal
+  >
+    <div class="t-stagger-line grid justify-items-start gap-3">
+      <h2
+        class="text-balance font-medium text-[21px] text-foreground leading-[145%] lg:text-[25px]"
+      >
+        Sees every request, end to end
+      </h2>
+      <p
+        class="text-pretty text-[15px] text-muted-foreground leading-[160%] lg:text-[17px]"
+      >
+        Method, path, status, duration, and client IP land on one readable line
+        — captured automatically for every request, with no wrappers and no
+        middleware chains.
+      </p>
+      <a
+        class="group -my-2.5 py-2.5 font-medium text-[15px] text-foreground transition-colors hover:text-muted-foreground"
+        href="/docs/features/request-context"
+      >
+        Explore request context
+        <span
+          aria-hidden="true"
+          class="inline-block transition-[translate] group-hover:translate-x-0.5"
+          >→</span
+        >
+      </a>
+    </div>
+    <div
+      aria-label="Example log line with each colored token highlighted in turn: timestamp, service, method, path, status, duration, and client IP"
+      class="t-stagger-line t-stagger-line--2 min-w-0 rounded-3xl bg-white shadow-[0_0_0_1px_rgb(0_0_0/0.06),0_1px_2px_-1px_rgb(0_0_0/0.06),0_2px_4px_0_rgb(0_0_0/0.04)] dark:bg-[#131313] dark:shadow-[0_0_0_1px_rgb(255_255_255/0.08)]"
+      data-anatomy
+      role="img"
+    >
+      <div class="overflow-x-auto p-5 font-mono text-[0.8rem] leading-relaxed">
+        <div class="whitespace-pre">
+          {requestLine.map(part => (
+            <TokenSpan cls={part.cls} text={part.text} token={part.token} />
+          ))}
+        </div>
+      </div>
+      <div
+        class="flex flex-wrap gap-1.5 border-[#EBEBEB] border-t p-4 dark:border-white/8"
+      >
+        {legend.map(item => <LegendChip cls={item.cls} label={item.label} />)}
+      </div>
+    </div>
+  </div>
+
+  <!-- 02 · Filtering -->
+  <div
+    class="t-stagger grid items-center gap-8 lg:grid-cols-2 lg:gap-12"
+    data-reveal
+  >
+    <div class="t-stagger-line grid justify-items-start gap-3 lg:order-2">
+      <h2
+        class="text-balance font-medium text-[21px] text-foreground leading-[145%] lg:text-[25px]"
+      >
+        Keeps the noise out
+      </h2>
+      <p
+        class="text-pretty text-[15px] text-muted-foreground leading-[160%] lg:text-[17px]"
+      >
+        Filter by level, HTTP method, or status code. Health checks and favicons
+        fade away — warnings and errors stay loud.
+      </p>
+      <a
+        class="group -my-2.5 py-2.5 font-medium text-[15px] text-foreground transition-colors hover:text-muted-foreground"
+        href="/docs/features/filtering"
+      >
+        Explore filtering
+        <span
+          aria-hidden="true"
+          class="inline-block transition-[translate] group-hover:translate-x-0.5"
+          >→</span
+        >
+      </a>
+    </div>
+    <div
+      aria-label="Example filter config keeping only warnings and errors; filtered-out request logs appear dimmed"
+      class="t-stagger-line t-stagger-line--2 min-w-0 rounded-3xl bg-white shadow-[0_0_0_1px_rgb(0_0_0/0.06),0_1px_2px_-1px_rgb(0_0_0/0.06),0_2px_4px_0_rgb(0_0_0/0.04)] lg:order-1 dark:bg-[#131313] dark:shadow-[0_0_0_1px_rgb(255_255_255/0.08)]"
+      data-filter-demo
+      role="img"
+    >
+      <div
+        class="flex items-center gap-2 overflow-x-auto border-[#EBEBEB] border-b p-4 dark:border-white/8"
+      >
+        <span
+          class="whitespace-nowrap rounded-full px-2 py-0.5 font-mono text-[#2D2D2D] text-[11px] shadow-[0_0_0_1px_rgb(0_0_0/0.08)] transition-[background-color] duration-300 dark:text-[#DADADA] dark:shadow-[0_0_0_1px_rgb(255_255_255/0.1)]"
+          data-filter-chip
+        >
+          filter: &lbrace; level: ['warn', 'error'] &rbrace;
+        </span>
+      </div>
+      <div class="overflow-x-auto p-5 font-mono text-[0.8rem] leading-relaxed">
+        {filtered.map(line => <LogLine kept={line.kept} parts={line.parts} />)}
+      </div>
+    </div>
+  </div>
+
+  <!-- 03 · File rotation -->
+  <div
+    class="t-stagger grid items-center gap-8 lg:grid-cols-2 lg:gap-12"
+    data-reveal
+  >
+    <div class="t-stagger-line grid justify-items-start gap-3">
+      <h2
+        class="text-balance font-medium text-[21px] text-foreground leading-[145%] lg:text-[25px]"
+      >
+        Outlives the terminal
+      </h2>
+      <p
+        class="text-pretty text-[15px] text-muted-foreground leading-[160%] lg:text-[17px]"
+      >
+        Write logs to disk with size- and time-based rotation built in —
+        yesterday's file compresses and rotates away on its own.
+      </p>
+      <a
+        class="group -my-2.5 py-2.5 font-medium text-[15px] text-foreground transition-colors hover:text-muted-foreground"
+        href="/docs/features/file-logging"
+      >
+        Explore file logging
+        <span
+          aria-hidden="true"
+          class="inline-block transition-[translate] group-hover:translate-x-0.5"
+          >→</span
+        >
+      </a>
+    </div>
+    <div
+      aria-label="Example rotation config: the live log file grows to the 10 MB size limit, then rotates while older files compress"
+      class="t-stagger-line t-stagger-line--2 min-w-0 rounded-3xl bg-white shadow-[0_0_0_1px_rgb(0_0_0/0.06),0_1px_2px_-1px_rgb(0_0_0/0.06),0_2px_4px_0_rgb(0_0_0/0.04)] dark:bg-[#131313] dark:shadow-[0_0_0_1px_rgb(255_255_255/0.08)]"
+      data-rotation
+      role="img"
+    >
+      <div
+        class="flex items-center gap-2 overflow-x-auto border-[#EBEBEB] border-b p-4 dark:border-white/8"
+      >
+        <span
+          class="whitespace-nowrap rounded-full px-2 py-0.5 font-mono text-[#2D2D2D] text-[11px] shadow-[0_0_0_1px_rgb(0_0_0/0.08)] dark:text-[#DADADA] dark:shadow-[0_0_0_1px_rgb(255_255_255/0.1)]"
+        >
+          rotation: &lbrace; size: '10m', interval: '1d' &rbrace;
+        </span>
+      </div>
+      <div
+        class="grid gap-1 overflow-x-auto p-5 font-mono text-[0.8rem] leading-relaxed"
+      >
+        {files.map(file => (
+          <FileRow live={file.live} name={file.name} size={file.size} />
+        ))}
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+  const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
+
+  const reduceMotion = window.matchMedia(
+    '(prefers-reduced-motion: reduce)'
+  ).matches
+
+  // Resolves immediately while `el` is on screen; otherwise waits for it.
+  const visibilityGate = (el: Element) => {
+    let visible = false
+    let onVisible: (() => void) | undefined
+    new IntersectionObserver(
+      entries => {
+        visible = entries.some(entry => entry.isIntersecting)
+        if (visible && onVisible) {
+          onVisible()
+          onVisible = undefined
+        }
+      },
+      { threshold: 0.35 }
+    ).observe(el)
+    return () =>
+      visible
+        ? Promise.resolve()
+        : new Promise<void>(resolve => {
+            onVisible = resolve
+          })
+  }
+
+  // 01 · Spotlight each token of the log line, synced with its legend chip.
+  const anatomy = document.querySelector('[data-anatomy]')
+  if (anatomy && !reduceMotion) {
+    const tokens = [...anatomy.querySelectorAll<HTMLElement>('[data-token]')]
+    const chips = [...anatomy.querySelectorAll<HTMLElement>('[data-chip]')]
+    const waitUntilVisible = visibilityGate(anatomy)
+    const spotlight = async (token: HTMLElement) => {
+      await waitUntilVisible()
+      token.classList.add('bg-black/5', 'dark:bg-white/10')
+      for (const chip of chips) {
+        chip.classList.toggle(
+          'opacity-40',
+          chip.dataset.chip !== token.dataset.token
+        )
+      }
+      await sleep(1100)
+      token.classList.remove('bg-black/5', 'dark:bg-white/10')
+    }
+    const round = async () => {
+      // Chain instead of an awaited loop: each token spotlights in turn.
+      await tokens.reduce(
+        (previous, token) => previous.then(() => spotlight(token)),
+        Promise.resolve()
+      )
+      for (const chip of chips) {
+        chip.classList.remove('opacity-40')
+      }
+      await sleep(900)
+    }
+    // Bounded replay (WCAG 2.2.2): stop after a few rounds instead of looping
+    // forever; the resting state matches the static markup.
+    let rounds = 0
+    const loop = () => {
+      round().then(() => {
+        rounds += 1
+        if (rounds < 3) {
+          loop()
+        }
+      })
+    }
+    loop()
+  }
+
+  // 02 · Replay the raw stream, then apply the filter and dim the noise.
+  const filterDemo = document.querySelector('[data-filter-demo]')
+  if (filterDemo && !reduceMotion) {
+    const lines = [...filterDemo.querySelectorAll<HTMLElement>('[data-log]')]
+    const chip = filterDemo.querySelector<HTMLElement>('[data-filter-chip]')
+    const waitUntilVisible = visibilityGate(filterDemo)
+    // setTimeout chain instead of an awaited loop: lines reveal one by one.
+    const revealLines = () =>
+      new Promise<void>(resolve => {
+        let index = 0
+        const tick = () => {
+          const line = lines[index]
+          if (!line) {
+            resolve()
+            return
+          }
+          index += 1
+          line.classList.remove('opacity-0')
+          setTimeout(tick, 180)
+        }
+        tick()
+      })
+    const round = async () => {
+      await waitUntilVisible()
+      for (const line of lines) {
+        line.classList.add('opacity-0')
+        line.classList.remove('opacity-35')
+      }
+      await sleep(500)
+      await revealLines()
+      await sleep(800)
+      chip?.classList.add('bg-black/5', 'dark:bg-white/10')
+      for (const line of lines) {
+        if (line.dataset.kept === undefined) {
+          line.classList.add('opacity-35')
+        }
+      }
+      await sleep(600)
+      chip?.classList.remove('bg-black/5', 'dark:bg-white/10')
+      await sleep(2800)
+    }
+    let rounds = 0
+    const loop = () => {
+      round().then(() => {
+        rounds += 1
+        if (rounds < 3) {
+          loop()
+        }
+      })
+    }
+    loop()
+  }
+
+  // 03 · The live file grows until the size threshold, flashes, and rotates.
+  const rotation = document.querySelector('[data-rotation]')
+  if (rotation && !reduceMotion) {
+    const row = rotation.querySelector<HTMLElement>('[data-live-row]')
+    const size = rotation.querySelector<HTMLElement>('[data-live-size]')
+    const waitUntilVisible = visibilityGate(rotation)
+    if (row && size) {
+      // setTimeout chain instead of an awaited loop: the size ticks upward.
+      const growFile = () =>
+        new Promise<void>(resolve => {
+          let megabytes = 0.1
+          const tick = () => {
+            if (megabytes >= 10) {
+              resolve()
+              return
+            }
+            size.textContent = `${megabytes.toFixed(1)} MB`
+            megabytes += 0.3
+            setTimeout(tick, 120)
+          }
+          tick()
+        })
+      const round = async () => {
+        await waitUntilVisible()
+        await growFile()
+        size.textContent = '10.0 MB'
+        row.classList.add('bg-[#067647]/10', 'dark:bg-[#99ffe4]/10')
+        await sleep(700)
+        row.classList.remove('bg-[#067647]/10', 'dark:bg-[#99ffe4]/10')
+      }
+      const initialSize = size.textContent
+      let rounds = 0
+      const loop = () => {
+        round().then(() => {
+          rounds += 1
+          if (rounds < 3) {
+            loop()
+            return
+          }
+          size.textContent = initialSize
+        })
+      }
+      loop()
+    }
+  }
+</script>

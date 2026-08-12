@@ -1,0 +1,49 @@
+---
+title: Presets
+description: Opinionated dev, prod, and json logging defaults
+---
+
+Use `preset` for one-line environment defaults. Explicit `config` fields always override the preset.
+
+```ts
+import { Elysia } from 'elysia'
+import logixlysia from 'logixlysia'
+
+const app = new Elysia().use(
+  logixlysia({
+    preset: 'prod',
+    config: {
+      service: 'api',
+      logFilePath: './logs/app.log'
+    }
+  })
+)
+```
+
+## Available presets
+
+| Preset | Startup banner | Pretty print | Context tree | `autoRedact` |
+| ------ | -------------- | ------------ | ------------ | ------------ |
+| `dev` | Yes (banner) | Yes | Yes | No |
+| `prod` | No | No | No | Yes |
+| `json` | No | No | No | No |
+
+## Override example
+
+```ts
+logixlysia({
+  preset: 'prod',
+  config: {
+    autoRedact: false,
+    showStartupMessage: true
+  }
+})
+```
+
+You can also resolve options programmatically:
+
+```ts
+import { resolveOptions } from 'logixlysia'
+
+const options = resolveOptions({ preset: 'dev', config: { service: 'api' } })
+```

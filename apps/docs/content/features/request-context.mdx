@@ -1,0 +1,76 @@
+---
+title: Request context
+description: Accumulate request-scoped fields into a single access log line
+---
+
+Logixlysia can accumulate context during a request and merge it into the automatic access log—similar to evlog wide events, without replacing your existing `logger.info()` API.
+
+## Basic usage
+
+```ts
+import { Elysia } from 'elysia'
+import logixlysia from 'logixlysia'
+
+const app = new Elysia()
+  .use(logixlysia())
+  .get('/checkout', ({ request, store }) => {
+    store.logger.mergeContext(request, { userId: 'usr_123' })
+    store.logger.mergeContext(request, { cartTotal: 9999 })
+    return { ok: true }
+  })
+```
+
+The final `INFO` access log includes a `context` object with `userId` and `cartTotal` (and renders as a context tree when `showContextTree` is enabled).
+
+## Precedence
+
+When you call `logger.info(request, message, { ...explicit })`, keys in the explicit context **override** accumulated values. Non-colliding keys from both sources are kept.
+
+## Reading context
+
+```ts
+const ctx = store.logger.getContext(request)
+```
+
+## Request-Scoped Logger & AsyncLocalStorage
+
+Instead of manually passing the `request` object to `store.logger` methods (e.g. `store.logger.info(request, message)`), you can enable `AsyncLocalStorage` propagation:
+
+```ts
+logixlysia({
+  config: {
+    useAsyncLocalStorage: true
+  }
+})
+```
+
+When enabled, a request-scoped logger `log` is derived automatically on the Elysia handler context. You can also retrieve the active logger globally in nested service layers or helper functions using the `useLogger()` hook.
+
+### 1. Handler Context (`log`)
+
+Destructure `log` directly in your route handlers:
+
+```ts
+app.get('/user/:id', ({ log, params }) => {
+  log.mergeContext({ userId: params.id })
+  log.info('Fetched user profile')
+  return { success: true }
+})
+```
+
+### 2. Global Hook (`useLogger()`)
+
+Import `useLogger()` to log or merge context from deeply nested operations without prop-drilling the request context:
+
+```ts
+import { useLogger } from 'logixlysia'
+
+async function findUser(id: string) {
+  const log = useLogger()
+  log.mergeContext({ action: 'db_query' })
+  log.info('Executing database lookup...')
+  
+  // Database lookup logic...
+  return { id, name: 'John Doe' }
+}
+```

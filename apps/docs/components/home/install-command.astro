@@ -1,0 +1,80 @@
+---
+interface Props {
+  command: string
+}
+
+const { command } = Astro.props
+---
+
+<div
+  class="flex items-center justify-between w-full max-w-94.25 lg:w-94.25 h-12.25 rounded-[7px] pl-4.25 pr-1.25 shrink-0 bg-white shadow-[0_0_0_1px_rgb(0_0_0/0.06),0_1px_2px_-1px_rgb(0_0_0/0.06),0_2px_4px_0_rgb(0_0_0/0.04)] dark:bg-[#131313] dark:shadow-[0_0_0_1px_rgb(255_255_255/0.08)]"
+  data-copy={command}
+>
+  <div class="text-[17px] leading-[145%] font-mono inline-flex gap-2.5">
+    <span aria-hidden="true" class="select-none text-muted-foreground">$</span>
+    <code class="whitespace-nowrap">{command}</code>
+  </div>
+  <button
+    aria-label="Copy command"
+    class="group relative grid size-10 shrink-0 cursor-pointer place-items-center rounded-[3px] text-muted-foreground transition-[scale,background-color,color] duration-150 ease-out after:absolute after:-inset-1.5 hover:bg-muted hover:text-foreground active:scale-[0.96] data-copied:text-emerald-600 dark:data-copied:text-emerald-400"
+    type="button"
+  >
+    <span class="relative size-4">
+      <svg
+        aria-hidden="true"
+        class="size-4 transition-[opacity,scale,filter] duration-300 ease-[cubic-bezier(0.2,0,0,1)] group-data-copied:scale-25 group-data-copied:opacity-0 group-data-copied:blur-xs"
+        fill="none"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+      >
+        <rect height="13" rx="2" width="13" x="8" y="8"></rect>
+        <path d="M5 16V5a1 1 0 0 1 1-1h11"></path>
+      </svg>
+      <svg
+        aria-hidden="true"
+        class="absolute inset-0 size-4 scale-25 opacity-0 blur-xs transition-[opacity,scale,filter] duration-300 ease-[cubic-bezier(0.2,0,0,1)] group-data-copied:scale-100 group-data-copied:opacity-100 group-data-copied:blur-none"
+        fill="none"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+      >
+        <path d="M5 12l5 5L20 7"></path>
+      </svg>
+    </span>
+  </button>
+  <span class="sr-only" data-copy-status role="status"></span>
+</div>
+
+<script>
+  for (const block of document.querySelectorAll('[data-copy]')) {
+    const button = block.querySelector('button')
+    const status = block.querySelector('[data-copy-status]')
+    if (!button) {
+      continue
+    }
+    let timeout: ReturnType<typeof setTimeout> | undefined
+    button.addEventListener('click', async () => {
+      const value = block.getAttribute('data-copy')
+      if (!value) {
+        return
+      }
+      await navigator.clipboard.writeText(value)
+      button.dataset.copied = ''
+      if (status) {
+        status.textContent = 'Copied'
+      }
+      clearTimeout(timeout)
+      timeout = setTimeout(() => {
+        delete button.dataset.copied
+        if (status) {
+          status.textContent = ''
+        }
+      }, 1200)
+    })
+  }
+</script>

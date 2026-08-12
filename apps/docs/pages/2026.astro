@@ -1,0 +1,100 @@
+---
+import data from 'blume:data'
+import PageLayout from 'blume/components/layout/PageLayout.astro'
+import '../styles/home.css'
+
+import { getLatestVersion, getReleaseUrl } from '../lib/version'
+
+const { config } = data
+const version = getLatestVersion()
+const releaseUrl = getReleaseUrl(version)
+const title = '2026 in review | Logixlysia'
+const description =
+  "The story of Logixlysia's 2026 is still being written — the full year in review lands here in December."
+---
+
+<PageLayout
+  analytics={config.analytics}
+  appleIcon={config.appleIcon}
+  banner={config.banner}
+  favicon={config.favicon}
+  fontCssVars={data.fontCssVars}
+  logo={config.logo}
+  navigation={data.navigation}
+  ogEnabled={config.og.enabled}
+  ogImage="/opengraph-image.png"
+  page={{
+    description,
+    title
+  }}
+  searchEnabled={config.search.enabled}
+  site={{ description, title: config.title }}
+  siteUrl={config.site}
+  themeMode={config.theme.mode}
+>
+  <div class="mx-auto mt-24 grid max-w-3xl gap-10 px-4 sm:mt-36">
+    <div class="t-stagger relative grid justify-items-center gap-6 text-center">
+      <div
+        aria-hidden="true"
+        class="-top-32 -translate-x-1/2 -z-10 pointer-events-none absolute left-1/2 h-72 w-xl max-w-full rounded-full bg-[radial-gradient(closest-side,oklch(70%_0.14_50/0.14),transparent)] blur-3xl dark:hidden"
+      ></div>
+
+      <span
+        class="t-stagger-line inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-muted-foreground text-sm"
+      >
+        <span
+          aria-hidden="true"
+          class="size-2 shrink-0 animate-pulse rounded-full bg-amber-500"
+        ></span>
+        Year in review — still in progress
+      </span>
+
+      <h1
+        class="t-stagger-line font-medium text-7xl text-balance tracking-tight sm:text-8xl"
+      >
+        2026
+      </h1>
+
+      <p
+        class="t-stagger-line t-stagger-line--2 max-w-md text-[17px] text-muted-foreground leading-[145%] text-pretty font-medium [font-variation-settings:'opsz'_26]"
+      >
+        The story of Logixlysia's 2026 is still being written. The full year in
+        review lands here in December — releases, milestones, and the numbers
+        behind them.
+      </p>
+
+      <div
+        class="t-stagger-line t-stagger-line--3 mt-4 flex flex-col items-center gap-3 sm:flex-row sm:gap-4.5"
+      >
+        <a
+          class="inline-flex h-12.25 items-center justify-center rounded-[7px] bg-linear-to-b from-[oklch(67%_0.16_48)] to-[oklch(60%_0.16_44)] px-6 font-medium text-sm text-white shadow-[inset_0_0_1px_1px_rgb(255_255_255/0.12),0_1.5px_2px_rgb(0_0_0/0.1),0_0_0_1px_oklch(54%_0.15_45)] transition-[filter,scale] duration-150 ease-out hover:brightness-105 active:scale-[0.96]"
+          href="/changelog"
+          >Follow along in the changelog</a
+        >
+        <a
+          class="group -my-2.5 flex w-fit items-center gap-2 py-2.5 text-muted-foreground text-sm transition-colors hover:text-foreground"
+          href={releaseUrl}
+          rel="noopener noreferrer"
+          target="_blank"
+        >
+          <span
+            aria-hidden="true"
+            class="size-2 shrink-0 rounded-full bg-emerald-500"
+          ></span>
+          <span>Latest update — v{version} released</span>
+        </a>
+      </div>
+    </div>
+  </div>
+</PageLayout>
+
+<script>
+  for (const container of document.querySelectorAll('.t-stagger')) {
+    // Double rAF so the initial (hidden) styles paint before the transition.
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        container.classList.add('is-shown')
+      })
+    })
+  }
+</script>

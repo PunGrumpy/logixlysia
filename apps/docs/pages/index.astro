@@ -1,0 +1,78 @@
+---
+import data from 'blume:data'
+import PageLayout from 'blume/components/layout/PageLayout.astro'
+import '../styles/home.css'
+
+import Demo from '../components/home/demo.astro'
+import Faq from '../components/home/faq.astro'
+import Features from '../components/home/features.astro'
+import Footer from '../components/home/footer.astro'
+import Hero from '../components/home/hero.astro'
+import { getLatestVersion, getReleaseUrl } from '../lib/version'
+
+const { config } = data
+const version = getLatestVersion()
+const releaseUrl = getReleaseUrl(version)
+const title = 'The logger for Elysia.js | Logixlysia'
+const description =
+  'Structured, colorful request logging for Elysia.js on Bun — filtering, file rotation, request context, and custom formats in one plugin.'
+---
+
+<PageLayout
+  analytics={config.analytics}
+  appleIcon={config.appleIcon}
+  banner={config.banner}
+  favicon={config.favicon}
+  fontCssVars={data.fontCssVars}
+  logo={config.logo}
+  navigation={data.navigation}
+  ogEnabled={config.og.enabled}
+  ogImage="/opengraph-image.png"
+  page={{
+    description,
+    title
+  }}
+  searchEnabled={config.search.enabled}
+  site={{ description, title: config.title }}
+  siteUrl={config.site}
+  themeMode={config.theme.mode}
+>
+  <div
+    class="mx-auto mt-16 grid max-w-7xl gap-16 px-4 sm:mt-24 sm:gap-24 md:gap-32"
+  >
+    <div class="grid gap-8 sm:gap-20">
+      <Hero releaseUrl={releaseUrl} version={version} />
+      <Demo />
+    </div>
+    <div
+      aria-hidden="true"
+      class="-my-8 sm:-my-12 md:-my-16 h-px w-full bg-linear-to-r from-transparent via-border to-transparent"
+    ></div>
+    <Features />
+    <div
+      aria-hidden="true"
+      class="-my-8 sm:-my-12 md:-my-16 h-px w-full bg-linear-to-r from-transparent via-border to-transparent"
+    ></div>
+    <Faq />
+    <Footer />
+  </div>
+</PageLayout>
+
+<script>
+  // Below-the-fold sections marked `.t-stagger[data-reveal]` play their
+  // staggered entrance when scrolled into view (hero triggers its own on load).
+  const observer = new IntersectionObserver(
+    entries => {
+      for (const entry of entries) {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('is-shown')
+          observer.unobserve(entry.target)
+        }
+      }
+    },
+    { threshold: 0.2 }
+  )
+  for (const section of document.querySelectorAll('.t-stagger[data-reveal]')) {
+    observer.observe(section)
+  }
+</script>

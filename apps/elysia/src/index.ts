@@ -1,25 +1,11 @@
-import { swagger } from "@elysia/swagger";
-import { Elysia, env } from "elysia";
-import packageJson from "logixlysia/package.json";
-import { routers } from "./routers";
+import { Elysia, env } from 'elysia'
+import { routers } from './routers'
 
+// TODO(elysia-2): re-add the OpenAPI/Scalar plugin once an Elysia 2 compatible
+// release is published. Route `detail` metadata below is kept intact for it.
 export const app = new Elysia({
-  name: "Elysia with Logixlysia",
-})
-  .use(
-    swagger({
-      documentation: {
-        info: {
-          title: "Elysia with Logixlysia",
-          version: packageJson.version,
-        },
-      },
-      scalarConfig: {
-        theme: "saturn",
-      },
-    })
-  )
-  .use(routers);
+  name: 'Elysia with Logixlysia'
+}).use(routers)
 
 app.listen({
   port: env.PORT,

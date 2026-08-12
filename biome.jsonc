@@ -5,7 +5,8 @@
     "ultracite/react",
     "ultracite/biome/core",
     "ultracite/biome/react",
-    "ultracite/biome/next"
+    "ultracite/biome/astro",
+    "ultracite/biome/vitest"
   ],
   "files": {
     "ignoreUnknown": false,
@@ -84,27 +85,23 @@
       }
     }
   },
-  "json": {
-    "parser": {
-      "allowComments": true, // 确保这是开启的
-      "allowTrailingCommas": true
-    },
-    "formatter": {
-      "enabled": true
-    }
+  "files": {
+    "includes": ["**/*", "!__tests__", "!**/.blume", "!**/.astro", "!**/dist"]
   },
   "overrides": [
     {
-      "includes": ["**/*.svelte", "**/*.astro", "**/*.vue"],
+      "includes": ["**/*.astro"],
+      "assist": {
+        "actions": {
+          "source": {
+            "useSortedProperties": "off"
+          }
+        }
+      },
       "linter": {
         "rules": {
-          "style": {
-            "useConst": "off",
-            "useImportType": "off"
-          },
           "correctness": {
-            "noUnusedVariables": "off",
-            "noUnusedImports": "off"
+            "useJsxKeyInIterable": "off"
           }
         }
       }

@@ -1,7 +1,0 @@
-{
-  "extends": "@repo/tsconfig/tsconfig.base.json",
-  "include": ["src/**/*.ts"],
-  "compilerOptions": {
-    "strictNullChecks": true
-  }
-}

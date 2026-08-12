@@ -204,3 +204,6 @@ $RECYCLE.BIN/
 
 # Turborepo
 .turbo
+
+# npm configuration
+.npmrc

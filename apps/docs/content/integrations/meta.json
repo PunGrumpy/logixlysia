@@ -1,6 +1,0 @@
-{
-  "title": "Integrations",
-  "description": "Third-party integrations for Logixlysia",
-  "pages": ["pino", "..."],
-  "root": true
-}
