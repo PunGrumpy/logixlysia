@@ -160,3 +160,136 @@ export interface Transport {
 
 export type LogLevel = 'DEBUG' | 'INFO' | 'WARNING' | 'ERROR'
 ```
+
+## 组合器(Composers)
+
+Transport 接口只有一个 `log` 方法,所以**(Transport) => Transport** 的纯函数可以任意堆叠,跟 pino multi-stream 一样。logixlysia 给了 5 个常用组合器,从 `@pori15/logixlysia` 直接 import:
+
+| 组合器 | 用途 |
+| --- | --- |
+| `tee([t1, t2, ...])` | 多路 fan-out,任一失败不短路 |
+| `sample(rate, t)` | 概率采样(0-1) |
+| `filter(predicate, t)` | 谓词过滤 |
+| `tap(fn, t)` | 旁路(metrics / 计数),不影响主链路 |
+| `batch(size, ms, t)` | 缓冲 `size` 条或 `ms` 毫秒,合成一条发 |
+
+### tee —— 多路 fan-out
+
+把一条 log 同时发到多个 transport。任一分支 throw 或 reject 都不会短路其它分支(用 `Promise.allSettled` 兜底)。
+
+```ts
+import logixlysia, { tee } from '@pori15/logixlysia'
+
+const consoleT = { log: (l, m) => console.log(l, m) }
+const metricsT = { log: (l, m, meta) => metrics.increment(m) }
+
+logixlysia({
+  config: {
+    transports: [tee([consoleT, metricsT])],
+  },
+})
+```
+
+### sample —— 概率采样
+
+以 `rate` (0-1) 的概率把 log 转发给 transport。`rate=0` 完全丢弃,`rate=1` 等于直通。`rate` 越界抛 `Error`。
+
+```ts
+import logixlysia, { tee, sample } from '@pori15/logixlysia'
+
+logixlysia({
+  config: {
+    transports: [
+      tee([
+        sample(0.1, metricsT),  // 10% 进 metrics
+        consoleT,                // 100% 进 console
+      ]),
+    ],
+  },
+})
+```
+
+### filter —— 谓词过滤
+
+仅当 `predicate(level, message, meta)` 返回 truthy 时才转发。最常见:ERROR 才告警。
+
+```ts
+import logixlysia, { tee, filter, sample } from '@pori15/logixlysia'
+
+const slackAlerter = { log: async (l, m) => fetch(process.env.SLACK_WEBHOOK!, { ... }) }
+
+logixlysia({
+  config: {
+    transports: [
+      tee([
+        filter((lvl) => lvl === 'ERROR', slackAlerter),
+        sample(0.1, metricsT),
+        consoleT,
+      ]),
+    ],
+  },
+})
+```
+
+### tap —— 旁路
+
+对每条 log 跑 `fn`,**然后总是**转发给 transport。适合打 metrics / 计数 / 调试 trace。`fn` 抛错会被静默吞(不影响主链路)。
+
+```ts
+import logixlysia, { tap, sample } from '@pori15/logixlysia'
+
+let counter = 0
+
+logixlysia({
+  config: {
+    transports: [
+      tap(
+        (lvl, msg, meta) => {
+          counter++
+          if (meta?.durationMs && meta.durationMs > 1000) {
+            console.warn('slow request', meta)
+          }
+        },
+        sample(0.01, metricsT),  // 计数 100%,metrics 采样 1%
+      ),
+    ],
+  },
+})
+```
+
+### batch —— 缓冲
+
+缓冲 log 直到满 `size` 条**或**距首条 `flushMs` 毫秒,触发后作为一条 `INFO` "batch" 发出去,`meta.entries` 是缓冲数组。`size` / `flushMs` ≤ 0 抛 `Error`。
+
+适合打远程服务(每次 HTTP 请求成本高):
+
+```ts
+import logixlysia, { batch, filter, tee } from '@pori15/logixlysia'
+
+const httpSink = { log: async (lvl, msg, meta) => {
+  await fetch('https://logs.example.com/ingest', {
+    method: 'POST',
+    body: JSON.stringify({ lvl, msg, meta }),
+  })
+}}
+
+logixlysia({
+  config: {
+    transports: [
+      tee([
+        filter((lvl) => lvl === 'DEBUG', batch(50, 5000, httpSink)),  // DEBUG 批量 5s
+        consoleT,
+      ]),
+    ],
+  },
+})
+```
+
+**注意**:程序退出时未刷的 buffer 会丢。在 `beforeExit` / SIGTERM handler 里**目前没有**自动 flush 机制(等 PR)—— 自己用 `setTimeout` / 长进程 / 接收 SIGTERM 的方式让 batch 自然触发。
+
+### 组合原则
+
+- 每个组合器**只做一件事**,任意堆叠;
+- 顺序敏感:`filter` 放在 `tee` 之前比之后便宜(早 fail 早 return);
+- 涉及副作用的(metrics / 计数)用 `tap`,**绝不要**用 `filter` 丢日志;
+- 远程 / 慢 transport 一定套 `batch`,否则一个请求一条 HTTP 成本压垮服务。

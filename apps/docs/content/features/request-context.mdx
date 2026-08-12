@@ -106,3 +106,21 @@ async function findUser(id: string) {
 
 - ALS 透传只在经过 logixlysia 插件 `.request()` 钩子的请求内生效。在请求生命周期外调度的后台任务会拿到 no-op `log`,不输出任何东西。
 - ALS 是 opt-in。默认行为只保留显式 `store.logger` API —— 想要深调用栈日志的新代码再开 ALS。
+- **`useLogger()` 在 Elysia 2 下不可靠,生产深调用栈推荐用 `({ log })` derive** —— 见下文。
+
+### `useLogger()` 的限制(Elysia 2)
+
+`useLogger()` 走的是 Node.js `AsyncLocalStorage`,在 logixlysia 自己的 `.request()` 钩子里用 `enterWith()` 设置 scope。Elysia 2 内部对每个请求会包一层自己的 `als.run()` scope,所以 `enterWith` 设进去的值能**透传**到路由 handler 和 `.afterHandle()`。
+
+**前提**:Elysia 2 自己在路由 handler 之前不**额外**再起一次 `als.run()`。这是 Elysia 2 当前的实现细节,**未来升级 Elysia 时需要回归测试** —— 一旦 Elysia 在中间再 `als.run()` 一次,`useLogger()` 在 await / `setTimeout` 之后的子 async 树就会拿到 no-op,日志静默丢失。
+
+**实践建议**
+
+| 场景 | 推荐方式 |
+| --- | --- |
+| 路由 handler 直接记日志 | `({ log })` derive ✅ |
+| 一层 service / helper(`await service.foo()`) | `({ log })` 显式传下去 ✅ |
+| 深调用栈(`setTimeout` / `setImmediate` / Worker) | **不要依赖** `useLogger()` ⚠️ |
+| 请求外(模块 init / cron / 测试 setup) | 拿到 no-op,不要打日志 |
+
+**显式 vs ALS 的取舍**:`({ log })` 走的是 Elysia 自己的 derive 机制,不依赖 ALS —— 升级 Elysia 时不会受影响。代码上多一行解构,换的是**长期可预测性**。
