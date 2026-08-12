@@ -1,0 +1,74 @@
+name: 发布NPM包
+
+# 仅允许手动触发。NPM发布基本不可撤销 —— 已撤销的版本号永远不能再次复用，
+# 因此禁止代码推送时自动执行发布流程
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "待发布版本：可填写精确版本号（如 0.2.0），或版本递增关键字（patch/minor/major）。留空则直接使用 package.json 当前版本发布。"
+        required: false
+        type: string
+      dry-run:
+        description: "完整执行所有检查并打包产物，但不上传到NPM（试运行/干跑模式）"
+        required: false
+        default: true
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    # 此项目目标运行平台为 Windows，因此校验流程在 Windows 环境执行
+    runs-on: windows-latest
+    permissions:
+      contents: write   # 权限：推送版本变更提交与Git标签tag
+      id-token: write   # 权限：用于NPM provenance 来源可信认证
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: latest
+
+      # 使用原生npm执行发布（而非bun publish）：npm支持 --provenance，
+      # setup-node 可自动通过 NODE_AUTH_TOKEN 配置仓库鉴权
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+
+      - run: bun install --frozen-lockfile
+
+      - run: bun run type-check
+
+      - run: bun test
+
+      - run: bun run build
+
+      - name: 校验打包后的tgz文件内容
+        run: node scripts/verify-package.mjs
+
+      - name: 更新版本号（生成提交与Tag）
+        if: inputs.version != ''
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          npm version ${{ inputs.version }} -m "chore(release): v%s"
+
+      - name: 发布【试运行模式，不上传】
+        if: inputs.dry-run
+        run: npm publish --dry-run --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: 正式发布至NPM公共仓库
+        if: ${{ !inputs.dry-run }}
+        run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: 推送版本提交与标签到远程仓库
+        if: ${{ inputs.version != '' && !inputs.dry-run }}
+        run: git push --follow-tags

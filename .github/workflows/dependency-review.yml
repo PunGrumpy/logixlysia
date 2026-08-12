@@ -1,0 +1,21 @@
+name: 🧑‍🏫 Dependency Review
+
+# PR 打开或更新时扫描新增依赖,识别其中的已知漏洞。
+# 零成本,但能在合入前挡住带 CVE 的新依赖。
+on:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+
+permissions:
+  contents: read
+
+jobs:
+  dependency-review:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🛫 Checkout Code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: ✒️ Dependency Review
+        uses: actions/dependency-review-action@v4

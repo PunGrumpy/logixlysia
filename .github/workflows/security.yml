@@ -1,0 +1,32 @@
+name: 🛡️ Security Scan
+
+# 每天 0 点跑一次 CodeQL 静态分析,捕获新出现的漏洞。
+# 依赖生态每天都有新 CVE,定时跑能在你手动改代码前就提醒存在风险的路径。
+# 同时允许其他 workflow 用 uses: ./.github/workflows/security.yml 引用,做串行依赖图。
+on:
+  schedule:
+    - cron: "0 0 * * *"
+  workflow_call:
+
+jobs:
+  codeql:
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    name: 🧑‍⚕️ CodeQL Analysis
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - name: 🛫 Checkout Code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: 🔬 Setting up CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: javascript-typescript
+      - name: 🩻 Auto Build
+        uses: github/codeql-action/autobuild@v4
+      - name: 🧪 Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v4
+        with:
+          category: "/languages/javascript-typescript"

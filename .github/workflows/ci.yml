@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Least privilege: CI only needs to read the repo.
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # Windows is the production platform — the server shells out to es.exe,
+        # which only exists there. Ubuntu is kept as a canary: the pure functions
+        # must stay platform-independent, and the es.exe-dependent tests skip
+        # themselves when the binary is absent rather than failing.
+        os: [windows-latest, ubuntu-latest]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: latest
+      - run: bun install --frozen-lockfile
+      # No --if-present here: every one of these scripts exists, and a missing
+      # script should break the build rather than be silently skipped.
+      - run: bun run type-check
+      - run: bun test
+      - run: bun run build

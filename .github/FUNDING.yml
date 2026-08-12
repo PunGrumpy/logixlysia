@@ -1,0 +1,4 @@
+# 仓库赞助按钮配置:在 GitHub 仓库页面右上角显示 Sponsor 入口。
+# 至少填一个,可选项:github / open_collective / patreon / ko_fi / tidelift / community_bridge / liberapay / issuehunt / polar
+# 或使用 custom: ['https://your-site'] 自定义链接。
+github: [eastgold15]
