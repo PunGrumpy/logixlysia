@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "bench": "vitest bench",
-    "typecheck": "tsc --noEmit"
+    "type-check": "tsc --noEmit"
   },
   "dependencies": {
     "@bogeychan/elysia-logger": "^0.1.10",

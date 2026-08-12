@@ -15,7 +15,7 @@ bun add @pori15/logixlysia elysia@next
 
 ```ts
 import { Elysia } from 'elysia'
-import logixlysia from '@pori15/logixlysia'
+import { logixlysia } from '@pori15/logixlysia'
 
 const app = new Elysia()
   .use(logixlysia())
@@ -132,8 +132,9 @@ logixlysia({ logLevel: ['ERROR', 'WARNING'] })
 Logixlysia 由 Pino 驱动。Pino 实例可以通过 `store.pino` 访问,也可以从请求作用域 `log` 拿到:
 
 ```ts
-app.get('/users/:id', ({ log, params }) => {
-  log.pino.info({ userId: params.id, action: 'view_profile' }, 'profile accessed')
+app.get('/users/:id', async ({ log, params, store }) => {
+  log.info({ userId: params.id, action: 'view_profile' }, 'profile accessed')
+  // 或者想用原始 Pino:store.pino.info({ ... }, '...')
   return { user: 'data' }
 })
 ```

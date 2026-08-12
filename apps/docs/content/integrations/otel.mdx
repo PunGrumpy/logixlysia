@@ -12,7 +12,7 @@ bun add @opentelemetry/api
 从 `@pori15/logixlysia/otel` 子路径导入:
 
 ```ts
-import logixlysia from '@pori15/logixlysia'
+import { logixlysia } from '@pori15/logixlysia'
 import { injectTraceContext } from '@pori15/logixlysia/otel'
 
 const plugin = logixlysia()
@@ -83,7 +83,7 @@ sdk.start()
 ```ts
 // app.ts
 import { Elysia } from 'elysia'
-import logixlysia from '@pori15/logixlysia'
+import { logixlysia } from '@pori15/logixlysia'
 import { injectTraceContext } from '@pori15/logixlysia/otel'
 import './tracing' // 先启动 OTel SDK
 

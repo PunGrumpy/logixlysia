@@ -8,7 +8,7 @@
     "dev": "bun run typedoc && blume dev --port 3000",
     "postinstall": "node scripts/setup-typedoc.mjs",
     "typedoc": "node scripts/typedoc.mjs",
-    "typecheck": "tsc --noEmit"
+    "type-check": "tsc --noEmit"
   },
   "dependencies": {
     "@openpanel/nextjs": "^1.4.0",

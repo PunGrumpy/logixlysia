@@ -4,7 +4,7 @@
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev",
-    "typecheck": "turbo run typecheck",
+    "type-check": "turbo run type-check",
     "test": "turbo test",
     "check": "ultracite check",
     "fix": "ultracite fix",

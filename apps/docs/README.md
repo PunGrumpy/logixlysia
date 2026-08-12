@@ -16,7 +16,7 @@ Other scripts:
 
 ```bash
 bun run build      # static build to dist/
-bun run typecheck  # tsc --noEmit
+bun run type-check  # tsc --noEmit
 bun run clean      # remove build output and caches
 ```
 

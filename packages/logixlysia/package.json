@@ -32,7 +32,7 @@
     "test": "bun test",
     "test:coverage": "bun test --coverage --coverage-reporter=lcov",
     "clean": "git clean -fdx .turbo dist node_modules coverage",
-    "typecheck": "tsc --noEmit",
+    "type-check": "tsc --noEmit",
     "release": "bun pm version patch && bun  publish --registry=https://registry.npmjs.org/ --access public"
   },
   "author": "Noppakorn Kaewsalabnil <hello@pungrumpy.com>",

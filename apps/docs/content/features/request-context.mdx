@@ -9,7 +9,7 @@ Logixlysia 在请求过程中累积 context,合并到最终的 access log ——
 
 ```ts
 import { Elysia } from 'elysia'
-import logixlysia from '@pori15/logixlysia'
+import { logixlysia } from '@pori15/logixlysia'
 
 const app = new Elysia()
   .use(logixlysia())

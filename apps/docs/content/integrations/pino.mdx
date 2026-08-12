@@ -31,11 +31,12 @@ app.get('/users/:id', ({ store, params }) => {
 })
 ```
 
-或者通过请求作用域 `log`(`useAsyncLocalStorage: true` 时):
+或者通过请求作用域 `log`(`useAsyncLocalStorage: true` 时,`log` 自动绑定到当前请求):
 
 ```ts
-app.get('/users/:id', ({ log, params }) => {
-  log.pino.info({ userId: params.id, action: 'view_profile' }, 'profile accessed')
+app.get('/users/:id', async ({ log, params, store }) => {
+  log.info({ userId: params.id, action: 'view_profile' }, 'profile accessed')
+  // 或者想用原始 Pino:store.pino.info({ ... }, '...')
   return { user: 'data' }
 })
 ```
@@ -46,7 +47,7 @@ app.get('/users/:id', ({ log, params }) => {
 
 ```ts
 // logger.ts
-import logixlysia from '@pori15/logixlysia'
+import { logixlysia } from '@pori15/logixlysia'
 
 export const logixlysiaIns = logixlysia({
   config: {
