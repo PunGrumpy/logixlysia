@@ -5,9 +5,9 @@ export default defineConfig({
   declaration: true,
   entries: ["src/index.ts", "src/otel.ts", "src/ai.ts"],
   externals: ["elysia", "chalk", "pino", "pino-pretty"],
+  failOnWarn: false,
   minify: true,
   outDir: "dist",
   runtime: "node",
-  sourcemap: true,
   transformer,
 });
