@@ -39,9 +39,7 @@ export type LogixlysiaErrorClass = TaggedHTTPError<string, any>;
  * Elysia 错误实例 → logixlysia 日志级别
  * 4xx → WARNING,5xx → ERROR,其他 → INFO
  */
-export const levelForStatus = (
-  status?: number | keyof StatusMap
-): LogLevel => {
+export const levelForStatus = (status?: number | keyof StatusMap): LogLevel => {
   const numeric = typeof status === "number" ? status : 500;
   if (numeric >= 500) {
     return "ERROR";
@@ -55,7 +53,7 @@ export const levelForStatus = (
 /** 内部:从任意 error 中提取 status 数字 */
 export const extractStatus = (error: unknown): number | undefined => {
   if (typeof error !== "object" || error === null) {
-    return undefined;
+    return;
   }
   const status = (error as { status?: unknown }).status;
   if (typeof status === "number") {
@@ -63,10 +61,10 @@ export const extractStatus = (error: unknown): number | undefined => {
   }
   if (typeof status === "string") {
     const known: Record<string, number> = {
+      "Bad Gateway": 502,
       "Bad Request": 400,
       Conflict: 409,
       Forbidden: 403,
-      "Bad Gateway": 502,
       "Internal Server Error": 500,
       "Not Found": 404,
       "Service Unavailable": 503,
@@ -77,23 +75,22 @@ export const extractStatus = (error: unknown): number | undefined => {
       known[status] ?? (status.toLowerCase().includes("error") ? 500 : 400)
     );
   }
-  return undefined;
 };
 
 /** 内部:从 error 提取 RFC 9457 友好字段 */
 export const extractErrorFields = (error: unknown) => {
   if (typeof error !== "object" || error === null) {
     return {
-      type: undefined,
       message: String(error),
       status: undefined,
+      type: undefined,
     };
   }
   const e = error as Record<string, unknown>;
   return {
-    type: typeof e.type === "string" ? e.type : undefined,
     message: e.message as string | undefined,
     status: extractStatus(error),
+    type: typeof e.type === "string" ? e.type : undefined,
   };
 };
 
@@ -116,7 +113,7 @@ export const applyErrorLogging = <T extends { error: any; onError?: any }>(
   logger: Logger,
   options: LogixlysiaOptions,
   didCustomLog?: WeakSet<Request>,
-  requestIdHeader: string = "X-Request-Id"
+  requestIdHeader = "X-Request-Id"
 ): T => {
   const verbose = options.error?.verbose === true;
   const markLogged = (request: Request) => {
@@ -157,45 +154,44 @@ export const applyErrorLogging = <T extends { error: any; onError?: any }>(
    */
   const makeErrorHandler =
     (withAll: boolean) =>
-      (ctx: any): undefined => {
-        const { request, error, store, set } = ctx;
-        markLogged(request);
-        const fields = extractErrorFields(error);
-        const status = fields.status ?? 500;
-        const data: Record<string, unknown> = {
-          status,
-          type: fields.type,
-          message: fields.message,
-        };
-        if (withAll && error && typeof error === "object" && "all" in error) {
-          const all = (error as { all?: unknown }).all;
-          if (Array.isArray(all)) {
-            data.errors = all.map((e) => {
-              const errObj = e as Record<string, unknown>;
-              return {
-                field:
-                  (typeof errObj.instancePath === "string"
-                    ? errObj.instancePath
-                    : typeof errObj.path === "string"
-                      ? errObj.path
-                      : ""
-                  ).replace(/^\//, "") || undefined,
-                message:
-                  (errObj.summary as string | undefined) ??
-                  (errObj.message as string | undefined) ??
-                  "Validation error",
-              };
-            });
-          }
-        }
-        logger.log(levelForStatus(status), request, data, store as StoreData);
-        if (withAll && verbose) {
-          const errStr = JSON.stringify(error, null, 2);
-          logger.warn(request, "Verbose error context", { error: errStr });
-        }
-        echoRequestId(request, set);
-        return undefined;
+    (ctx: any): undefined => {
+      const { request, error, store, set } = ctx;
+      markLogged(request);
+      const fields = extractErrorFields(error);
+      const status = fields.status ?? 500;
+      const data: Record<string, unknown> = {
+        message: fields.message,
+        status,
+        type: fields.type,
       };
+      if (withAll && error && typeof error === "object" && "all" in error) {
+        const all = (error as { all?: unknown }).all;
+        if (Array.isArray(all)) {
+          data.errors = all.map((e) => {
+            const errObj = e as Record<string, unknown>;
+            return {
+              field:
+                (typeof errObj.instancePath === "string"
+                  ? errObj.instancePath
+                  : typeof errObj.path === "string"
+                    ? errObj.path
+                    : ""
+                ).replace(/^\//, "") || undefined,
+              message:
+                (errObj.summary as string | undefined) ??
+                (errObj.message as string | undefined) ??
+                "Validation error",
+            };
+          });
+        }
+      }
+      logger.log(levelForStatus(status), request, data, store as StoreData);
+      if (withAll && verbose) {
+        const errStr = JSON.stringify(error, null, 2);
+        logger.warn(request, "Verbose error context", { error: errStr });
+      }
+      echoRequestId(request, set);
+    };
 
   // 1. HTTPError 通用 handler(任何 HTTPError 派生类)
   app.error(HTTPError, makeErrorHandler(false));
@@ -223,7 +219,7 @@ export const applyErrorLogging = <T extends { error: any; onError?: any }>(
     const { request, error, store, set } = ctx;
     if (error instanceof HTTPError) {
       // 已被 class-specific handler 处理过日志,这里只兜底响应体
-      return undefined;
+      return;
     }
     markLogged(request);
     const status = extractStatus(error) ?? 500;
@@ -234,9 +230,9 @@ export const applyErrorLogging = <T extends { error: any; onError?: any }>(
       levelForStatus(status),
       request,
       {
-        status,
         error: normalized.error,
         message: normalized.message,
+        status,
       },
       store as StoreData
     );
@@ -270,8 +266,8 @@ export const applyErrorLogging = <T extends { error: any; onError?: any }>(
  */
 export const errorMap = (
   map: Record<string, { status: number; title: string; type?: string }>
-): LogixlysiaErrorClass[] => {
-  return Object.entries(map).map(([slug, { status, title, type }]) => {
+): LogixlysiaErrorClass[] =>
+  Object.entries(map).map(([slug, { status, title, type }]) => {
     const finalType = type ?? slug;
     class MappedHTTPError extends HTTPError {
       override readonly status: number = status;
@@ -280,7 +276,6 @@ export const errorMap = (
     }
     return MappedHTTPError as unknown as LogixlysiaErrorClass;
   });
-};
 
 // ==========================================
 // httpError — 函数式 HTTPError 工厂

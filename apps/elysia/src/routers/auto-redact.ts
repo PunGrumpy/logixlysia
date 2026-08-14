@@ -1,4 +1,4 @@
-import { Logixlysia, logixlysia } from "@pori15/logixlysia";
+import { Logixlysia } from "@pori15/logixlysia";
 
 const BASE64URL_PAD_STRIP = /[=]+$/;
 
@@ -40,6 +40,5 @@ export const autoRedactRouter = <App extends Logixlysia>(app: App) =>
         jwt: mockJwt(),
       });
       return { message: "Hello, world!" };
-    },
-
+    }
   );

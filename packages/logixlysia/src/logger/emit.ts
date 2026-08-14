@@ -1,7 +1,10 @@
-import { mergeLogDataContext, type RequestContextStore } from "../context/request-context";
+import {
+  mergeLogDataContext,
+  type RequestContextStore,
+} from "../context/request-context";
 import type {
-  LogLevel,
   LogixlysiaOptions,
+  LogLevel,
   StoreData,
   Transport,
 } from "../interfaces";
@@ -79,8 +82,8 @@ export const resolveSinks = (options: LogixlysiaOptions): Sinks => {
   const transports = resolveTransports(options);
   const hasTransports = transports.length > 0;
   const hasFileLogging =
-    !useTransportsOnly && !disableFileLogging && !!config?.logFilePath;
-  const hasInternalLogger = !useTransportsOnly && !disableInternalLogger;
+    !(useTransportsOnly || disableFileLogging) && !!config?.logFilePath;
+  const hasInternalLogger = !(useTransportsOnly || disableInternalLogger);
   const isEffectivelyDisabled = !(
     hasTransports ||
     hasFileLogging ||
@@ -116,16 +119,12 @@ export const shouldLogForOptions = (
   options: LogixlysiaOptions
 ): boolean => {
   const configLevel = options.config?.logFilter?.level;
-  if (configLevel && configLevel.length > 0) {
-    if (!configLevel.includes(level)) {
-      return false;
-    }
+  if (configLevel && configLevel.length > 0 && !configLevel.includes(level)) {
+    return false;
   }
   const rootLevel = options.logLevel;
-  if (rootLevel && rootLevel.length > 0) {
-    if (!rootLevel.includes(level)) {
-      return false;
-    }
+  if (rootLevel && rootLevel.length > 0 && !rootLevel.includes(level)) {
+    return false;
   }
   return true;
 };
@@ -220,10 +219,7 @@ export const emit = ({
 }: EmitInput): void => {
   const { config } = options;
 
-  if (
-    sinks.isEffectivelyDisabled ||
-    !shouldLogForOptions(level, options)
-  ) {
+  if (sinks.isEffectivelyDisabled || !shouldLogForOptions(level, options)) {
     return;
   }
 
@@ -249,12 +245,12 @@ export const emit = ({
 
   if (sinks.hasTransports) {
     logToTransports({
-      transports: resolveTransports(options),
       data: logData,
       level,
       precomputed,
       request: logRequest,
       store,
+      transports: resolveTransports(options),
     });
   }
 

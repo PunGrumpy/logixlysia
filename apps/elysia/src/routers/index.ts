@@ -1,18 +1,15 @@
-import Elysia from "elysia";
 import { logixlysia } from "@pori15/logixlysia";
+import Elysia from "elysia";
+import { aiMetricsRouter } from "./ai-metrics";
 import { boomRouter } from "./boom";
 import { customRouter } from "./custom";
-import { pinoRouter } from "./pino";
-import { statusRouter } from "./status";
 import { otelRouter } from "./otel";
-import { aiMetricsRouter } from "./ai-metrics";
+import { pinoRouter } from "./pino";
 import { requestContextRouter } from "./request-context";
-
+import { statusRouter } from "./status";
 
 export const routers = new Elysia()
-  .use(
-    logixlysia()
-  )
+  .use(logixlysia())
   .get(
     "/",
     {

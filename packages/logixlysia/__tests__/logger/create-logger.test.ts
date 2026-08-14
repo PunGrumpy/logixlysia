@@ -24,8 +24,8 @@ describe("createLogger", () => {
     });
     const options: Options = {
       transports: {
-        targets: [{ log: transport }],
         only: true,
+        targets: [{ log: transport }],
       },
     };
 
@@ -38,7 +38,7 @@ describe("createLogger", () => {
 
     // transport should be invoked synchronously
     expect(transport).toHaveBeenCalledTimes(1);
-    const firstCall = transport.mock.calls[0];
+    const [firstCall, ...rest] = transport.mock.calls;
     expect(firstCall).toBeDefined();
     const [levelValue, messageValue] = firstCall ?? [undefined, undefined];
     expect(levelValue).toBe("INFO");
@@ -65,8 +65,8 @@ describe("createLogger", () => {
     });
     const options: Options = {
       transports: {
-        targets: [{ log: transport }],
         only: true,
+        targets: [{ log: transport }],
       },
     };
 
@@ -75,17 +75,17 @@ describe("createLogger", () => {
     const store = { beforeTime: BigInt(0) };
 
     const problemError = {
-      status: 400,
       message: "bad",
-      title: "Bad Request",
-      type: "https://httpstatuses.com/400",
       name: "ProblemError",
+      status: 400,
+      title: "Bad Request",
       toJSON: () => ({
-        status: 400,
         message: "bad",
+        status: 400,
         title: "Bad Request",
         type: "https://httpstatuses.com/400",
       }),
+      type: "https://httpstatuses.com/400",
     };
 
     logger.handleHttpError(request, problemError, store, options);

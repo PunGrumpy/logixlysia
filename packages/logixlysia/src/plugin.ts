@@ -42,6 +42,9 @@ import {
   type StatusMap,
   ValidationError,
 } from "elysia";
+import { ErrorHandler } from "elysia/types";
+// 导入全局 Logger 管理
+import { initGlobalLogger } from "./$log";
 import { resolveOptions } from "./config/resolve-options";
 import { createRequestContextStore } from "./context/request-context";
 import { loggerStorage } from "./context/storage";
@@ -57,13 +60,9 @@ import type {
 import { createLogger } from "./logger";
 import {
   getOrCreateRequestId,
-  resolveRequestIdConfig,
   type ResolvedRequestIdConfig,
+  resolveRequestIdConfig,
 } from "./middleware/request-id";
-import { ErrorHandler } from "elysia/types";
-
-// 导入全局 Logger 管理
-import { initGlobalLogger, globalContextStore } from "./$log";
 
 // ============================================================
 // 类型定义
@@ -85,9 +84,7 @@ export interface LogixlysiaSingleton {
 // 主插件函数
 // ============================================================
 
-export const createLogPlugin = (
-  rawOptions: LogixlysiaOptions = {}
-) => {
+export const createLogPlugin = (rawOptions: LogixlysiaOptions = {}) => {
   // ---------- 1. 初始化 per-instance 状态 ----------
   const options = resolveOptions(rawOptions);
   const requestHasCustomLog = new WeakSet<Request>();
@@ -110,14 +107,14 @@ export const createLogPlugin = (
         context?: Record<string, unknown>
       ) => void
     ) =>
-      (
-        request: Request,
-        message: string,
-        context?: Record<string, unknown>
-      ): void => {
-        requestHasCustomLog.add(request);
-        fn(request, message, context);
-      };
+    (
+      request: Request,
+      message: string,
+      context?: Record<string, unknown>
+    ): void => {
+      requestHasCustomLog.add(request);
+      fn(request, message, context);
+    };
 
   const logger: Logger = {
     ...baseLogger,
@@ -128,9 +125,8 @@ export const createLogPlugin = (
   };
 
   // 解析请求 ID 配置
-  const requestIdConfig: ResolvedRequestIdConfig | null = resolveRequestIdConfig(
-    options.config?.requestId
-  );
+  const requestIdConfig: ResolvedRequestIdConfig | null =
+    resolveRequestIdConfig(options.config?.requestId);
   const useAsyncLocalStorage = options.config?.useAsyncLocalStorage === true;
   const verboseErrorLogging = options.error?.verbose === true;
   const requestIdHeaderName = requestIdConfig?.header ?? "X-Request-Id";
@@ -140,7 +136,9 @@ export const createLogPlugin = (
    * 创建请求作用域的 Logger 实例
    * 每个请求独立，自动关联当前请求的上下文
    */
-  const createRequestScopedLogger = (request: Request): RequestScopedLogger => ({
+  const createRequestScopedLogger = (
+    request: Request
+  ): RequestScopedLogger => ({
     debug: (message, context) => logger.debug(request, message, context),
     error: (message, context) => logger.error(request, message, context),
     info: (message, context) => logger.info(request, message, context),
@@ -160,9 +158,7 @@ export const createLogPlugin = (
     if (!requestIdConfig) {
       return;
     }
-    const id = contextStore.getContext(request).requestId as
-      | string
-      | undefined;
+    const id = contextStore.getContext(request).requestId as string | undefined;
     if (id && set) {
       set.headers = {
         ...set.headers,
@@ -191,7 +187,7 @@ export const createLogPlugin = (
    */
   const extractStatusCode = (error: unknown): number | undefined => {
     if (!error || typeof error !== "object") {
-      return undefined;
+      return;
     }
     const status = (error as { status?: unknown }).status;
     if (typeof status === "number") {
@@ -200,7 +196,6 @@ export const createLogPlugin = (
     if (typeof status === "string") {
       return getStatusCode(status);
     }
-    return undefined;
   };
 
   // ---------- 4. 错误处理器工厂 ----------
@@ -217,64 +212,70 @@ export const createLogPlugin = (
    * 窄化为 logixlysia 所需的形态。`ErrorHandler` 让 Elysia 接受此函数作为
    * `.error()` 的处理器，无需在调用点进行类型转换。
    */
-  const createErrorHandler = (includeValidationDetails: boolean): ErrorHandler => (ctx) => {
-    const { request, error, store, set } = ctx as ErrorContext & {
-      error: unknown;
-      store: LogixlysiaStore;
-      set: { headers: HTTPHeaders; status?: number | keyof StatusMap };
-    };
-    requestHasCustomLog.add(request);
+  const createErrorHandler =
+    (includeValidationDetails: boolean): ErrorHandler =>
+    (ctx) => {
+      const { request, error, store, set } = ctx as ErrorContext & {
+        error: unknown;
+        store: LogixlysiaStore;
+        set: { headers: HTTPHeaders; status?: number | keyof StatusMap };
+      };
+      requestHasCustomLog.add(request);
 
-    // 提取状态码
-    const status = getStatusCode(
-      extractStatusCode(error) ??
-      (error instanceof HTTPError ? error.status : 500)
-    );
-    const data: Record<string, unknown> = { status };
+      // 提取状态码
+      const status = getStatusCode(
+        extractStatusCode(error) ??
+          (error instanceof HTTPError ? error.status : 500)
+      );
+      const data: Record<string, unknown> = { status };
 
-    // 构建错误数据
-    if (error instanceof HTTPError) {
-      data.type = error.type;
-      data.message = error.message ?? error.detail;
-    } else {
-      data.message = error instanceof Error ? error.message : String(error);
-    }
-
-    // 包含验证详情（用于 ValidationError / ParseError）
-    if (includeValidationDetails && error && typeof error === "object" && "all" in error) {
-      const all = (error as { all?: unknown }).all;
-      if (Array.isArray(all)) {
-        data.errors = all.map((e) => {
-          const errObj = e as Record<string, unknown>;
-          return {
-            field:
-              (typeof errObj.instancePath === "string"
-                ? errObj.instancePath
-                : typeof errObj.path === "string"
-                  ? errObj.path
-                  : ""
-              ).replace(/^\//, "") || undefined,
-            message:
-              (errObj.summary as string | undefined) ??
-              (errObj.message as string | undefined) ??
-              "Validation error",
-          };
-        });
+      // 构建错误数据
+      if (error instanceof HTTPError) {
+        data.type = error.type;
+        data.message = error.message ?? error.detail;
+      } else {
+        data.message = error instanceof Error ? error.message : String(error);
       }
-    }
 
-    // 记录错误日志
-    logger.log(getLogLevelForStatus(status), request, data, store);
+      // 包含验证详情（用于 ValidationError / ParseError）
+      if (
+        includeValidationDetails &&
+        error &&
+        typeof error === "object" &&
+        "all" in error
+      ) {
+        const all = (error as { all?: unknown }).all;
+        if (Array.isArray(all)) {
+          data.errors = all.map((e) => {
+            const errObj = e as Record<string, unknown>;
+            return {
+              field:
+                (typeof errObj.instancePath === "string"
+                  ? errObj.instancePath
+                  : typeof errObj.path === "string"
+                    ? errObj.path
+                    : ""
+                ).replace(/^\//, "") || undefined,
+              message:
+                (errObj.summary as string | undefined) ??
+                (errObj.message as string | undefined) ??
+                "Validation error",
+            };
+          });
+        }
+      }
 
-    // 详细错误日志（开发环境开启 verbose 时）
-    if (includeValidationDetails && verboseErrorLogging) {
-      const errStr = JSON.stringify(error, null, 2);
-      logger.warn(request, "Verbose error context", { error: errStr });
-    }
+      // 记录错误日志
+      logger.log(getLogLevelForStatus(status), request, data, store);
 
-    setResponseRequestId(request, set);
-    return undefined;
-  };
+      // 详细错误日志（开发环境开启 verbose 时）
+      if (includeValidationDetails && verboseErrorLogging) {
+        const errStr = JSON.stringify(error, null, 2);
+        logger.warn(request, "Verbose error context", { error: errStr });
+      }
+
+      setResponseRequestId(request, set);
+    };
 
   /**
    * 兜底错误处理器：处理未被任何特定错误类匹配的错误
@@ -288,7 +289,7 @@ export const createLogPlugin = (
 
     // 如果是 HTTPError，已被特定处理器处理，这里只做兜底响应
     if (error instanceof HTTPError) {
-      return undefined;
+      return;
     }
 
     requestHasCustomLog.add(request);
@@ -301,7 +302,7 @@ export const createLogPlugin = (
     logger.log(
       getLogLevelForStatus(status),
       request,
-      { status, message, ...payload },
+      { message, status, ...payload },
       store
     );
 
@@ -333,98 +334,102 @@ export const createLogPlugin = (
   }
 
   // ---------- 6. 返回 Elysia 插件（单一链式调用） ----------
-  return new Elysia({ name: "Logixlysia" })
-    // 初始化状态
-    .state("logger", logger)
-    .state("pino", logger.pino)
-    .state("beforeTime", BigInt(0))
+  return (
+    new Elysia({ name: "Logixlysia" })
+      // 初始化状态
+      .state("logger", logger)
+      .state("pino", logger.pino)
+      .state("beforeTime", BigInt(0))
 
-    // 注入请求级 Logger
-    .derive(({ request }) => ({ log: createRequestScopedLogger(request) }))
+      // 注入请求级 Logger
+      .derive(({ request }) => ({ log: createRequestScopedLogger(request) }))
 
-    // 启动服务器
-    .setup(({ server }) => {
-      if (server) {
-        startServer(server, options);
-        return;
-      }
-      const port = Number(process.env["PORT"]) || 3000;
-      const hostname = process.env["HOST"] || "localhost";
-      startServer({ hostname, port, protocol: "http" }, options);
-    })
-
-    // 请求前置处理
-    .request(({ request, store }) => {
-      const now = process.hrtime.bigint();
-      requestStartTimes.set(request, now);
-      // 写入 Elysia store，方便 handler / 测试直接使用 `store.beforeTime` 计算耗时
-      (store as { beforeTime?: bigint }).beforeTime = now;
-
-      // 生成/提取请求 ID
-      if (requestIdConfig) {
-        const id = getOrCreateRequestId(request, requestIdConfig);
-        contextStore.mergeContext(request, { requestId: id });
-      }
-
-      // AsyncLocalStorage 支持
-      // Elysia 2 在 hook 链路上有自己的 async scope，这里 enterWith
-      // 设置的值会透传到 handler / afterHandle，只要 Elysia 不在中间
-      // 额外调用 `als.run()`（Elysia 2.x 当前不会，升级时需回归测试）
-      if (useAsyncLocalStorage) {
-        loggerStorage.enterWith(createRequestScopedLogger(request));
-      }
-    })
-
-    // 请求后置处理（访问日志）
-    .afterHandle(({ request, set }) => {
-      try {
-        // 回显请求 ID
-        if (requestIdConfig) {
-          const ctx = contextStore.getContext(request);
-          const id = ctx.requestId as string | undefined;
-          if (id) {
-            set.headers[requestIdHeaderName] = id;
-          }
-        }
-
-        // 如果已自定义记录日志，跳过自动访问日志
-        if (requestHasCustomLog.has(request)) {
+      // 启动服务器
+      .setup(({ server }) => {
+        if (server) {
+          startServer(server, options);
           return;
         }
+        const port = Number(process.env.PORT) || 3000;
+        const hostname = process.env.HOST || "localhost";
+        startServer({ hostname, port, protocol: "http" }, options);
+      })
 
-        // 记录访问日志
-        const status =
-          set.status === undefined || set.status === null
-            ? 200
-            : getStatusCode(set.status);
-        const accumulated = contextStore.getContext(request);
-        const data: Record<string, unknown> = { status };
-        if (Object.keys(accumulated).length > 0) {
-          data.context = { ...accumulated };
+      // 请求前置处理
+      .request(({ request, store }) => {
+        const now = process.hrtime.bigint();
+        requestStartTimes.set(request, now);
+        // 写入 Elysia store，方便 handler / 测试直接使用 `store.beforeTime` 计算耗时
+        (store as { beforeTime?: bigint }).beforeTime = now;
+
+        // 生成/提取请求 ID
+        if (requestIdConfig) {
+          const id = getOrCreateRequestId(request, requestIdConfig);
+          contextStore.mergeContext(request, { requestId: id });
         }
 
-        const beforeTime = requestStartTimes.get(request) ?? BigInt(0);
-        logger.log(getLogLevelForStatus(status), request, data, { beforeTime });
-      } finally {
-        // 清理请求状态，防止内存泄漏
-        requestStartTimes.delete(request);
-        contextStore.clearContext(request);
-      }
-    })
+        // AsyncLocalStorage 支持
+        // Elysia 2 在 hook 链路上有自己的 async scope，这里 enterWith
+        // 设置的值会透传到 handler / afterHandle，只要 Elysia 不在中间
+        // 额外调用 `als.run()`（Elysia 2.x 当前不会，升级时需回归测试）
+        if (useAsyncLocalStorage) {
+          loggerStorage.enterWith(createRequestScopedLogger(request));
+        }
+      })
 
-    // 错误处理器注册（优先级从高到低）
-    .error(HTTPError, createErrorHandler(false))
-    .error(ValidationError, createErrorHandler(true))
-    .error(NotFound, createErrorHandler(true))
-    .error(ParseError, createErrorHandler(true))
-    .error(InternalServerError, createErrorHandler(true))
-    .error(InvalidCookie, createErrorHandler(true))
-    .error(fallbackErrorHandler)
+      // 请求后置处理（访问日志）
+      .afterHandle(({ request, set }) => {
+        try {
+          // 回显请求 ID
+          if (requestIdConfig) {
+            const ctx = contextStore.getContext(request);
+            const id = ctx.requestId as string | undefined;
+            if (id) {
+              set.headers[requestIdHeaderName] = id;
+            }
+          }
 
-    // 用户自定义错误
-    .use(userErrorHandlers)
+          // 如果已自定义记录日志，跳过自动访问日志
+          if (requestHasCustomLog.has(request)) {
+            return;
+          }
 
-    .as("global");
+          // 记录访问日志
+          const status =
+            set.status === undefined || set.status === null
+              ? 200
+              : getStatusCode(set.status);
+          const accumulated = contextStore.getContext(request);
+          const data: Record<string, unknown> = { status };
+          if (Object.keys(accumulated).length > 0) {
+            data.context = { ...accumulated };
+          }
+
+          const beforeTime = requestStartTimes.get(request) ?? BigInt(0);
+          logger.log(getLogLevelForStatus(status), request, data, {
+            beforeTime,
+          });
+        } finally {
+          // 清理请求状态，防止内存泄漏
+          requestStartTimes.delete(request);
+          contextStore.clearContext(request);
+        }
+      })
+
+      // 错误处理器注册（优先级从高到低）
+      .error(HTTPError, createErrorHandler(false))
+      .error(ValidationError, createErrorHandler(true))
+      .error(NotFound, createErrorHandler(true))
+      .error(ParseError, createErrorHandler(true))
+      .error(InternalServerError, createErrorHandler(true))
+      .error(InvalidCookie, createErrorHandler(true))
+      .error(fallbackErrorHandler)
+
+      // 用户自定义错误
+      .use(userErrorHandlers)
+
+      .as("global")
+  );
 };
 
 /**

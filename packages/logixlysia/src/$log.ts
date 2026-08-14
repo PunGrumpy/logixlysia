@@ -12,9 +12,9 @@
  * $log.debug(request, 'Request processing', { userId: 123 });
  */
 
-import type { Logger, LogixlysiaOptions } from './interfaces';
-import { createLogger } from './logger';
-import { createRequestContextStore } from './context/request-context';
+import { createRequestContextStore } from "./context/request-context";
+import type { Logger, LogixlysiaOptions } from "./interfaces";
+import { createLogger } from "./logger";
 
 /**
  * 全局 Logger 实例
@@ -42,7 +42,7 @@ export const initGlobalLogger = (
 ): Logger => {
   // 如果已经初始化，返回已有的实例
   if ($log) {
-    console.warn('Global logger already initialized, skipping re-init');
+    console.warn("Global logger already initialized, skipping re-init");
     return $log;
   }
 
@@ -56,9 +56,7 @@ export const initGlobalLogger = (
 /**
  * 检查全局 Logger 是否已初始化
  */
-export const isGlobalLoggerInitialized = (): boolean => {
-  return $log !== undefined;
-};
+export const isGlobalLoggerInitialized = (): boolean => $log !== undefined;
 
 /**
  * 重置全局 Logger（主要用于测试）
@@ -73,7 +71,7 @@ export const resetGlobalLogger = (): void => {
 export const getGlobalLogger = (): Logger => {
   if (!$log) {
     throw new Error(
-      'Global logger not initialized. Please ensure createLogPlugin is used before accessing $log.'
+      "Global logger not initialized. Please ensure createLogPlugin is used before accessing $log."
     );
   }
   return $log;

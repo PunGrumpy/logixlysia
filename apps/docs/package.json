@@ -7,8 +7,8 @@
     "clean": "git clean -xdf .blume .astro .cache .turbo dist node_modules",
     "dev": "bun run typedoc && blume dev --port 3000",
     "postinstall": "node scripts/setup-typedoc.mjs",
-    "typedoc": "node scripts/typedoc.mjs",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "typedoc": "node scripts/typedoc.mjs"
   },
   "dependencies": {
     "@openpanel/nextjs": "^1.4.0",

@@ -9,16 +9,14 @@
  * `ERROR` 到 `console.error`,无需在这里直接调 console。
  */
 
-import type {
-  LogixlysiaOptions,
-  LogLevel,
-  StoreData,
-} from "../interfaces";
-import { isStructuredError, normalizeLoggedError } from "../utils/error";
-import { extractStatus, levelForStatus } from "../errors";
 import type { RequestContextStore } from "../context/request-context";
-import { computePrecomputedLogParts, emit, resolveSinks } from "./emit";
+
+export { extractStatus, levelForStatus } from "../errors";
+
+import type { LogixlysiaOptions, LogLevel, StoreData } from "../interfaces";
+import { isStructuredError, normalizeLoggedError } from "../utils/error";
 import { createFormatContext } from "./create-logger";
+import { computePrecomputedLogParts, emit, resolveSinks } from "./emit";
 
 /**
  * 旧版 entry — 直接调用,不依赖 RequestContextStore(用于 createLogger 的 fallback 路径)。
@@ -69,10 +67,7 @@ export const handleHttpError = (
     options,
     precomputed,
     request,
-    store,
     sinks,
+    store,
   });
 };
-
-// Re-export for callers that still need a small surface
-export { extractStatus, levelForStatus };

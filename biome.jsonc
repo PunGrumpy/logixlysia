@@ -18,7 +18,8 @@
         "noExcessiveCognitiveComplexity": "off",
         "noStaticOnlyClass": "off",
         "noForEach": "off",
-        "noBannedTypes": "off"
+        "noBannedTypes": "off",
+        "noVoid": "off"
       },
       "suspicious": {
         "noConsole": "off",
@@ -29,13 +30,6 @@
         "noConfusingVoidType": "off",
         "noAlert": "off",
         "noArrayIndexKey": "off"
-      },
-      "nursery": {
-        "noShadow": "off",
-        "noIncrementDecrement": "off",
-        "noSyncScripts": "off",
-        "noLeakedRender": "off",
-        "noUndeclaredEnvVars": "off"
       },
       "style": {
         "useDefaultParameterLast": "off",
@@ -72,9 +66,7 @@
   },
   "overrides": [
     {
-      "includes": [
-        "**/*.astro"
-      ],
+      "includes": ["**/*.astro"],
       "assist": {
         "actions": {
           "source": {

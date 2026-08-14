@@ -90,7 +90,7 @@ describe("Node adapter", () => {
   // @elysiajs/node 1.x targets Elysia 1.x. The local fork still runs
   // Elysia 2.0.0-exp.62, so this test is skipped under the current dep
   // matrix. The Bun path is covered by the tests above.
-  test.skip("logixlysia resolves and handles GET / on @elysia/node", async () => {
+  test("logixlysia resolves and handles GET / on @elysia/node", async () => {
     const transport = mockTransport();
     const app = new Elysia()
       .use(logixlysia(silentTestOptions(transport)))

@@ -120,11 +120,7 @@ class FileSinkImpl implements FileSink {
     // The directory only needs creating on first open (or on reopen after a
     // rotation cleared the handle) — never per line.
     await ensureDir(dirname(this.filePath), options.logDirMode);
-    const handle = await open(
-      this.filePath,
-      "a",
-      options.logFileMode ?? 0o600
-    );
+    const handle = await open(this.filePath, "a", options.logFileMode ?? 0o600);
     const stat = await handle.stat();
     this.handle = handle;
     this.bytesWritten = stat.size;

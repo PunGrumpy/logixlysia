@@ -1,4 +1,4 @@
-import { Logixlysia, logixlysia } from "@pori15/logixlysia";
+import { Logixlysia } from "@pori15/logixlysia";
 
 export const customRouter = <App extends Logixlysia>(app: App) =>
   app.get(

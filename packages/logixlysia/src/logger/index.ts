@@ -14,38 +14,37 @@
  * - pino（底层 Pino 实例）
  */
 
-import pino from "pino";
 import type {
   Logger as PinoLogger,
   LoggerOptions as PinoLoggerOptions,
 } from "pino";
+import pino from "pino";
 import {
-  type RequestContextStore,
   createRequestContextStore,
   mergeLogDataContext,
+  type RequestContextStore,
 } from "../context/request-context";
 import type {
-  LogLevel,
   Logger,
   LogixlysiaOptions,
+  LogLevel,
   Pino,
   StoreData,
 } from "../interfaces";
 import { redact, redactRequest } from "../utils/redact";
-import { handleHttpError } from "./handle-http-error";
 import {
-  type FormatContext,
-  type PrecomputedLogParts,
   createFormatContext,
-  formatLogOutput,
+  type FormatContext,
   logWithPino,
+  type PrecomputedLogParts,
 } from "./create-logger";
 import {
-  resolveSinks,
   computePrecomputedLogParts,
   emit,
+  resolveSinks,
   shouldLogForOptions,
 } from "./emit";
+import { handleHttpError } from "./handle-http-error";
 
 export type PinoFactory = (options: PinoLoggerOptions) => PinoLogger;
 
@@ -53,9 +52,8 @@ export type PinoFactory = (options: PinoLoggerOptions) => PinoLogger;
  * 默认的 Pino 工厂函数
  * Bun 运行时自动检测；pino-pretty 为可选开启
  */
-const defaultPinoFactory: PinoFactory = (options) => {
-  return pino(options) as unknown as PinoLogger;
-};
+const defaultPinoFactory: PinoFactory = (options) =>
+  pino(options) as unknown as PinoLogger;
 
 export interface CreateLoggerOptions {
   contextStore?: RequestContextStore;
@@ -66,22 +64,17 @@ export interface CreateLoggerOptions {
 /**
  * 类型守卫：判断是否为 CreateLoggerOptions
  */
-const isCreateLoggerOptions = (
-  value: unknown
-): value is CreateLoggerOptions => {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    'options' in value &&
-    (value as any).options !== undefined
-  );
-};
+const isCreateLoggerOptions = (value: unknown): value is CreateLoggerOptions =>
+  typeof value === "object" &&
+  value !== null &&
+  "options" in value &&
+  (value as any).options !== undefined;
 
 /**
  * 创建静默 Pino Logger（用于 pino.enabled === false）
  */
-const createSilentPinoLogger = (): Pino => {
-  return {
+const createSilentPinoLogger = (): Pino =>
+  ({
     debug: () => undefined,
     error: () => undefined,
     fatal: () => undefined,
@@ -90,14 +83,13 @@ const createSilentPinoLogger = (): Pino => {
     silent: () => undefined,
     trace: () => undefined,
     warn: () => undefined,
-  } as unknown as Pino;
-};
+  }) as unknown as Pino;
 
 /**
  * 构建 Pino 配置选项
  */
 const buildPinoOptions = (
-  config: LogixlysiaOptions['config']
+  config: LogixlysiaOptions["config"]
 ): PinoLoggerOptions => {
   const pinoOptions: PinoLoggerOptions = {
     level: "info",
@@ -107,13 +99,12 @@ const buildPinoOptions = (
   // 配置 prettyPrint
   if (config?.pino?.prettyPrint === true) {
     pinoOptions.transport = {
-      target: "pino-pretty",
       options: {
         colorize: process.stdout?.isTTY === true,
-        translateTime: typeof config?.timestamp === "string"
-          ? config.timestamp
-          : undefined,
+        translateTime:
+          typeof config?.timestamp === "string" ? config.timestamp : undefined,
       },
+      target: "pino-pretty",
     };
   }
 
@@ -202,7 +193,7 @@ export const createLogger = (
       const pinoLogger = getOrCreatePino();
       const value = (pinoLogger as any)[propertyKey];
 
-      if (typeof value === 'function') {
+      if (typeof value === "function") {
         return value.bind(pinoLogger);
       }
       return value;
@@ -316,7 +307,7 @@ export const createLogger = (
     try {
       pathname = new URL(request.url).pathname;
     } catch {
-      pathname = 'invalid-url';
+      pathname = "invalid-url";
     }
 
     const storeData: StoreData = {
@@ -330,10 +321,10 @@ export const createLogger = (
 
   // ============ 5. 日志级别映射 ============
   const LOG_LEVELS = {
-    DEBUG: 'DEBUG',
-    INFO: 'INFO',
-    WARN: 'WARNING',
-    ERROR: 'ERROR',
+    DEBUG: "DEBUG",
+    ERROR: "ERROR",
+    INFO: "INFO",
+    WARN: "WARNING",
   } as const;
 
   // ============ 6. 返回 Logger 实例 ============
@@ -342,29 +333,29 @@ export const createLogger = (
     debug: (request, message, context) =>
       logWithMergedContext(LOG_LEVELS.DEBUG, request, message, context),
 
-    info: (request, message, context) =>
-      logWithMergedContext(LOG_LEVELS.INFO, request, message, context),
-
-    warn: (request, message, context) =>
-      logWithMergedContext(LOG_LEVELS.WARN, request, message, context),
-
     error: (request, message, context) =>
       logWithMergedContext(LOG_LEVELS.ERROR, request, message, context),
 
-    // 显式指定级别的日志方法
-    log: executeLog,
+    // 上下文管理
+    getContext: (request) => activeContextStore.getContext(request),
 
     // HTTP 错误处理
     handleHttpError: (request, error, storeData) => {
       handleHttpError(request, error, storeData, options);
     },
 
-    // 上下文管理
-    getContext: (request) => activeContextStore.getContext(request),
+    info: (request, message, context) =>
+      logWithMergedContext(LOG_LEVELS.INFO, request, message, context),
+
+    // 显式指定级别的日志方法
+    log: executeLog,
     mergeContext: (request, partialContext) =>
       activeContextStore.mergeContext(request, partialContext),
 
     // 底层 Pino 实例（懒加载代理）
     pino: pinoProxy,
+
+    warn: (request, message, context) =>
+      logWithMergedContext(LOG_LEVELS.WARN, request, message, context),
   };
 };

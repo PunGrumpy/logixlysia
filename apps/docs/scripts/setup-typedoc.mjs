@@ -13,7 +13,13 @@
 // postinstall hook also runs it so the symlink is in place before the
 // first `blume build`.
 
-import { existsSync, mkdirSync, readFileSync, symlinkSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -26,12 +32,16 @@ const TYPEDOC_LOCAL_TS = join(TYPEDOC_DIR, "node_modules", "typescript");
 const DOCS_LOCAL_TS = join(DOCS_ROOT, "node_modules", "typescript");
 const TYPEDOC_TSCONFIG = join(PKG_ROOT, ".typedoc-tsconfig.json");
 
-if (existsSync(join(TYPEDOC_DIR, "package.json"))) {
-  if (!existsSync(TYPEDOC_LOCAL_TS) && existsSync(DOCS_LOCAL_TS)) {
-    mkdirSync(dirname(TYPEDOC_LOCAL_TS), { recursive: true });
-    symlinkSync(DOCS_LOCAL_TS, TYPEDOC_LOCAL_TS, "dir");
-    console.log(`[setup-typedoc] symlinked ${DOCS_LOCAL_TS} → ${TYPEDOC_LOCAL_TS}`);
-  }
+if (
+  existsSync(join(TYPEDOC_DIR, "package.json")) &&
+  !existsSync(TYPEDOC_LOCAL_TS) &&
+  existsSync(DOCS_LOCAL_TS)
+) {
+  mkdirSync(dirname(TYPEDOC_LOCAL_TS), { recursive: true });
+  symlinkSync(DOCS_LOCAL_TS, TYPEDOC_LOCAL_TS, "dir");
+  console.log(
+    `[setup-typedoc] symlinked ${DOCS_LOCAL_TS} → ${TYPEDOC_LOCAL_TS}`
+  );
 }
 
 const TYPEDOC_TSCONFIG_BODY = `${JSON.stringify(

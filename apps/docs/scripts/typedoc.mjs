@@ -17,12 +17,7 @@
 //      apps/docs/content/reference/
 
 import { spawnSync } from "node:child_process";
-import {
-  existsSync,
-  mkdirSync,
-  readFileSync,
-  writeFileSync,
-} from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -105,7 +100,9 @@ const PUBLIC_NAMES = new Set();
     }
   }
   // Also: `export const X`, `export function X`, `export class X`, `export interface X`, `export type X`
-  for (const m of barrel.matchAll(/^export\s+(?:declare\s+)?(?:const|function|class|interface|type)\s+([A-Za-z_$][\w$]*)/gm)) {
+  for (const m of barrel.matchAll(
+    /^export\s+(?:declare\s+)?(?:const|function|class|interface|type)\s+([A-Za-z_$][\w$]*)/gm
+  )) {
     PUBLIC_NAMES.add(m[1]);
   }
 }
@@ -120,14 +117,14 @@ const all = project.children ?? [];
 
 const KIND = {
   CLASS: 128,
-  INTERFACE: 256,
   ENUM: 16,
-  VARIABLE: 32,
   FUNCTION: 64,
+  INTERFACE: 256,
+  METHOD: 2048,
   NAMESPACE: 4,
   PROPERTY: 1024,
-  METHOD: 2048,
-  TYPE_ALIAS: 2097152,
+  TYPE_ALIAS: 2_097_152,
+  VARIABLE: 32,
 };
 
 const symById = new Map();
@@ -146,7 +143,7 @@ walk(project);
 
 const resolveRef = (type) => {
   if (!type || typeof type !== "object") return type;
-  if (type.type === "reference" && type.id != null) {
+  if (type.type === "reference" && type.id !== null) {
     return symById.get(type.id) ?? type;
   }
   return type;
@@ -172,7 +169,7 @@ const fmtType = (type) => {
         return `[${(t.elements ?? []).map(visit).join(", ")}]`;
       case "reference": {
         const sym = resolveRef(t);
-        if (sym && sym.name) {
+        if (sym?.name) {
           const args =
             t.typeArguments && t.typeArguments.length > 0
               ? `<${t.typeArguments.map(visit).join(", ")}>`
@@ -184,7 +181,8 @@ const fmtType = (type) => {
       case "reflection": {
         const sigs = t.declaration?.signatures ?? [];
         if (sigs.length > 0) {
-          const s = sigs[0];
+          const [s, ...rest] = sigs;
+
           const params = (s.parameters ?? [])
             .map((p) => `${p.name}: ${visit(p.type)}`)
             .join(", ");
@@ -212,7 +210,7 @@ const fmtType = (type) => {
       case "conditional":
         return `${visit(t.checkType)} extends ${visit(t.extendsType)} ? ${visit(t.trueType)} : ${visit(t.falseType)}`;
       case "templateLiteral":
-        return `\`${(t.head ?? "")}${(t.tail ?? [])
+        return `\`${t.head ?? ""}${(t.tail ?? [])
           .map((p) => `$${p.toString()}${p.tail ?? ""}`)
           .join("")}\``;
       case "predicate":
@@ -252,9 +250,7 @@ const slug = (name) => {
   // Strip backtick wrappers and parens that show up in headings like
   // `### \`logixlysia\`` and `### \`__resetForTesting\`` so the anchor
   // matches what blume/fumadocs derives from the rendered heading text.
-  const stripped = String(name)
-    .replace(/`/g, "")
-    .replace(/[()]/g, "");
+  const stripped = String(name).replace(/`/g, "").replace(/[()]/g, "");
   return stripped
     .replace(/([a-z0-9])([A-Z])/g, "$1-$2")
     .replace(/[^a-zA-Z0-9-]/g, "-")
@@ -276,7 +272,10 @@ const fmtSignature = (sig) => {
   const typeParams =
     sig.typeParameters && sig.typeParameters.length > 0
       ? `<${sig.typeParameters
-          .map((t) => t.name + (t.constraint ? ` extends ${fmtType(t.constraint)}` : ""))
+          .map(
+            (t) =>
+              t.name + (t.constraint ? ` extends ${fmtType(t.constraint)}` : "")
+          )
           .join(", ")}>`
       : "";
   return `${typeParams}(${params}) => ${fmtType(sig.type)}`;
@@ -286,7 +285,7 @@ const fmtInterface = (node) => {
   const lines = [];
   lines.push(`### \`${node.name}\`\n`);
   const doc = fmtComment(node);
-  if (doc) lines.push(doc + "\n");
+  if (doc) lines.push(`${doc}\n`);
   const props = (node.children ?? []).filter(
     (c) => c.kind === KIND.PROPERTY || c.kind === KIND.METHOD
   );
@@ -297,7 +296,13 @@ const fmtInterface = (node) => {
       const t =
         p.kind === KIND.METHOD
           ? `<code>${(p.signatures ?? [])
-              .map((s) => s.name + "(" + (s.parameters ?? []).map((q) => q.name).join(", ") + ")")
+              .map(
+                (s) =>
+                  s.name +
+                  "(" +
+                  (s.parameters ?? []).map((q) => q.name).join(", ") +
+                  ")"
+              )
               .join(" / ")}</code>`
           : `\`${fmtType(p.type)}\``;
       const opt = p.flags?.isOptional ? "✓" : "";
@@ -312,7 +317,7 @@ const fmtInterface = (node) => {
 const fmtTypeAlias = (node) => {
   const lines = [`### \`${node.name}\`\n`];
   const doc = fmtComment(node);
-  if (doc) lines.push(doc + "\n");
+  if (doc) lines.push(`${doc}\n`);
   lines.push("```ts");
   lines.push(`type ${node.name} = ${fmtType(node.type)};`);
   lines.push("```\n");
@@ -322,10 +327,10 @@ const fmtTypeAlias = (node) => {
 const fmtVariable = (node) => {
   const lines = [`### \`${node.name}\`\n`];
   const doc = fmtComment(node);
-  if (doc) lines.push(doc + "\n");
+  if (doc) lines.push(`${doc}\n`);
   const sigs =
     node.type?.type === "reflection"
-      ? node.type.declaration?.signatures ?? []
+      ? (node.type.declaration?.signatures ?? [])
       : [];
   if (sigs.length > 0) {
     lines.push("```ts");
@@ -357,7 +362,7 @@ const fmtVariable = (node) => {
 const fmtFunction = (node) => {
   const lines = [`### \`${node.name}\`\n`];
   const doc = fmtComment(node);
-  if (doc) lines.push(doc + "\n");
+  if (doc) lines.push(`${doc}\n`);
   const sigs = node.signatures ?? [];
   if (sigs.length > 0) {
     for (const sig of sigs) {
@@ -383,7 +388,7 @@ const fmtFunction = (node) => {
 const fmtClass = (node) => {
   const lines = [`### \`${node.name}\`\n`];
   const doc = fmtComment(node);
-  if (doc) lines.push(doc + "\n");
+  if (doc) lines.push(`${doc}\n`);
   if (node.children?.length) {
     lines.push("```ts");
     lines.push(`class ${node.name} {`);
@@ -392,7 +397,7 @@ const fmtClass = (node) => {
         const opt = c.flags?.isOptional ? "?" : "";
         lines.push(`  ${c.name}${opt}: ${fmtType(c.type)};`);
       } else if (c.kind === KIND.METHOD && c.signatures?.[0]) {
-        const sig = c.signatures[0];
+        const [sig, ...rest] = c.signatures;
         const params = (sig.parameters ?? [])
           .map((p) => `${p.name}: ${fmtType(p.type)}`)
           .join(", ");
@@ -415,8 +420,7 @@ mkdirSync(OUT_DIR, { recursive: true });
 // Without this, descriptions containing `:` + `{` (e.g. `` `logixlysia({ config: { ... } })` ``)
 // get parsed as flow mappings and blume dies with "bad indentation of a
 // mapping entry" at frontmatter parse time.
-const yamlSingleQuoted = (s) =>
-  `'${String(s ?? "").replace(/'/g, "''")}'`;
+const yamlSingleQuoted = (s) => `'${String(s ?? "").replace(/'/g, "''")}'`;
 
 const frontmatter = (title, description) =>
   `---\ntitle: ${yamlSingleQuoted(title)}\ndescription: ${yamlSingleQuoted(description)}\n---\n\n`;
@@ -434,7 +438,9 @@ const isPublic = (c) => PUBLIC_NAMES.has(c.name);
 const functions = all.filter((c) => c.kind === KIND.FUNCTION && isPublic(c));
 const variables = all.filter((c) => c.kind === KIND.VARIABLE && isPublic(c));
 const interfaces = all.filter((c) => c.kind === KIND.INTERFACE && isPublic(c));
-const typeAliases = all.filter((c) => c.kind === KIND.TYPE_ALIAS && isPublic(c));
+const typeAliases = all.filter(
+  (c) => c.kind === KIND.TYPE_ALIAS && isPublic(c)
+);
 const classes = all.filter((c) => c.kind === KIND.CLASS && isPublic(c));
 
 const exportsBody = [
@@ -481,9 +487,13 @@ const configBody = [
   ),
   "本页是 [`LogixlysiaConfig`](https://github.com/eastgold15/logixlysia/blob/main/packages/logixlysia/src/interfaces.ts) 字段的自动生成参考。源代码变更后会重新生成。\n",
   "## LogixlysiaConfig\n",
-  config ? fmtInterface(config) : "_LogixlysiaConfig not found in typedoc output._\n",
+  config
+    ? fmtInterface(config)
+    : "_LogixlysiaConfig not found in typedoc output._\n",
   "## LogixlysiaOptions\n",
-  opts ? fmtInterface(opts) : "_LogixlysiaOptions not found in typedoc output._\n",
+  opts
+    ? fmtInterface(opts)
+    : "_LogixlysiaOptions not found in typedoc output._\n",
 ].join("\n");
 
 writeFileSync(join(OUT_DIR, "configuration.mdx"), configBody);

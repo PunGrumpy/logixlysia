@@ -10,9 +10,9 @@
  */
 
 import type {
+  LogixlysiaOptions,
   LogLevel,
   LogRotationConfig,
-  LogixlysiaOptions,
   StoreData,
 } from "../interfaces";
 import type { PrecomputedLogParts } from "../logger/create-logger";
@@ -28,15 +28,20 @@ export interface LogToFileInput {
   store: StoreData;
 }
 
-const resolveRotation = (options: LogixlysiaOptions): LogRotationConfig | undefined => {
+const resolveRotation = (
+  options: LogixlysiaOptions
+): LogRotationConfig | undefined => {
   if (options.config?.logRotation) {
     return options.config.logRotation;
   }
   const fileConfig = options.file;
-  if (fileConfig && typeof fileConfig === "object" && "rotation" in fileConfig) {
+  if (
+    fileConfig &&
+    typeof fileConfig === "object" &&
+    "rotation" in fileConfig
+  ) {
     return fileConfig.rotation;
   }
-  return undefined;
 };
 
 export const logToFile = async (input: LogToFileInput): Promise<void> => {

@@ -27,7 +27,7 @@ const makeTransport = () =>
 const baseOptions = (
   transport: ReturnType<typeof makeTransport>
 ): LogixlysiaOptions => ({
-  transports: { targets: [{ log: transport }], only: true },
+  transports: { only: true, targets: [{ log: transport }] },
 });
 
 describe("logixlysia plugin (Elysia 2.0)", () => {

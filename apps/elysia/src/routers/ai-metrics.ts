@@ -25,6 +25,5 @@ export const aiMetricsRouter = <App extends Logixlysia>(app: App) =>
         ok: true,
         reply: "Demo response — check access log for `context.ai`",
       };
-    },
-
+    }
   );

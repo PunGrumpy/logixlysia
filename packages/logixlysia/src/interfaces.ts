@@ -182,14 +182,14 @@ export interface LogixlysiaConfig {
   disableWebSocketLogging?: boolean;
   /** 在日志中显示 IP(x-forwarded-for / x-real-ip) */
   ip?: boolean;
-  /** 把错误对象的 payload(可能是用户输入)写入 meta,默认 false(防泄露) */
-  logErrorPayload?: boolean;
-  /** 日志文件路径 */
-  logFilePath?: string;
   /** 目录模式(默认 0o700) */
   logDirMode?: number;
+  /** 把错误对象的 payload(可能是用户输入)写入 meta,默认 false(防泄露) */
+  logErrorPayload?: boolean;
   /** 文件模式(默认 0o600) */
   logFileMode?: number;
+  /** 日志文件路径 */
+  logFilePath?: string;
   /** 日志级别过滤 */
   logFilter?: LogFilter;
   /** 在 pathname 中包含 query string */
@@ -198,8 +198,6 @@ export interface LogixlysiaConfig {
   logRotation?: LogRotationConfig;
   /** Pino 配置 */
   pino?: PinoConfig;
-  /** 透传 transport 列表(emit 用;`transports` 也可以在 root,但 emit 只看 config) */
-  transports?: Transport[];
   /** 自定义 redact key 列表(合并到默认敏感 key) */
   redactKeys?: string[];
   /** request-id 跟踪 */
@@ -218,6 +216,8 @@ export interface LogixlysiaConfig {
   startupMessageFormat?: "simple" | "banner";
   /** 时间戳格式或 { format } */
   timestamp?: string | { format: string };
+  /** 透传 transport 列表(emit 用;`transports` 也可以在 root,但 emit 只看 config) */
+  transports?: Transport[];
   /** Transport 错误节流窗口(ms) */
   transportThrottleMs?: number;
   /**
@@ -251,10 +251,10 @@ export interface LogixlysiaConfig {
  * 同时兼容 root-level 字段(legacy tests)
  */
 export interface LogixlysiaOptions {
-  /** 错误处理配置 */
-  error?: ErrorConfig;
   /** 新版配置块 */
   config?: LogixlysiaConfig;
+  /** 错误处理配置 */
+  error?: ErrorConfig;
   /** 用户自定义 HTTPError 类 */
   errors?: LogixlysiaErrorClasses;
   /** 文件日志配置(legacy) */
@@ -276,8 +276,6 @@ export interface LogixlysiaOptions {
   /** 自定义传输(legacy) */
   transports?: Transport[] | TransportsConfig;
 }
-
-
 
 // ==========================================
 // Logger
@@ -331,10 +329,7 @@ export interface Logger {
     store: StoreData
   ) => void;
   /** 合并 per-request context(后续 access log 带上) */
-  mergeContext: (
-    request: Request,
-    partial: Record<string, unknown>
-  ) => void;
+  mergeContext: (request: Request, partial: Record<string, unknown>) => void;
   /** 底层 Pino Logger 实例 */
   pino: Pino;
   /** 记录 WARNING 级别日志 */

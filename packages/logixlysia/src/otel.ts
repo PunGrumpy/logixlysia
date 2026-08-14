@@ -19,10 +19,9 @@ let otelApi: OtelApi | null | undefined;
 // Use a Function indirection so the TypeScript compiler does not require
 // `@opentelemetry/api` to be installed at build time. The string form
 // of import() is rewritten by bundlers without affecting runtime semantics.
-const dynamicImport = new Function(
-  "specifier",
-  "return import(specifier)"
-) as (specifier: string) => Promise<unknown>;
+const dynamicImport = new Function("specifier", "return import(specifier)") as (
+  specifier: string
+) => Promise<unknown>;
 
 /**
  * Resolves the OTel API via dynamic import so bun's

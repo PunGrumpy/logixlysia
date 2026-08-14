@@ -10,19 +10,19 @@ export const spyConsole = (
 } => {
   const originals = new Map<ConsoleMethod, typeof console.log>();
   const spies = {
-    log: mock(() => {
-      /* noop */
-    }),
-    info: mock(() => {
-      /* noop */
-    }),
-    warn: mock(() => {
+    debug: mock(() => {
       /* noop */
     }),
     error: mock(() => {
       /* noop */
     }),
-    debug: mock(() => {
+    info: mock(() => {
+      /* noop */
+    }),
+    log: mock(() => {
+      /* noop */
+    }),
+    warn: mock(() => {
       /* noop */
     }),
   } as const;
@@ -41,5 +41,5 @@ export const spyConsole = (
     }
   };
 
-  return { spies: { ...spies }, restore };
+  return { restore, spies: { ...spies } };
 };

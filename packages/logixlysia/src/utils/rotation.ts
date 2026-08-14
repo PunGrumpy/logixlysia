@@ -6,7 +6,8 @@ const INTERVAL_REGEX = /^(\d+)(h|d|w)$/i;
 // Matches both 6-component (no ms) and 7-component (with ms) timestamps,
 // with an optional hrtime suffix and an optional .gz extension. Anything
 // else (e.g. `.backup`, `.tmp`) is excluded.
-const ROTATED_REGEX = /\.(\d{4}-\d{2}-\d{2}-\d{2}-\d{2}-\d{2}(?:-\d{3})?)(?:-\d+)?(?:\.gz)?$/;
+const ROTATED_REGEX =
+  /\.(\d{4}-\d{2}-\d{2}-\d{2}-\d{2}-\d{2}(?:-\d{3})?)(?:-\d+)?(?:\.gz)?$/;
 
 export const parseSize = (value: number | string): number => {
   if (typeof value === "number") {

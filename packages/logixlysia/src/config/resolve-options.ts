@@ -1,6 +1,6 @@
-import { getPresetDefaults } from "./preset-registry";
 import type { LogixlysiaOptions } from "../interfaces";
 import { parseInterval, parseRetention, parseSize } from "../utils/rotation";
+import { getPresetDefaults } from "./preset-registry";
 
 /**
  * 内置 preset 名 —— 给 IDE 自动补全。
@@ -49,17 +49,20 @@ const mergeConfig = (
     return base;
   }
 
-  const merged: NonNullable<LogixlysiaOptions["config"]> = { ...base, ...override };
+  const merged: NonNullable<LogixlysiaOptions["config"]> = {
+    ...base,
+    ...override,
+  };
 
   if (base.pino || override.pino) {
     merged.pino = {
       ...base.pino,
       ...override.pino,
       ...(base.pino?.prettyPrint !== undefined ||
-        override.pino?.prettyPrint !== undefined
+      override.pino?.prettyPrint !== undefined
         ? {
-          prettyPrint: override.pino?.prettyPrint ?? base.pino?.prettyPrint,
-        }
+            prettyPrint: override.pino?.prettyPrint ?? base.pino?.prettyPrint,
+          }
         : {}),
     };
   }
@@ -91,7 +94,9 @@ const mergeConfig = (
 };
 
 /** Applies preset defaults; explicit `config` keys override preset values. */
-export const resolveOptions = (options: LogixlysiaOptions = {}): LogixlysiaOptions => {
+export const resolveOptions = (
+  options: LogixlysiaOptions = {}
+): LogixlysiaOptions => {
   const { preset } = options;
 
   const resolved = preset

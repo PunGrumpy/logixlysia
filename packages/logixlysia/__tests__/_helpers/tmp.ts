@@ -6,5 +6,5 @@ export const createTempDir = async (prefix = "logixlysia-"): Promise<string> =>
   await mkdtemp(join(tmpdir(), prefix));
 
 export const removeTempDir = async (dir: string): Promise<void> => {
-  await rm(dir, { recursive: true, force: true });
+  await rm(dir, { force: true, recursive: true });
 };

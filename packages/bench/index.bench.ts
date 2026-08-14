@@ -1,8 +1,8 @@
 import { createPinoLogger as createBogeychan } from "@bogeychan/elysia-logger";
+import logixlysia, { createLogger } from "@pori15/logixlysia";
 import { consola } from "consola";
 import { Elysia } from "elysia";
 import { createLogger as createEvlog } from "evlog";
-import logixlysia, { createLogger } from "@pori15/logixlysia";
 import pino from "pino";
 import { bench, describe } from "vitest";
 import winston from "winston";

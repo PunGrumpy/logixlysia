@@ -19,5 +19,5 @@ export const otelRouter = <App extends Logixlysia>(app: App) =>
       () => ({
         note: "When @opentelemetry/api is installed and a span is active, trace_id / span_id appear in logs",
         ok: true,
-      }),
+      })
     );

@@ -22,9 +22,9 @@ describe("logToTransports", () => {
     const store = { beforeTime: BigInt(0) };
 
     logToTransports({
+      data: { message: "Test message", status: 200 },
       level: "INFO",
       request,
-      data: { message: "Test message", status: 200 },
       store,
       transports,
     });
@@ -65,9 +65,9 @@ describe("logToTransports", () => {
 
     expect(() => {
       logToTransports({
+        data: { message: "ignored" },
         level: "INFO",
         request,
-        data: { message: "ignored" },
         store,
         transports: [{ log: throwing }],
       });
@@ -83,9 +83,9 @@ describe("logToTransports", () => {
     const store = { beforeTime: BigInt(0) };
 
     logToTransports({
+      data: { message: "async" },
       level: "INFO",
       request,
-      data: { message: "async" },
       store,
       transports: [{ log: rejecting }],
     });

@@ -21,7 +21,9 @@ export const useLogger = (): RequestScopedLogger =>
   loggerStorage.getStore() ?? NOOP_LOGGER;
 
 export interface RequestScopedLoggerOptions {
-  contextStore: { mergeContext: (key: object, partial: Record<string, unknown>) => void };
+  contextStore: {
+    mergeContext: (key: object, partial: Record<string, unknown>) => void;
+  };
   level: import("../interfaces").LogLevel;
   logger: import("../interfaces").Logger;
   request: object;

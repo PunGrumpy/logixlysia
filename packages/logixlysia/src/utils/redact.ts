@@ -97,7 +97,7 @@ export const DEFAULT_REDACT_KEYS: readonly string[] = [
   "credit-card",
   "card-number",
   "cvv",
-  "ssn",  // 社保号
+  "ssn", // 社保号
 ];
 
 // ============================================================
@@ -118,9 +118,9 @@ const CAMEL_CASE_BOUNDARY_REGEX = /([a-z0-9])([A-Z])/g;
  */
 const normalizeKeyName = (key: string): string =>
   key
-    .replace(CAMEL_CASE_BOUNDARY_REGEX, "$1-$2")  // 驼峰转短横线
-    .replaceAll("_", "-")                         // 下划线转短横线
-    .toLowerCase();                               // 转小写
+    .replace(CAMEL_CASE_BOUNDARY_REGEX, "$1-$2") // 驼峰转短横线
+    .replaceAll("_", "-") // 下划线转短横线
+    .toLowerCase(); // 转小写
 
 // ============================================================
 // 4. 敏感字段判断
@@ -271,7 +271,7 @@ const passesLuhn = (digits: string): boolean => {
     if (alternate) {
       n *= 2;
       if (n > 9) {
-        n -= 9;  // 两位数减9（等同于各位相加）
+        n -= 9; // 两位数减9（等同于各位相加）
       }
     }
 
@@ -342,7 +342,7 @@ export const redactString = (text: string): string => {
  */
 const redactErrorClone = (
   originalError: Error,
-  inProgress: WeakSet<object>,  // 循环引用检测
+  inProgress: WeakSet<object>, // 循环引用检测
   extraKeys?: readonly string[] // 用户自定义敏感字段
 ): Error & Record<string, unknown> => {
   // 脱敏错误消息

@@ -16,9 +16,9 @@
 import chalk from "chalk";
 import { getStatusCode } from "../helpers/status";
 import type {
-  LogLevel,
   LogixlysiaConfig,
   LogixlysiaOptions,
+  LogLevel,
   Pino,
   StoreData,
 } from "../interfaces";
@@ -65,12 +65,12 @@ export const formatDuration = (ms: number): string => {
  * createLogger 调用时计算,后续每条 emit 直接读取,避免重复 `padStart`/颜色开关判断。
  */
 export interface FormatContext {
-  /** 启用的 token 集合(已经解析的 Set<string>) */
-  tokens: Set<string>;
-  /** 自定义格式模板(已回退到 default) */
-  template: string;
   /** 慢请求阈值 (ms) — duration >= 此值打 slow 标记 */
   slowThreshold: number;
+  /** 自定义格式模板(已回退到 default) */
+  template: string;
+  /** 启用的 token 集合(已经解析的 Set<string>) */
+  tokens: Set<string>;
   /** TTY 判定 + config.useColors */
   useColors: boolean;
   /** 极慢请求阈值 (ms) — duration >= 此值打 ⚡ 标记 */
@@ -88,9 +88,9 @@ export const createFormatContext = (
   const template = config.customLogFormat ?? DEFAULT_LOG_FORMAT;
 
   return {
-    tokens: collectTokens(template),
-    template,
     slowThreshold: config.slowThreshold ?? 0,
+    template,
+    tokens: collectTokens(template),
     useColors: enabledByConfig && isTty,
     verySlowThreshold: config.verySlowThreshold ?? 0,
   };
@@ -288,10 +288,7 @@ export const formatLogOutput = ({
       ? 0
       : Number(process.hrtime.bigint() - before) / 1_000_000);
   const pathname =
-    precomputed?.pathname ||
-    store.pathname ||
-    fallbackUrl?.pathname ||
-    "/";
+    precomputed?.pathname || store.pathname || fallbackUrl?.pathname || "/";
   const search = precomputed?.search ?? fallbackUrl?.search ?? "";
 
   const now = new Date();
@@ -315,14 +312,19 @@ export const formatLogOutput = ({
   const fullPath = showQuery && search ? `${pathname}${search}` : pathname;
 
   const ip =
-    config.ip === true || config.showIp === true || options.format?.showIp === true
+    config.ip === true ||
+    config.showIp === true ||
+    options.format?.showIp === true
       ? getIp(request)
       : "";
   const coloredLevel = getColoredLevel(level, useColors);
   const coloredMethod = getColoredMethod(request.method, useColors);
   const coloredStatus = getColoredStatus(status, useColors);
   const coloredPathname = getColoredPathname(fullPath, useColors);
-  const coloredDuration = getColoredDuration(formatDuration(durationMs), useColors);
+  const coloredDuration = getColoredDuration(
+    formatDuration(durationMs),
+    useColors
+  );
 
   // Speed token: ⚡ + path when duration >= verySlowThreshold (and > 0)
   const needsSpeed = tokens.has("speed");
@@ -343,11 +345,11 @@ export const formatLogOutput = ({
   const dataCtx = data.context;
   const ctxString =
     !showTree &&
-      dataCtx !== undefined &&
-      dataCtx !== null &&
-      typeof dataCtx === "object" &&
-      !Array.isArray(dataCtx) &&
-      Object.keys(dataCtx as object).length > 0
+    dataCtx !== undefined &&
+    dataCtx !== null &&
+    typeof dataCtx === "object" &&
+    !Array.isArray(dataCtx) &&
+    Object.keys(dataCtx as object).length > 0
       ? JSON.stringify(dataCtx)
       : "";
 
@@ -362,8 +364,8 @@ export const formatLogOutput = ({
     message,
     method: coloredMethod,
     now: timestamp,
-    pathname: coloredPathname,
     path: coloredPathname,
+    pathname: coloredPathname,
     query: search,
     requestid: "",
     service: "",
@@ -375,7 +377,9 @@ export const formatLogOutput = ({
   // match here so tokens like {RequestId} still work.
   let main = template.replace(/\{([a-zA-Z]+)\}/g, (match, name: string) => {
     const key = name.toLowerCase();
-    return Object.hasOwn(replacements, key) ? (replacements[key] ?? match) : match;
+    return Object.hasOwn(replacements, key)
+      ? (replacements[key] ?? match)
+      : match;
   });
   // If a service is configured, prefix the main line with [service]
   if (serviceToken) {
@@ -384,10 +388,12 @@ export const formatLogOutput = ({
 
   // Slow request marker: append ⚡ if duration >= slowThreshold (and > 0), and not already shown via speed
   let withSlowMarker = main;
-  if (durationMs > 0 && durationMs >= ctx.slowThreshold) {
-    if (!main.includes("⚡")) {
-      withSlowMarker = `${main} ⚡ slow`;
-    }
+  if (
+    durationMs > 0 &&
+    durationMs >= ctx.slowThreshold &&
+    !main.includes("⚡")
+  ) {
+    withSlowMarker = `${main} ⚡ slow`;
   }
 
   // Build context tree lines only when showContextTree is true
@@ -395,7 +401,7 @@ export const formatLogOutput = ({
     ? buildContextTreeLines(level, data, options)
     : [];
 
-  return { main: withSlowMarker, contextLines };
+  return { contextLines, main: withSlowMarker };
 };
 
 /**
@@ -464,7 +470,7 @@ export const buildContextTreeLines = (
 
   // Flatten at depth N: for depth=1 just top-level keys; for depth>1 expand
   // nested objects into `parent.child` style.
-  const flat: Array<[string, unknown]> = [];
+  const flat: [string, unknown][] = [];
   const flatten = (obj: Record<string, unknown>, prefix: string, d: number) => {
     for (const [k, v] of Object.entries(obj)) {
       const key = prefix ? `${prefix}.${k}` : k;

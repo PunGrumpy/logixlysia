@@ -29,8 +29,7 @@ export const requestContextRouter = <App extends Logixlysia>(app: App) =>
           note: "See access log — context merged automatically",
           ok: true,
         };
-      },
-
+      }
     )
     .get(
       "/async-context",
@@ -52,6 +51,5 @@ export const requestContextRouter = <App extends Logixlysia>(app: App) =>
           note: "Check console logs for useLogger() context propagation",
           ok: true,
         };
-      },
-
+      }
     );

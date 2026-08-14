@@ -73,9 +73,7 @@ export const sample = (rate: number, transport: Transport): Transport => {
   }
   return {
     log: (level, message, meta) =>
-      Math.random() < rate
-        ? transport.log(level, message, meta)
-        : undefined,
+      Math.random() < rate ? transport.log(level, message, meta) : undefined,
   };
 };
 
@@ -88,7 +86,11 @@ export const sample = (rate: number, transport: Transport): Transport => {
  * 常见用法:`filter((lvl) => lvl === "ERROR", errorTarget)`。
  */
 export const filter = (
-  predicate: (level: LogLevel, message: string, meta?: Record<string, unknown>) => boolean,
+  predicate: (
+    level: LogLevel,
+    message: string,
+    meta?: Record<string, unknown>
+  ) => boolean,
   transport: Transport
 ): Transport => ({
   log: (level, message, meta) =>
@@ -106,7 +108,11 @@ export const filter = (
  * 适合打 metrics / 计数 / 调试 trace,**绝不**用来丢日志(用 `filter`)。
  */
 export const tap = (
-  fn: (level: LogLevel, message: string, meta?: Record<string, unknown>) => void,
+  fn: (
+    level: LogLevel,
+    message: string,
+    meta?: Record<string, unknown>
+  ) => void,
   transport: Transport
 ): Transport => ({
   log: (level, message, meta) => {
@@ -161,6 +167,8 @@ export const batch = (
   };
 
   return {
+    // 暴露 flush 给用户手动触发(比如 beforeExit / 测试结束)
+    flush: flush as never,
     log: (level, message, meta) => {
       buffer.push({ level, message, meta });
       if (buffer.length >= size) {
@@ -168,9 +176,6 @@ export const batch = (
       } else if (!timer) {
         timer = setTimeout(flush, flushMs);
       }
-      return undefined;
     },
-    // 暴露 flush 给用户手动触发(比如 beforeExit / 测试结束)
-    flush: flush as never,
   } as Transport;
 };

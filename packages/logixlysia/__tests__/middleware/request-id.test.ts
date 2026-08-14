@@ -25,7 +25,7 @@ describe("resolveRequestIdConfig", () => {
     expect(config?.header).toBe("X-Request-Id");
     expect(typeof config?.generator).toBe("function");
     // default generator produces UUID v4 format
-    const id = config?.generator?.();
+    const id = config?.generator();
     expect(id).toMatch(UUID_V4_REGEX);
   });
 
@@ -54,7 +54,7 @@ describe("resolveRequestIdConfig", () => {
       generator: () => "custom-id-123",
     });
     expect(config).not.toBeNull();
-    expect(config?.generator?.()).toBe("custom-id-123");
+    expect(config?.generator()).toBe("custom-id-123");
   });
 
   test("defaults enabled to true when object is provided without enabled field", () => {

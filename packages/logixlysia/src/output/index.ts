@@ -18,7 +18,7 @@ interface LogToTransportsInput {
   transports: Transport[];
 }
 
-const DEFAULT_THROTTLE_MS = 5_000;
+const DEFAULT_THROTTLE_MS = 5000;
 
 const lastErrorAt = new WeakMap<Transport, number>();
 
@@ -34,10 +34,7 @@ const shouldThrottle = (
   return now - last < windowMs;
 };
 
-const reportTransportError = (
-  transport: Transport,
-  error: unknown
-): void => {
+const reportTransportError = (transport: Transport, error: unknown): void => {
   const now = Date.now();
   if (shouldThrottle(transport, now, DEFAULT_THROTTLE_MS)) {
     return;
@@ -64,12 +61,12 @@ export const logToTransports = (input: LogToTransportsInput): void => {
     ...data,
   };
   if (precomputed) {
-    meta["durationMs"] = precomputed.durationMs;
-    meta["pathname"] = precomputed.pathname;
+    meta.durationMs = precomputed.durationMs;
+    meta.pathname = precomputed.pathname;
   } else {
     // Fall back to a derived duration when caller didn't precompute.
     const before = store.beforeTime ?? BigInt(0);
-    meta["durationMs"] =
+    meta.durationMs =
       before === BigInt(0)
         ? 0
         : Number(process.hrtime.bigint() - before) / 1_000_000;

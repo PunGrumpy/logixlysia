@@ -4,5 +4,5 @@ export const ensureDir = async (
   dirPath: string,
   mode = 0o700
 ): Promise<void> => {
-  await fs.mkdir(dirPath, { recursive: true, mode });
+  await fs.mkdir(dirPath, { mode, recursive: true });
 };
