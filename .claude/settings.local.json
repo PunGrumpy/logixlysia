@@ -5,7 +5,9 @@
       "Bash(git stash *)",
       "Bash(bunx tsc *)",
       "Bash(git checkout *)",
-      "Bash(bun test *)"
+      "Bash(bun test *)",
+      "Bash(bun run *)",
+      "Bash(bun x *)"
     ]
   }
 }

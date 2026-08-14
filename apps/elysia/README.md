@@ -10,7 +10,7 @@ Canonical demo for Logixlysia on **Bun + TypeScript**. Node.js compatibility is 
 - Request context (`mergeContext`) on `/checkout`
 - AI metrics (`logixlysia/ai`) on `POST /chat`
 - OpenTelemetry hook (`logixlysia/otel`) on `/trace`
-- WebSocket lifecycle via `plugin.wrapWs` on `/ws`
+- WebSocket lifecycle via `createWsHandlerWrapper` on `/ws`
 - Classic examples: `/status/:code`, `/pino`, `/custom`, `/boom`, `/auto-redact`
 
 ## Getting Started
@@ -49,7 +49,7 @@ logixlysia({
 | GET | `/checkout` | Request context on access log |
 | POST | `/chat` | `mergeAIMetrics` → `context.ai` |
 | GET | `/trace` | `injectTraceContext` (needs active OTel span for IDs) |
-| WS | `/ws` | `wrapWs` lifecycle + context on socket |
+| WS | `/ws` | `createWsHandlerWrapper` lifecycle + context on socket |
 | GET | `/status/:code` | Status-based log levels |
 | GET | `/pino` | Direct Pino from store |
 | GET | `/custom` | Custom `logger.info` with context |

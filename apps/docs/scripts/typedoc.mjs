@@ -199,6 +199,12 @@ const fmtType = (type) => {
         return JSON.stringify(t.value);
       case "typeOperator":
         return `${t.operator} ${visit(t.target)}`;
+      case "query":
+        // `typeof X` query types — formatted as `typeof X`. The `queryType`
+        // field holds the operand, not `target` (which the typeOperator case
+        // uses). Without this branch, the default case spits back `"query"`
+        // and downstream MDX turns `ReturnType<query>` into a JSX parse error.
+        return `typeof ${visit(t.queryType)}`;
       case "mappedType":
         return `{ [_: ${visit(t.parameter ?? t.name)}]: ${visit(t.templateType)} }`;
       case "indexedAccess":

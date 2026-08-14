@@ -8,7 +8,7 @@ description: 'Public functions and values exported by `@pori15/logixlysia`.'
 
 ## Functions
 
-[__resetForTesting](#reset-for-testing) · [__resetPresetRegistry](#reset-preset-registry) · [applyErrorLogging](#apply-error-logging) · [buildDeriveSlot](#build-derive-slot) · [buildPinoRedactPaths](#build-pino-redact-paths) · [buildRequestHooks](#build-request-hooks) · [buildStartupHook](#build-startup-hook) · [createCore](#create-core) · [createRequestContextStore](#create-request-context-store) · [createRequestScopedLogger](#create-request-scoped-logger) · [createWsHandlerWrapper](#create-ws-handler-wrapper) · [errorMap](#error-map) · [extractErrorFields](#extract-error-fields) · [extractStatus](#extract-status) · [getOrCreateRequestId](#get-or-create-request-id) · [getPresetDefaults](#get-preset-defaults) · [getRotatedFiles](#get-rotated-files) · [getStatusCode](#get-status-code) · [httpError](#http-error) · [injectTraceContext](#inject-trace-context) · [isSensitiveKey](#is-sensitive-key) · [isStructuredError](#is-structured-error) · [levelForStatus](#level-for-status) · [listPresets](#list-presets) · [logixlysia](#logixlysia) · [mergeAIMetrics](#merge-aimetrics) · [mergeLogDataContext](#merge-log-data-context) · [normalizeLoggedError](#normalize-logged-error) · [pad2](#pad2) · [pad3](#pad3) · [parseError](#parse-error) · [parseInterval](#parse-interval) · [parseRetention](#parse-retention) · [parseSize](#parse-size) · [redact](#redact) · [redactRequest](#redact-request) · [redactString](#redact-string) · [registerPreset](#register-preset) · [resolveOptions](#resolve-options) · [resolveRequestIdConfig](#resolve-request-id-config) · [sanitizeLogText](#sanitize-log-text) · [shouldRotateBySize](#should-rotate-by-size) · [useLogger](#use-logger)
+[__resetForTesting](#reset-for-testing) · [__resetPresetRegistry](#reset-preset-registry) · [applyErrorLogging](#apply-error-logging) · [buildPinoRedactPaths](#build-pino-redact-paths) · [createRequestContextStore](#create-request-context-store) · [createRequestScopedLogger](#create-request-scoped-logger) · [createWsHandlerWrapper](#create-ws-handler-wrapper) · [errorMap](#error-map) · [extractErrorFields](#extract-error-fields) · [extractStatus](#extract-status) · [getOrCreateRequestId](#get-or-create-request-id) · [getPresetDefaults](#get-preset-defaults) · [getRotatedFiles](#get-rotated-files) · [getStatusCode](#get-status-code) · [httpError](#http-error) · [injectTraceContext](#inject-trace-context) · [isSensitiveKey](#is-sensitive-key) · [isStructuredError](#is-structured-error) · [levelForStatus](#level-for-status) · [listPresets](#list-presets) · [logixlysia](#logixlysia) · [mergeAIMetrics](#merge-aimetrics) · [mergeLogDataContext](#merge-log-data-context) · [normalizeLoggedError](#normalize-logged-error) · [pad2](#pad2) · [pad3](#pad3) · [parseError](#parse-error) · [parseInterval](#parse-interval) · [parseRetention](#parse-retention) · [parseSize](#parse-size) · [redact](#redact) · [redactRequest](#redact-request) · [redactString](#redact-string) · [registerPreset](#register-preset) · [resolveOptions](#resolve-options) · [resolveRequestIdConfig](#resolve-request-id-config) · [sanitizeLogText](#sanitize-log-text) · [shouldRotateBySize](#should-rotate-by-size) · [useLogger](#use-logger)
 
 
 ## Variables
@@ -65,19 +65,6 @@ function applyErrorLogging<T>(app: T, logger: Logger, options: LogixlysiaOptions
 | `didCustomLog` | `WeakSet<Request>` |  |
 | `requestIdHeader` | `string` |  |
 
-### `buildDeriveSlot`
-
-```ts
-function buildDeriveSlot(app: any, core: LogixlysiaCore) => any;
-```
-
-**Parameters**
-
-| Name | Type | Description |
-| --- | --- | --- |
-| `app` | `any` |  |
-| `core` | `LogixlysiaCore` |  |
-
 ### `buildPinoRedactPaths`
 
 为Pino日志框架生成脱敏路径
@@ -92,44 +79,6 @@ function buildPinoRedactPaths(extraKeys?: readonly string[]) => string[];
 | Name | Type | Description |
 | --- | --- | --- |
 | `extraKeys` | `readonly string[]` | 用户自定义敏感字段 |
-
-### `buildRequestHooks`
-
-```ts
-function buildRequestHooks(app: AnyElysia, core: LogixlysiaCore) => AnyElysia;
-```
-
-**Parameters**
-
-| Name | Type | Description |
-| --- | --- | --- |
-| `app` | `AnyElysia` |  |
-| `core` | `LogixlysiaCore` |  |
-
-### `buildStartupHook`
-
-```ts
-function buildStartupHook(app: any, core: LogixlysiaCore) => any;
-```
-
-**Parameters**
-
-| Name | Type | Description |
-| --- | --- | --- |
-| `app` | `any` |  |
-| `core` | `LogixlysiaCore` |  |
-
-### `createCore`
-
-```ts
-function createCore(options: LogixlysiaOptions) => LogixlysiaCore;
-```
-
-**Parameters**
-
-| Name | Type | Description |
-| --- | --- | --- |
-| `options` | `LogixlysiaOptions` |  |
 
 ### `createRequestContextStore`
 
@@ -356,14 +305,14 @@ function listPresets() => string[];
 ### `logixlysia`
 
 ```ts
-function logixlysia(options: LogixlysiaOptions) => AnyElysia & object;
+function logixlysia(rawOptions?: LogixlysiaOptions) => AnyElysia;
 ```
 
 **Parameters**
 
 | Name | Type | Description |
 | --- | --- | --- |
-| `options` | `LogixlysiaOptions` |  |
+| `rawOptions` | `LogixlysiaOptions` |  |
 
 ### `mergeAIMetrics`
 

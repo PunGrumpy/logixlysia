@@ -3,23 +3,26 @@ title: WebSocket logging
 description: Log WebSocket open, message, and close events
 ---
 
-Use `wrapWs` on the plugin instance to add lifecycle logs for WebSocket routes:
+Use `createWsHandlerWrapper` to add lifecycle logs for WebSocket routes:
 
 ```ts
 import { Elysia } from 'elysia'
-import { logixlysia } from 'logixlysia'
+import { logixlysia, createWsHandlerWrapper } from 'logixlysia'
 
 const plugin = logixlysia({
   config: {
     service: 'chat'
   }
 })
+// 跟 logixlysia 共享同一份 logger / context store,
+// 所以 wrap 出来的事件能直接走 access log 管道。
+const wrapWs = createWsHandlerWrapper()
 
 const app = new Elysia()
   .use(plugin)
   .ws(
     '/chat',
-    plugin.wrapWs({
+    wrapWs({
       open(ws) {
         ws.send('connected')
       },
@@ -42,7 +45,7 @@ Accumulate context with the WebSocket instance as the key:
 ```ts
 .ws(
   '/chat',
-  plugin.wrapWs({
+  wrapWs({
     message(ws, payload) {
       ws.data.store.logger.mergeContext(ws, { lastPayloadType: typeof payload })
     }
@@ -59,3 +62,9 @@ logixlysia({
   }
 })
 ```
+
+## Why a separate export?
+
+Elysia 2 用 `#private` brand 标记合法 plugin 实例,直接在 plugin 上挂额外字段(像
+`plugin.wrapWs`)会破坏这个 brand,导致 `.use()` 报类型错误。`createWsHandlerWrapper`
+作为独立函数导出,绕开这个限制,同时保证它和 `logixlysia` 跑在同一份 logger 上下文。

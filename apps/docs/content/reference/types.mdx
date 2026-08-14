@@ -8,12 +8,12 @@ description: 'Public TypeScript types — interfaces, type aliases, and classes.
 
 ## Interfaces
 
-[AIMetrics](#aimetrics) · [ErrorConfig](#error-config) · [FileConfig](#file-config) · [FormatConfig](#format-config) · [LogFilter](#log-filter) · [Logger](#logger) · [LogixlysiaConfig](#logixlysia-config) · [LogixlysiaContext](#logixlysia-context) · [LogixlysiaCore](#logixlysia-core) · [LogixlysiaOptions](#logixlysia-options) · [LogixlysiaSingleton](#logixlysia-singleton) · [LogixlysiaStore](#logixlysia-store) · [LogRotationConfig](#log-rotation-config) · [NormalizedLoggedError](#normalized-logged-error) · [PinoConfig](#pino-config) · [RequestContextStore](#request-context-store) · [RequestIdConfig](#request-id-config) · [RequestScopedLogger](#request-scoped-logger) · [RequestScopedLoggerOptions](#request-scoped-logger-options) · [ResolvedRequestIdConfig](#resolved-request-id-config) · [StartupConfig](#startup-config) · [StoreData](#store-data) · [StructuredError](#structured-error) · [TraceContextFields](#trace-context-fields) · [Transport](#transport) · [TransportsConfig](#transports-config) · [WebSocketLike](#web-socket-like) · [WsHandlerHooks](#ws-handler-hooks)
+[AIMetrics](#aimetrics) · [ErrorConfig](#error-config) · [FileConfig](#file-config) · [FormatConfig](#format-config) · [LogFilter](#log-filter) · [Logger](#logger) · [LogixlysiaConfig](#logixlysia-config) · [LogixlysiaContext](#logixlysia-context) · [LogixlysiaOptions](#logixlysia-options) · [LogixlysiaSingleton](#logixlysia-singleton) · [LogixlysiaStore](#logixlysia-store) · [LogRotationConfig](#log-rotation-config) · [NormalizedLoggedError](#normalized-logged-error) · [PinoConfig](#pino-config) · [RequestContextStore](#request-context-store) · [RequestIdConfig](#request-id-config) · [RequestScopedLogger](#request-scoped-logger) · [RequestScopedLoggerOptions](#request-scoped-logger-options) · [ResolvedRequestIdConfig](#resolved-request-id-config) · [StartupConfig](#startup-config) · [StoreData](#store-data) · [StructuredError](#structured-error) · [TraceContextFields](#trace-context-fields) · [Transport](#transport) · [TransportsConfig](#transports-config) · [WebSocketLike](#web-socket-like) · [WsHandlerHooks](#ws-handler-hooks)
 
 
 ## Type Aliases
 
-[ContextKey](#context-key) · [EmptyElysiaSlot](#empty-elysia-slot) · [Logixlysia](#logixlysia) · [LogixlysiaErrorClass](#logixlysia-error-class) · [LogixlysiaErrorClasses](#logixlysia-error-classes) · [LogixlysiaPlugin](#logixlysia-plugin) · [LogLevel](#log-level) · [LogPreset](#log-preset) · [Pino](#pino) · [PresetConfig](#preset-config)
+[ContextKey](#context-key) · [Logixlysia](#logixlysia) · [LogixlysiaErrorClass](#logixlysia-error-class) · [LogixlysiaErrorClasses](#logixlysia-error-classes) · [LogLevel](#log-level) · [LogPreset](#log-preset) · [Pino](#pino) · [PresetConfig](#preset-config)
 
 
 ## Classes
@@ -145,18 +145,6 @@ Logixlysia 请求上下文
 | `request` | `Request` |  |  |
 | `store` | `LogixlysiaStore` |  |  |
 
-### `LogixlysiaCore`
-
-| Field | Type | Optional | Description |
-| --- | --- | --- | --- |
-| `contextStore` | `RequestContextStore` |  |  |
-| `didCustomLog` | `WeakSet<Request>` |  |  |
-| `logger` | `Logger` |  |  |
-| `requestIdConfig` | `ResolvedRequestIdConfig` |  |  |
-| `requestStartTimes` | `WeakMap<Request, bigint>` |  |  |
-| `resolvedOptions` | `LogixlysiaOptions` |  |  |
-| `useALS` | `boolean` |  |  |
-
 ### `LogixlysiaOptions`
 
 Logixlysia 插件配置
@@ -179,13 +167,16 @@ Logixlysia 插件配置
 
 ### `LogixlysiaSingleton`
 
-插件单例接口 - 描述 logixlysia 注入到 Elysia 的 store / derive 形状
+Elysia 2 singleton —— 注入到 Elysia 的 store / derive 形状。
+
+关闭了 Elysia ``SingletonBase.store`` 的 ``Record<string, unknown>`` 索引签名
+(我们用 ``LogixlysiaStore`` 显式列举字段,合并后的 context / ws.data 能保持
+精确推断,不会退化成 ``any``)。``resolve`` 槽位在 Elysia 2 中已被移除,不导出。
 
 | Field | Type | Optional | Description |
 | --- | --- | --- | --- |
-| `decorator` | `Record<string, unknown>` |  |  |
+| `decorator` | `Record<string, never>` |  |  |
 | `derive` | `object` |  |  |
-| `resolve` | `Record<string, never>` |  |  |
 | `store` | `LogixlysiaStore` |  |  |
 
 ### `LogixlysiaStore`
@@ -291,7 +282,7 @@ Request-scoped Logger,挂在 ``context.log`` 上,不需要传 request 参数。
 
 | Field | Type | Optional | Description |
 | --- | --- | --- | --- |
-| `beforeTime` | `bigint` |  | 请求开始的纳秒时间戳（hrtime） |
+| `beforeTime` | `bigint` | ✓ | 请求开始的纳秒时间戳（hrtime） |
 | `pathname` | `string` | ✓ | 缓存的 URL pathname，避免重复解析 |
 
 ### `StructuredError`
@@ -352,26 +343,25 @@ HTTP ``Request`` or WebSocket instance for accumulated context.
 type ContextKey = Request | object;
 ```
 
-### `EmptyElysiaSlot`
-
-空插槽类型 - Elysia 2 要求所有插槽必须是对象类型
-用空对象表示"这个槽位不暴露任何内容"
-
-```ts
-type EmptyElysiaSlot = Record<string, never>;
-```
-
 ### `Logixlysia`
 
-demo 路由用 ``<App extends Logixlysia>(app: App)`` 给 ``app`` 加上
-logixlysia 的 singleton 约束(``store.logger`` / ``store.pino`` 等)。
+插件返回类型 —— ``ReturnType<typeof logixlysia>``,Elysia 自己推断。
+不手写 ``Elysia<...>`` 泛型,避免与 elysia 模块的 ``#private`` brand 冲突。
 
-这是**独立的类型**,跟 ``logixlysia()`` 的实际返回类型解耦:
-- 主函数返回 ``Elysia<any, ...>``(满足 brand check,能 ``.use()``)
-- ``Logixlysia`` 是给 demo / 用户做约束用的"logixlysia 后的 Elysia"形态
+必须在 ``logixlysia`` 函数声明**之后**导出 (因为下方 ``declare const logixlysia``
+才是它的类型来源)。
+
+**bunup 配套要求**:``bunup.config.ts`` 的 ``dts`` 必须开 ``inferTypes: true``,
+否则 ``@bunup/dts`` 把函数体当 JS 走 AST,返回类型退化成 ``unknown``。
+
+**为什么返回类型是 ``AnyElysia`` 而不是精确泛型**:开了 ``inferTypes: true`` 之后
+真实类型是 ``Elysia<"", "local", {...}>``;它的 ``#private`` 跟 ``AnyElysia`` 的
+``#private`` 被 TS 算成不同类,``.use()`` 会拒。在函数签名层加
+``(rawOptions?: LogixlysiaOptions) => AnyElysia`` 把出口拓宽到 ``AnyElysia``,
+函数体保持单链、零 ``as`` 零 ``any`` 零 ``@ts-expect-error``。
 
 ```ts
-type Logixlysia = Elysia<"", "plugin", LogixlysiaSingleton>;
+type Logixlysia = ReturnType<typeof logixlysia>;
 ```
 
 ### `LogixlysiaErrorClass`
@@ -393,18 +383,6 @@ logixlysia 在 handler 内写日志,响应交还给 Elysia(自动 application/pr
 
 ```ts
 type LogixlysiaErrorClasses = TaggedHTTPError<string, any>[];
-```
-
-### `LogixlysiaPlugin`
-
-插件返回类型,带 ``wrapWs`` 辅助方法。
-
-同样**不**用作 ``logixlysia()`` 的显式返回类型(会 brand 失败);
-实际返回值由 Elysia 推断,本类型仅在用户拿到返回值后用 ``as LogixlysiaPlugin``
-重新声明 ``wrapWs`` 字段时有用,或者写 helper 时强类型。
-
-```ts
-type LogixlysiaPlugin = Logixlysia & object;
 ```
 
 ### `LogLevel`

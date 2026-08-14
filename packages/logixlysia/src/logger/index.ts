@@ -1,17 +1,17 @@
 /**
  * logixlysia 2.0 — Logger 工厂
  *
- * 包装:
- * - 单 emit 管道(emit.ts):filter → context merge → redact → transports → file → console
- * - Lazy Pino via Proxy:pino 第一次访问时构造,无效配置 fail-fast
- * - RequestContextStore:per-request 累积 context(getContext/mergeContext)
+ * 功能封装：
+ * - 单一 emit 管道（emit.ts）：filter → context merge → redact → transports → file → console
+ * - 通过 Proxy 实现懒加载 Pino：仅在首次访问时构造 Pino 实例，无效配置将快速失败（fail-fast）
+ * - RequestContextStore：支持按请求累积上下文（通过 getContext/mergeContext）
  *
- * 公共 API 9 个方法(全部实现):
+ * 公共 API 包含 9 个方法（已全部实现）：
  * - debug / info / warn / error
- * - log (显式 level)
+ * - log（显式指定日志级别）
  * - handleHttpError
  * - getContext / mergeContext
- * - pino(底层)
+ * - pino（底层 Pino 实例）
  */
 
 import pino from "pino";
@@ -49,18 +49,11 @@ import {
 
 export type PinoFactory = (options: PinoLoggerOptions) => PinoLogger;
 
-const shouldLog = (
-  level: LogLevel,
-  logFilter?: { level?: LogLevel[] }
-): boolean => {
-  if (!logFilter?.level || logFilter.level.length === 0) {
-    return true;
-  }
-  return logFilter.level.includes(level);
-};
-
+/**
+ * 默认的 Pino 工厂函数
+ * Bun 运行时自动检测；pino-pretty 为可选开启
+ */
 const defaultPinoFactory: PinoFactory = (options) => {
-  // Bun's runtime auto-detects; pino-pretty is opt-in.
   return pino(options) as unknown as PinoLogger;
 };
 
@@ -71,186 +64,307 @@ export interface CreateLoggerOptions {
 }
 
 /**
- * Build a Logger wired to the single emit pipeline. The `pino` field is a
- * lazy Proxy: the underlying Pino instance is only constructed on first access.
- * If `config.pino` is set, the first access fail-fasts on invalid config.
+ * 类型守卫：判断是否为 CreateLoggerOptions
  */
-export const createLogger = (
-  optionsOrArg?: LogixlysiaOptions | CreateLoggerOptions,
-  pinoFactoryArg?: PinoFactory,
-  contextStoreArg?: RequestContextStore
-): Logger => {
-  // Backward-compat: 0/1-arg form used by tests/legacy code
-  //   createLogger()
-  //   createLogger({ config: {...} })
-  // New 3-arg form (upstream main):
-  //   createLogger({ options, pinoFactory?, contextStore? })
-  let options: LogixlysiaOptions;
-  let pinoFactory: PinoFactory | undefined;
-  let contextStore: RequestContextStore | undefined;
-  if (
-    optionsOrArg &&
-    typeof optionsOrArg === "object" &&
-    "options" in (optionsOrArg as object) &&
-    (optionsOrArg as { options?: unknown }).options !== undefined
-  ) {
-    const arg = optionsOrArg as CreateLoggerOptions;
-    options = arg.options;
-    pinoFactory = arg.pinoFactory;
-    contextStore = arg.contextStore;
-  } else {
-    options = (optionsOrArg as LogixlysiaOptions | undefined) ?? {};
-    pinoFactory = pinoFactoryArg;
-    contextStore = contextStoreArg;
-  }
+const isCreateLoggerOptions = (
+  value: unknown
+): value is CreateLoggerOptions => {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'options' in value &&
+    (value as any).options !== undefined
+  );
+};
 
-  const factory = pinoFactory ?? defaultPinoFactory;
-  const config = options.config ?? {};
-  const sinks = resolveSinks(options);
-  const formatContext: FormatContext = createFormatContext(options);
+/**
+ * 创建静默 Pino Logger（用于 pino.enabled === false）
+ */
+const createSilentPinoLogger = (): Pino => {
+  return {
+    debug: () => undefined,
+    error: () => undefined,
+    fatal: () => undefined,
+    info: () => undefined,
+    level: "silent",
+    silent: () => undefined,
+    trace: () => undefined,
+    warn: () => undefined,
+  } as unknown as Pino;
+};
 
-  // Lazy pino: built on first access via Proxy.
-  let realPino: Pino | null = null;
-  const getPino = (): Pino => {
-    if (realPino) {
-      return realPino;
-    }
-    // Build pino options from config.pino + format
-    const pinoOptions: PinoLoggerOptions = {
-      level: "info",
-      ...((config.pino as PinoLoggerOptions | undefined) ?? {}),
-    };
-    // `pino.enabled === false` short-circuits to a silent logger
-    if (config.pino?.enabled === false) {
-      realPino = {
-        // minimal mock — tests only check pino is not undefined
-        debug: () => undefined,
-        error: () => undefined,
-        fatal: () => undefined,
-        info: () => undefined,
-        level: "silent",
-        silent: () => undefined,
-        trace: () => undefined,
-        warn: () => undefined,
-      } as unknown as Pino;
-      return realPino;
-    }
-    if (config.pino?.prettyPrint === true) {
-      pinoOptions.transport = {
-        target: "pino-pretty",
-        options: {
-          colorize: process.stdout?.isTTY === true,
-          translateTime: typeof config.timestamp === "string"
-            ? config.timestamp
-            : undefined,
-        },
-      };
-    }
-    realPino = factory(pinoOptions) as unknown as Pino;
-    return realPino;
+/**
+ * 构建 Pino 配置选项
+ */
+const buildPinoOptions = (
+  config: LogixlysiaOptions['config']
+): PinoLoggerOptions => {
+  const pinoOptions: PinoLoggerOptions = {
+    level: "info",
+    ...((config?.pino as PinoLoggerOptions | undefined) ?? {}),
   };
 
-  // If user provided a pino config, force build now so they see errors at startup
-  if (config.pino !== undefined) {
-    getPino();
+  // 配置 prettyPrint
+  if (config?.pino?.prettyPrint === true) {
+    pinoOptions.transport = {
+      target: "pino-pretty",
+      options: {
+        colorize: process.stdout?.isTTY === true,
+        translateTime: typeof config?.timestamp === "string"
+          ? config.timestamp
+          : undefined,
+      },
+    };
   }
 
-  const lazyPino: Pino = new Proxy({} as Pino, {
-    get(_target, prop) {
-      const p = getPino() as unknown as Record<string | symbol, unknown>;
-      const value = p[prop as string];
-      return typeof value === "function" ? (value as (...a: unknown[]) => unknown).bind(p) : value;
+  return pinoOptions;
+};
+
+/**
+ * 构建一个与单一 emit 管道绑定的 Logger 实例。
+ * `pino` 字段是一个懒加载的 Proxy：仅在首次访问时构建底层 Pino 实例。
+ * 如果设置了 `config.pino`，则首次访问时若配置无效将快速失败（fail-fast）。
+ */
+export const createLogger = (
+  optionsOrConfig?: LogixlysiaOptions | CreateLoggerOptions,
+  externalPinoFactory?: PinoFactory,
+  externalContextStore?: RequestContextStore
+): Logger => {
+  // ============ 1. 参数解析 ============
+  let options: LogixlysiaOptions;
+  let pinoFactory: PinoFactory;
+  let contextStore: RequestContextStore | undefined;
+
+  if (isCreateLoggerOptions(optionsOrConfig)) {
+    // 新式调用：{ options, pinoFactory?, contextStore? }
+    options = optionsOrConfig.options;
+    pinoFactory = optionsOrConfig.pinoFactory ?? defaultPinoFactory;
+    contextStore = optionsOrConfig.contextStore;
+  } else {
+    // 旧式调用：options?, pinoFactory?, contextStore?
+    options = optionsOrConfig ?? {};
+    pinoFactory = externalPinoFactory ?? defaultPinoFactory;
+    contextStore = externalContextStore;
+  }
+
+  const config = options.config ?? {};
+  const activeContextStore = contextStore ?? createRequestContextStore();
+  const logDestinations = resolveSinks(options);
+  const formatContext: FormatContext = createFormatContext(options);
+
+  // ============ 2. 懒加载 Pino 实例 ============
+  let pinoInstance: Pino | null = null;
+  let pinoInitError: Error | null = null;
+
+  /**
+   * 获取或创建 Pino 实例（懒加载）
+   * 如果配置了 pino.enabled === false，返回静默 Logger
+   * 如果配置无效，快速失败（fail-fast）
+   */
+  const getOrCreatePino = (): Pino => {
+    // 已初始化成功
+    if (pinoInstance) {
+      return pinoInstance;
+    }
+
+    // 之前初始化失败，直接抛出错误
+    if (pinoInitError) {
+      throw pinoInitError;
+    }
+
+    try {
+      // pino.enabled === false：返回静默 Logger
+      if (config.pino?.enabled === false) {
+        pinoInstance = createSilentPinoLogger();
+        return pinoInstance;
+      }
+
+      // 构建 Pino 配置并创建实例
+      const pinoOptions = buildPinoOptions(config);
+      pinoInstance = pinoFactory(pinoOptions) as unknown as Pino;
+      return pinoInstance;
+    } catch (error) {
+      pinoInitError = error as Error;
+      throw error;
+    }
+  };
+
+  // 如果用户提供了 pino 配置，立即初始化以暴露配置错误
+  if (config.pino !== undefined) {
+    getOrCreatePino();
+  }
+
+  /**
+   * Pino 代理对象：懒加载访问 Pino 实例的所有方法
+   */
+  const pinoProxy: Pino = new Proxy({} as Pino, {
+    get(_target, propertyKey) {
+      const pinoLogger = getOrCreatePino();
+      const value = (pinoLogger as any)[propertyKey];
+
+      if (typeof value === 'function') {
+        return value.bind(pinoLogger);
+      }
+      return value;
     },
-    has(_target, prop) {
-      return prop in (getPino() as unknown as object);
+    has(_target, propertyKey) {
+      const pinoLogger = getOrCreatePino();
+      return propertyKey in (pinoLogger as any);
     },
   });
 
-  const fallbackStore: RequestContextStore =
-    contextStore ?? createRequestContextStore();
+  // ============ 3. 数据脱敏工具 ============
+  /**
+   * 对数据和请求执行脱敏处理
+   */
+  const sanitizeDataAndRequest = (
+    data: Record<string, unknown>,
+    request: Request
+  ): { sanitizedData: Record<string, unknown>; sanitizedRequest: Request } => {
+    if (config.autoRedact !== true) {
+      return { sanitizedData: data, sanitizedRequest: request };
+    }
 
-  const logImpl = (
+    return {
+      sanitizedData: redact(data, config.redactKeys),
+      sanitizedRequest: redactRequest(request, config.redactKeys),
+    };
+  };
+
+  // ============ 4. 核心日志处理函数 ============
+
+  /**
+   * 执行日志记录的核心逻辑
+   * 1. 检查是否应该记录
+   * 2. 合并上下文
+   * 3. 执行脱敏（redact）
+   * 4. 预计算日志部分
+   * 5. 发送到所有目标（sinks）
+   * 6. 转发到 Pino（如果启用）
+   */
+  const executeLog = (
     level: LogLevel,
     request: Request,
-    data: Record<string, unknown>,
-    store: StoreData
+    logData: Record<string, unknown>,
+    storeData: StoreData
   ): void => {
+    // 快速路径：检查是否应该记录此日志
     if (
-      sinks.isEffectivelyDisabled ||
+      logDestinations.isEffectivelyDisabled ||
       !shouldLogForOptions(level, options)
     ) {
       return;
     }
 
+    // 合并请求上下文
     const dataWithContext = mergeLogDataContext(
-      data,
-      fallbackStore.peekContext(request)
-    );
-    const logData =
-      config.autoRedact === true
-        ? redact(dataWithContext, config.redactKeys)
-        : dataWithContext;
-    const logRequest =
-      config.autoRedact === true
-        ? redactRequest(request, config.redactKeys)
-        : request;
-
-    const precomputed: PrecomputedLogParts = computePrecomputedLogParts(
-      store,
-      logRequest,
-      sinks.needsUrlParts
+      logData,
+      activeContextStore.peekContext(request)
     );
 
+    // 执行数据脱敏
+    const { sanitizedData, sanitizedRequest } = sanitizeDataAndRequest(
+      dataWithContext,
+      request
+    );
+
+    // 预计算日志部分（优化性能）
+    const precomputedParts: PrecomputedLogParts = computePrecomputedLogParts(
+      storeData,
+      sanitizedRequest,
+      logDestinations.needsUrlParts
+    );
+
+    // 发送到所有日志目标
     emit({
-      contextStore: fallbackStore,
-      data: logData,
+      contextStore: activeContextStore,
+      data: sanitizedData,
       formatContext,
       level,
       options,
-      precomputed,
-      request: logRequest,
-      sinks,
-      store,
+      precomputed: precomputedParts,
+      request: sanitizedRequest,
+      sinks: logDestinations,
+      store: storeData,
     });
 
-    // Also forward to pino if pino is enabled
-    if (config.pino?.enabled !== false && sinks.hasInternalLogger) {
-      logWithPino(getPino(), level, logData);
+    // 如果 Pino 已启用，同时转发给 Pino
+    if (config.pino?.enabled !== false && logDestinations.hasInternalLogger) {
+      logWithPino(getOrCreatePino(), level, sanitizedData);
     }
   };
 
-  const logWithContext = (
+  /**
+   * 带上下文合并的日志记录包装器
+   * 1. 合并传入的上下文到请求上下文
+   * 2. 准备 storeData
+   * 3. 调用核心日志函数
+   */
+  const logWithMergedContext = (
     level: LogLevel,
     request: Request,
     message: string,
-    context?: Record<string, unknown>
+    additionalContext?: Record<string, unknown>
   ): void => {
-    if (context) {
-      fallbackStore.mergeContext(request, context);
+    // 合并上下文
+    if (additionalContext) {
+      activeContextStore.mergeContext(request, additionalContext);
     }
-    const store: StoreData = {
+
+    // 准备 storeData
+    let pathname: string;
+    try {
+      pathname = new URL(request.url).pathname;
+    } catch {
+      pathname = 'invalid-url';
+    }
+
+    const storeData: StoreData = {
       beforeTime: process.hrtime.bigint(),
-      pathname: new URL(request.url).pathname,
+      pathname,
     };
-    logImpl(level, request, { message }, store);
+
+    // 执行日志记录
+    executeLog(level, request, { message }, storeData);
   };
 
+  // ============ 5. 日志级别映射 ============
+  const LOG_LEVELS = {
+    DEBUG: 'DEBUG',
+    INFO: 'INFO',
+    WARN: 'WARNING',
+    ERROR: 'ERROR',
+  } as const;
+
+  // ============ 6. 返回 Logger 实例 ============
   return {
+    // 标准日志方法
     debug: (request, message, context) =>
-      logWithContext("DEBUG", request, message, context),
-    error: (request, message, context) =>
-      logWithContext("ERROR", request, message, context),
-    getContext: (request) => fallbackStore.getContext(request),
-    handleHttpError: (request, error, store) => {
-      handleHttpError(request, error, store, options);
-    },
+      logWithMergedContext(LOG_LEVELS.DEBUG, request, message, context),
+
     info: (request, message, context) =>
-      logWithContext("INFO", request, message, context),
-    log: logImpl,
-    mergeContext: (request, partial) =>
-      fallbackStore.mergeContext(request, partial),
-    pino: lazyPino,
+      logWithMergedContext(LOG_LEVELS.INFO, request, message, context),
+
     warn: (request, message, context) =>
-      logWithContext("WARNING", request, message, context),
+      logWithMergedContext(LOG_LEVELS.WARN, request, message, context),
+
+    error: (request, message, context) =>
+      logWithMergedContext(LOG_LEVELS.ERROR, request, message, context),
+
+    // 显式指定级别的日志方法
+    log: executeLog,
+
+    // HTTP 错误处理
+    handleHttpError: (request, error, storeData) => {
+      handleHttpError(request, error, storeData, options);
+    },
+
+    // 上下文管理
+    getContext: (request) => activeContextStore.getContext(request),
+    mergeContext: (request, partialContext) =>
+      activeContextStore.mergeContext(request, partialContext),
+
+    // 底层 Pino 实例（懒加载代理）
+    pino: pinoProxy,
   };
 };

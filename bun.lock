@@ -94,7 +94,7 @@
     },
     "packages/logixlysia": {
       "name": "@pori15/logixlysia",
-      "version": "7.1.0",
+      "version": "7.1.1",
       "dependencies": {
         "chalk": "^5.6.2",
         "pino": "^10.3.1",

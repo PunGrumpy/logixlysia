@@ -8,17 +8,10 @@ import { otelRouter } from "./otel";
 import { aiMetricsRouter } from "./ai-metrics";
 import { requestContextRouter } from "./request-context";
 
+
 export const routers = new Elysia()
   .use(
-    logixlysia({
-      config: {
-        timestamp: "yyyy-mm-dd HH:MM:ss",
-        customLogFormat:
-          "🦊 {now} {level} {duration} {method} {pathname} {status} {message} {ip} {context}",
-        logFilePath: "./logs/example.log",
-        ip: true,
-      },
-    })
+    logixlysia()
   )
   .get(
     "/",

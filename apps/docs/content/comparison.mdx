@@ -13,7 +13,7 @@ description: How Logixlysia compares to evlog and other Elysia loggers
 | Single access log per request | Auto | `log.emit()` | Auto |
 | File rotation | Yes | Via drains | Limited |
 | `autoRedact` PII | Yes | Varies | Manual |
-| WebSocket lifecycle logs | `wrapWs` | Manual | Manual |
+| WebSocket lifecycle logs | `createWsHandlerWrapper` | Manual | Manual |
 | OTel trace correlation | `logixlysia/otel` | Built-in integrations | Manual |
 | AI usage on access log | `logixlysia/ai` | `evlog/ai` | Manual |
 | Presets (`dev` / `prod`) | Yes | N/A | N/A |
