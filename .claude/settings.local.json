@@ -7,7 +7,9 @@
       "Bash(git checkout *)",
       "Bash(bun test *)",
       "Bash(bun run *)",
-      "Bash(bun x *)"
+      "Bash(bun x *)",
+      "Bash(grep -oE \".{0,80}dtsOnly===!0.{0,80}\" /home/pori/logixlysia/node_modules/@visulima/packem/dist/packem_shared/index-B_etFvsK.js)",
+      "Bash(grep -oE \".[a-z]\\\\.[a-z]+!==void 0.[^,]{0,80}\" /home/pori/logixlysia/node_modules/@visulima/packem/dist/packem_shared/index-B_etFvsK.js)"
     ]
   }
 }

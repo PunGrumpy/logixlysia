@@ -43,12 +43,12 @@ import {
   ValidationError,
 } from "elysia";
 import { ErrorHandler } from "elysia/types";
-// 导入全局 Logger 管理
-import { initGlobalLogger } from "./$log";
 import { resolveOptions } from "./config/resolve-options";
 import { createRequestContextStore } from "./context/request-context";
 import { loggerStorage } from "./context/storage";
 import { startServer } from "./extensions";
+// 导入全局 Logger 管理
+import { initGlobalLogger } from "./global-logger";
 import { getStatusCode } from "./helpers/status";
 import type {
   Logger,

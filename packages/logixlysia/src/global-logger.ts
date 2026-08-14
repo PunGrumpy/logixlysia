@@ -6,10 +6,10 @@
  *
  * @example
  * // 在任意文件中使用
- * import { $log } from 'logixlysia';
+ * import { globalLogger } from 'logixlysia';
  *
- * $log.info('Hello world');
- * $log.debug(request, 'Request processing', { userId: 123 });
+ * globalLogger.info('Hello world');
+ * globalLogger.debug(request, 'Request processing', { userId: 123 });
  */
 
 import { createRequestContextStore } from "./context/request-context";
@@ -20,7 +20,7 @@ import { createLogger } from "./logger";
  * 全局 Logger 实例
  * 在插件初始化时设置，之后可直接使用
  */
-export let $log: Logger;
+export let globalLogger: Logger;
 
 /**
  * 全局请求上下文存储
@@ -41,14 +41,14 @@ export const initGlobalLogger = (
   contextStore = globalContextStore
 ): Logger => {
   // 如果已经初始化，返回已有的实例
-  if ($log) {
+  if (globalLogger) {
     console.warn("Global logger already initialized, skipping re-init");
-    return $log;
+    return globalLogger;
   }
 
   // 创建 Logger 实例
   const logger = createLogger(options, undefined, contextStore);
-  $log = logger;
+  globalLogger = logger;
 
   return logger;
 };
@@ -56,23 +56,24 @@ export const initGlobalLogger = (
 /**
  * 检查全局 Logger 是否已初始化
  */
-export const isGlobalLoggerInitialized = (): boolean => $log !== undefined;
+export const isGlobalLoggerInitialized = (): boolean =>
+  globalLogger !== undefined;
 
 /**
  * 重置全局 Logger（主要用于测试）
  */
 export const resetGlobalLogger = (): void => {
-  $log = undefined as any;
+  globalLogger = undefined as any;
 };
 
 /**
  * 获取全局 Logger，如果未初始化则抛出错误
  */
 export const getGlobalLogger = (): Logger => {
-  if (!$log) {
+  if (!globalLogger) {
     throw new Error(
-      "Global logger not initialized. Please ensure createLogPlugin is used before accessing $log."
+      "Global logger not initialized. Please ensure createLogPlugin is used before accessing globalLogger."
     );
   }
-  return $log;
+  return globalLogger;
 };

@@ -1,12 +1,27 @@
+// packem.config.ts
 import { defineConfig } from "@visulima/packem/config";
-import transformer from "@visulima/packem/transformer/esbuild";
+import esbuild from "@visulima/packem/transformer/esbuild";
+
 export default defineConfig({
   declaration: true,
-  entries: ["src/index.ts", "src/otel.ts", "src/ai.ts"],
+
+  entries: [
+    { declaration: true, esm: true, input: "src/index.ts" },
+    { declaration: true, esm: true, input: "src/otel.ts" },
+    { declaration: true, esm: true, input: "src/ai.ts" },
+  ],
+
   externals: ["elysia", "chalk", "pino", "pino-pretty"],
   failOnWarn: false,
-  minify: false,
+  minify: true,
+
   outDir: "dist",
+
+  rollup: {
+    patchTypes: false,
+  },
+
   runtime: "node",
-  transformer,
+  sourcemap: true,
+  transformer: esbuild,
 });

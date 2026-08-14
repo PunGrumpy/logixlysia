@@ -10,6 +10,7 @@
  */
 
 import type { RequestContextStore } from "../context/request-context";
+import { extractStatus, levelForStatus } from "../errors";
 
 export { extractStatus, levelForStatus } from "../errors";
 
