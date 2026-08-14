@@ -22,19 +22,19 @@
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "default": "./dist/index.js"
+      "import": "./dist/index.js"
     },
     "./otel": {
       "types": "./dist/otel.d.ts",
-      "default": "./dist/otel.js"
+      "import": "./dist/otel.js"
     },
     "./ai": {
       "types": "./dist/ai.d.ts",
-      "default": "./dist/ai.js"
+      "import": "./dist/ai.js"
     }
   },
-  "main": "./dist/index.cjs",
-  "module": "./dist/index.mjs",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "files": [
     "dist",

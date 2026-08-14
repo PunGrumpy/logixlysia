@@ -128,9 +128,11 @@ export const createLogger = (
 
   if (isCreateLoggerOptions(optionsOrConfig)) {
     // 新式调用：{ options, pinoFactory?, contextStore? }
-    options = optionsOrConfig.options;
-    pinoFactory = optionsOrConfig.pinoFactory ?? defaultPinoFactory;
-    contextStore = optionsOrConfig.contextStore;
+    ({
+      options,
+      pinoFactory = defaultPinoFactory,
+      contextStore,
+    } = optionsOrConfig);
   } else {
     // 旧式调用：options?, pinoFactory?, contextStore?
     options = optionsOrConfig ?? {};
@@ -305,7 +307,7 @@ export const createLogger = (
     // 准备 storeData
     let pathname: string;
     try {
-      pathname = new URL(request.url).pathname;
+      ({ pathname } = new URL(request.url));
     } catch {
       pathname = "invalid-url";
     }

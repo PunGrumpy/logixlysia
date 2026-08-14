@@ -73,7 +73,7 @@ export const resolveTransportsOnly = (options: LogixlysiaOptions): boolean => {
 };
 
 export const resolveSinks = (options: LogixlysiaOptions): Sinks => {
-  const config = options.config;
+  const { config } = options;
   const useTransportsOnly =
     resolveTransportsOnly(options) || config?.useTransportsOnly === true;
   const disableInternalLogger = config?.disableInternalLogger === true;
@@ -227,7 +227,7 @@ export const emit = ({
     data,
     // mergeLogDataContext only reads/spreads this bag into a new object; it never retains
     // the reference, so a non-cloning peek is safe here.
-    contextStore.peekContext ? contextStore.peekContext(request) : {}
+    contextStore.peekContext(request)
   );
   const shouldRedact = config?.autoRedact === true;
   const logData = shouldRedact

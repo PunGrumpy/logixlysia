@@ -55,7 +55,7 @@ export const extractStatus = (error: unknown): number | undefined => {
   if (typeof error !== "object" || error === null) {
     return;
   }
-  const status = (error as { status?: unknown }).status;
+  const { status } = error as { status?: unknown };
   if (typeof status === "number") {
     return status;
   }
@@ -165,7 +165,7 @@ export const applyErrorLogging = <T extends { error: any; onError?: any }>(
         type: fields.type,
       };
       if (withAll && error && typeof error === "object" && "all" in error) {
-        const all = (error as { all?: unknown }).all;
+        const { all } = error as { all?: unknown };
         if (Array.isArray(all)) {
           data.errors = all.map((e) => {
             const errObj = e as Record<string, unknown>;

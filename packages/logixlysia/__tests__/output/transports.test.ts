@@ -32,7 +32,7 @@ describe("logToTransports", () => {
     expect(t1).toHaveBeenCalledTimes(1);
     expect(t2).toHaveBeenCalledTimes(1);
 
-    const firstCall = t1.mock.calls[0];
+    const [firstCall] = t1.mock.calls;
     expect(firstCall).toBeDefined();
     const [levelValue, messageValue, metaValue] = firstCall ?? [
       undefined,

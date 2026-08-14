@@ -129,7 +129,8 @@ export const createLogPlugin = (rawOptions: LogixlysiaOptions = {}) => {
     resolveRequestIdConfig(options.config?.requestId);
   const useAsyncLocalStorage = options.config?.useAsyncLocalStorage === true;
   const verboseErrorLogging = options.error?.verbose === true;
-  const requestIdHeaderName = requestIdConfig?.header ?? "X-Request-Id";
+  const { header: requestIdHeaderName = "X-Request-Id" } =
+    requestIdConfig ?? {};
 
   // ---------- 2. 请求级 Logger 工厂 ----------
   /**
@@ -189,7 +190,7 @@ export const createLogPlugin = (rawOptions: LogixlysiaOptions = {}) => {
     if (!error || typeof error !== "object") {
       return;
     }
-    const status = (error as { status?: unknown }).status;
+    const { status } = error as { status?: unknown };
     if (typeof status === "number") {
       return status;
     }
@@ -244,7 +245,7 @@ export const createLogPlugin = (rawOptions: LogixlysiaOptions = {}) => {
         typeof error === "object" &&
         "all" in error
       ) {
-        const all = (error as { all?: unknown }).all;
+        const { all } = error as { all?: unknown };
         if (Array.isArray(all)) {
           data.errors = all.map((e) => {
             const errObj = e as Record<string, unknown>;

@@ -16,13 +16,14 @@
 import chalk from "chalk";
 import { getStatusCode } from "../helpers/status";
 import type {
-  LogixlysiaConfig,
   LogixlysiaOptions,
   LogLevel,
   Pino,
   StoreData,
 } from "../interfaces";
 import { pad2, pad3 } from "../utils/format";
+
+export type { LogixlysiaConfig } from "../interfaces";
 
 /** 默认日志格式(emoji + 完整 token 集合) */
 const DEFAULT_LOG_FORMAT =
@@ -282,14 +283,14 @@ export const formatLogOutput = ({
     }
   })();
   const before = store.beforeTime ?? BigInt(0);
-  const durationMs =
-    precomputed?.durationMs ??
-    (before === BigInt(0)
+  const durationMs = precomputed
+    ? precomputed.durationMs
+    : before === BigInt(0)
       ? 0
-      : Number(process.hrtime.bigint() - before) / 1_000_000);
+      : Number(process.hrtime.bigint() - before) / 1_000_000;
   const pathname =
     precomputed?.pathname || store.pathname || fallbackUrl?.pathname || "/";
-  const search = precomputed?.search ?? fallbackUrl?.search ?? "";
+  const search = precomputed ? precomputed.search : (fallbackUrl?.search ?? "");
 
   const now = new Date();
   const timestampPattern =
@@ -414,8 +415,7 @@ export const buildContextTreeLines = (
   options: LogixlysiaOptions
 ): string[] => {
   const config = options.config ?? {};
-  const ctxObj = data.context;
-  const error = data.error;
+  const { context: ctxObj, error } = data;
   const lines: string[] = [];
 
   const formatInlineValue = (v: unknown): string => {
@@ -527,4 +527,3 @@ export const logWithPino = (
 
 // Re-export for tests that still import the old symbol
 export const formatLine = formatLogOutput;
-export type { LogixlysiaConfig };
