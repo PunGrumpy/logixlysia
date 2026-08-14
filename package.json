@@ -1,6 +1,14 @@
 {
+  "devDependencies": {
+    "@biomejs/biome": "2.5.6",
+    "@changesets/cli": "^3.0.0",
+    "@typescript/native": "npm:typescript@^7.0.2",
+    "lefthook": "^2.1.10",
+    "turbo": "^2.10.9",
+    "typescript": "npm:@typescript/typescript6@^6.0.2",
+    "ultracite": "7.10.0"
+  },
   "name": "logixlysia-monorepo",
-  "description": "🦊 Logixlysia is a logger for Elysia",
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev",
@@ -19,22 +27,15 @@
     "changeset:version": "changeset version",
     "changeset:publish": "bun build && changeset publish"
   },
-  "devDependencies": {
-    "lefthook": "^2.1.4",
-    "@biomejs/biome": "2.5.7",
-    "@changesets/cli": "^2.31.0",
-    "turbo": "^2.10.8",
-    "typescript": "7.0.2",
-    "ultracite": "7.10.0"
-  },
-  "engines": {
-    "node": ">=24"
-  },
-  "packageManager": "bun@1.3.14",
   "workspaces": [
     "apps/*",
     "packages/*"
   ],
+  "description": "🦊 Logixlysia is a logger for Elysia",
+  "engines": {
+    "node": ">=24"
+  },
+  "packageManager": "bun@1.3.14",
   "devEngines": {
     "packageManager": [
       {

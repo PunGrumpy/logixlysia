@@ -1,7 +1,16 @@
 {
-  "extends": "@repo/tsconfig/tsconfig.base.json",
-  "include": ["src/**/*.ts"],
+  "$schema": "https://json.schemastore.org/tsconfig",
   "compilerOptions": {
-    "strictNullChecks": true
-  }
+    "esModuleInterop": true,
+    "lib": ["ESNext"],
+    "module": "ESNext",
+    "moduleDetection": "force",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "target": "ES2020",
+    "types": ["bun"]
+  },
+  "include": ["src/**/*.ts"]
 }

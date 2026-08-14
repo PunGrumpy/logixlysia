@@ -85,7 +85,7 @@ export interface LogixlysiaSingleton {
 // 主插件函数
 // ============================================================
 
-export const createLogPlugin: (rawOptions?: LogixlysiaOptions) => AnyElysia = (
+export const createLogPlugin = (
   rawOptions: LogixlysiaOptions = {}
 ) => {
   // ---------- 1. 初始化 per-instance 状态 ----------
