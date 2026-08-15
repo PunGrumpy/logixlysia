@@ -9,7 +9,7 @@
  * - WebSocket 生命周期日志（通过 `createWsHandlerWrapper` 单独提供）
  * - AsyncLocalStorage 透传（`useLogger()` 获取请求作用域 logger）
  * - 预设配置（dev / prod / json）+ 自定义预设（`registerPreset`）
- * - Pino 集成（`store.pino` + 透传 pino options）
+ * - Pino 集成（`globalLogger.pino` + 透传 pino options）
  * - 文件日志 + 日志轮转
  * - 单点 onError 钩子:只记录日志,不劫持错误响应格式
  * - 可选 `autoTranslate`:在钩子里跑 Drizzle 等 DB 错误翻译,决定日志级别
@@ -49,7 +49,7 @@ import {
 import type { ErrorHandler } from "elysia/types";
 import { resolveOptions } from "./config/resolve-options";
 import { createRequestContextStore } from "./context/request-context";
-import { loggerStorage } from "./context/storage";
+import { loggerStorage, requestStorage } from "./context/storage";
 import { startServer } from "./extensions";
 // 导入全局 Logger 管理
 import { initGlobalLogger } from "./global-logger";
@@ -60,7 +60,6 @@ import type {
   ErrorTranslator,
   Logger,
   LogLevel,
-  Pino,
   RequestScopedLogger,
 } from "./interfaces";
 import { createLogger } from "./logger";
@@ -265,16 +264,13 @@ export const createElogs = (rawOptions: CreateElogsOptions = {}) => {
    */
   // 单点 onError 钩子 —— 显式标注 Singleton 形状,匹配链上 .state() 累积的 store
   // Elysia 2 的 ErrorHandler 第三个泛型是 Singleton,默认值是 DefaultSingleton(store={}),
-  // 链上 .state("logger"/"pino"/"beforeTime") 后变成 { logger, pino, beforeTime },
-  // 必须显式标注才能赋值给 .error()。
+  // 链上 .state("beforeTime") 后变成 { beforeTime },必须显式标注才能赋值给 .error()。
   const logOnErrorHook: ErrorHandler<
     [],
     {},
     {
       decorator: Record<string, never>;
       store: {
-        logger: Logger;
-        pino: Pino;
         beforeTime: bigint;
         [key: string]: unknown;
       };
@@ -329,8 +325,6 @@ export const createElogs = (rawOptions: CreateElogsOptions = {}) => {
   return (
     new Elysia({ name: "Elogs" })
       // 初始化状态
-      .state("logger", logger)
-      .state("pino", logger.pino)
       .state("beforeTime", BigInt(0))
 
       // 注入请求级 Logger
@@ -365,7 +359,11 @@ export const createElogs = (rawOptions: CreateElogsOptions = {}) => {
         // 设置的值会透传到 handler / afterHandle，只要 Elysia 不在中间
         // 额外调用 `als.run()`（Elysia 2.x 当前不会，升级时需回归测试）
         if (useAsyncLocalStorage) {
-          loggerStorage.enterWith(createRequestScopedLogger(request));
+          const scoped = createRequestScopedLogger(request);
+          loggerStorage.enterWith(scoped);
+          // 同步把裸 request 也放进去，让 `globalLogger` (no-request API)
+          // 能在 ALS 内自动拿到当前 request 走完整 emit。
+          requestStorage.enterWith(request);
         }
       })
 

@@ -1,8 +1,17 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import type { RequestScopedLogger } from "../interfaces";
 
+/** `Request` 是 Bun runtime 内置的全局类型(来自 undici-types),不需要 import */
 export const loggerStorage: AsyncLocalStorage<RequestScopedLogger> =
   new AsyncLocalStorage<RequestScopedLogger>();
+
+/**
+ * Carries the **bare Request** so `globalLogger` (no-request API) can auto-pick
+ * up the current request from inside async call stacks. Populated alongside
+ * `loggerStorage` in `plugin.ts` so the two are always set/unset together.
+ */
+export const requestStorage: AsyncLocalStorage<Request> =
+  new AsyncLocalStorage<Request>();
 
 /**
  * Fallback when no request is in flight. It is intentionally a no-op so that

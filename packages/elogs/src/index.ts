@@ -26,10 +26,10 @@ export { errorMap, extractStatus, httpError, levelForStatus } from "./errors";
 export { renderBanner, startServer } from "./extensions";
 export {
   getGlobalLogger,
-  globalContextStore,
   globalLogger,
   initGlobalLogger,
   isGlobalLoggerInitialized,
+  pino,
   resetGlobalLogger,
 } from "./global-logger";
 export { getStatusCode } from "./helpers";
@@ -43,6 +43,7 @@ export type {
   ErrorTranslator,
   FileConfig,
   FormatConfig,
+  GlobalLogger,
   LogFilter,
   Logger,
   LogLevel,
@@ -56,7 +57,6 @@ export type {
   Transport,
   TransportsConfig,
 } from "./interfaces";
-export { HttpError } from "./interfaces";
 export type {
   EmitInput,
   FormatContext,

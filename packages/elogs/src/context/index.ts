@@ -6,4 +6,9 @@ export {
   mergeLogDataContext,
 } from "./request-context";
 export type { RequestScopedLoggerOptions } from "./storage";
-export { createRequestScopedLogger, loggerStorage, useLogger } from "./storage";
+export {
+  createRequestScopedLogger,
+  loggerStorage,
+  requestStorage,
+  useLogger,
+} from "./storage";

@@ -1,4 +1,4 @@
-import type { Logger } from "./interfaces";
+import type { GlobalLogger } from "./interfaces";
 
 export interface AIMetrics {
   calls?: number;
@@ -17,14 +17,16 @@ export interface AIMetrics {
 /**
  * Merges AI SDK / LLM usage metrics into the request context bag so they appear
  * on the final access log (evlog-style `ai` object).
+ *
+ * 接受 GlobalLogger —— 无需手动传 request,GlobalLogger 自己从 ALS 拿
+ * (若在请求作用域外,mergeContext 为 noop + warn 一次)。
  */
 export const mergeAIMetrics = (
-  logger: Pick<Logger, "mergeContext">,
-  request: Request,
+  logger: Pick<GlobalLogger, "mergeContext">,
   metrics: AIMetrics
 ): void => {
   if (Object.keys(metrics).length === 0) {
     return;
   }
-  logger.mergeContext(request, { ai: metrics });
+  logger.mergeContext({ ai: metrics });
 };

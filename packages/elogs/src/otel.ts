@@ -1,4 +1,4 @@
-import type { Logger } from "./interfaces";
+import type { GlobalLogger } from "./interfaces";
 
 export interface TraceContextFields {
   span_id?: string;
@@ -44,10 +44,12 @@ const getOtelApi = async (): Promise<OtelApi | null> => {
 /**
  * Injects active OpenTelemetry span IDs into the request context bag when
  * `@opentelemetry/api` is installed and a span is active.
+ *
+ * 接受 GlobalLogger —— 无需手动传 request,GlobalLogger 自己从 ALS 拿
+ * (若在请求作用域外,mergeContext 为 noop + warn 一次)。
  */
 export const injectTraceContext = async (
-  logger: Pick<Logger, "mergeContext">,
-  request: Request
+  logger: Pick<GlobalLogger, "mergeContext">
 ): Promise<TraceContextFields | undefined> => {
   const api = await getOtelApi();
   if (!api) {
@@ -64,7 +66,7 @@ export const injectTraceContext = async (
     span_id: spanId,
     trace_id: traceId,
   } satisfies TraceContextFields;
-  logger.mergeContext(request, fields);
+  logger.mergeContext(fields);
   return fields;
 };
 

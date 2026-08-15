@@ -19,21 +19,6 @@ import type {
 /** Pino Logger 实例类型 */
 export type Pino = PinoLogger<never, boolean>;
 
-/**
- * Minimal HTTP-aware Error used by createElogs for non-Elysia call sites
- * (re-export pipeline, redact tests, integration helpers). Independent of
- * Elysia 2's `HTTPError` (note the capitalisation) — that one lives in
- * `elysia` and is the type the framework actually responds with.
- */
-export class HttpError extends Error {
-  readonly status: number;
-  constructor(status: number, message: string) {
-    super(message);
-    this.name = "HttpError";
-    this.status = status;
-  }
-}
-
 /** 日志级别 */
 export type LogLevel = "DEBUG" | "INFO" | "WARNING" | "ERROR";
 
@@ -47,10 +32,10 @@ export interface StoreData {
 
 /** Elysia store 中挂载的 createElogs 状态 */
 export interface ElogsStore {
+  /** 请求开始的纳秒时间戳,emit 算 durationMs 用 */
   beforeTime?: bigint;
-  logger: Logger;
+  /** 缓存的 URL pathname,避免重复解析 */
   pathname?: string;
-  pino: Pino;
   [key: string]: unknown;
 }
 
@@ -536,6 +521,79 @@ export interface RequestScopedLogger {
   /** 合并 context(无 request 参数,因为已绑定) */
   mergeContext: (partial: Record<string, unknown>) => void;
   /** 记录 WARNING 级别日志 */
+  warn: (message: string, context?: Record<string, unknown>) => void;
+}
+
+/**
+ * 全局 Logger,通过 `globalLogger` 导出。
+ *
+ * - **请求作用域内**(Elysia 路由 handler / 中间件 / hook 调用栈):自动从
+ *   AsyncLocalStorage 拿当前 request,走完整 emit 流水线(file/transports/console)。
+ * - **请求作用域外**(模块初始化 / 后台任务 / 进程级错误兜底):降级为 pino 输出,
+ *   首次降级时 `console.warn` 一次提示。
+ *
+ * 调用者**不需要**也不应该传 `request`。
+ *
+ * @example
+ * ```typescript
+ * import { globalLogger } from "@pori15/elogs";
+ *
+ * // 路由 handler / 中间件 / hook —— 自动走完整 emit
+ * app.get("/user/:id", ({ params }) => {
+ *   globalLogger.info("Fetching user", { userId: params.id });
+ * });
+ *
+ * // 错误处理 —— Error 实例自动 unwrap .message + .stack
+ * try {
+ *   await db.query();
+ * } catch (err) {
+ *   globalLogger.error(err);
+ * }
+ * ```
+ */
+export interface GlobalLogger {
+  /**
+   * 记录 DEBUG 级别日志。作用域内走完整 emit,作用域外走 pino。
+   */
+  debug: (message: string, context?: Record<string, unknown>) => void;
+
+  /**
+   * 记录 ERROR 级别日志。
+   *
+   * @param message - 字符串消息,或 Error 实例(自动 unwrap `.message` + `.stack` 进 context)
+   * @param context - 附加上下文。当 `message` 是 Error 时,`stack` 和 `errorName` 会被自动
+   *   合并进 context(除非 context 显式提供同名 key,显式值优先级更高)。
+   */
+  error: (message: string | Error, context?: Record<string, unknown>) => void;
+
+  /**
+   * 读取当前请求的累积上下文(作用域内有效)。
+   * 作用域外返回 `{}`,首次调用时 `console.warn` 一次。
+   */
+  getContext: () => Readonly<Record<string, unknown>>;
+
+  /**
+   * 记录 INFO 级别日志。作用域内走完整 emit,作用域外走 pino。
+   */
+  info: (message: string, context?: Record<string, unknown>) => void;
+
+  /**
+   * 合并上下文到当前请求(作用域内有效)。
+   * 作用域外为 noop,首次调用时 `console.warn` 一次。
+   */
+  mergeContext: (partial: Record<string, unknown>) => void;
+
+  /**
+   * 底层 pino 实例。
+   *
+   * @deprecated 请直接 `import { pino } from "@pori15/elogs"` 而不是 `globalLogger.pino`。
+   * 保留字段仅为向后兼容,新代码不应使用。
+   */
+  pino: Pino;
+
+  /**
+   * 记录 WARNING 级别日志。作用域内走完整 emit,作用域外走 pino。
+   */
   warn: (message: string, context?: Record<string, unknown>) => void;
 }
 

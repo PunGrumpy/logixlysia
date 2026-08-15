@@ -92,9 +92,9 @@ export const normalizeLoggedError = (
       error as unknown as Record<string, unknown>
     );
     safe.message = error.message;
-    // Native subclasses (e.g. `class HttpError extends Error`) don't set
-    // `.name` unless the author overrides it, so it reads back as the
-    // generic "Error". Prefer the constructor name in that case.
+    // Native Error subclasses don't set `.name` unless the author overrides
+    // it, so it reads back as the generic "Error". Prefer the constructor
+    // name in that case.
     safe.name =
       error.name === "Error"
         ? (error.constructor?.name ?? error.name)
