@@ -1,6 +1,18 @@
 {
   "version": 1,
   "skills": {
+    "ast-grep": {
+      "source": "ast-grep/agent-skill",
+      "sourceType": "github",
+      "skillPath": "ast-grep/skills/ast-grep/SKILL.md",
+      "computedHash": "3bca45167617f547e97454ae16d271ba3aeb2550d89e6ef1942057bd122c0061"
+    },
+    "ast-grep-outline": {
+      "source": "ast-grep/agent-skill",
+      "sourceType": "github",
+      "skillPath": "ast-grep/skills/outline/SKILL.md",
+      "computedHash": "688ee8a93a82da5788b733c06d899d7e0f0b5d5e5e8b40356054f7afa33ed69c"
+    },
     "make-interfaces-feel-better": {
       "source": "jakubkrehel/make-interfaces-feel-better",
       "sourceType": "github",
