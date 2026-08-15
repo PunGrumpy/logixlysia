@@ -1,49 +1,44 @@
 ---
-title: Elysia 2 support
-description: How Elogs maps onto the Elysia 2 open beta, and what changes when you upgrade
+title: Elysia 2 适配
+description: Elogs 在 Elysia 2 open beta 上的适配说明,以及升级时的所有破坏性变更
 ---
 
-[Elysia 2 "DayDream"](https://elysiajs.com/blog/elysia-20) is a full rewrite of the framework. It renames every
-lifecycle hook, changes the `Elysia` type parameters, and moves WebSocket support behind an opt-in plugin.
-Elogs cannot support both major versions from one build, so the two lines are published separately.
+[Elysia 2 "DayDream"](https://elysiajs.com/blog/elysia-20) 是 Elysia 框架的一次完整重写。它重命名了所有生命周期钩子、改动了 `Elysia` 的类型泛型,并把 WebSocket 支持拆成 opt-in 插件。Elogs 无法在单一构建里同时兼容两个大版本,所以发布为两条独立分支。
 
-## Compatibility
+## 兼容性矩阵
 
-| Elysia      | Elogs    | npm tag  | Install                                |
-| ----------- | ------------- | -------- | -------------------------------------- |
-| `1.4.x`     | `6.x`         | `latest` | `bun add createElogs`                   |
-| `>= 2.0.0-beta.2` | `7.x-next` | `next`   | `bun add createElogs@next elysia@next`  |
+| Elysia              | Elogs    | npm tag  | 安装                                                  |
+| ------------------- | -------- | -------- | ----------------------------------------------------- |
+| `1.4.x`             | `6.x`    | `latest` | `bun add @pori15/elogs`                               |
+| `>= 2.0.0-beta.2`   | `7.x-next` | `next`   | `bun add @pori15/elogs@next elysia@next`              |
 
-The `next` line follows the Elysia 2 beta and may take further breaking changes until Elysia 2 is stable.
+`next` 分支紧跟 Elysia 2 beta,在 Elysia 2 稳定前还可能继续引入破坏性变更。
 
-## What changed in your app
+## 你应用里的变化
 
-Elysia 2 dropped the `on` prefix from lifecycle methods, and there are no aliases left behind. If you register
-hooks around Elogs, rename them:
+Elysia 2 移除了所有生命周期方法的 `on` 前缀,也没有留下别名。如果你在 Elogs 钩子周围注册了自定义钩子,需要重命名:
 
-| Elysia 1.4         | Elysia 2       |
-| ------------------ | -------------- |
-| `.onStart()`       | `.setup()`     |
-| `.onStop()`        | `.cleanup()`   |
-| `.onRequest()`     | `.request()`   |
-| `.onTransform()`   | `.transform()` |
-| `.onBeforeHandle()`| `.beforeHandle()` |
-| `.onAfterHandle()` | `.afterHandle()`  |
-| `.onAfterResponse()` | `.afterResponse()` |
-| `.onMapResponse()` | `.mapResponse()`  |
-| `.onError()`       | `.error()`     |
-| `.as('scoped')`    | `.as('plugin')` |
+| Elysia 1.4            | Elysia 2            |
+| --------------------- | ------------------- |
+| `.onStart()`          | `.setup()`          |
+| `.onStop()`           | `.cleanup()`        |
+| `.onRequest()`        | `.request()`        |
+| `.onTransform()`      | `.transform()`      |
+| `.onBeforeHandle()`   | `.beforeHandle()`   |
+| `.onAfterHandle()`    | `.afterHandle()`    |
+| `.onAfterResponse()`  | `.afterResponse()`  |
+| `.onMapResponse()`    | `.mapResponse()`    |
+| `.onError()`          | `.error()`          |
+| `.as('scoped')`       | `.as('plugin')`     |
 
-`resolve` was removed and `derive` now runs during `beforeHandle`. Elogs derives `ctx.log` there, so it is
-available in `beforeHandle`, the route handler and `afterHandle` — but no longer in `parse` or `transform`. Use
-`store.logger` (which is set up in the `request` hook) if you need to log that early.
+`resolve` 被移除,`derive` 现在在 `beforeHandle` 阶段运行。Elogs 派生 `ctx.log` 到 `beforeHandle`,所以在 `beforeHandle`、route handler 和 `afterHandle` 都能拿到 —— 但 `parse` 和 `transform` 拿不到了。如果你需要更早记日志,用 `store.logger`(在 `request` 钩子里已经设好)。
 
-WebSocket routes need the opt-in provider before `createWsHandlerWrapper` has anything to wrap:
+WebSocket 路由需要 opt-in provider,`createWsHandlerWrapper` 才能包到东西:
 
 ```ts
 import { Elysia } from 'elysia'
 import { websocket } from 'elysia/websocket'
-import { createElogs, createWsHandlerWrapper } from 'createElogs'
+import { createElogs, createWsHandlerWrapper } from '@pori15/elogs'
 
 const logging = createElogs()
 const wrapWs = createWsHandlerWrapper()
@@ -52,7 +47,7 @@ const app = new Elysia()
   .use(websocket())
   .use(logging)
   .ws('/ws', {
-    ...wrapWs('/ws', {
+    ...wrapWs({
       message(ws, message) {
         ws.send(message)
       }
@@ -60,21 +55,101 @@ const app = new Elysia()
   })
 ```
 
-`trace` and automatic `HEAD` routes moved the same way, to `elysia/trace` and `elysia/auto-head`.
+`trace` 和自动 `HEAD` 路由也按同样方式搬到 `elysia/trace` 和 `elysia/auto-head`。
 
-## What did not change
+## 哪些没变
 
-The Elogs API itself is unchanged: `createElogs(options)`, the `preset`/`config` shape, `store.logger`,
-`ctx.log`, `useLogger()`, `createWsHandlerWrapper`, and the `createElogs/otel` and `createElogs/ai`
-subpaths all behave exactly as they do on the 6.x line.
+Elogs 自身的 API 没变:`createElogs(options)`、`preset` / `config` 形态、`store.logger`、`ctx.log`、`useLogger()`、`createWsHandlerWrapper`,以及 `createElogs/otel` 和 `createElogs/ai` 子路径 —— 都跟 6.x 行为一致。
 
-## Error logging under Elysia 2
+## 单点 onError 设计
 
-Two framework behaviour changes show up in your logs:
+Elogs 2.x 重写了错误处理模型,从 1.x 时代的"多 handler 链"简化成**一个钩子只做一件事**。这背后的动机是:错误**响应格式**和错误**日志记录**是两个正交的关注点,把它们绑在一起会让两边都难以替换。
 
-- Errors are reported as [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457) problem documents by default.
-- When `NODE_ENV=production`, an unhandled error's `message` is no longer sent to the client, and a returned
-  `Error` is serialized without its `cause`.
+### 设计要点
 
-Neither affects what Elogs writes — the full error is still logged server-side, subject to your
-`logErrorPayload` and `autoRedact` settings.
+- 插件在 `.error(logOnErrorHook)` 钩子里**只**记录日志
+- 钩子**不 return value** —— 错误继续传播到用户的 `.error(MyClass, fn)` 或 Elysia 默认的 `application/problem+json` 响应
+- 钩子捕获所有进入错误管道的错误 —— 无论路由 `throw` 还是 `return Response(status >= 400)`,都会触发(Elysia 2 语义)
+- 翻译器(`autoTranslate`)只决定**日志级别和内容**;翻译后丢弃,原 `error` 继续以原形态传播
+
+实现位置在 `packages/elogs/src/plugin.ts:265-308`,核心结构:
+
+```ts
+const logOnErrorHook: ErrorHandler = (ctx) => {
+  // 1) 可选:跑 autoTranslate 链得到 effectiveError(只用来决定 status)
+  // 2) 提取 status(从 error.status 或 HTTPError.status,默认 500)
+  // 3) 按 status 写一条 ERROR / WARNING / INFO 日志
+  // 4) 回显 X-Request-Id 到响应头
+  // 5) **不 return** —— 错误继续向下游传播
+}
+```
+
+### 已删除的 API
+
+下面是 1.x → 2.x 错误处理模型的破坏性变更清单。**这些名字都不再存在**,不能在新代码里使用:
+
+| 旧 API                                  | 替代方案                                              |
+| --------------------------------------- | ----------------------------------------------------- |
+| `applyErrorLogging(error, request, store)` | 已被 `.error(logOnErrorHook)` 钩子取代,无需手动调用   |
+| `LogixlysiaErrorClass`                  | 用 Elysia 2 原生 `class extends HTTPError`            |
+| `LogixlysiaErrorClasses`                | 用 Elysia 2 原生 `class extends HTTPError`            |
+| `createErrorHandler(options)`           | 改为用户用 Elysia 2 原生 `.error(handler)`            |
+| `userErrorHandlers`                     | 用户在自己 app 上注册 `.error(MyClass, fn)`           |
+| `fallbackErrorHandler`                  | 改为 Elysia 默认 problem 响应 + Elogs 日志钩子        |
+| `errors` 配置项                         | 全部移除,改用 `.error()` 链 + `autoTranslate` 配置   |
+
+旧的 `extractErrorStatus` 也已下放到内部,改名 `extractStatus` 后作为公开工具导出(供 translator 复用),不再是 Elogs 的对外约定。
+
+### 自定义错误响应:用 Elysia 2 原生 `.error()`
+
+想要自定义某个错误类的响应格式,直接用 Elysia 2 原生钩子。Elogs 的钩子会先跑,写完日志后把控制权交回,你的钩子再决定响应形态:
+
+```ts
+import { Elysia, problem } from 'elysia'
+import { createElogs, httpError, errorMap } from '@pori15/elogs'
+import { translateDrizzleError } from '@pori15/elogs/translator'
+
+class NotFoundError extends Error {
+  status = 404
+}
+
+const app = new Elysia()
+  .use(
+    createElogs({
+      // 自动把 Drizzle 错误翻译成 4xx/5xx,只影响日志级别
+      autoTranslate: { db: 'drizzle' },
+    })
+  )
+  // 你的 .error() 在 Elogs 之后注册,日志已写好
+  .error(NotFoundError, ({ code }) => {
+    return problem(404, { detail: code ?? 'not found' })
+  })
+  .error('DrizzleError', (ctx) => {
+    const code = (ctx.error as { code?: string }).code ?? 'UNKNOWN'
+    return problem(409, { detail: `duplicate: ${code}` })
+  })
+  .get('/users/:id', ({ params }) => {
+    if (params.id === '404') {
+      throw httpError(404, 'user not found')
+    }
+    throw new Error('boom')
+  })
+```
+
+### 翻译器 vs 错误响应
+
+翻译器和错误响应是两条**独立**的线,不要混:
+
+- **`autoTranslate`** —— 决定日志怎么记(级别 + 内容),原 error 不动
+- **`.error(MyClass, fn)`** —— 决定响应怎么发,可能完全覆盖 Elogs 默认的 problem 响应
+
+完整 Drizzle 翻译示例见 [Database errors](/docs/features/database-errors)。`httpError(status, msg)` 和 `errorMap()` 仍是用户工具,只是不再被插件自动注册。
+
+## Elysia 2 框架行为对你的日志
+
+两个框架行为变化会反映在日志内容里:
+
+- 错误默认以 [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457) problem document 形式报告。
+- 当 `NODE_ENV=production`,未处理错误的 `message` 不再发回客户端,返回的 `Error` 序列化时也不会带 `cause`。
+
+这两个都不影响 Elogs 写入的内容 —— 完整 error 仍然服务端全量记录,具体范围由 `logErrorPayload` 和 `autoRedact` 决定。

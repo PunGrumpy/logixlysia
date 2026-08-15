@@ -1,70 +1,121 @@
 ---
-title: WebSocket logging
-description: Log WebSocket open, message, and close events
+title: WebSocket Logging
+description: Log WebSocket open、message、close 事件
 ---
 
-Use `createWsHandlerWrapper` to add lifecycle logs for WebSocket routes:
+Elogs 把 WebSocket 的生命周期当成一类"请求"打日志 —— 走同一份 access log 管道,所以 access log 里能直接 grep `WS` 行的 open / message / close。
+
+## 基本用法
+
+`createWsHandlerWrapper(options, logger, contextStore)` 返回一个 `(path, hooks) => wrappedHooks` 的工厂,wrap 完的 hooks 跟普通 Elysia WebSocket handler 一样传给 `.ws(path, hooks)`。
 
 ```ts
 import { Elysia } from 'elysia'
-import { createElogs, createWsHandlerWrapper } from 'createElogs'
+import {
+  createElogs,
+  createWsHandlerWrapper,
+  createRequestContextStore,
+} from '@pori15/elogs'
 
 const plugin = createElogs({
   config: {
-    service: 'chat'
-  }
+    service: 'chat',
+  },
 })
-// 跟 createElogs 共享同一份 logger / context store,
-// 所以 wrap 出来的事件能直接走 access log 管道。
-const wrapWs = createWsHandlerWrapper()
+
+// 拿插件内部的 logger(挂在 Elysia store 上);contextStore 需要自己创建一份
+// —— Elogs 内部维护一份,但它没有直接 export 给 store。
+// 常见做法:在 app 启动时单独 createRequestContextStore,跟 logger 一起喂给 wrapper。
+const contextStore = createRequestContextStore()
+
+// 通过访问 plugin 暴露的 state 拿 logger
+// 注:Elogs 把 logger 挂在 store.logger;Elysia 启动后可以从 ctx.store.logger 取
+// 这里用一个 dummy request 来"探"到 logger 不直观,推荐方式见下节
+```
+
+> 上面这段有个真实的工程问题:`createWsHandlerWrapper` 的 3 个参数里,`logger` 和 `contextStore` 是 Elogs 插件**内部**创建的对象,目前没从 plugin 实例上直接 expose 出来。
+
+### 推荐用法:从 request handler 里拿
+
+把 `createWsHandlerWrapper` 放在第一个 HTTP handler 里取一次,后面复用:
+
+```ts
+import { Elysia } from 'elysia'
+import {
+  createElogs,
+  createWsHandlerWrapper,
+  createRequestContextStore,
+} from '@pori15/elogs'
+
+const contextStore = createRequestContextStore()
+
+const plugin = createElogs({ config: { service: 'chat' } })
 
 const app = new Elysia()
   .use(plugin)
+  // 通过 .derive 拿一份 plugin 暴露的 logger(走 store)
+  .derive({ as: 'global' }, ({ store }) => ({
+    wrapWs: createWsHandlerWrapper({}, store.logger, contextStore),
+  }))
   .ws(
     '/chat',
-    wrapWs({
-      open(ws) {
-        ws.send('connected')
-      },
-      message(ws, message) {
-        ws.send(message)
-      },
-      close(ws) {
-        console.log('bye', ws.id)
-      }
-    })
+    ({ wrapWs }) =>
+      wrapWs('/chat', {
+        open(ws) {
+          ws.send('connected')
+        },
+        message(ws, message) {
+          ws.send(message)
+        },
+        close() {
+          // 关闭时清理 contextStore
+        },
+      }),
   )
 ```
 
-Each lifecycle event logs with HTTP method `WS`, the route path, duration, and optional `wsId` in context.
+每次生命周期事件产生一条 `INFO` 级别的 access log,HTTP method 显示为 `WS`,带路由路径、耗时,以及 `wsId`(从 `ws.id` 派生)。
 
 ## Request context on WebSockets
 
-Accumulate context with the WebSocket instance as the key:
+用 WebSocket 实例本身作 key 累积 context,这样同一个 socket 的多行 message log 共享同一份 context bag:
 
 ```ts
-.ws(
-  '/chat',
-  wrapWs({
+.ws('/chat', ({ wrapWs }) =>
+  wrapWs('/chat', {
     message(ws, payload) {
-      ws.data.store.logger.mergeContext(ws, { lastPayloadType: typeof payload })
-    }
-  })
+      contextStore.mergeContext(ws, { lastPayloadType: typeof payload })
+    },
+  }),
 )
 ```
 
-## Disable WebSocket logs
+`close` 时 Elogs 会自动 `contextStore.clearContext(ws)`,不会泄漏。
+
+## 关闭 WebSocket 日志
+
+整段业务不想打 WS 生命周期日志:
 
 ```ts
+import { createElogs } from '@pori15/elogs'
+
 createElogs({
   config: {
-    disableWebSocketLogging: true
-  }
+    disableWebSocketLogging: true,
+  },
 })
 ```
 
-## Why a separate export?
+注意:这个开关只关生命周期日志,你自己 wrap 后调的 `log.info()` 之类不受影响。
 
-Elysia 2 用 `#private` brand 标记合法 plugin 实例,直接在 plugin 上挂额外字段(像
-`plugin.wrapWs`)会破坏这个 brand,导致 `.use()` 报类型错误。`createWsHandlerWrapper`
-作为独立函数导出,绕开这个限制,同时保证它和 `createElogs` 跑在同一份 logger 上下文。
+## 为什么是独立 export?
+
+Elysia 2 用 `#private` brand 标记合法 plugin 实例,直接在 plugin 上挂额外字段(像 `plugin.wrapWs`)会破坏这个 brand,导致 `.use()` 报类型错误。`createWsHandlerWrapper` 作为独立函数导出,绕开这个限制,同时保证它跑在同一份 logger / context store 上。
+
+## 相关 API
+
+- [`createWsHandlerWrapper`](/docs/api/exports#createwshandlerwrapper) — WebSocket 事件 wrap 工厂
+- [`WebSocketLike`](/docs/api/types#websocketlike) — 最小 WebSocket 协议
+- [`WsHandlerHooks`](/docs/api/types#wshandlerhooks) — `open` / `message` / `close` hook 形状
+- [`disableWebSocketLogging`](/docs/api/types#elogsconfig) — `ElogsConfig` 上的开关
+- [`ContextKey`](/docs/api/types#contextkey) — WebSocket 实例是合法的 context key

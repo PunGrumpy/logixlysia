@@ -3,48 +3,62 @@ title: File Logging
 description: 把日志写入文件以便持久化
 ---
 
-用 Elogs 的 file sink 把日志写入文件,持久化和分析都用得上。
+用 Elogs 的 file sink 把日志写到本地文件,持久化、归档、离线分析都用得上。所有文件行为都集中在 [`ElogsConfig`](/docs/api/types#elogs-config) 的几个字段上,不需要碰 plugin 选项。
 
 ## 基本用法
 
+只要给 `logFilePath` 一个路径,Elogs 就会在 emit 管道里把每条 log 追加到文件末尾。**不配** `logFilePath` 时文件 sink 是关的 —— 这是默认行为。
+
 ```ts
-createElogs({
-  config: {
-    logFilePath: './logs/app.log',
-  },
-})
+import { Elysia } from 'elysia'
+import { createElogs } from '@pori15/elogs'
+
+const app = new Elysia().use(
+  createElogs({
+    config: {
+      logFilePath: './logs/app.log',
+    },
+  })
+)
 ```
+
+父目录不存在时会自动创建(`recursive: true`)。文件用 `open(..., 'a')` 追加,进程重启不丢历史。
 
 ## 配置项
 
-| 选项 | 类型 | 描述 | 默认 |
+| 字段 | 类型 | 描述 | 默认 |
 | --- | --- | --- | --- |
-| `logFilePath` | `string` | 日志文件路径 | `undefined` |
-| `logFileMode` | `number` | 文件权限位 (chmod) | `0o600` |
-| `logDirMode` | `number` | 目录权限位 (chmod) | `0o700` |
-| `logRotation` | `LogRotationConfig` | rotation 策略 | `undefined` |
+| `logFilePath` | `string` | 日志文件路径;不设即关闭文件输出 | `undefined` |
+| `logFileMode` | `number` | 文件权限位(`chmod` 形式) | `0o600` |
+| `logDirMode` | `number` | 目录权限位 | `0o700` |
+| `logRotation` | [`LogRotationConfig`](/docs/api/types#log-rotation-config) | 轮转策略(大小 / 间隔 / 保留 / 压缩) | `undefined` |
+| `disableFileLogging` | `boolean` | 即使配了 `logFilePath` 也关掉 file sink | `false` |
+
+字段定义见 [`ElogsConfig`](/docs/api/configuration#elogs-config),类型见 [`LogRotationConfig`](/docs/api/types#log-rotation-config)。
 
 ## 工作机制
 
-file sink:
+file sink 走的是单 emit 管道的 file 出口([`emit.ts`](/docs/api/exports#emit)),核心四点:
 
-1. **缓存文件句柄** —— 按路径缓存,重复写入同一文件复用句柄,不必每次 `writeFile`。
-2. **批写** —— 通过 `queueMicrotask` 批处理,同一 tick 内的多条日志合并成单次 `writev`。
-3. **跨文件 rotation 串行** —— keyed mutex 串行,rotate 文件 A 不会阻塞文件 B 的写入。
-4. **文件 `0o600`、目录 `0o700`** —— 默认权限。可通过 `logFileMode` / `logDirMode` 覆盖。
+1. **句柄缓存** —— 同路径复用同一 `FileHandle`,免去每次 `open` 的系统调用开销。句柄按 path 在模块级 `Map` 里缓存。
+2. **微任务批写** —— `write` 不立刻落盘,把同 tick 内的多条 log 入队,下一个 `queueMicrotask` 一次性 `handle.write()` 写完,降低 syscall 次数。
+3. **rotation 串行** —— flush 链(`flushChain`)把每批写盘和可能触发的 rotation 串行化:同一文件任何时刻只有一个 flush 在做 I/O。压缩走独立的 keyed mutex,跨文件互不阻塞。
+4. **权限默认 0o600 / 0o700** —— 文件 `0o600`(仅 owner 读写)、目录 `0o700`(仅 owner 进出),匹配大多数生产部署的安全预期。可用 `logFileMode` / `logDirMode` 覆盖。
 
-## 文件格式
+## 输出格式
 
-日志用跟 console 一样的格式(根据 `customLogFormat` token 集合,或内置默认):
+文件里的每行跟 console 出口用同一份格式化结果 —— `customLogFormat` token 集合生效,内置默认长这样:
 
 ```
 🦊 2025-04-13 15:00:19.225 INFO  123.45ms GET /api/users 200
 🦊 2025-04-13 15:00:20.225 ERROR 234.56ms POST /api/users 500 Error creating user
 ```
 
+每条 log 自带 trailing newline,`FileSink` 内部 `lines.join('')` 后单次 `write`,不会插额外分隔符。
+
 ## 示例
 
-### 生产
+### 生产(配 rotation)
 
 ```ts
 createElogs({
@@ -60,7 +74,9 @@ createElogs({
 })
 ```
 
-### 开发
+rotation 字段细节见 [Log Rotation](/docs/features/log-rotation)。
+
+### 开发(无 rotation)
 
 ```ts
 createElogs({
@@ -70,33 +86,61 @@ createElogs({
 })
 ```
 
+dev 环境直接配文件也行 —— 但通常 dev 看 console 就够了,文件 sink 主要给 retention / 离线分析用。
+
 ### 自定义文件权限
 
 ```ts
 createElogs({
   config: {
     logFilePath: '/var/log/myapp/app.log',
-    logFileMode: 0o640,
-    logDirMode: 0o750,
+    logFileMode: 0o640, // owner=rw, group=r, other=none
+    logDirMode: 0o750,  // owner=rwx, group=rx, other=none
   },
 })
 ```
+
+`logFileMode` / `logDirMode` 是 `number`,用 `0o` 前缀的八进制字面量。`open(..., mode)` 和 `mkdir(..., mode)` 透传。
 
 ### 关闭文件输出
 
+两种方式:
+
 ```ts
+// 1. 不配 logFilePath(默认行为)
+createElogs({
+  config: {},
+})
+
+// 2. 配了路径但运行时关掉
 createElogs({
   config: {
-    logFilePath: './logs/app.log', // 配置了
-    disableFileLogging: true,      // ...但关闭
+    logFilePath: './logs/app.log', // 配了
+    disableFileLogging: true,      // 但不走 file sink
   },
 })
 ```
 
+如果只关 console 保留 file,见 [Log Filtering](/docs/features/filtering#输出-sink-开关)。
+
 ## 最佳实践
 
-- 用有描述性的文件名
-- 按类型 / 级别拆分日志(access log、error log 分开)
-- 设置合适的文件权限 —— `0o600`/`0o700` 是大多数生产的合理选择
-- 避免记录敏感数据 —— 开启 `autoRedact`,让 PII 在到达文件前就替换
-- 长时间运行的服务搭配 [Log Rotation](/docs/features/log-rotation) 一起用
+- **用有描述性的文件名** —— `./logs/access.log` / `./logs/error.log` 比单一 `app.log` 更便于按类型拆分。
+- **按类型 / 级别拆分文件** —— access log 走 `logFilePath: './logs/access.log'`,error log 走另一个 instance 或在 transport 层分流。
+- **默认权限已经够安全** —— `0o600` / `0o700` 是大多数容器化部署的合理选择;只有在跟 sidecar 共享目录时才放宽。
+- **不要把敏感数据落盘** —— 启用 `autoRedact`,PII 在到达 file 之前就被替换;meta 里的 secret 不会被自动脱敏,自己加 `redactKeys`。
+- **长跑服务配 rotation** —— 单文件无限增长会拖死磁盘 IO。详见 [Log Rotation](/docs/features/log-rotation)。
+- **容器化部署挂 volume** —— 容器本身的文件系统是临时的,`./logs` 路径要挂到 host volume / PVC,否则容器重启日志一起丢。
+
+## API 参考
+
+- [`ElogsConfig.logFilePath`](/docs/api/configuration#elogs-config) — 启用文件输出
+- [`ElogsConfig.logFileMode`](/docs/api/configuration#elogs-config) — 文件权限
+- [`ElogsConfig.logDirMode`](/docs/api/configuration#elogs-config) — 目录权限
+- [`ElogsConfig.logRotation`](/docs/api/configuration#elogs-config) — 轮转配置
+- [`ElogsConfig.disableFileLogging`](/docs/api/configuration#elogs-config) — 关闭 file sink
+- [`LogRotationConfig`](/docs/api/types#log-rotation-config) — rotation 字段类型
+- [`FileSink`](/docs/api/types#file-sink) / [`FileSinkOptions`](/docs/api/types#file-sink-options) — 底层 file sink 抽象
+- [`getFileSink(path)`](/docs/api/exports#getfilesink) — 按 path 拿复用 sink
+- [`logToFile`](/docs/api/exports#logtofile) — 内部 file 出口
+- [Log Rotation](/docs/features/log-rotation) — 轮转 / 压缩 / 保留

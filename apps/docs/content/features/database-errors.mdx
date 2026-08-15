@@ -1,0 +1,204 @@
+---
+title: 'Database errors'
+description: '把 Drizzle ORM 的底层 driver 错误翻译成有意义的 HTTP 状态码'
+---
+
+Elogs 自带 Drizzle ORM 错误翻译器。driver 抛出来的 `DrizzleError` / `DrizzleQueryError`(携带 `code` 字段,比如 PG 的 `23505`、MySQL 的 `ER_DUP_ENTRY`)会被翻译成有 HTTP `status` 的 `Error` 实例,让 access log 自动落到正确的级别 —— 唯一约束冲突记 `WARNING`,连接错误记 `ERROR`。
+
+翻译器**只**决定日志级别和内容,不劫持错误响应格式;响应仍由 Elysia 2 原生 `.error("DrizzleError", ...)` 或默认 `application/problem+json` 处理。
+
+## 三种使用方式
+
+| 方式 | 配置入口 | 适用场景 |
+| --- | --- | --- |
+| 手动 | `translateDrizzleError(err)` 在 `try/catch` 里调 | 只在某条路由要处理 DB 错误 |
+| 自动 | `createElogs({ autoTranslate: { db: 'drizzle' } })` | 全局统一处理所有路由 |
+| 混合 | `autoTranslate.custom: [...]` 在内置之前匹配 | 内置翻译器不够用,自己追加规则 |
+
+## 方式 1:手动翻译
+
+`@pori15/elogs/translator` 子路径导出了 `translateDrizzleError` 和 `isDrizzleError`。`isDrizzleError` 是类型守卫,避免误把普通 `Error` 当作 Drizzle 错误处理。
+
+```ts
+import { Elysia } from 'elysia'
+import { createElogs } from '@pori15/elogs'
+import { translateDrizzleError } from '@pori15/elogs/translator'
+
+const app = new Elysia()
+  .use(createElogs())
+  .post('/users', async ({ body }) => {
+    try {
+      return await db.insert(users).values(body).returning()
+    } catch (error) {
+      // try/catch 兜住 driver 错误,自己决定怎么翻译
+      throw translateDrizzleError(error)
+    }
+  })
+```
+
+适合"只在某条路由要处理 DB 错误"的场景,不影响其他路由。
+
+## 方式 2:插件自动翻译
+
+把翻译逻辑放到 `createElogs` 配置里,所有路由共用一份。`onError` 钩子跑翻译器,翻译结果决定日志级别,但**不**替换原 error。
+
+```ts
+import { Elysia, problem } from 'elysia'
+import { createElogs } from '@pori15/elogs'
+
+const app = new Elysia()
+  .use(
+    createElogs({
+      autoTranslate: { db: 'drizzle' },
+    })
+  )
+  // 用户用 Elysia 2 原生 .error() 接管 DrizzleError 的响应格式
+  .error('DrizzleError', ({ code }) => {
+    if (code === '23505') return problem(409, { detail: 'Duplicate key' })
+    if (code === '23503') return problem(400, { detail: 'Foreign key violation' })
+    return problem(500, { detail: 'Unhandled DB error' })
+  })
+  .post('/users', async ({ body }) => {
+    // 抛原 DrizzleError,翻译在 onError 钩子里自动跑
+    return await db.insert(users).values(body).returning()
+  })
+  .get('/health/db', async () => {
+    return await db.select().from(users).limit(1)
+  })
+```
+
+路由本身只写业务代码,翻译自动接管。
+
+## 方式 3:混合模式
+
+`autoTranslate.custom` 在内置翻译器之前匹配,可以**覆盖**内置行为或**追加**全新的错误类型。custom 命中后短路,内置不再跑。
+
+```ts
+import { Elysia, problem } from 'elysia'
+import { httpError, createElogs } from '@pori15/elogs'
+
+const app = new Elysia()
+  .use(
+    createElogs({
+      autoTranslate: {
+        db: 'drizzle',
+        custom: [
+          // 业务规则:某张表的 23505 不该返回 409
+          {
+            canHandle: (e) =>
+              typeof e === 'object' &&
+              e !== null &&
+              (e as { code?: string }).code === '23505' &&
+              (e as { table?: string }).table === 'audit_log',
+            translate: () =>
+              httpError(202, 'Duplicate audit event — accepted as idempotent'),
+          },
+          // 业务规则:把 40001(序列化失败)翻译成 503
+          {
+            canHandle: (e) =>
+              typeof e === 'object' &&
+              e !== null &&
+              (e as { code?: string }).code === '40001',
+            translate: () => httpError(503, 'Transaction conflict — retry'),
+          },
+        ],
+      },
+    })
+  )
+```
+
+如果 `custom` 没传,等价于"内置翻译器直接跑";如果传了但 `canHandle` 返回 `false`,内置翻译器兜底。
+
+## 错误码映射表
+
+`translateDrizzleError` 内置了 PG / MySQL / SQLite 三大主流 driver 的常见错误码。判断依据是 `error.name === 'DrizzleError' || error.name === 'DrizzleQueryError'` 且 `error.code` 命中下表。
+
+| 类别 | 数据库 | 错误码 | HTTP 状态 | 翻译后的 message |
+| --- | --- | --- | --- | --- |
+| 唯一约束冲突 | PostgreSQL | `23505` | 409 | `Unique constraint violation` |
+| 唯一约束冲突 | MySQL | `ER_DUP_ENTRY` | 409 | `Duplicate entry` |
+| 唯一约束冲突 | SQLite | `SQLITE_CONSTRAINT_UNIQUE` | 409 | `Unique violation` |
+| 外键违反 | PostgreSQL | `23503` | 400 | `Foreign key violation` |
+| 外键违反 | MySQL | `ER_NO_REFERENCED_ROW_2` | 400 | `Foreign key violation` |
+| 外键违反 | SQLite | `SQLITE_CONSTRAINT_FOREIGNKEY` | 400 | `Foreign key violation` |
+| NOT NULL 违反 | PostgreSQL | `23502` | 422 | `Required field missing` |
+| CHECK 约束 | PostgreSQL | `23514` | 422 | `Constraint check failed` |
+| 数据库连接错误 | PostgreSQL | `08000` `08001` `08003` `08004` `08006` `08007` | 503 | `Database unavailable` |
+
+**状态码语义**遵循 REST 惯例:
+
+- `409 Conflict` —— 资源状态冲突(唯一键、重复键)
+- `400 Bad Request` —— 请求违反约束(外键引用了不存在的行)
+- `422 Unprocessable Entity` —— 字段值不合法(NULL 缺失、CHECK 不通过)
+- `503 Service Unavailable` —— 上游依赖不可用(连接断开)
+
+未在上表中的错误码不会被翻译,原 `DrizzleError` 继续传播。
+
+## 关键不变量
+
+翻译器的设计严格遵守以下规则,这些规则在 [`__tests__/plugin/auto-translate.test.ts`](https://github.com/eastgold15/elogs/blob/main/packages/elogs/__tests__/plugin/auto-translate.test.ts) 里全部断言过:
+
+1. **翻译只决定日志级别和内容**。翻译后的 error 决定 `status` → 派生 `WARNING` / `ERROR`;翻译后**丢弃**,原 error 继续以原形态传播。用户的 `.error("DrizzleError", fn)` 拿到的还是原 error 引用。
+2. **`onError` 钩子不 return value**。钩子只记录日志,错误继续向下游传播 —— 用户的 `.error(MyClass, fn)` 链路、Elysia 默认 `application/problem+json` 响应都不受影响。
+3. **`custom` 在内置之前匹配**。`translateDrizzleError(err, custom)` 内部顺序是 `[...custom, ...DRIZZLE_TRANSLATORS]`,custom 命中即短路。
+4. **不命中则原样返回**。如果是 `Error` 实例直接返回(同一引用,`===` 相等);如果是 `string` / `null` / 普通对象,包成 `new Error(String(e))` 兜底。
+5. **类型守卫只看 `name`**。`isDrizzleError` 只判断 `name === 'DrizzleError' || 'DrizzleQueryError'`,不依赖 `drizzle-orm` 的类型导入,所以翻译器可以独立子路径导出。
+
+## 边界情况
+
+### 未知错误码
+
+```ts
+translateDrizzleError({ name: 'DrizzleError', code: '99999_UNKNOWN' })
+// → 原 error 原样返回
+```
+
+未在映射表里的 `code` 不会被翻译,日志级别会按原 error 的 `status`(如果存在)决定,没有则 `ERROR`。
+
+### 非 Drizzle 错误
+
+```ts
+translateDrizzleError(new Error('plain boom'))         // → 原 Error 返回
+translateDrizzleError('oops')                          // → new Error('oops')
+translateDrizzleError(null)                            // → new Error('null')
+translateDrizzleError({ code: '23505', name: 'Other' })// → new Error('[object Object]')
+```
+
+`isDrizzleError` 拒绝这些值(只看 `name`),所以不会走内置翻译器,直接兜底返回。
+
+### custom 命中但内置不命中
+
+```ts
+translateDrizzleError({ name: 'MyError', code: 'X1' }, [
+  {
+    canHandle: (e) => (e as { code?: string }).code === 'X1',
+    translate: () => httpError(422, 'Custom handled'),
+  },
+])
+// → httpError(422, 'Custom handled')
+```
+
+custom 命中,内置不参与。
+
+### `httpError` vs `translateDrizzleError`
+
+两者都在 `@pori15/elogs` 主包和 `translator` 子路径下分别暴露,但用途不同:
+
+| API | 路径 | 用途 |
+| --- | --- | --- |
+| `httpError(status, message)` | `@pori15/elogs` | 手动构造一个 HTTPError(响应 + 日志同时生效) |
+| `translateDrizzleError(error)` | `@pori15/elogs/translator` | 翻译一个已知的 Drizzle 错误(只决定日志级别) |
+
+`httpError` 是**主动**抛错,`translateDrizzleError` 是**被动**翻译(路由里 `try/catch` 兜住 driver 错误后再翻译)。
+
+### 翻译器是纯函数
+
+`translateDrizzleError` 不依赖 `drizzle-orm` 的类型,只看 `error.name` 和 `error.code` 两个字段。可以**直接**用任何来源的 Drizzle 错误(比如 mock 的、第三方包抛的),不必真的安装 `drizzle-orm`。
+
+## API 参考
+
+- [`translateDrizzleError`](/docs/api/functions#translate-drizzle-error) — 翻译一个 error
+- [`isDrizzleError`](/docs/api/functions#is-drizzle-error) — Drizzle 错误类型守卫
+- [`DrizzleLikeError`](/docs/api/interfaces#drizzle-like-error) — Drizzle 错误最小形状
+- [`AutoTranslateConfig`](/docs/api/interfaces#auto-translate-config) — `autoTranslate` 配置形状
+- [`ErrorTranslator`](/docs/api/types#error-translator) — 自定义翻译器形状

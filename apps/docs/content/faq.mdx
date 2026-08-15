@@ -28,21 +28,19 @@ Yes, Elogs is built for production environments. It's powered by Pino, which is 
 ### How do I install Elogs?
 
 ```bash
-bun add createElogs@next
+bun add @pori15/elogs
 ```
 
 Or with npm:
 
 ```bash
-npm install createElogs@next
+npm install @pori15/elogs
 ```
-
-The `next` tag targets the Elysia 2 open beta. The `latest` tag stays on the Elysia 1.4 line — see [Elysia 2 support](/docs/elysia-2).
 
 ### What are the requirements?
 
 - Node.js 18+ or Bun
-- Elysia 2.0.0-beta.2 or newer (`createElogs@next`), or Elysia 1.4 (`createElogs@latest`)
+- Elysia 2.0.0 or newer
 - TypeScript 5.7+
 
 ## Configuration
@@ -150,7 +148,7 @@ app.get('/orders/:id', ({ store, params }) => {
 
 ```ts
 // logger.ts
-import { createElogs } from 'createElogs'
+import { createElogs } from '@pori15/elogs'
 
 export const elogsIns = createElogs({
   config: {
@@ -338,11 +336,11 @@ Elogs maintains backward compatibility within major versions. Check the changelo
 ### Where can I get help?
 
 - [Documentation](/)
-- [GitHub Issues](https://github.com/PunGrumpy/createElogs/issues)
+- [GitHub Issues](https://github.com/eastgold15/elogs/issues)
 
 ### How do I report a bug?
 
-Open an issue on [GitHub](https://github.com/PunGrumpy/createElogs/issues) with:
+Open an issue on [GitHub](https://github.com/eastgold15/elogs/issues) with:
 - Description of the issue
 - Steps to reproduce
 - Expected behavior

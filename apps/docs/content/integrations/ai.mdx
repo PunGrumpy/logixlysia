@@ -3,17 +3,20 @@ title: AI SDK metrics
 description: 把 LLM 用量指标挂到请求日志
 ---
 
-从 `@pori15/elogs/ai` 子路径导入(无必需 peer 依赖):
+Elogs 提供子路径 `@pori15/elogs/ai`,用 `mergeAIMetrics` 把 LLM/AI SDK 的用量指标合并到请求 context。`ai` 字段会出现在 access log 的 context 树里,任何日志后端都能按 `ai.model` / `ai.totalTokens` 聚合。
+
+无必需 peer 依赖 —— 任何返回 `usage` 字段的 AI SDK(Anthropic、OpenAI、Vercel AI SDK 等)都能直接用。
+
+## 基本用法
 
 ```ts
+import { Elysia } from 'elysia'
 import { createElogs } from '@pori15/elogs'
 import { mergeAIMetrics } from '@pori15/elogs/ai'
 
-const plugin = createElogs()
-
 const app = new Elysia()
-  .use(plugin)
-  .post('/chat', async ({ request, store }) => {
+  .use(createElogs())
+  .post('/chat', ({ request, store }) => {
     // 在 AI SDK 调用之后:
     mergeAIMetrics(store.logger, request, {
       model: 'claude-sonnet',
@@ -28,7 +31,7 @@ const app = new Elysia()
   })
 ```
 
-最终的 access log `context.ai` 对象沿用 evlog wide event 的 `ai` 字段,方便两边对照迁移。
+最终的 access log `context.ai` 对象携带上面所有字段,跟 evlog wide event 的 `ai` 字段形状一致,方便两边对照迁移。
 
 ## API
 
@@ -40,56 +43,121 @@ function mergeAIMetrics(
 ): void
 
 interface AIMetrics {
-  model: string
-  provider: string
-  inputTokens: number
-  outputTokens: number
-  totalTokens: number
-  msToFinish: number
-  // 可选费用估算(美元)
-  costUsd?: number
-  // 可选 cache 命中/未命中分布
-  cacheReadTokens?: number
-  cacheWriteTokens?: number
+  /** 累计调用次数 */
+  calls?: number
+  /** 模型返回的 finish reason(如 'stop' / 'tool_use') */
+  finishReason?: string
+  /** 输入 token 数(prompt) */
+  inputTokens?: number
+  /** 模型标识,如 'claude-sonnet-4-5' */
+  model?: string
+  /** 本次调用耗时(ms) */
+  msToFinish?: number
+  /** 首块延迟(streaming,ms) */
+  msToFirstChunk?: number
+  /** 输出 token 数(completion) */
+  outputTokens?: number
+  /** 提供方,如 'anthropic' / 'openai' */
+  provider?: string
+  /** reasoning / thinking token 数(Claude extended thinking 等) */
+  reasoningTokens?: number
+  /** 输出吞吐(tokens/s) */
+  tokensPerSecond?: number
+  /** 总 token 数(input + output) */
+  totalTokens?: number
 }
 ```
 
-`mergeAIMetrics` 调用 `logger.mergeContext(request, { ai: { ...metrics } })`。指标是合并(不是替换),后续用不同 model 调用只覆盖 `model` key。
+`mergeAIMetrics` 调用 `logger.mergeContext(request, { ai: { ...metrics } })`。指标是**合并**而不是替换,多次调用只覆盖传入的 key;没传的 key 保留前值。传入空对象(`{}`)会被直接跳过,不写入 context。
 
-## 带费用追踪的示例
+## 完整示例(Anthropic)
 
 ```ts
-app.post('/chat', async ({ request, store }) => {
-  const start = performance.now()
-  const response = await anthropic.messages.create({ /* ... */ })
+import { Anthropic } from '@anthropic-ai/sdk'
+import { Elysia } from 'elysia'
+import { createElogs } from '@pori15/elogs'
+import { mergeAIMetrics } from '@pori15/elogs/ai'
 
-  mergeAIMetrics(store.logger, request, {
-    model: response.model,
-    provider: 'anthropic',
-    inputTokens: response.usage.input_tokens,
-    outputTokens: response.usage.output_tokens,
-    totalTokens:
-      response.usage.input_tokens + response.usage.output_tokens,
-    msToFinish: performance.now() - start,
-    costUsd: estimateCost(response.model, response.usage),
+const anthropic = new Anthropic()
+
+const app = new Elysia()
+  .use(createElogs())
+  .post('/chat', async ({ request, store }) => {
+    const start = performance.now()
+    const response = await anthropic.messages.create({
+      model: 'claude-sonnet-4-5',
+      max_tokens: 1024,
+      messages: [{ role: 'user', content: 'Hello' }],
+    })
+
+    mergeAIMetrics(store.logger, request, {
+      finishReason: response.stop_reason ?? undefined,
+      inputTokens: response.usage.input_tokens,
+      model: response.model,
+      msToFinish: performance.now() - start,
+      outputTokens: response.usage.output_tokens,
+      provider: 'anthropic',
+      totalTokens:
+        response.usage.input_tokens + response.usage.output_tokens,
+    })
+
+    return { ok: true }
   })
+```
 
-  return { ok: true }
+## 流式首块延迟(streaming)
+
+Vercel AI SDK 或 Anthropic streaming 场景下,可以同时记首块延迟和总耗时:
+
+```ts
+import { mergeAIMetrics } from '@pori15/elogs/ai'
+
+const start = performance.now()
+let firstChunkMs: number | undefined
+
+const stream = await anthropic.messages.stream({ /* ... */ })
+for await (const event of stream) {
+  if (firstChunkMs === undefined) {
+    firstChunkMs = performance.now() - start
+  }
+}
+
+const final = await stream.finalMessage()
+
+mergeAIMetrics(store.logger, request, {
+  inputTokens: final.usage.input_tokens,
+  model: final.model,
+  msToFinish: performance.now() - start,
+  msToFirstChunk: firstChunkMs,
+  outputTokens: final.usage.output_tokens,
+  provider: 'anthropic',
+  totalTokens: final.usage.input_tokens + final.usage.output_tokens,
 })
 ```
 
-## 带 cache 分布(Anthropic prompt caching)
+## 多次调用累加
+
+`mergeAIMetrics` 是合并语义,不会替换整个 `ai` 对象。多次 LLM 调用可以独立记,字段自动按 key 合并:
 
 ```ts
+import { mergeAIMetrics } from '@pori15/elogs/ai'
+
+// 第一次调用
 mergeAIMetrics(store.logger, request, {
+  calls: 1,
+  inputTokens: 800,
   model: 'claude-sonnet',
+  outputTokens: 200,
   provider: 'anthropic',
-  inputTokens: response.usage.input_tokens,
-  outputTokens: response.usage.output_tokens,
-  totalTokens: response.usage.input_tokens + response.usage.output_tokens,
-  cacheReadTokens: response.usage.cache_read_input_tokens ?? 0,
-  cacheWriteTokens: response.usage.cache_creation_input_tokens ?? 0,
-  msToFinish: 2300,
+  totalTokens: 1000,
+})
+
+// 第二次调用 —— 只覆盖 calls 和 token 数字,model/provider 仍在
+mergeAIMetrics(store.logger, request, {
+  calls: 2,
+  inputTokens: 600,
+  outputTokens: 150,
+  totalTokens: 750,
 })
 ```
 
@@ -98,28 +166,34 @@ access log 里会显示:
 ```
 context: {
   ai: {
+    calls: 2,
+    inputTokens: 600,
     model: 'claude-sonnet',
+    outputTokens: 150,
     provider: 'anthropic',
-    inputTokens: 1200,
-    outputTokens: 400,
-    totalTokens: 1600,
-    msToFinish: 2300,
-    cacheReadTokens: 900,
-    cacheWriteTokens: 200,
+    totalTokens: 750,
   }
 }
 ```
+
+(后写覆盖前写,字段级合并。)
 
 ## 易于聚合
 
 `ai` 字段结构稳定,可以在任何日志后端聚合:
 
-```
+```sql
 SELECT
   context->'ai'->>'model' AS model,
+  COUNT(*) AS requests,
   AVG((context->'ai'->>'totalTokens')::int) AS avg_tokens,
   AVG((context->'ai'->>'msToFinish')::float) AS avg_latency_ms
 FROM logs
 WHERE context->'ai' IS NOT NULL
 GROUP BY model
 ```
+
+## 相关 API
+
+- [`mergeAIMetrics`](/docs/api/exports#mergeaimetrics) — 主入口函数
+- [`AIMetrics`](/docs/api/types#aimetrics) — metrics 对象类型

@@ -1,11 +1,13 @@
 ---
-title: Request context
+title: Request Context
 description: 把请求作用域的字段累积到一条 access log
 ---
 
-Elogs 在请求过程中累积 context,合并到最终的 access log —— 类似 evlog 的 wide event,但不替换你已有的 `logger.info()` API。
+Elogs 在请求过程中累积 context,合并到最终的 access log 里 —— 类似 evlog 的 wide event,但**不**替换你已有的 `logger.info()` / `log.info()` API。
 
 ## 基本用法
+
+默认行为:在 route handler 里调 `store.logger.mergeContext(request, partial)`,partial 里的字段会被并入这条请求最终的 access log。
 
 ```ts
 import { Elysia } from 'elysia'
@@ -20,11 +22,22 @@ const app = new Elysia()
   })
 ```
 
-最终的 `INFO` access log 里包含一个 `context` 对象,带 `userId` 和 `cartTotal`(`showContextTree` 开启时显示为树)。
+最终的 `INFO` access log 里会带一个 `context` 对象,合并 `userId` 和 `cartTotal`(`config.showContextTree` 开启时显示为树形):
 
-## Logger API
+```json
+{
+  "level": "INFO",
+  "method": "GET",
+  "pathname": "/checkout",
+  "status": 200,
+  "context": {
+    "userId": "usr_123",
+    "cartTotal": 9999
+  }
+}
+```
 
-`store.logger` 暴露 9 个方法:
+## `store.logger` 上的 9 个方法
 
 | 方法 | 用途 |
 | --- | --- |
@@ -32,15 +45,15 @@ const app = new Elysia()
 | `info(request, message, context?)` | 记录 INFO |
 | `warn(request, message, context?)` | 记录 WARNING |
 | `error(request, message, context?)` | 记录 ERROR |
-| `log(level, request, data, store)` | 显式级别 + 结构化数据入口 |
-| `handleHttpError(request, error, store, options?)` | 处理抛出的错误,输出 level 派生日志 |
-| `getContext(request)` | 读累积的请求作用域 context |
-| `mergeContext(request, partial)` | 合并部分字段到请求作用域 context |
-| `pino` | 底层 Pino Logger 实例 |
+| `log(level, request, data, store)` | 显式级别 + 结构化数据入口(底层 emit 走这里) |
+| `handleHttpError(request, error, store, options?)` | 处理抛出的错误,按状态码派生日志级别 |
+| `getContext(request)` | 读当前请求累积的 context(返回冻结视图) |
+| `mergeContext(request, partial)` | 合并 partial 到当前请求的 context bag |
+| `pino` | 底层 Pino Logger 实例,直接走 pino 协议时用 |
 
 ## 优先级
 
-调用 `logger.info(request, message, { ...explicit })` 时,显式 context 里的 key **覆盖** 累积值。不冲突的 key 双方都保留。
+调 `logger.info(request, message, { ...explicit })` 时,**显式** context 里的 key 覆盖**累积**值,不冲突的 key 双方都保留。
 
 ```ts
 store.logger.mergeContext(request, { userId: 'usr_123', role: 'guest' })
@@ -48,20 +61,24 @@ store.logger.info(request, 'fetched user', { role: 'admin', email: 'a@b.co' })
 // 最终 context: { userId: 'usr_123', role: 'admin', email: 'a@b.co' }
 ```
 
+显式覆盖发生在最终 emit 的 merge 阶段(`mergeLogDataContext` 负责),所以累积值并不会被改写 —— 下一次 access log 还是能拿到原值。
+
 ## 读 context
 
 ```ts
 const ctx = store.logger.getContext(request)
-// Readonly<Record<string, unknown>>
+// → Readonly<Record<string, unknown>>
 ```
 
-返回的对象是冻结的视图,改它没效果。要加字段用 `mergeContext`。
+返回的是冻结视图(`{ ...bag }` 浅拷贝),改它没效果。要加字段用 `mergeContext`。
 
 ## 请求作用域 logger & AsyncLocalStorage
 
-不想手动传 `request` 给 `store.logger` 方法(比如 `store.logger.info(request, message)`),可以开启 `AsyncLocalStorage` 透传,这样 Elysia handler context 上会自动派生一个请求作用域的 `log`:
+不想每个调用都手动传 `request`,可以开 `useAsyncLocalStorage: true`,让 Elysia handler context 上自动派生一个 `log`,而且深调用栈里 `useLogger()` 也能拿到同一份 logger。
 
 ```ts
+import { createElogs } from '@pori15/elogs'
+
 createElogs({
   config: {
     useAsyncLocalStorage: true,
@@ -71,7 +88,7 @@ createElogs({
 
 ### 1. Handler context(`log`)
 
-在 route handler 里直接解构 `log`:
+路由 handler 里直接解构 `log`:
 
 ```ts
 app.get('/user/:id', ({ log, params }) => {
@@ -81,11 +98,11 @@ app.get('/user/:id', ({ log, params }) => {
 })
 ```
 
-`log` 没有 `request` 参数 —— 通过 `AsyncLocalStorage` 绑定到当前请求。`log.mergeContext` / `log.info` / `log.warn` / `log.error` / `log.debug` 跟 `store.logger` 一样,只是少了 `request`。
+`log` 没有 `request` 参数 —— 已经通过 AsyncLocalStorage 绑定到当前请求。`log.mergeContext` / `log.info` / `log.warn` / `log.error` / `log.debug` 跟 `store.logger` 同名方法一样,只是少了 `request`。
 
 ### 2. 全局 hook(`useLogger()`)
 
-在嵌套的服务层或 helper 函数里,导入 `useLogger()` 在任意深度拿 logger:
+在嵌套服务层或 helper 里,导入 `useLogger()` 拿当前请求的 logger:
 
 ```ts
 import { useLogger } from '@pori15/elogs'
@@ -100,19 +117,19 @@ async function findUser(id: string) {
 }
 ```
 
-`useLogger()` 返回跟 handler `log` 一样的 `RequestScopedLogger`。在请求外(启动时、worker 里、cron 任务里)调用会返回 no-op,所有调用静默无效。
+`useLogger()` 返回的跟 handler 里 `({ log })` 一样的 `RequestScopedLogger`。在请求外(启动时、worker、cron 任务)调用会返回 no-op,所有方法静默无效 —— 不会抛,只是日志被吞。
 
 ### 注意事项
 
-- ALS 透传只在经过 createElogs 插件 `.request()` 钩子的请求内生效。在请求生命周期外调度的后台任务会拿到 no-op `log`,不输出任何东西。
-- ALS 是 opt-in。默认行为只保留显式 `store.logger` API —— 想要深调用栈日志的新代码再开 ALS。
+- ALS 透传只在经过 `createElogs` 插件 `.request()` 钩子的请求内生效。在请求生命周期外调度的后台任务会拿到 no-op `log`,不输出任何东西。
+- ALS 是 **opt-in**。默认行为只保留显式 `store.logger` API —— 想要深调用栈日志的新代码再开 ALS。
 - **`useLogger()` 在 Elysia 2 下不可靠,生产深调用栈推荐用 `({ log })` derive** —— 见下文。
 
 ### `useLogger()` 的限制(Elysia 2)
 
-`useLogger()` 走的是 Node.js `AsyncLocalStorage`,在 createElogs 自己的 `.request()` 钩子里用 `enterWith()` 设置 scope。Elysia 2 内部对每个请求会包一层自己的 `als.run()` scope,所以 `enterWith` 设进去的值能**透传**到路由 handler 和 `.afterHandle()`。
+`useLogger()` 走的是 Node.js `AsyncLocalStorage`,在 `createElogs` 自己的 `.request()` 钩子里用 `enterWith()` 设置 scope。Elysia 2 内部对每个请求会包一层自己的 `als.run()` scope,所以 `enterWith` 设进去的值能**透传**到路由 handler 和 `.afterHandle()`。
 
-**前提**:Elysia 2 自己在路由 handler 之前不**额外**再起一次 `als.run()`。这是 Elysia 2 当前的实现细节,**未来升级 Elysia 时需要回归测试** —— 一旦 Elysia 在中间再 `als.run()` 一次,`useLogger()` 在 await / `setTimeout` 之后的子 async 树就会拿到 no-op,日志静默丢失。
+**前提**:Elysia 2 自己在路由 handler 之前不**额外**再起一次 `als.run()`。这是 Elysia 2 当前的实现细节,**未来升级 Elysia 时需要回归测试** —— 一旦 Elysia 在中间再 `als.run()` 一次,`useLogger()` 在 `await` / `setTimeout` 之后的子 async 树就会拿到 no-op,日志静默丢失。
 
 **实践建议**
 
@@ -124,3 +141,14 @@ async function findUser(id: string) {
 | 请求外(模块 init / cron / 测试 setup) | 拿到 no-op,不要打日志 |
 
 **显式 vs ALS 的取舍**:`({ log })` 走的是 Elysia 自己的 derive 机制,不依赖 ALS —— 升级 Elysia 时不会受影响。代码上多一行解构,换的是**长期可预测性**。
+
+## 相关 API
+
+- [`RequestScopedLogger`](/docs/api/types#requestscopedlogger) — `({ log })` / `useLogger()` 的返回类型
+- [`useLogger`](/docs/api/exports#uselogger) — 从 `AsyncLocalStorage` 拿当前请求 logger
+- [`createRequestScopedLogger`](/docs/api/exports#createrequestscopedlogger) — 工厂函数(测试 / 自定义中间件)
+- [`createRequestContextStore`](/docs/api/exports#createrequestcontextstore) — 底层 `RequestContextStore` 工厂
+- [`mergeLogDataContext`](/docs/api/exports#mergelogdatacontext) — 显式 vs 累积的 merge 逻辑
+- [`RequestContextStore`](/docs/api/types#requestcontextstore) — 累积 / 读取 / 清空 context 的接口
+- [`ContextKey`](/docs/api/types#contextkey) — `Request | object`(WebSocket 也用它作 key)
+- [`useAsyncLocalStorage`](/docs/api/types#elogsconfig) — `ElogsConfig` 上的开关

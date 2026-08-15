@@ -108,6 +108,10 @@ export {
   tap,
   tee,
 } from "./output";
+/**
+ * 公开的插件实例类型别名 —— 与包名 `Elogs` 同名,比 `CreateElogs`(底层是
+ * `ReturnType<typeof createElogs>`)更易读。建议用户写 `<App extends Elogs>(app: App) => ...`。
+ */
 export type { CreateElogs } from "./plugin";
 export { createElogs } from "./plugin";
 export type { DrizzleLikeError } from "./translator";

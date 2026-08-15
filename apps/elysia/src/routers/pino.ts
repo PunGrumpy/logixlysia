@@ -1,6 +1,6 @@
-import type { Elogs } from "@pori15/elogs";
+import type { CreateElogs } from "@pori15/elogs";
 
-export const pinoRouter = <App extends Elogs>(app: App) =>
+export const pinoRouter = <App extends CreateElogs>(app: App) =>
   app.get(
     "/pino",
     {

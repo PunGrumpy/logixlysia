@@ -3,24 +3,35 @@ title: Log Levels
 description: 控制日志详细程度
 ---
 
-用 Elogs 的级别系统控制日志输出的详细程度。级别是大小写不敏感的字符串:`DEBUG`、`INFO`、`WARNING`、`ERROR`。
+用 Elogs 的级别系统控制日志输出的详细程度。Elogs 用 **白名单过滤**,不是层级阈值 —— 数组里列出的级别才会输出。
 
 ## 可用级别
 
-```
-DEBUG > INFO > WARNING > ERROR
+```ts
+import type { LogLevel } from '@pori15/elogs'
 ```
 
-Elogs 用的是**白名单过滤**,不是层级。`logFilter.level: ['ERROR']` 只输出 `ERROR`;`['ERROR', 'WARNING']` 输出这两个。数组里的顺序无关紧要。
+`LogLevel` 是 4 个字面量:
+
+| 级别 | 含义 |
+| --- | --- |
+| `DEBUG` | 调试信息,只在开发环境开启 |
+| `INFO` | 普通访问日志(默认) |
+| `WARNING` | 4xx 响应、预期之内的失败 |
+| `ERROR` | 5xx 响应、未捕获异常 |
+
+`logFilter.level: ['ERROR']` 只输出 `ERROR`;`['ERROR', 'WARNING']` 输出这两个。**数组里的顺序无关紧要**,白名单匹配。
 
 ## 配置
 
 ### 单个级别
 
 ```ts
+import { createElogs } from '@pori15/elogs'
+
 createElogs({
   config: {
-    logFilter: { level: 'ERROR' },
+    logFilter: { level: ['ERROR'] },
   },
 })
 ```
@@ -37,13 +48,15 @@ createElogs({
 
 ### 根级简写
 
-`logLevel` 在 options 根级,等价于 `config.logFilter.level`:
+`logLevel` 是 options 根级字段,等价于 `config.logFilter.level`:
 
 ```ts
-createElogs({ logLevel: ['ERROR', 'WARNING'] })
+import type { LogLevel } from '@pori15/elogs'
+
+createElogs({ logLevel: ['ERROR', 'WARNING'] satisfies LogLevel[] })
 ```
 
-两种形式都会合并:同时设置时 `logLevel` 胜出(根级简写优先)。
+两种形式都生效。同时设置时,**两者取并集**(`shouldLogForOptions` 各自独立检查,任一通过即放行)—— 根级简写不会覆盖 `config.logFilter.level`。
 
 ### 按环境配置
 
@@ -51,9 +64,10 @@ createElogs({ logLevel: ['ERROR', 'WARNING'] })
 createElogs({
   config: {
     logFilter: {
-      level: process.env.NODE_ENV === 'production'
-        ? ['ERROR', 'WARNING']
-        : ['DEBUG', 'INFO', 'WARNING', 'ERROR'],
+      level:
+        process.env.NODE_ENV === 'production'
+          ? ['ERROR', 'WARNING']
+          : ['DEBUG', 'INFO', 'WARNING', 'ERROR'],
     },
   },
 })
@@ -61,33 +75,54 @@ createElogs({
 
 ## 状态派生的级别
 
-除了 `logFilter.level`,每条 access log 还会按响应状态码派生出级别:
+每条 access log 会按 HTTP 状态码派生一个起始级别(由内部 `getLogLevelForStatus` 决定):
 
-| 状态码范围 | 级别 |
+| 状态码范围 | 派生级别 |
 | --- | --- |
 | `200`–`399` | `INFO` |
 | `400`–`499` | `WARNING` |
 | `500`–`599` | `ERROR` |
 
-派生出来的级别也会被 `logFilter.level`(或 `logLevel`)过滤 —— `level: ['ERROR']` 时 404 不会产生输出。
+派生出来的级别也会被 `logFilter.level`(或 `logLevel`)过滤 —— `level: ['ERROR']` 时 404 请求不会产生输出。
 
-## Pino 自己的级别
+> 想自己派生级别?`levelForStatus(status)` 是从 `@pori15/elogs` 导出的纯函数,在自定义 `Transport` 里可以直接用。
 
-Pino 也有自己的级别系统(`fatal`、`error`、`warn`、`info`、`debug`、`trace`)。`config.pino.level` 控制 Pino 的门槛,跟 `logFilter.level` 相互独立:
+## Pino 的级别
+
+`pino` 配置有自己独立的级别字段,跟 `logFilter.level` 互不影响:
 
 ```ts
 createElogs({
   config: {
-    pino: { level: 'debug' },
+    pino: {
+      enabled: true,
+      level: 'debug', // pino 内部门槛
+      prettyPrint: true,
+    },
   },
 })
 ```
 
-Pino 在首次访问时按需构造。把 `config.pino` 设为真值可以让错误的 Pino 选项在启动时 fail-fast。
+`pino.level` 控制 Pino 自己日志方法的门槛(`logger.debug` / `logger.info` 等),而 `logFilter.level` 控制 **Elogs 的 emit 管道** 是否放行。两者可以独立设置:
+
+- `pino.level: 'info'` —— `logger.debug(...)` 调用在 Pino 层就被吞
+- `logFilter.level: ['ERROR']` —— 即使 Pino 输出了,Elogs 也不发到 console / file / transports
+
+Pino logger 通过 lazy proxy 实现,首次访问时按需构造。把 `config.pino` 设为对象可以让错误的 Pino 选项在启动时 fail-fast;不设置时使用默认的 lazy 构造。
 
 ## 最佳实践
 
-- **开发:** `['DEBUG', 'INFO', 'WARNING', 'ERROR']` —— 全部四个
-- **Staging:** `['INFO', 'WARNING', 'ERROR']` —— 去掉 DEBUG
-- **生产:** `['ERROR', 'WARNING']` —— 去掉 INFO 和 DEBUG
-- **告警:** `['ERROR']` —— 只在错误时告警
+| 环境 | 推荐 `level` |
+| --- | --- |
+| 开发 | `['DEBUG', 'INFO', 'WARNING', 'ERROR']` —— 全部 |
+| Staging | `['INFO', 'WARNING', 'ERROR']` —— 去掉 DEBUG |
+| 生产 | `['ERROR', 'WARNING']` —— 去掉 INFO 和 DEBUG |
+| 告警 | `['ERROR']` —— 只在错误时记录 |
+
+## API 参考
+
+- [`LogLevel`](https://elogs.vercel.app/docs/api/types#log-level) — 4 个字面量
+- [`LogFilter`](https://elogs.vercel.app/docs/api/types#log-filter) — `{ level?: LogLevel[] }`
+- [`ElogsConfig.logFilter`](https://elogs.vercel.app/docs/api/configuration#elogs-config) — 配置字段
+- [`CreateElogsOptions.logLevel`](https://elogs.vercel.app/docs/api/configuration#create-elogs-options) — 根级别名
+- `levelForStatus(status)` — 公开工具函数,从 `@pori15/elogs` 直接 import

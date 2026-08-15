@@ -1,28 +1,51 @@
 ---
 title: Custom Transports
-description: 把日志发到外部服务
+description: 把日志发到外部服务(Elasticsearch / Slack / OpenTelemetry ...)
 ---
 
-用自定义 transport 把日志发到外部服务。transport 跟内置的 console / file 日志并行,统一从 emit 管道调用。
+用自定义 transport 把日志发到外部服务。transport 跟内置的 console / file 日志**并行**跑,统一从 emit 管道调用 —— 一条 log 命中后同时送往所有激活的 sink。
 
 ## 输出行为
 
-Elogs 支持三种输出目标:
+Elogs 支持三种输出目标,**互不冲突**:
 
 1. **Console 日志** —— 内置控制台输出
-2. **File 日志** —— 通过 file sink 输出
-3. **Transport 日志** —— 自定义外部服务
+2. **File 日志** —— 通过 file sink 输出,详见 [File Logging](/docs/features/file-logging)
+3. **Transport 日志** —— 自定义外部服务,本文
 
-### 输出控制
+### 开关矩阵
 
-- **默认:** console + file(如果设置了 `logFilePath`)+ transports
-- **`disableInternalLogger: true`:** 只关 console
-- **`disableFileLogging: true`:** 只关 file
-- **`useTransportsOnly: true`:** 同时关 console 和 file,只走 transport
+| 字段 | 作用 |
+| --- | --- |
+| [`disableInternalLogger`](/docs/api/configuration#elogs-config) | 只关 console |
+| [`disableFileLogging`](/docs/api/configuration#elogs-config) | 只关 file |
+| [`useTransportsOnly`](/docs/api/configuration#elogs-config) | 同时关 console + file,只走 transport |
+
+默认:console + file(如果设置了 `logFilePath`)+ transports 同时生效。详见 [Log Filtering](/docs/features/filtering#输出-sink-开关)。
+
+## Transport 接口
+
+[`Transport`](/docs/api/types#transport) 是**只有一个方法**的纯接口,所有组合器、sink 出口都走它:
+
+```ts
+import type { LogLevel, Transport } from '@pori15/elogs'
+
+export interface Transport {
+  log: (
+    level: LogLevel,                       // 'DEBUG' | 'INFO' | 'WARNING' | 'ERROR'
+    message: string,
+    meta?: Record<string, unknown>         // request.method/url, durationMs, pathname ...
+  ) => void | Promise<void>
+}
+```
+
+`meta` 由 [`logToTransports`](/docs/api/exports#logtotransports) 装配,固定包含 `request.method`、`request.url`、`durationMs`、`pathname`、原始 `data` 字段(包含 `status`、`requestId` 等)。
 
 ## 基本 transport
 
 ```ts
+import { Elysia } from 'elysia'
+import { createElogs } from '@pori15/elogs'
 import type { Transport } from '@pori15/elogs'
 
 const consoleTransport: Transport = {
@@ -31,7 +54,7 @@ const consoleTransport: Transport = {
   },
 }
 
-app.use(
+const app = new Elysia().use(
   createElogs({
     config: {
       transports: [consoleTransport],
@@ -40,23 +63,25 @@ app.use(
 )
 ```
 
-签名是 `(level: LogLevel, message: string, meta?: Record<string, unknown>) => void | Promise<void>`。异步 transport 返回 promise,同步 transport 返回 `void`。
+签名是 `(level, message, meta?) => void | Promise<void>`。同步 transport 返回 `void`,异步 transport 返回 promise —— Elogs 内部会 catch 异步 reject 并节流上报(见下方错误处理)。
 
-## 外部服务
+## 外部服务示例
 
 ### Elasticsearch
 
 ```ts
+import type { Transport } from '@pori15/elogs'
+
 const elasticsearchTransport: Transport = {
   log: async (level, message, meta) => {
     await fetch('http://elasticsearch:9200/logs/_doc', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        '@timestamp': new Date().toISOString(),
         level,
         message,
         ...meta,
-        timestamp: new Date().toISOString(),
       }),
     })
   },
@@ -66,6 +91,8 @@ const elasticsearchTransport: Transport = {
 ### MongoDB
 
 ```ts
+import type { Transport } from '@pori15/elogs'
+
 const mongodbTransport: Transport = {
   log: async (level, message, meta) => {
     await db.collection('logs').insertOne({
@@ -78,11 +105,13 @@ const mongodbTransport: Transport = {
 }
 ```
 
-### Slack
+### Slack(只告 ERROR)
 
 ```ts
+import type { Transport, LogLevel } from '@pori15/elogs'
+
 const slackTransport: Transport = {
-  log: async (level, message, meta) => {
+  log: async (level: LogLevel, message, meta) => {
     if (level !== 'ERROR') return
     const webhook = process.env.SLACK_WEBHOOK_URL
     if (!webhook) return
@@ -92,6 +121,31 @@ const slackTransport: Transport = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         text: `[${level}] ${message}\n\`\`\`${JSON.stringify(meta, null, 2)}\`\`\``,
+      }),
+    })
+  },
+}
+```
+
+`meta` 已经是纯 `Record<string, unknown>`,可以直接 `JSON.stringify` 序列化。
+
+### OpenTelemetry / Datadog / Loki
+
+任何 HTTP 端点都能直接 `fetch` 包一个 transport。批量 / 节流需求用下面的 `batch` 组合器:
+
+```ts
+import type { Transport } from '@pori15/elogs'
+
+const otelTransport: Transport = {
+  log: async (level, message, meta) => {
+    await fetch('https://otel-collector:4318/v1/logs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        severityText: level,
+        body: message,
+        attributes: meta,
+        time: new Date().toISOString(),
       }),
     })
   },
@@ -110,7 +164,7 @@ app.use(
 )
 ```
 
-数组里的 transport 顺序调用,各自独立 —— Elasticsearch 慢不会阻塞 Slack。
+数组里的 transport 顺序调用,**各自独立** —— Elasticsearch 慢不会阻塞 Slack。每个 transport 的错误也独立节流,一个挂了不影响其它 transport 的错误日志。
 
 ## 只用 transport
 
@@ -118,16 +172,18 @@ app.use(
 app.use(
   createElogs({
     config: {
-      useTransportsOnly: true,
+      useTransportsOnly: true,           // 关掉 console + file
       transports: [elasticsearchTransport, slackTransport],
     },
   })
 )
 ```
 
+生产只接外部聚合器时的标准姿势 —— 避免本地双写,也防止容器没挂 volume 时日志全丢。
+
 ## 错误处理 & 节流
 
-transport 抛出的同步异常和异步 reject 都会被捕获并打印到 `console.error`。为了防止坏掉的 transport 每个请求都刷一屏 stderr,同一 transport 的同一错误在 `transportThrottleMs`(默认 5s)窗口内合并为一条 `console.error`。
+transport 抛出的同步异常和异步 reject 都会被 [`logToTransports`](/docs/api/exports#logtotransports) 捕获并打印到 `console.error`,**不会**让请求挂掉。但为了防止坏掉的 transport 把 stderr 刷爆,同一 transport 的同一错误在 [`transportThrottleMs`](/docs/api/configuration#elogs-config)(默认 `5000`ms)窗口内合并为一条 `console.error`。
 
 ```ts
 createElogs({
@@ -137,51 +193,41 @@ createElogs({
 })
 ```
 
-这是生产环境的安全阀。你仍然应该在 transport 内部自己处理错误,接到自己的监控系统。
+这是生产环境的安全阀 —— 你的 transport 仍要自己处理错误(重试 / 降级 / 死信队列),不要依赖 Elogs 的内部日志。
 
 ## 最佳实践
 
-- **在 transport 内部处理错误** —— createElogs 捕获了 throw,但只打印到 `console.error`,不会送回你的目标。
-- **异步用 `Promise<void>`** —— createElogs 会 await 异步 transport 的返回值。
-- **避免在 `meta` 里写 secret / PII** —— 脱敏会处理 message 和 key 字段,但 transport 拿到的就是管道给的原始数据。
-- **生产只接外部聚合器时,设 `useTransportsOnly: true`**
-- **按重要性排 transport 顺序** —— 告警放最前,批写放最后
-
-## Transport 接口
-
-```ts
-export interface Transport {
-  log: (
-    level: LogLevel,
-    message: string,
-    meta?: Record<string, unknown>
-  ) => void | Promise<void>
-}
-
-export type LogLevel = 'DEBUG' | 'INFO' | 'WARNING' | 'ERROR'
-```
+- **在 transport 内部处理错误** —— Elogs 捕获了 throw 但只打 `console.error`,不会送回外部目标。重试、熔断、死信队列都在 transport 里实现。
+- **异步用 `Promise<void>`** —— 同步 transport 用 `void`,异步返回 `Promise<void>` 让 Elogs 知道要 `.catch`。
+- **避免在 `meta` 里写 secret / PII** —— `autoRedact` 处理 `message` 字符串和 key 名,但 transport 拿到的 `meta` 是 emit 管道给的原始数据,不会二次脱敏。敏感字段在源头就过滤掉。
+- **生产只接外部聚合器时,设 `useTransportsOnly: true`** —— 避免双写也避免本地文件膨胀。
+- **按重要性排 transport 顺序** —— 告警(快速失败)放最前,批写(慢)放最后。
+- **慢 transport 套 `batch`** —— 远程 HTTP 每条一次请求成本压垮服务,见下。
 
 ## 组合器(Composers)
 
-Transport 接口只有一个 `log` 方法,所以**(Transport) => Transport** 的纯函数可以任意堆叠,跟 pino multi-stream 一样。createElogs 给了 5 个常用组合器,从 `@pori15/elogs` 直接 import:
+`Transport` 接口只有一个 `log` 方法,所以 **(Transport) => Transport** 的纯函数可以任意堆叠,跟 pino multi-stream 一样。Elogs 给 5 个常用组合器,从 `@pori15/elogs` 直接 import:
 
 | 组合器 | 用途 |
 | --- | --- |
-| `tee([t1, t2, ...])` | 多路 fan-out,任一失败不短路 |
-| `sample(rate, t)` | 概率采样(0-1) |
-| `filter(predicate, t)` | 谓词过滤 |
-| `tap(fn, t)` | 旁路(metrics / 计数),不影响主链路 |
-| `batch(size, ms, t)` | 缓冲 `size` 条或 `ms` 毫秒,合成一条发 |
+| [`tee([t1, t2, ...])`](/docs/api/exports#tee) | 多路 fan-out,任一失败不短路 |
+| [`sample(rate, t)`](/docs/api/exports#sample) | 概率采样(0-1) |
+| [`filter(predicate, t)`](/docs/api/exports#filter) | 谓词过滤 |
+| [`tap(fn, t)`](/docs/api/exports#tap) | 旁路(metrics / 计数),不影响主链路 |
+| [`batch(size, ms, t)`](/docs/api/exports#batch) | 缓冲 `size` 条或 `ms` 毫秒,合成一条发 |
+
+所有组合器都在 `output/composers.ts` 里实现,签名见 [`LogEntry`](/docs/api/types#log-entry)。
 
 ### tee —— 多路 fan-out
 
-把一条 log 同时发到多个 transport。任一分支 throw 或 reject 都不会短路其它分支(用 `Promise.allSettled` 兜底)。
+把一条 log 同时发到多个 transport。任一分支 throw 或 reject 都不会短路其它分支(`Promise.allSettled` 兜底)。
 
 ```ts
-import createElogs, { tee } from '@pori15/elogs'
+import { createElogs, tee } from '@pori15/elogs'
+import type { Transport } from '@pori15/elogs'
 
-const consoleT = { log: (l, m) => console.log(l, m) }
-const metricsT = { log: (l, m, meta) => metrics.increment(m) }
+const consoleT: Transport = { log: (l, m) => console.log(l, m) }
+const metricsT: Transport = { log: (l, m, meta) => metrics.increment(m) }
 
 createElogs({
   config: {
@@ -195,7 +241,7 @@ createElogs({
 以 `rate` (0-1) 的概率把 log 转发给 transport。`rate=0` 完全丢弃,`rate=1` 等于直通。`rate` 越界抛 `Error`。
 
 ```ts
-import createElogs, { tee, sample } from '@pori15/elogs'
+import { createElogs, tee, sample } from '@pori15/elogs'
 
 createElogs({
   config: {
@@ -214,9 +260,17 @@ createElogs({
 仅当 `predicate(level, message, meta)` 返回 truthy 时才转发。最常见:ERROR 才告警。
 
 ```ts
-import createElogs, { tee, filter, sample } from '@pori15/elogs'
+import { createElogs, tee, filter, sample } from '@pori15/elogs'
+import type { Transport, LogLevel } from '@pori15/elogs'
 
-const slackAlerter = { log: async (l, m) => fetch(process.env.SLACK_WEBHOOK!, { ... }) }
+const slackAlerter: Transport = {
+  log: async (l: LogLevel, m) => {
+    await fetch(process.env.SLACK_WEBHOOK!, {
+      method: 'POST',
+      body: JSON.stringify({ text: `[${l}] ${m}` }),
+    })
+  },
+}
 
 createElogs({
   config: {
@@ -236,7 +290,7 @@ createElogs({
 对每条 log 跑 `fn`,**然后总是**转发给 transport。适合打 metrics / 计数 / 调试 trace。`fn` 抛错会被静默吞(不影响主链路)。
 
 ```ts
-import createElogs, { tap, sample } from '@pori15/elogs'
+import { createElogs, tap, sample } from '@pori15/elogs'
 
 let counter = 0
 
@@ -259,25 +313,34 @@ createElogs({
 
 ### batch —— 缓冲
 
-缓冲 log 直到满 `size` 条**或**距首条 `flushMs` 毫秒,触发后作为一条 `INFO` "batch" 发出去,`meta.entries` 是缓冲数组。`size` / `flushMs` ≤ 0 抛 `Error`。
+缓冲 log 直到满 `size` 条**或**距首条 `flushMs` 毫秒,触发后作为一条 `INFO` "batch" 发出去,`meta.entries` 是缓冲数组。`size` / `flushMs` ≤ 0 抛 `Error`。`batch` 内部会暴露 `flush` 方法(在返回的 transport 上 cast 出来),`process.on("beforeExit", ...)` / SIGTERM handler 里调一下能避免退出时丢 buffer。
 
 适合打远程服务(每次 HTTP 请求成本高):
 
 ```ts
-import createElogs, { batch, filter, tee } from '@pori15/elogs'
+import { createElogs, batch, filter, tee } from '@pori15/elogs'
+import type { Transport, LogLevel } from '@pori15/elogs'
 
-const httpSink = { log: async (lvl, msg, meta) => {
-  await fetch('https://logs.example.com/ingest', {
-    method: 'POST',
-    body: JSON.stringify({ lvl, msg, meta }),
-  })
-}}
+const httpSink: Transport = {
+  log: async (lvl: LogLevel, msg, meta) => {
+    await fetch('https://logs.example.com/ingest', {
+      method: 'POST',
+      body: JSON.stringify({ lvl, msg, meta }),
+    })
+  },
+}
+
+const debugBatch = batch(50, 5000, httpSink)
+
+process.on('beforeExit', () => {
+  ;(debugBatch as Transport & { flush?: () => void }).flush?.()
+})
 
 createElogs({
   config: {
     transports: [
       tee([
-        filter((lvl) => lvl === 'DEBUG', batch(50, 5000, httpSink)),  // DEBUG 批量 5s
+        filter((lvl) => lvl === 'DEBUG', debugBatch),  // DEBUG 批量 5s
         consoleT,
       ]),
     ],
@@ -285,11 +348,21 @@ createElogs({
 })
 ```
 
-**注意**:程序退出时未刷的 buffer 会丢。在 `beforeExit` / SIGTERM handler 里**目前没有**自动 flush 机制(等 PR)—— 自己用 `setTimeout` / 长进程 / 接收 SIGTERM 的方式让 batch 自然触发。
-
 ### 组合原则
 
 - 每个组合器**只做一件事**,任意堆叠;
 - 顺序敏感:`filter` 放在 `tee` 之前比之后便宜(早 fail 早 return);
 - 涉及副作用的(metrics / 计数)用 `tap`,**绝不要**用 `filter` 丢日志;
-- 远程 / 慢 transport 一定套 `batch`,否则一个请求一条 HTTP 成本压垮服务。
+- 远程 / 慢 transport 一定套 `batch`,否则一个请求一条 HTTP 成本压垮服务;
+- `batch` 在 `beforeExit` / SIGTERM 之前手动 `flush`,否则最后一批进 buffer 的会丢。
+
+## API 参考
+
+- [`Transport`](/docs/api/types#transport) — 接口定义
+- [`ElogsConfig.transports`](/docs/api/configuration#elogs-config) — 启用 transport 列表
+- [`ElogsConfig.useTransportsOnly`](/docs/api/configuration#elogs-config) — 只走 transport
+- [`ElogsConfig.transportThrottleMs`](/docs/api/configuration#elogs-config) — 错误节流窗口
+- [`logToTransports`](/docs/api/exports#logtotransports) — 内部 transport 出口
+- [`tee`](/docs/api/exports#tee) / [`sample`](/docs/api/exports#sample) / [`filter`](/docs/api/exports#filter) / [`tap`](/docs/api/exports#tap) / [`batch`](/docs/api/exports#batch) — 组合器
+- [`LogEntry`](/docs/api/types#log-entry) — 组合器用的条目类型
+- [Log Filtering](/docs/features/filtering#transport-谓词过滤) — transport 层谓词过滤

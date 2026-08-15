@@ -1,81 +1,164 @@
 ---
 title: Log Filtering
-description: Filter logs based on various criteria
+description: Filter logs based on level, output sink, and transport predicates
 ---
 
-Filter logs based on level, status, or HTTP method using Elogs's flexible filtering system.
+Elogs 的过滤分三层:**级别白名单**(`logFilter`)、**输出 sink 开关**(`disableInternalLogger` / `disableFileLogging` / `useTransportsOnly`)、以及 **transport 谓词过滤**(`filter` 组合器)。三层互不重叠,按需组合。
 
-## Basic Usage
+## 级别白名单
+
+`ElogsConfig.logFilter` 只接受 `level` 字段 —— 一个 `LogLevel` 数组,白名单语义。
+
+```ts
+import { createElogs } from '@pori15/elogs'
+import type { LogLevel } from '@pori15/elogs'
+
+createElogs({
+  config: {
+    logFilter: {
+      level: ['ERROR', 'WARNING'] satisfies LogLevel[],
+    },
+  },
+})
+```
+
+`level: ['ERROR']` 只输出 `ERROR`;空数组 `[]` 表示不过滤,全部放行。**不是层级**(没有"INFO 包含 DEBUG"这种关系),每个值都精确匹配。
+
+### 根级别名
+
+`CreateElogsOptions.logLevel` 是 `config.logFilter.level` 的根级别名:
+
+```ts
+createElogs({ logLevel: ['ERROR'] })
+```
+
+两个字段独立检查 —— 同时设置时取并集(任一放行即通过)。详见 [Log Levels](/docs/features/log-levels)。
+
+## 输出 sink 开关
+
+控制哪些 sink **完全**关闭,不管级别:
+
+| 字段 | 作用 |
+| --- | --- |
+| `disableInternalLogger` | 关掉 console(内建 logger) |
+| `disableFileLogging` | 关掉 file(即使配了 `logFilePath`) |
+| `useTransportsOnly` | 同时关 console + file,只走 transport |
+
+### 关掉 console
 
 ```ts
 createElogs({
   config: {
-    logFilter: {
-      level: ['ERROR', 'WARNING'],
-      status: [500, 404],
-      method: 'GET'
-    }
-  }
+    disableInternalLogger: true,
+    // logFilePath / transports 仍然生效
+  },
 })
 ```
 
-## Filter Types
-
-### By Log Level
+### 关掉 file
 
 ```ts
-logFilter: {
-  level: ['ERROR', 'WARNING'] // Only log ERROR and WARNING messages
+createElogs({
+  config: {
+    logFilePath: './logs/app.log',
+    disableFileLogging: true, // 配了路径但关掉
+  },
+})
+```
+
+### 只走 transport
+
+```ts
+import type { Transport } from '@pori15/elogs'
+
+const httpSink: Transport = {
+  log: async (level, message, meta) => {
+    await fetch('https://logs.example.com/ingest', {
+      method: 'POST',
+      body: JSON.stringify({ level, message, meta }),
+    })
+  },
 }
+
+createElogs({
+  config: {
+    transports: [httpSink],
+    useTransportsOnly: true, // console + file 全关
+  },
+})
 ```
 
-Available levels: `ERROR`, `WARNING`, `INFO`, `DEBUG`
+`sinks` 在 logger 初始化时一次性 resolve,后续 `emit` 不再二次判断 —— 开销可忽略。
 
-### By HTTP Status
+## Transport 谓词过滤
+
+`logFilter` 只过滤 **级别**。如果想按 HTTP method / path / status 过滤,你需要把 `filter` 组合器套在 transport 上 —— 这是在 transport 层做自定义谓词的标准方式。
 
 ```ts
-logFilter: {
-  status: [500, 404] // Only log 500 and 404 responses
+import { createElogs, filter } from '@pori15/elogs'
+import type { Transport } from '@pori15/elogs'
+
+const consoleT: Transport = {
+  log: (level, message, meta) => {
+    console.log(`[${level}] ${message}`, meta)
+  },
 }
+
+createElogs({
+  config: {
+    transports: [
+      // 只转发 POST 请求到外部聚合
+      filter((_level, _message, meta) => {
+        return meta?.method === 'POST'
+      }, consoleT),
+    ],
+  },
+})
 ```
 
-### By HTTP Method
+`filter(predicate, transport)` 的 `predicate` 签名是 `(level, message, meta) => boolean`,`meta` 包含 `pathname` / `method` / `status` / `durationMs` / `requestId` 等。可以基于 `meta` 任意组合:
 
 ```ts
-logFilter: {
-  method: 'GET' // Only log GET requests
-}
+// 只记录 5xx + 慢请求
+filter(
+  (_lvl, _msg, meta) =>
+    typeof meta?.status === 'number' && meta.status >= 500,
+  alertingTransport
+)
+
+// 排除健康检查路径
+filter(
+  (_lvl, _msg, meta) => !meta?.pathname?.startsWith('/health'),
+  metricsTransport
+)
 ```
 
-Or multiple methods:
+`filter` 是纯组合器,可以跟 `tee` / `sample` / `tap` / `batch` 任意堆叠。详见 [Custom Transports](/docs/features/transports#filter--谓词过滤)。
+
+## 按环境过滤
 
 ```ts
-logFilter: {
-  method: ['POST', 'PUT']
-}
+createElogs({
+  config: {
+    logFilter:
+      process.env.NODE_ENV === 'production'
+        ? { level: ['ERROR'] }
+        : { level: ['DEBUG', 'INFO', 'WARNING', 'ERROR'] },
+  },
+})
 ```
 
-### Combined Filters
+## 最佳实践
 
-```ts
-logFilter: {
-  level: ['ERROR'],
-  status: [500],
-  method: ['POST', 'PUT']
-}
-```
+- **生产只接外部聚合器** —— `useTransportsOnly: true` + transport 列表,避免本地双写
+- **告警只关心 ERROR** —— transport 层用 `filter((lvl) => lvl === 'ERROR', alerter)` 而不是改全局 `logFilter`(否则会同时关掉 metrics)
+- **过滤逻辑写在 transport 层,不是全局** —— 不同的下游需要不同的过滤规则(告警 / 聚合 / metrics 各自一套)
+- **敏感路由靠 `autoRedact`,不是过滤** —— 过滤是"不输出这条",`autoRedact` 是"输出但把敏感字段替换"。前者丢信息,后者脱敏
+- **状态码 / method / path 不在 `logFilter` 里** —— API 表面只有 `level`;复杂过滤用 transport + `filter` 组合器
 
-## Environment-Specific Filters
+## API 参考
 
-```ts
-logFilter: process.env.NODE_ENV === 'production'
-  ? { level: ['ERROR'] }
-  : null // Log everything in development
-```
-
-## Best Practices
-
-- **Production**: Filter to essential logs only (errors and warnings)
-- **Development**: Log everything for debugging
-- **Security**: Filter sensitive routes and avoid logging sensitive data
-- **Performance**: Use simple filters in production
+- [`LogFilter`](https://elogs.vercel.app/docs/api/types#log-filter) — `{ level?: LogLevel[] }`
+- [`ElogsConfig.logFilter`](https://elogs.vercel.app/docs/api/configuration#elogs-config) / `disableInternalLogger` / `disableFileLogging` / `useTransportsOnly`
+- [`CreateElogsOptions.logLevel`](https://elogs.vercel.app/docs/api/configuration#create-elogs-options) — 根级别名
+- [`filter`](/docs/features/transports#filter--谓词过滤) — transport 组合器

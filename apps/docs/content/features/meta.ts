@@ -14,6 +14,7 @@ export default defineMeta({
     "file-logging",
     "transports",
     "log-rotation",
+    "database-errors",
   ],
   title: "Features",
 });

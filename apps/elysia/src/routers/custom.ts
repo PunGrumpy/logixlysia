@@ -1,6 +1,6 @@
-import { Elogs } from "@pori15/elogs";
+import { CreateElogs } from "@pori15/elogs";
 
-export const customRouter = <App extends Elogs>(app: App) =>
+export const customRouter = <App extends CreateElogs>(app: App) =>
   app.get(
     "/custom",
     {

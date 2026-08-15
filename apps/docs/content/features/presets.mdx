@@ -3,7 +3,7 @@ title: Presets
 description: 现成的 dev、prod、json 日志默认值
 ---
 
-用 `preset` 一行设好环境默认。显式 `config` 字段永远覆盖 preset。
+用 `preset` 一行设好环境默认。显式 `config` / `startup` 字段永远覆盖 preset。
 
 ```ts
 import { Elysia } from 'elysia'
@@ -22,29 +22,38 @@ const app = new Elysia().use(
 
 ## 可用 preset
 
-| Preset | 启动 banner | 美化输出 | context 树 | `autoRedact` | `requestId` |
-| --- | --- | --- | --- | --- | --- |
-| `dev` | 是(banner) | 是 | 是 | 否 | 否 |
-| `prod` | 否 | 否 | 否 | 是 | 是 |
-| `json` | 否 | 否 | 否 | 否 | 否 |
+| Preset | pino.prettyPrint | showContextTree | showStartupMessage | startupMessageFormat | autoRedact | requestId |
+| --- | --- | --- | --- | --- | --- | --- |
+| `dev` | `true` | `true` | `true` | `"banner"` | — | — |
+| `prod` | `false` | `false` | `false` | `"banner"` | `true` | `true` |
+| `json` | `false` | `false` | `false` | `"banner"` | — | — |
 
-`json` 是日志聚合器(Datadog、Loki、Elasticsearch)的最小配置 —— 关掉所有装饰性输出,JSON 是唯一 payload。下游需要解析行分隔 JSON、又不需要人类可读格式时用它。
+> 表里 `—` 表示 preset 没设,会沿用 Elogs 的默认(`false` / `undefined`)。
+
+`json` 是给日志聚合器(Datadog、Loki、Elasticsearch)的最小配置 —— 关掉所有装饰性输出,JSON 行就是唯一 payload。下游需要按行解析 JSON、又不需要人类可读格式时用它。
 
 ## 覆盖示例
 
+preset 给出基线,显式 `config` / `startup` 字段覆盖单个键:
+
 ```ts
+import { createElogs } from '@pori15/elogs'
+
 createElogs({
   preset: 'prod',
   config: {
-    autoRedact: false,
-    showStartupMessage: true,
+    autoRedact: false,        // 覆盖 prod 的 true
+    showContextTree: true,    // 单独开
+  },
+  startup: {
+    show: true,               // 覆盖 prod 的 false
   },
 })
 ```
 
 ## 程序化解析
 
-如果想先看解析后的 options 再往下传,用 `resolveOptions`:
+`resolveOptions(options)` 是 Elogs 内部用的 merge 函数 —— 拿到 preset 默认值后,把显式 `config` 字段 shallow-merge 上去(对 `pino` / `logFilter` / `logRotation` / `timestamp` 做嵌套深合并)。想先看解析结果再传给 `createElogs` 时用:
 
 ```ts
 import { resolveOptions } from '@pori15/elogs'
@@ -54,7 +63,7 @@ const options = resolveOptions({ preset: 'dev', config: { service: 'api' } })
 // options.config.showStartupMessage === true (来自 dev preset)
 ```
 
-`resolveOptions` 就是插件内部用的同一个 merge 函数,行为跟直接传给 `createElogs()` 完全一致。
+行为跟直接传 `createElogs()` 完全一致 —— `resolveOptions` 已经在 `createElogs` 内部被调用过一次,显式调一次只是为了"先看一眼"。
 
 ## 自定义 preset
 
@@ -74,14 +83,14 @@ registerPreset('staging', {
 const app = new Elysia().use(createElogs({ preset: 'staging' }))
 ```
 
-**规则**
+### 规则
 
 - 重复注册同名 preset 抛 `Error("createElogs: preset \"<name>\" already registered")` —— 防止 typo 静默覆盖。
 - `name` 必须是非空字符串。
-- 用户 preset 的 schema 跟 `ElogsConfig` 完全一致,**不**做轻量校验(`resolveOptions` 阶段统一管 `logRotation` 之类)。
-- 注册时机:模块加载时一次性注册,放**自己项目的初始化入口**(比如 `src/logging.ts`),**不要**在请求处理函数里注册 —— 重复抛错会让第一个请求 500。
+- `defaults` 的 schema 跟 `ElogsConfig` 完全一致,**不**做轻量校验(`resolveOptions` 阶段统一管 `logRotation` 之类)。
+- 注册时机:模块加载时一次性注册,放**自己项目的初始化入口**(比如 `src/logging.ts`)。**不要**在请求处理函数里注册 —— 重复抛错会让第一个请求 500。
 
-**调试用 API**
+### 调试用 API
 
 ```ts
 import { listPresets, getPresetDefaults } from '@pori15/elogs'
@@ -90,10 +99,10 @@ console.log(listPresets())
 // ['dev', 'prod', 'json', 'staging']
 
 console.log(getPresetDefaults('staging'))
-// { pino: { prettyPrint: true }, showContextTree: true, ... }
+// { pino: { prettyPrint: true }, showContextTree: true, requestId: true, ... }
 ```
 
-**测试重置**
+### 测试重置
 
 单测之间清掉注册表用 `__resetPresetRegistry()`(注意:会**连同**内置 `dev` / `prod` / `json` 一起清掉,生产代码绝不能调):
 
@@ -105,8 +114,19 @@ afterEach(() => {
 })
 ```
 
-**类型上**(TypeScript):`preset` 字段的提示仍是 `'dev' | 'prod' | 'json'`,但运行时接受任意字符串。IDE 自动补全给内置,用户 preset 用 `as` 断言或 `satisfies` 收口:
+### TypeScript 提示
+
+`preset` 字段的提示仍是 `'dev' | 'prod' | 'json'`,但运行时接受任意字符串。IDE 自动补全给内置,用户 preset 用 `as` 断言或 `satisfies` 收口:
 
 ```ts
 createElogs({ preset: 'staging' as 'dev' | 'prod' | 'json' | 'staging' })
 ```
+
+## 相关 API
+
+- [`registerPreset`](/docs/api/exports#registerpreset) — 注册自定义 preset
+- [`getPresetDefaults`](/docs/api/exports#getpresetdefaults) — 查表
+- [`listPresets`](/docs/api/exports#listpresets) — 列出当前已注册名
+- [`resolveOptions`](/docs/api/exports#resolveoptions) — 手动跑 merge
+- [`__resetPresetRegistry`](/docs/api/exports#resetpresetregistry) — 测试重置
+- [`LogPreset`](/docs/api/types#logpreset) / [`PresetConfig`](/docs/api/types#presetconfig) — 类型

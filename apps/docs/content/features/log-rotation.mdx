@@ -1,126 +1,168 @@
 ---
 title: Log Rotation
-description: Manage log file sizes and retention
+description: 管理日志文件大小、轮转间隔、压缩和保留策略
 ---
 
-Automatically manage log file sizes, rotation intervals, compression, and retention policies.
+Elogs 的 rotation 在 file sink 内部跑 —— [`FileSink`](/docs/api/types#file-sink) 每次 flush 后检查触发条件,触发就把当前文件改名、压缩、按保留策略清理。整套行为只用一个 [`LogRotationConfig`](/docs/api/types#log-rotation-config) 块配置。
 
-## Basic Configuration
+## 基本配置
 
 ```ts
+import { createElogs } from '@pori15/elogs'
+import type { LogRotationConfig } from '@pori15/elogs'
+
+const rotation: LogRotationConfig = {
+  maxSize: '10m',    // 单文件超过 10MB 触发轮转
+  maxFiles: '7d',    // 保留最近 7 天的轮转文件
+  compress: true,    // 轮转后 gzip 压缩
+}
+
 createElogs({
   config: {
     logFilePath: './logs/app.log',
-    logRotation: {
-      maxSize: '10m',    // Rotate when file reaches 10MB
-      maxFiles: '7d',    // Keep logs for 7 days
-      compress: true     // Compress rotated logs
-    }
-  }
+    logRotation: rotation,
+  },
 })
 ```
 
-## Rotation Options
+`maxSize` 和 `interval` 任一满足都会触发轮转。轮转在 flush 之后做,前一条 log 一定先落盘。
 
-### Size-based Rotation
+## 配置项
 
-```ts
-logRotation: {
-  maxSize: '10m'    // 10 megabytes
-}
-```
+| 字段 | 类型 | 描述 |
+| --- | --- | --- |
+| `maxSize` | `string \| number` | 单文件最大体积,如 `'10m'` / `'1g'`,或纯字节数 |
+| `interval` | `string` | 固定时间轮转,如 `'1h'` / `'1d'` / `'12h'` |
+| `maxFiles` | `string \| number` | 保留数量(数字)或时长(字符串,如 `'7d'`) |
+| `compress` | `boolean` | 轮转后是否 gzip 压缩(默认 `false`) |
+| `compression` | `'gzip'` | 压缩算法,目前仅 `gzip`(留作后续扩展) |
 
-Supported formats: `'1k'`, `'1m'`, `'1g'` or bytes (number)
+完整类型见 [`LogRotationConfig`](/docs/api/types#log-rotation-config)。
 
-### Time-based Rotation
-
-```ts
-logRotation: {
-  interval: '1d'    // Rotate daily
-}
-```
-
-Supported intervals: `'1h'`, `'1d'`, `'1w'` (or any number)
-
-### Retention Policy
+## 触发条件
 
 ```ts
-logRotation: {
-  maxFiles: '7d'    // Keep logs for 7 days
-}
+// 大小触发
+logRotation: { maxSize: '10m' }   // 单文件 > 10MB 轮转
+
+// 时间触发
+logRotation: { interval: '1d' }   // 距离文件首次写入 > 1d 轮转
 ```
 
-Or keep a specific number of files:
+`maxSize` 支持的格式:`'1k'` / `'1kb'` / `'1m'` / `'1mb'` / `'1g'` / `'1gb'`,或纯数字字节数(必须 > 0)。`parseSize` 在 `FileSink.shouldRotateNow` 内调用,格式不合法抛 `Error`。
+
+`interval` 支持的格式:`'1h'` / `'1d'` / `'1w'`,数字必须 ≥ 1。`parseInterval` 不接受 `'30m'` / 秒级单位 —— 需要更细粒度就配合 `maxSize` 用。
+
+两个条件**并存**时,任一命中即轮转。
+
+## 保留策略
 
 ```ts
-logRotation: {
-  maxFiles: 10      // Keep last 10 files
-}
+// 按数量保留最近 N 个
+logRotation: { maxFiles: 10 }
+
+// 按时间保留最近 N 天/小时
+logRotation: { maxFiles: '7d' }
+logRotation: { maxFiles: '24h' }
 ```
 
-### Compression
+`maxFiles` 是数字时按 **mtime 排序** 删最老的;是字符串时按 `parseInterval` 解析成毫秒,删 `mtime` 早于 `now - ms` 的文件。`parseRetention` 根据类型走 `cleanupByCount` 或 `cleanupByTime`。
+
+只配 `maxSize` 不配 `maxFiles` 时,旧轮转文件**不会被清理** —— 长期跑下来磁盘会堆满。
+
+## 压缩
 
 ```ts
-logRotation: {
-  compress: true    // Enable compression (gzip)
-}
+logRotation: { compress: true }
 ```
 
-## How Rotation Works
+`compress: true` 时,轮转(rename)完成后立刻 gzip 压缩新文件,然后按 `maxFiles` 清理。`compression` 字段当前只接受 `'gzip'`,留作 API 占位(未来可能加 zstd / brotli)。`compress: false`(默认)保留未压缩的明文轮转文件。
 
-When a log file is rotated, it's renamed with a timestamp:
+压缩跑在 keyed mutex 锁内,跨文件互不阻塞;但同文件并发 rotation 会被串行化。压缩失败不会让主流程挂掉 —— 错误经 [`RotationErrorReporter`](/docs/api/types#rotation-error-reporter) 上报,默认打 `console.error`。
 
-```
-app.log → app.log.2025-10-10-14-30-45
-```
+## 轮转文件命名
 
-If compression is enabled:
+触发轮转时,当前活文件被 rename 成带时间戳的归档名:
 
 ```
-app.log.2025-10-10-14-30-45 → app.log.2025-10-10-14-30-45.gz
+app.log  →  app.log.2025-10-10-14-30-45-123-<hrtime>
 ```
 
-Rotation occurs automatically when:
-- File size reaches `maxSize`
-- Time interval `interval` has elapsed
+格式 `app.log.YYYY-MM-DD-HH-MM-SS-mmm-<hrtime>` —— 时间戳精确到毫秒,后面再追加 `process.hrtime.bigint()` 避免同一毫秒内多次轮转碰撞。`getRotatedFileName` 生成基础名,`rotateFile` 负责拼 hrtime 后缀并执行 `fs.rename`。
 
-## Example Configurations
+如果启用了 `compress: true`,压缩后文件名变成:
 
-### Production
+```
+app.log.2025-10-10-14-30-45-123-<hrtime>.gz
+```
+
+`getRotatedFiles` 用 `ROTATED_REGEX` 过滤归档名,清理时只动匹配项,不会误删 `app.log.backup` 之类的非轮转文件。
+
+## 示例配置
+
+### 生产
 
 ```ts
 logRotation: {
   maxSize: '100m',
   interval: '1d',
   maxFiles: '30d',
-  compress: true
+  compress: true,
 }
 ```
 
-### Development
+每日 + 100MB 双保险,保留一个月,gzip 节省磁盘。
+
+### 开发
 
 ```ts
 logRotation: {
   maxSize: '10m',
   maxFiles: '7d',
-  compress: false
+  compress: false,
 }
 ```
 
-### High-Volume
+保留一周方便回溯,不压缩方便 `grep` / `tail -f` 直读。
+
+### 高流量
 
 ```ts
 logRotation: {
   maxSize: '1g',
   interval: '1h',
   maxFiles: '7d',
-  compress: true
+  compress: true,
 }
 ```
 
-## Important Notes
+大文件 + 短间隔,适合 batch 任务或长连接服务。
 
-- Empty files are not rotated
-- Rotation failures don't crash the application
-- Compression runs asynchronously
-- Old files are automatically cleaned up based on `maxFiles`
+## 边界行为
+
+- **空文件不轮转** —— `rotateFile` 内 `stat.size === 0` 时直接 return,不 rename、不压缩、不清理。
+- **rotation 失败不挂主流程** —— 错误经 `onRotationError` 报告(默认 `console.error`);log 写入已经 resolve,不会因为 rotation 失败被 reject。
+- **压缩异步** —— 跟后续 log 写入并行,FileSink 在 `maybeRotate` 里 `await`,但 compressFile 自身跑在 microtask 上,不等。
+- **清理按 mtime** —— `maxFiles: 5` 删最老的 5 个之外的;`maxFiles: '7d'` 删 7 天前的,7 天内的一律保留。
+- **进程重启不保留 `openedAt`** —— `FileSink.resolveOpenedAt` 用 `birthtimeMs`,部分文件系统(btrfs / 容器 overlay)返回 0 时回退到 `Date.now()`,interval 计时从重启起算。
+
+## 最佳实践
+
+- **`maxSize` 和 `maxFiles` 至少配一个** —— 不配 `maxFiles` = 不清理 = 磁盘会爆。
+- **生产必开 `compress: true`** —— 文本日志 gzip 后通常 < 20% 原始大小,长期收益明显。
+- **interval 比 maxSize 优先** —— 想"每天一个文件"就只配 `interval: '1d'`,别同时配大 `maxSize`,行为不可预测。
+- **轮转失败看 stderr** —— 自定义 `onRotationError` 把错误接到自己的告警 channel,不要只看 `console.error`。
+- **容器化挂 volume** —— rotation 改了文件但容器本身是无状态的,目录要挂 host / PVC,否则容器重启归档全丢。
+
+## API 参考
+
+- [`ElogsConfig.logRotation`](/docs/api/configuration#elogs-config) — rotation 配置入口
+- [`LogRotationConfig`](/docs/api/types#log-rotation-config) — 字段类型
+- [`FileSink`](/docs/api/types#file-sink) — 内部 file sink 抽象
+- [`shouldRotate`](/docs/api/exports#shouldrotate) — 大小触发的预检查
+- [`performRotation`](/docs/api/exports#performrotation) — 执行 rename + compress + cleanup
+- [`rotateFile`](/docs/api/exports#rotatefile) — 单次 rename
+- [`compressFile`](/docs/api/exports#compressfile) — 单次 gzip
+- [`getRotatedFileName`](/docs/api/exports#getrotatedfilename) — 生成归档文件名
+- [`RotationErrorReporter`](/docs/api/types#rotation-error-reporter) — 错误回调签名
+- [File Logging](/docs/features/file-logging) — file sink 基础

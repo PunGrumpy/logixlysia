@@ -3,11 +3,11 @@ title: Request ID
 description: 在请求和响应之间生成或透传唯一标识
 ---
 
-Elogs 自动生成或读取唯一请求标识(request ID),挂到请求 context、响应头和日志输出上。
+Elogs 自动生成或读取唯一请求标识(request ID),挂到请求 context、响应头和 access log 上。生产环境调试、按 ID grep 日志、跨服务追踪都用得上。
 
 ## 基本用法
 
-用 `requestId: true` 开启。默认配置使用 `X-Request-Id` 头和 UUID v4 生成器。
+`config.requestId: true` 开启。默认配置使用 `X-Request-Id` 头和 `crypto.randomUUID()` 生成器。
 
 ```ts
 import { Elysia } from 'elysia'
@@ -22,75 +22,89 @@ const app = new Elysia().use(
 )
 ```
 
-## 生产 preset
+请求进来时:
+1. 读入站 `Request` 的 `X-Request-Id` header,有就用它(透传上游 trace key)。
+2. 没有就 `crypto.randomUUID()` 生成一个。
+3. ID 写到请求作用域 context 的 `requestId` 字段。
+4. 响应阶段(`afterHandle`)回写到响应 header —— 客户端也能拿到。
 
-`prod` preset 自动开启 `requestId`:
+关闭整个 feature:传 `false` 或不设。
+
+```ts
+import { createElogs } from '@pori15/elogs'
+
+createElogs({ config: { requestId: false } })
+```
+
+## `prod` preset 自动开启
 
 ```ts
 const app = new Elysia().use(
   createElogs({
-    preset: 'prod', // 自动开启 requestId
+    preset: 'prod', // 自动 requestId: true
   })
 )
 ```
 
 ## 自定义配置
 
-需要更细的控制时,传配置对象:
+传 `RequestIdConfig` 对象做更细的控制:
 
 ```ts
-const app = new Elysia().use(
-  createElogs({
-    config: {
-      requestId: {
-        // 自定义读取 / 写入的 header 名
-        header: 'X-Correlation-Id',
-        // 自定义 request ID 生成函数
-        generator: () => `req-${crypto.randomUUID()}`,
-      },
+import { createElogs } from '@pori15/elogs'
+
+createElogs({
+  config: {
+    requestId: {
+      // 自定义 header 名(读入站 + 写回响应都用这个)
+      header: 'X-Correlation-Id',
+      // 自定义 ID 生成函数
+      generator: () => `req-${crypto.randomUUID()}`,
     },
-  })
-)
+  },
+})
 ```
 
 ### 选项
 
-| 选项 | 类型 | 默认 | 描述 |
+| 字段 | 类型 | 默认 | 描述 |
 | --- | --- | --- | --- |
-| `enabled` | `boolean` | `true` | 用对象配置时,显式开关 request ID 生成 |
-| `header` | `string` | `'X-Request-Id'` | 入口读、出口写的 header 名 |
-| `generator` | `() => string` | `crypto.randomUUID` | 返回唯一字符串的生成函数 |
+| `enabled` | `boolean` | `true` | 用对象配置时显式开关;设 `false` 等价于整个 feature 关闭 |
+| `header` | `string` | `"X-Request-Id"` | 入站读、出站写的 header 名 |
+| `generator` | `() => string` | `crypto.randomUUID` | 生成新 ID 的函数 |
 
-## 工作机制
+> 入站值会用 `^[A-Za-z0-9._-]{1,128}$` 校验 —— 长度合法才会被信任地回显,否则直接替换成 `generator()` 的新值(防 header 注入 / 超长字符串污染日志)。
 
-1. 请求进入时,插件从入站 `Request` 读配置的 header(默认 `X-Request-Id`)。
-2. 如果缺失,用 `generator` 生成一个。
-3. ID 存到请求作用域 context 包的 `requestId` 字段。
-4. 响应阶段(`afterHandle` 钩子)把 ID 写回响应 header。
-5. 错误响应同样在响应 header 和错误日志 context 里带上 ID —— 方便失败请求的 trace 关联。
+## 在日志格式里引用
 
-## 日志格式化
-
-在自定义日志格式里用 `{requestId}` 占位符输出 request ID:
+`customLogFormat` 支持 `{requestId}` 占位符,直接渲染当前请求的 ID:
 
 ```ts
-const app = new Elysia().use(
-  createElogs({
-    config: {
-      requestId: true,
-      customLogFormat: '{method} {pathname} - Request ID: {requestId}',
-    },
-  })
-)
+import { createElogs } from '@pori15/elogs'
+
+createElogs({
+  config: {
+    requestId: true,
+    customLogFormat: '[{requestId}] {method} {pathname} {status} {duration}ms',
+  },
+})
 ```
 
-request ID 没开启或缺失时,token 渲染为空字符串。
+输出形如:
 
-## 跨服务追踪
+```
+[01HXY...] GET /api/users 200 12.34ms
+```
 
-把 request ID 跟 `autoRedact: true` 配对,让 `authorization` 和 `cookie` 头在 access log 里被脱敏,但 request ID 仍能 grep:
+`requestId` 没开启或缺失时,token 渲染为空字符串。
+
+## 跟 redaction 配对
+
+把 request ID 跟 `autoRedact: true` 配对,让 `authorization` / `cookie` 在 access log 里被脱敏,但 request ID 仍能 grep:
 
 ```ts
+import { createElogs } from '@pori15/elogs'
+
 createElogs({
   config: {
     requestId: true,
@@ -100,4 +114,47 @@ createElogs({
 })
 ```
 
-分布式追踪场景,再叠一层 OpenTelemetry(见 [OpenTelemetry](/docs/integrations/otel))。request ID 和 trace ID 是独立的 —— request ID 是你的应用层关联键,trace ID 是 OTel 那一层的。
+## 跨服务追踪
+
+request ID 是应用层关联键,跟 OpenTelemetry 的 trace ID 是**独立**的。生产环境通常两层都开:
+
+```ts
+import { Elysia } from 'elysia'
+import { createElogs } from '@pori15/elogs'
+import { injectTraceContext } from '@pori15/elogs/otel' // 可选 peer 依赖,见 OTel 集成文档
+
+const plugin = createElogs({
+  config: {
+    requestId: true,
+  },
+})
+
+new Elysia()
+  .use(plugin)
+  .request(({ request, store }) => {
+    injectTraceContext(store.logger, request)
+  })
+```
+
+request ID → grep 单服务日志;trace ID → 跨服务 span 关联。详见 [OpenTelemetry 集成](/docs/integrations/otel)。
+
+## 公开 API
+
+`resolveRequestIdConfig(raw)` 和 `getOrCreateRequestId(request, config)` 也单独导出,要写自己的中间件 / 测试时用:
+
+```ts
+import { resolveRequestIdConfig, getOrCreateRequestId } from '@pori15/elogs'
+
+const config = resolveRequestIdConfig(true)
+// → { enabled: true, generator: <UUID>, header: 'X-Request-Id' }
+
+const id = getOrCreateRequestId(request, config)
+// → '01HXY...' 或 入站 header 的值
+```
+
+## 相关 API
+
+- [`RequestIdConfig`](/docs/api/types#requestidconfig) — 配置类型
+- [`ResolvedRequestIdConfig`](/docs/api/types#resolvedrequestidconfig) — `resolveRequestIdConfig` 返回的归一化形态
+- [`resolveRequestIdConfig`](/docs/api/exports#resolverequestidconfig) — 归一化 `boolean | object` → `ResolvedRequestIdConfig | null`
+- [`getOrCreateRequestId`](/docs/api/exports#getorcreaterequestid) — 读 header 或生成新值

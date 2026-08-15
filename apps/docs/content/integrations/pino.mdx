@@ -3,7 +3,7 @@ title: Pino
 description: 用 Pino 做高性能结构化日志
 ---
 
-Elogs 集成了 [Pino](https://github.com/pinojs/pino) 作为底层日志引擎。Pino 在首次访问时按需构造 —— 错误的 Pino 选项只在真正 log 时才报错。
+Elogs 集成了 [Pino](https://github.com/pinojs/pino) 作为底层日志引擎,挂载在 Elysia store 的 `pino` 字段上 —— 所有 `pino.LoggerOptions` 都通过 `config.pino` 透传,不需要单独 import。
 
 ## 为什么选 Pino
 
@@ -19,6 +19,11 @@ Elogs 集成了 [Pino](https://github.com/pinojs/pino) 作为底层日志引擎�
 在 route handler 里通过 store 拿 Pino:
 
 ```ts
+import { Elysia } from 'elysia'
+import { createElogs } from '@pori15/elogs'
+
+const app = new Elysia().use(createElogs())
+
 app.get('/users/:id', ({ store, params }) => {
   const { pino } = store
 
@@ -36,7 +41,7 @@ app.get('/users/:id', ({ store, params }) => {
 ```ts
 app.get('/users/:id', async ({ log, params, store }) => {
   log.info({ userId: params.id, action: 'view_profile' }, 'profile accessed')
-  // 或者想用原始 Pino:store.pino.info({ ... }, '...')
+  // 想用原始 Pino:store.pino.info({ ... }, '...')
   return { user: 'data' }
 })
 ```
@@ -102,17 +107,34 @@ new Elysia()
   .listen(3000)
 ```
 
-**注意:** 在 route 外用 Pino 没有 HTTP context(method、pathname、IP 等)。HTTP 请求日志请在 route handler 里用 `store.logger`。
+**注意:** 在 route 外用 Pino 没有 HTTP context(method、pathname、IP 等)。HTTP 请求日志请在 route handler 里用 `store.logger` 或 `store.pino`。
 
 ## 配置
+
+`config.pino` 字段是 [`PinoConfig`](/docs/api/types#pinoconfig) 类型,实际定义是:
+
+```ts
+interface PinoConfig {
+  /** 显式禁用 pino(测试中常用) */
+  enabled?: boolean
+  /** Pretty 打印(pino-pretty) */
+  prettyPrint?: boolean
+  /** 其他 pino options 透传(走 [key: string]: unknown) */
+  [key: string]: unknown
+}
+```
+
+`[key: string]: unknown` 索引签名让你能透传**任何** `pino.LoggerOptions`(`level`、`redact`、`transport`、`base`、`timestamp`、`formatters`、`serializers` 等)。下面是常用配置:
 
 ### 日志级别
 
 ```ts
+import { createElogs } from '@pori15/elogs'
+
 createElogs({
   config: {
     pino: {
-      level: 'debug', // 'fatal' | 'error' | 'warn' | 'info' | 'debug' | 'trace'
+      level: 'debug', // 'fatal' | 'error' | 'warn' | 'info' | 'debug' | 'trace' | 'silent'
     },
   },
 })
@@ -121,6 +143,8 @@ createElogs({
 ### 美化输出
 
 ```ts
+import { createElogs } from '@pori15/elogs'
+
 createElogs({
   config: {
     pino: {
@@ -133,6 +157,8 @@ createElogs({
 或者自定义:
 
 ```ts
+import { createElogs } from '@pori15/elogs'
+
 createElogs({
   config: {
     pino: {
@@ -146,13 +172,19 @@ createElogs({
 })
 ```
 
-`prettyPrint` 透传给 [pino-pretty](https://github.com/pinojs/pino-pretty)。用的话装一下 `pino-pretty` peer dep。
+`prettyPrint` 透传给 [pino-pretty](https://github.com/pinojs/pino-pretty)。要本地开发用漂亮输出,装一下 `pino-pretty`(peer dep,可选):
+
+```bash
+bun add pino-pretty
+```
 
 ### 脱敏
 
 Pino 自己的 `redact` 跟 Elogs 的 `autoRedact` 独立,可以同时跑:
 
 ```ts
+import { createElogs } from '@pori15/elogs'
+
 createElogs({
   config: {
     autoRedact: true,                 // Elogs: 改写 meta + headers
@@ -161,19 +193,26 @@ createElogs({
 })
 ```
 
+用 `paths` + `remove` 删掉整个 key:
+
 ```ts
-// 用 paths 和 remove:
-pino: {
-  redact: {
-    paths: ['user.password', 'req.headers.authorization'],
-    remove: true,
+createElogs({
+  config: {
+    pino: {
+      redact: {
+        paths: ['user.password', 'req.headers.authorization'],
+        remove: true,
+      },
+    },
   },
-},
+})
 ```
 
 ### base 字段
 
 ```ts
+import { createElogs } from '@pori15/elogs'
+
 createElogs({
   config: {
     pino: {
@@ -192,6 +231,8 @@ createElogs({
 Pino 有自己的 transport 体系,处理高级日志目标。用 `transport` 选项配置:
 
 ```ts
+import { createElogs } from '@pori15/elogs'
+
 createElogs({
   config: {
     pino: {
@@ -206,10 +247,18 @@ createElogs({
 
 **重要:** Pino transport 和 Elogs transport 是独立的:
 
-- **Pino transport**(`pino.transport`)—— 影响 `store.pino.info()`、`store.pino.error()` 等写出的日志
+- **Pino transport**(`config.pino.transport`)—— 影响 `store.pino.info()`、`store.pino.error()` 等写出的日志
 - **Elogs transport**(`config.transports`)—— 影响 HTTP access log 管道
 
 ```ts
+import { createElogs } from '@pori15/elogs'
+
+const customTransport = {
+  log(level, message, meta) {
+    // 你的实现
+  },
+}
+
 createElogs({
   config: {
     // Pino transport —— 只对 store.pino.* 日志生效
@@ -281,26 +330,11 @@ app.get('/api/risky', ({ store }) => {
 })
 ```
 
-## Lazy 初始化
-
-Pino 在首次访问时才构造。这意味着:
-
-```ts
-const plugin = createElogs({
-  config: {
-    pino: { level: 'invalid-level' as any },
-  },
-})
-
-// ... 插件构造完成,还不会报错
-// ... 第一次 plugin.store.pino.info() 调用时 throw
-```
-
-想强制启动时立即初始化(让错误的 Pino 选项 fail-fast),把 `config.pino` 设为真值。Pino 实例在插件构建时就创建。
-
 ## 按环境配置
 
 ```ts
+import { createElogs } from '@pori15/elogs'
+
 const isDev = process.env.NODE_ENV === 'development'
 
 createElogs({
@@ -316,6 +350,14 @@ createElogs({
     },
   },
 })
+```
+
+`dev` preset 已经预设了 `pino: { prettyPrint: true }`,开发环境通常直接用:
+
+```ts
+import { createElogs } from '@pori15/elogs'
+
+createElogs({ preset: 'dev' })
 ```
 
 ## 最佳实践
@@ -344,6 +386,7 @@ createElogs({
    - `info` —— 一般信息(默认)
    - `debug` —— 详细调试
    - `trace` —— 极详细调试
+   - `silent` —— 完全关掉
 
 6. **导出 Pino 给 standalone 用** —— 在服务、job、工具里
    ```ts
@@ -355,3 +398,4 @@ createElogs({
 - [Pino 文档](https://github.com/pinojs/pino)
 - [pino-pretty](https://github.com/pinojs/pino-pretty)
 - [Pino Transports](https://github.com/pinojs/pino/blob/master/transports.md)
+- [`PinoConfig` 类型](/docs/api/types#pinoconfig)

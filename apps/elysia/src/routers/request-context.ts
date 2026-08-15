@@ -1,4 +1,4 @@
-import type { Elogs } from "@pori15/elogs";
+import type { CreateElogs } from "@pori15/elogs";
 import { useLogger } from "@pori15/elogs";
 
 const dbQueryHelper = async () => {
@@ -8,7 +8,7 @@ const dbQueryHelper = async () => {
   log.info("Running database query in nested service");
 };
 
-export const requestContextRouter = <App extends Elogs>(app: App) =>
+export const requestContextRouter = <App extends CreateElogs>(app: App) =>
   app
     .get(
       "/checkout",

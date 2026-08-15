@@ -18,4 +18,6 @@ export {
   shouldLog,
   shouldLogForOptions,
 } from "./emit";
+export type { CreateLoggerOptions, PinoFactory } from "./factory";
+export { createLogger } from "./factory";
 export { handleHttpError } from "./handle-http-error";

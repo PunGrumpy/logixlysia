@@ -3,22 +3,27 @@ title: OpenTelemetry
 description: 把日志跟活动 trace 和 span 关联起来
 ---
 
-安装可选 peer 依赖:
+Elogs 提供子路径 `@pori15/elogs/otel` 把 OpenTelemetry 活动 span ID 合并到请求 context 包,access log 自动带上 `trace_id` / `span_id`。
+
+## 安装
+
+`@opentelemetry/api` 是可选 peer dep —— 装了就有 trace context,没装函数静默返回 `undefined`。
 
 ```bash
 bun add @opentelemetry/api
 ```
 
-从 `@pori15/elogs/otel` 子路径导入:
+## 基本用法
+
+从 `@pori15/elogs/otel` 子路径导入 `injectTraceContext`,在 Elysia 的 `.request()` 钩子里调用一次,后续所有 hook 都能看到 `trace_id` / `span_id`:
 
 ```ts
+import { Elysia } from 'elysia'
 import { createElogs } from '@pori15/elogs'
 import { injectTraceContext } from '@pori15/elogs/otel'
 
-const plugin = createElogs()
-
 const app = new Elysia()
-  .use(plugin)
+  .use(createElogs())
   .request(({ request, store }) => {
     injectTraceContext(store.logger, request)
   })
@@ -32,7 +37,7 @@ const app = new Elysia()
 └─ trace: { trace_id: '8c2f…', span_id: '4a1d…' }
 ```
 
-Elogs 不启动 OpenTelemetry SDK —— 你需要自己装 tracer provider 和 instrumentation。
+Elogs **不**启动 OpenTelemetry SDK —— 你需要自己装 tracer provider 和 instrumentation,`injectTraceContext` 才找得到活动 span。
 
 ## API
 
@@ -45,19 +50,18 @@ function injectTraceContext(
 interface TraceContextFields {
   trace_id: string
   span_id: string
-  // 可选,有时会带上 parent 和 trace flags
-  parent_span_id?: string
-  trace_flags?: string
 }
 ```
 
-`injectTraceContext` 是 async 的,因为它要动态 `import('@opentelemetry/api')` 来保持 `@opentelemetry/api` 的可选 peer dep 地位 —— 只有调用这个函数时才会发生 import。模块没装时,函数返回 `undefined`,什么都不输出。
+- `injectTraceContext` 是 async 的,因为它要动态 `import('@opentelemetry/api')` 来保持 `@opentelemetry/api` 的可选 peer dep 地位 —— 只有调用这个函数时才会发生 import。
+- 模块没装时,函数返回 `undefined`,什么都不输出。
+- 没有 active span 时,函数同样返回 `undefined`,`logger.mergeContext` 不会被调用。
 
 ## 工作机制
 
 1. 函数从 OpenTelemetry context API 查当前 active span(`trace.getSpan(context.active())`)。
 2. 如果有 span,读 `spanContext().traceId` 和 `spanContext().spanId`。
-3. 这一对字段合并到请求 context 的 `trace: { trace_id, span_id }`。
+3. 这一对字段合并到请求 context 的 `trace: { trace_id, span_id }`(通过 `logger.mergeContext(request, { trace: { trace_id, span_id } })`)。
 4. 合并后的 context 出现在最终 access log,跟用户合并的 context(比如 `context.userId`)并列。
 
 ## 完整 setup
@@ -106,6 +110,8 @@ request ID 和 trace ID 是独立的关联键:
 两个都放进 `customLogFormat`:
 
 ```ts
+import { createElogs } from '@pori15/elogs'
+
 createElogs({
   config: {
     requestId: true,
@@ -116,3 +122,8 @@ createElogs({
 ```
 
 或者不设 `customLogFormat`,让 `showContextTree` 把整个 `context` 对象作为树形行打印。
+
+## 相关 API
+
+- [`injectTraceContext`](/docs/api/exports#injecttracecontext) — 主入口函数
+- [`TraceContextFields`](/docs/api/types#tracecontextfields) — 返回类型

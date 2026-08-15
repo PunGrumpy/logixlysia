@@ -1,4 +1,4 @@
-import { Elogs } from "@pori15/elogs";
+import { CreateElogs } from "@pori15/elogs";
 
 const BASE64URL_PAD_STRIP = /[=]+$/;
 
@@ -23,7 +23,7 @@ const mockCreditCard = () =>
     .map((c) => String.fromCharCode(c))
     .join("");
 
-export const autoRedactRouter = <App extends Elogs>(app: App) =>
+export const autoRedactRouter = <App extends CreateElogs>(app: App) =>
   app.get(
     "/auto-redact",
     {

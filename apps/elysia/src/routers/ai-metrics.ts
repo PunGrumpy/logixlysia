@@ -1,7 +1,7 @@
-import { Elogs } from "@pori15/elogs";
+import { CreateElogs } from "@pori15/elogs";
 import { mergeAIMetrics } from "@pori15/elogs/ai";
 
-export const aiMetricsRouter = <App extends Elogs>(app: App) =>
+export const aiMetricsRouter = <App extends CreateElogs>(app: App) =>
   app.post(
     "/chat",
     {

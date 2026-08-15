@@ -1,54 +1,138 @@
 ---
-title: Startup Messages
-description: Customize startup messages in Elogs
+title: Startup Banner
+description: 启动横幅(service / port / format)
 ---
 
-Control how your application announces its startup with Elogs's flexible startup message system.
+Elogs 启动时会在控制台打印一行横幅,告诉你服务跑在哪个端口。生产环境可以关掉,或者换成不画框的简洁文本。
 
-## Basic Usage
+## 默认行为
 
 ```ts
-createElogs({
-  config: {
-    showStartupMessage: true,
-    startupMessageFormat: 'simple' // or 'banner'
-  }
-})
+import { Elysia } from 'elysia'
+import { createElogs } from '@pori15/elogs'
+
+new Elysia().use(createElogs()).listen(3000)
 ```
 
-## Message Formats
-
-### Simple Format
-
-A clean, minimal startup message:
-
-```
-🦊 Elogs is running on http://localhost:3000
-```
-
-### Banner Format
-
-A beautiful ASCII art banner (default):
+启动后控制台会输出一个带 ASCII 框的横幅:
 
 ```
 ┌─────────────────────────────────────────────────┐
 │                                                 │
 │                 Elysia v1.4.19                  │
 │                                                 │
-│  🦊 Elysia is running at http://localhost:3001  │
+│  🦊 Elysia is running at http://localhost:3000  │
 │                                                 │
 └─────────────────────────────────────────────────┘
 ```
 
-## Configuration
+## 配置
 
-| Option | Type | Description | Default |
-|--------|------|-------------|---------|
-| `showStartupMessage` | `boolean` | Whether to show the startup message | `true` |
-| `startupMessageFormat` | `'simple' \| 'banner'` | The format of the startup message | `'banner'` |
+`startup` 字段在 `CreateElogsOptions` 根级,跟 `config` 平级:
 
-## Best Practices
+| 字段 | 类型 | 默认 | 描述 |
+| --- | --- | --- | --- |
+| `show` | `boolean` | `true` | 是否在启动时输出横幅 |
+| `format` | `"simple" \| "banner"` | `"banner"` | `"banner"` = ASCII 框,`"simple"` = 单行文本 |
 
-- Use `'banner'` format in development for better visibility
-- Use `'simple'` format in production for cleaner logs
-- Consider disabling startup messages in production if not needed
+```ts
+import { createElogs } from '@pori15/elogs'
+
+createElogs({
+  startup: {
+    show: false,            // 完全关闭
+  },
+})
+
+createElogs({
+  startup: {
+    format: 'simple',       // 单行,无 ASCII 框
+  },
+})
+```
+
+simple 模式输出:
+
+```
+🦊 Elysia is running at http://localhost:3000
+```
+
+## preset 默认值
+
+`dev` / `prod` / `json` 三套内置 preset 在 `StartupConfig` 上有自己的默认值:
+
+| Preset | `show` | `format` |
+| --- | --- | --- |
+| `dev` | `true` | `"banner"` |
+| `prod` | `false` | `"banner"` |
+| `json` | `false` | `"banner"` |
+
+显式 `startup` 字段会覆盖 preset 的值。
+
+```ts
+import { createElogs } from '@pori15/elogs'
+
+createElogs({
+  preset: 'prod',         // prod 默认 show: false
+  startup: { show: true }, // 显式覆盖,生产也想看横幅
+})
+```
+
+## 程序化渲染
+
+`renderBanner(message)` 公开导出,返回 ASCII 框字符串(不打印)。要自己写 CLI 工具、嵌进别的输出流时直接调:
+
+```ts
+import { renderBanner } from '@pori15/elogs'
+
+console.log(renderBanner('🛰  My service is up at http://localhost:3000'))
+// ┌──────────────────────────────────────────────────┐
+// │                                                  │
+// │                   Elysia v1.4.19                 │
+// │                                                  │
+// │  🛰  My service is up at http://localhost:3000   │
+// │                                                  │
+// └──────────────────────────────────────────────────┘
+```
+
+> `renderBanner` 接收的只是**单行 message**;版本行("Elysia vX.Y.Z")是函数内部自动拼的。
+
+## `startServer` 内部钩子
+
+`startServer(server, options)` 是 Elogs 内部在 `.setup()` 阶段调用的钩子 —— 它从 Elysia 拿到的 `server` 对象(带 `port` / `hostname` / `protocol`)读出 URL,然后调 `renderBanner` 或 `console.log` 输出。
+
+> 一般情况下你**不需要**直接调 `startServer`,`createElogs()` 内部已经接好。只有在自己写非 Elysia 启动流程(比如 `Bun.serve()` 配 Elysia handler)时才用。
+
+```ts
+import { startServer } from '@pori15/elogs'
+
+Bun.serve({
+  port: 3000,
+  fetch: app.fetch,
+})
+// 手动驱动 banner
+startServer({ port: 3000, hostname: 'localhost', protocol: 'http' }, { startup: { show: true } })
+```
+
+## 关闭 banner
+
+生产环境想干净一点:
+
+```ts
+createElogs({
+  startup: { show: false },
+})
+```
+
+或者用 `prod` preset(它默认就是关闭的):
+
+```ts
+createElogs({ preset: 'prod' })
+```
+
+## 相关 API
+
+- [`StartupConfig`](/docs/api/types#startupconfig) — 启动选项类型
+- [`renderBanner`](/docs/api/exports#renderbanner) — 单独渲染 banner 字符串
+- [`startServer`](/docs/api/exports#startserver) — 内部启动钩子
+- [`CreateElogsOptions.startup`](/docs/api/types#createelogsoptions) — 根级 `startup` 字段

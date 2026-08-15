@@ -3,13 +3,15 @@ title: Examples
 description: Real-world examples and use cases for Elogs
 ---
 
-## Basic Setup
+下面所有示例都基于 [`apps/elysia/src/routers/`](https://github.com/eastgold15/elogs/tree/main/apps/elysia/src/routers) 的真实代码——`createElogs` 已在 `index.ts` 里挂上，这些 router 都按 `<App extends CreateElogs>(app: App) => ...` 模式写，TypeScript 能精确推断 `store.logger` / `log` 的类型。
 
-### Minimal Configuration
+## 基础
+
+### 最小化
 
 ```ts
 import { Elysia } from 'elysia'
-import { createElogs } from 'createElogs'
+import { createElogs } from '@pori15/elogs'
 
 const app = new Elysia()
   .use(createElogs())
@@ -17,228 +19,309 @@ const app = new Elysia()
   .listen(3000)
 ```
 
-### With Startup Message
-
-```ts
-const app = new Elysia()
-  .use(
-    createElogs({
-      config: {
-        showStartupMessage: true,
-        startupMessageFormat: 'banner'
-      }
-    })
-  )
-  .listen(3000)
-```
-
-## Production Setup
-
-### Full Production Configuration
+### 显示启动 banner
 
 ```ts
 import { Elysia } from 'elysia'
-import { createElogs } from 'createElogs'
+import { createElogs } from '@pori15/elogs'
 
-const app = new Elysia()
-  .use(
-    createElogs({
-      config: {
-        // Disable startup message in production
-        showStartupMessage: false,
-
-        // File logging with rotation
-        logFilePath: './logs/production.log',
-        logRotation: {
-          maxSize: '100m',
-          interval: '1d',
-          maxFiles: '30d',
-          compress: true
-        },
-
-        // Filter to important logs only
-        logFilter: {
-          level: ['ERROR', 'WARNING']
-        },
-
-        // Pino configuration
-        pino: {
-          level: 'info',
-          redact: ['password', 'token', 'apiKey', 'creditCard'],
-          base: {
-            service: 'my-api',
-            version: process.env.APP_VERSION,
-            environment: 'production'
-          }
-        },
-
-        // Use transports for external services
-        useTransportsOnly: false,
-        transports: [
-          elasticsearchTransport,
-          slackTransport
-        ]
-      }
-    })
-  )
-  .listen(3000)
-```
-
-## Development Setup
-
-### Development Configuration
-
-```ts
 const app = new Elysia()
   .use(
     createElogs({
       config: {
         showStartupMessage: true,
         startupMessageFormat: 'banner',
-
-        // Pretty printing for development
-        pino: {
-          level: 'debug',
-          prettyPrint: {
-            colorize: true,
-            translateTime: 'HH:MM:ss Z',
-            ignore: 'pid,hostname'
-          }
-        }
-      }
+      },
     })
   )
+  .get('/', () => 'Hello World')
   .listen(3000)
 ```
 
-## Custom Logging
+`dev` preset 默认就开 banner，等价于上面这段。
 
-### Structured Logging with Context
+## 请求作用域 context
+
+### 累积字段到 access log
+
+不调用任何 `logger.info`，只要在 handler 里 `mergeContext`，字段会自动出现在最终的 access log 的 `context` 节点下：
 
 ```ts
-app.get('/users/:id', ({ store, params, request }) => {
-  const { logger, pino } = store
+import type { CreateElogs } from '@pori15/elogs'
 
-  // Using logger helper
-  logger.info(request, 'User profile accessed', {
-    userId: params.id,
-    timestamp: Date.now()
+export const requestContextRouter = <App extends CreateElogs>(app: App) =>
+  app.get('/checkout', ({ request, store }) => {
+    store.logger.mergeContext(request, { userId: 'usr_demo' })
+    store.logger.mergeContext(request, { cart: { items: 2, total: 4999 } })
+    return { ok: true }
   })
+```
 
-  // Or using Pino directly
-  pino.info({
-    userId: params.id,
-    action: 'view_profile',
-    timestamp: Date.now()
-  }, 'User profile accessed')
+### 深调用栈：AsyncLocalStorage
 
-  return getUserById(params.id)
-})
+开启 `useAsyncLocalStorage: true` 后，service / helper 不用逐层传 `request`，直接 `useLogger()` 拿同一份 logger：
+
+```ts
+import type { CreateElogs } from '@pori15/elogs'
+import { createElogs, useLogger } from '@pori15/elogs'
+
+const dbQueryHelper = async () => {
+  const log = useLogger()
+  log.mergeContext({ query: 'SELECT * FROM users' })
+  await Promise.resolve()
+  log.info('Running database query in nested service')
+}
+
+export const requestContextRouter = <App extends CreateElogs>(app: App) =>
+  app
+    .use(createElogs({ config: { useAsyncLocalStorage: true } }))
+    .get('/async-context', async ({ log }) => {
+      log.mergeContext({ userId: 'usr_async' })
+      log.info('Starting async request processing')
+      await dbQueryHelper()
+      return { ok: true }
+    })
+```
+
+### 请求作用域 `log`（不传 request）
+
+handler context 上 derive 出来的 `log` 已经绑定了当前请求，省掉一个参数：
+
+```ts
+import type { CreateElogs } from '@pori15/elogs'
+
+export const requestContextRouter = <App extends CreateElogs>(app: App) =>
+  app.get('/profile', ({ log }) => {
+    log.info('profile accessed')                  // info, 自动绑 request
+    log.mergeContext({ stage: 'view' })           // 累积 context
+    return { ok: true }
+  })
+```
+
+## 自定义日志
+
+### 结构化日志
+
+两种姿势：直接走 `store.logger.info`（Elogs 路径）或者走 `store.pino.info`（原始 Pino）：
+
+```ts
+import type { CreateElogs } from '@pori15/elogs'
+
+export const customRouter = <App extends CreateElogs>(app: App) =>
+  app.get('/users/:id', ({ request, store, params }) => {
+    // Elogs 路径：自动关联 request context
+    store.logger.info(request, 'User profile accessed', {
+      userId: params.id,
+      feature: 'custom-route-log',
+    })
+
+    // 原始 Pino 路径（不进 request context）
+    store.pino.info(
+      { userId: params.id, action: 'view_profile' },
+      'User profile accessed'
+    )
+
+    return { ok: true }
+  })
 ```
 
 ### Child Loggers
 
-```ts
-app.get('/api/orders/:id', ({ store, params }) => {
-  const { pino } = store
+用 `pino.child(...)` 创建带绑定字段的子 logger：
 
-  // Create scoped logger
-  const orderLogger = pino.child({
-    orderId: params.id,
-    module: 'order-service'
+```ts
+import type { CreateElogs } from '@pori15/elogs'
+
+export const pinoRouter = <App extends CreateElogs>(app: App) =>
+  app.get('/api/orders/:id', ({ store, params }) => {
+    const orderLogger = store.pino.child({
+      orderId: params.id,
+      module: 'order-service',
+    })
+
+    orderLogger.debug('Fetching order details')
+    orderLogger.info({ status: 'processing' }, 'Order retrieved')
+
+    return { ok: true }
   })
-
-  orderLogger.debug('Fetching order details')
-  orderLogger.info({ status: 'processing' }, 'Order retrieved')
-
-  return getOrder(params.id)
-})
 ```
 
-### Performance Logging
+### 性能埋点
 
 ```ts
-app.post('/api/process', async ({ store, body }) => {
-  const { pino } = store
-  const startTime = Date.now()
+import type { CreateElogs } from '@pori15/elogs'
 
-  const result = await processData(body)
+export const pinoRouter = <App extends CreateElogs>(app: App) =>
+  app.post('/api/process', async ({ store, body }) => {
+    const startTime = Date.now()
+    const result = await processData(body)
 
-  pino.info({
-    operation: 'process_data',
-    duration: Date.now() - startTime,
-    itemsProcessed: result.count,
-    memory: process.memoryUsage().heapUsed / 1024 / 1024,
-    success: true
-  }, 'Data processing completed')
+    store.pino.info(
+      {
+        operation: 'process_data',
+        duration: Date.now() - startTime,
+        itemsProcessed: result.count,
+        memory: process.memoryUsage().heapUsed / 1024 / 1024,
+        success: true,
+      },
+      'Data processing completed'
+    )
 
-  return result
-})
+    return result
+  })
 ```
 
-## Error Handling
+## 错误处理
 
-### Automatic Error Logging
+### 自动错误日志
+
+Elogs 在单点 `onError` 钩子里记录所有进入错误管道的 error，**不** return value——错误继续按原路径传播：
 
 ```ts
-app.get('/api/risky', ({ store }) => {
-  const { pino } = store
+import type { CreateElogs } from '@pori15/elogs'
 
-  try {
-    performRiskyOperation()
-  } catch (error) {
-    pino.error({
-      err: error,
-      operation: 'risky_operation',
-      context: {
-        attempted: true,
-        timestamp: Date.now()
+export const boomRouter = <App extends CreateElogs>(app: App) =>
+  app.get('/boom', () => {
+    // 这个 Error 会被 Elogs 自动记录为 ERROR 级别
+    // 响应格式仍由 Elysia 默认的 application/problem+json 处理
+    throw new Error('Boom!')
+  })
+```
+
+### 自定义响应格式
+
+用自己的 `.error()` 钩子接管响应（Elogs 仍然负责日志）：
+
+```ts
+import { problem } from 'elysia'
+
+export const errorRouter = <App extends CreateElogs>(app: App) =>
+  app
+    .error(({ code, error }) => {
+      return problem(500, {
+        detail: error.message,
+        status: code,
+      })
+    })
+    .get('/risky', ({ store }) => {
+      try {
+        return performRiskyOperation()
+      } catch (error) {
+        store.pino.error(
+          {
+            err: error,
+            operation: 'risky_operation',
+            context: { attempted: true, timestamp: Date.now() },
+          },
+          'Operation failed'
+        )
+        throw error
       }
-    }, 'Operation failed')
-
-    throw error
-  }
-})
+    })
 ```
 
-### Custom Error Handler
+### JSON 格式的 access log
+
+`customLogFormat` 一行换成 JSON：
 
 ```ts
-app.error(({ code, error, store }) => {
-  const { pino } = store
+import { Elysia } from 'elysia'
+import { createElogs } from '@pori15/elogs'
 
-  pino.error({
-    err: error,
-    status: code,
-    timestamp: Date.now()
-  }, 'Request failed')
-
-  return {
-    error: error.message,
-    status: code
-  }
-})
+const app = new Elysia()
+  .use(
+    createElogs({
+      config: {
+        customLogFormat:
+          '{"level": "{level}", "message": "{message}", "method": "{method}", "pathname": "{pathname}", "status": "{status}"}',
+      },
+    })
+  )
+  .get('/error', () => {
+    throw new Error('Validation failed')
+  })
 ```
 
-### JSON Format for Error Logs
+正常请求和错误请求都会被渲染成 JSON：
 
-```ts
-app.use(createElogs({
-  config: {
-    customLogFormat: '{"level": "{level}", "message": "{message}", "method": "{method}", "pathname": "{pathname}", "status": "{status}"}'
-  }
-}))
-
-app.get('/error', () => {
-  throw new Error('Validation failed')
-})
-```
-
-Output for both regular requests and errors will be in JSON format:
 ```json
 {"level": "INFO", "message": "", "method": "GET", "pathname": "/hello", "status": "200"}
 {"level": "ERROR", "message": "Validation failed", "method": "GET", "pathname": "/error", "status": "500"}
 ```
+
+## 数据库错误翻译
+
+`autoTranslate: { db: 'drizzle' }` 让 Drizzle driver 错误（唯一约束 / 外键违反 / 连接失败）按映射规则决定日志级别。响应格式完全交给用户的 `.error("DrizzleError", ...)`：
+
+```ts
+import type { CreateElogs } from '@pori15/elogs'
+import { createElogs } from '@pori15/elogs'
+import { problem } from 'elysia'
+
+// 模拟 Drizzle 抛的错误（真实代码里是 drizzle 自己的 DrizzleError）
+const makeDrizzleError = (code: string) => {
+  const e = new Error(`PG driver reported: ${code}`) as Error & {
+    code: string
+    name: string
+  }
+  e.name = 'DrizzleError'
+  e.code = code
+  return e
+}
+
+export const dbRouter = <App extends CreateElogs>(app: App) =>
+  app
+    // 用户完全控制响应格式
+    .error('DrizzleError', (ctx) => {
+      const code = (ctx.error as { code?: string }).code ?? 'UNKNOWN'
+      if (code === '23505') {
+        return problem(409, { detail: 'Duplicate key — that value already exists' })
+      }
+      if (code === '23503') {
+        return problem(400, { detail: 'Foreign key violation — referenced row missing' })
+      }
+      if (code === '08006') {
+        return problem(503, { detail: 'Database unavailable — try again later' })
+      }
+      return problem(500, { detail: `Unhandled DB error (code=${code})` })
+    })
+    .get('/demo/db-error/duplicate', () => {
+      throw makeDrizzleError('23505')
+    })
+    .get('/demo/db-error/foreign-key', () => {
+      throw makeDrizzleError('23503')
+    })
+    .get('/demo/db-error/connect', () => {
+      throw makeDrizzleError('08006')
+    })
+
+const app = new Elysia()
+  .use(
+    createElogs({
+      autoTranslate: { db: 'drizzle' },
+      config: { /* ... */ },
+    })
+  )
+  .use(dbRouter)
+  .listen(3000)
+```
+
+也可以不依赖 `autoTranslate`，在 `try/catch` 里手动调 `translateDrizzleError`：
+
+```ts
+import { translateDrizzleError } from '@pori15/elogs/translator'
+
+app.post('/users', async ({ store, body }) => {
+  try {
+    return await db.insert(users).values(body)
+  } catch (err) {
+    // 翻译后抛回去——status / message 已经按 driver code 选好
+    throw translateDrizzleError(err)
+  }
+})
+```
+
+详见 [Database errors](/docs/features/database-errors) 和 [translator API](/docs/api/exports#translate-drizzle-error)。
 
 ## Custom Transports
 
@@ -255,46 +338,47 @@ const elasticsearchTransport = {
           level,
           message,
           ...meta,
-          timestamp: new Date().toISOString()
-        })
+          timestamp: new Date().toISOString(),
+        }),
       })
     } catch (err) {
       console.error('Elasticsearch transport error', err)
     }
-  }
+  },
 }
 
-app.use(
-  createElogs({
-    config: {
-      transports: [elasticsearchTransport]
-    }
-  })
-)
+const app = new Elysia()
+  .use(
+    createElogs({
+      config: {
+        transports: [elasticsearchTransport],
+      },
+    })
+  )
+  .listen(3000)
 ```
 
-### Slack Transport (Errors Only)
+### Slack Transport（仅 ERROR）
 
 ```ts
 const slackTransport = {
   log: async (level, message, meta) => {
-    if (level === 'ERROR') {
-      const webhook = process.env.SLACK_WEBHOOK_URL
-      if (!webhook) return
+    if (level !== 'ERROR') return
+    const webhook = process.env.SLACK_WEBHOOK_URL
+    if (!webhook) return
 
-      try {
-        await fetch(webhook, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            text: `[ERROR] ${message}\n\`\`\`${JSON.stringify(meta, null, 2)}\`\`\``
-          })
-        })
-      } catch (err) {
-        console.error('Slack transport error', err)
-      }
+    try {
+      await fetch(webhook, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: `[ERROR] ${message}\n\`\`\`${JSON.stringify(meta, null, 2)}\`\`\``,
+        }),
+      })
+    } catch (err) {
+      console.error('Slack transport error', err)
     }
-  }
+  },
 }
 ```
 
@@ -314,98 +398,142 @@ const mongodbTransport = {
         level,
         message,
         ...meta,
-        timestamp: new Date()
+        timestamp: new Date(),
       })
     } catch (err) {
       console.error('MongoDB transport error', err)
     }
-  }
+  },
 }
 ```
 
-## Environment-Based Configuration
-
-### Dynamic Configuration
-
-```ts
-const isDev = process.env.NODE_ENV === 'development'
-const isProd = process.env.NODE_ENV === 'production'
-
-app.use(
-  createElogs({
-    config: {
-      showStartupMessage: isDev,
-      startupMessageFormat: isDev ? 'banner' : 'simple',
-
-      logFilePath: isProd ? './logs/production.log' : undefined,
-      logRotation: isProd ? {
-        maxSize: '100m',
-        interval: '1d',
-        maxFiles: '30d',
-        compress: true
-      } : undefined,
-
-      pino: {
-        level: isDev ? 'debug' : 'info',
-        prettyPrint: isDev,
-        redact: isProd ? ['password', 'token', 'apiKey'] : [],
-        base: {
-          service: 'my-api',
-          version: process.env.APP_VERSION,
-          environment: process.env.NODE_ENV
-        }
-      },
-
-      transports: isProd ? [
-        elasticsearchTransport,
-        slackTransport
-      ] : []
-    }
-  })
-)
-```
-
-## REST API Example
-
-### Complete REST API with Logging
+## 完整生产配置
 
 ```ts
 import { Elysia } from 'elysia'
-import { createElogs } from 'createElogs'
+import { createElogs } from '@pori15/elogs'
+
+const elasticsearchTransport = { /* ... */ }
+const slackTransport = { /* ... */ }
 
 const app = new Elysia()
-  .use(createElogs({
-    config: {
-      pino: {
-        level: 'info',
-        base: { service: 'user-api' }
-      }
-    }
-  }))
+  .use(
+    createElogs({
+      preset: 'prod',
+      autoTranslate: { db: 'drizzle' },
+      config: {
+        service: 'my-api',
+        showStartupMessage: false,
+
+        // 文件日志 + 轮转
+        logFilePath: './logs/production.log',
+        logRotation: {
+          maxSize: '100m',
+          interval: '1d',
+          maxFiles: '30d',
+          compress: true,
+        },
+
+        // 只输出 ERROR / WARNING
+        logFilter: { level: ['ERROR', 'WARNING'] },
+
+        // Pino 配置
+        pino: {
+          level: 'info',
+          redact: ['password', 'token', 'apiKey', 'creditCard'],
+          base: {
+            service: 'my-api',
+            version: process.env.APP_VERSION,
+            environment: 'production',
+          },
+        },
+
+        // 外部 transport
+        useTransportsOnly: false,
+        transports: [elasticsearchTransport, slackTransport],
+      },
+    })
+  )
+  .listen(3000)
+```
+
+## 按环境动态切换
+
+```ts
+import { Elysia } from 'elysia'
+import { createElogs } from '@pori15/elogs'
+
+const isDev = process.env.NODE_ENV === 'development'
+const isProd = process.env.NODE_ENV === 'production'
+
+const app = new Elysia()
+  .use(
+    createElogs({
+      preset: isProd ? 'prod' : 'dev',
+      autoTranslate: isProd ? { db: 'drizzle' } : undefined,
+      config: {
+        showStartupMessage: isDev,
+        startupMessageFormat: isDev ? 'banner' : 'simple',
+
+        logFilePath: isProd ? './logs/production.log' : undefined,
+        logRotation: isProd
+          ? { maxSize: '100m', interval: '1d', maxFiles: '30d', compress: true }
+          : undefined,
+
+        pino: {
+          level: isDev ? 'debug' : 'info',
+          prettyPrint: isDev,
+          redact: isProd ? ['password', 'token', 'apiKey'] : [],
+          base: {
+            service: 'my-api',
+            version: process.env.APP_VERSION,
+            environment: process.env.NODE_ENV,
+          },
+        },
+
+        transports: isProd ? [elasticsearchTransport, slackTransport] : [],
+      },
+    })
+  )
+  .listen(3000)
+```
+
+## REST API 完整示例
+
+```ts
+import { Elysia } from 'elysia'
+import { createElogs } from '@pori15/elogs'
+
+const app = new Elysia()
+  .use(
+    createElogs({
+      config: {
+        pino: {
+          level: 'info',
+          base: { service: 'user-api' },
+        },
+      },
+    })
+  )
   .get('/users', ({ store }) => {
-    const { pino } = store
-    pino.info({ action: 'list_users' }, 'Fetching users')
+    store.pino.info({ action: 'list_users' }, 'Fetching users')
     return { users: [] }
   })
   .get('/users/:id', ({ store, params }) => {
-    const { pino } = store
-    const userLogger = pino.child({ userId: params.id })
+    const userLogger = store.pino.child({ userId: params.id })
     userLogger.info('Fetching user')
     return { user: { id: params.id } }
   })
   .post('/users', ({ store, body }) => {
-    const { pino } = store
-    pino.info({ action: 'create_user' }, 'Creating user')
+    store.pino.info({ action: 'create_user' }, 'Creating user')
     return { user: body }
   })
   .put('/users/:id', ({ store, params, body }) => {
-    const { pino } = store
-    pino.info({ userId: params.id, action: 'update_user' }, 'Updating user')
+    store.pino.info({ userId: params.id, action: 'update_user' }, 'Updating user')
     return { user: { id: params.id, ...body } }
   })
   .delete('/users/:id', ({ store, params }) => {
-    const { pino } = store
-    pino.info({ userId: params.id, action: 'delete_user' }, 'Deleting user')
+    store.pino.info({ userId: params.id, action: 'delete_user' }, 'Deleting user')
     return { success: true }
   })
   .listen(3000)

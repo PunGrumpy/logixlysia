@@ -9,7 +9,7 @@ description: 在 Elysia 应用中使用 Elogs
 bun add @pori15/elogs elysia@next
 ```
 
-`next` 标签对应 [Elysia 2 open beta](/docs/elysia-2)。如果你还在 Elysia 1.4,装上游的 `createElogs` 包(`latest` 标签)。
+`next` 标签对应 [Elysia 2 open beta](/docs/elysia-2)。如果你还在 Elysia 1.4，请见 [Elysia 2 支持](/docs/elysia-2)。
 
 ## 基本用法
 
@@ -23,7 +23,7 @@ const app = new Elysia()
   .listen(3000)
 ```
 
-`createElogs()` 返回一个插件。`Logger` 挂在 Elysia store 上,可以通过 `store.logger` 访问;请求作用域的 `log` 也会派生到 handler context 上。插件同时注册 `.request`、`.afterHandle`、`.error` 和 `.start` 钩子,你不需要手动接线。
+`createElogs()` 返回一个 Elysia 插件。`Logger` 挂在 Elysia store 上，可以通过 `store.logger` 访问；请求作用域的 `log` 也会派生到 handler context 上（不需要再手动传 `request`）。插件同时注册 `.request`、`.afterHandle`、`.error` 和 `.setup` 钩子，你不需要手动接线。
 
 ## 预设
 
@@ -32,10 +32,10 @@ const app = new Elysia()
 ```ts
 createElogs({ preset: 'dev' })   // 美化 console + 启动 banner
 createElogs({ preset: 'prod' })  // JSON console + autoRedact + requestId
-createElogs({ preset: 'json' })  // 极简 JSON console,无附加
+createElogs({ preset: 'json' })  // 极简 JSON console，无附加
 ```
 
-完整默认值见 [Presets](/docs/features/presets)。
+也可以通过 `registerPreset('staging', { ... })` 注册自己的预设。完整默认值见 [Presets](/docs/features/presets)。
 
 ## 配置
 
@@ -53,7 +53,7 @@ createElogs({
 
 ### 请求作用域 context
 
-在请求过程中累积字段,最终合并到 access log 的 `context` 下:
+在请求过程中累积字段，最终合并到 access log 的 `context` 下：
 
 ```ts
 .get('/users/:id', ({ request, store, params }) => {
@@ -62,11 +62,11 @@ createElogs({
 })
 ```
 
-完整 API 含深调用栈用的 `useLogger()`,见 [Request context](/docs/features/request-context)。
+完整 API 含深调用栈用的 `useLogger()`，见 [Request context](/docs/features/request-context)。
 
 ### Request ID
 
-开启 `X-Request-Id` 头透传用 `requestId: true`。插件入口读这个头,缺失时自动生成,出口回显——包括错误响应。
+开启 `X-Request-Id` 头透传用 `requestId: true`。插件入口读这个头，缺失时自动生成，出口回显——包括错误响应。
 
 ```ts
 createElogs({ config: { requestId: true } })
@@ -76,7 +76,7 @@ createElogs({ config: { requestId: true } })
 
 ### 自定义日志格式
 
-通过 `customLogFormat` 自定义 access log:
+通过 `customLogFormat` 自定义 access log：
 
 ```ts
 createElogs({
@@ -86,30 +86,30 @@ createElogs({
 })
 ```
 
-可用的占位符:
+可用的占位符：
 
 | 占位符 | 描述 | 示例 |
 | --- | --- | --- |
-| `{now}` | 当前时间戳 | `2025-12-21 10:00:00` |
+| `{now}` | 当前时间戳 | `2026-08-15 10:00:00` |
 | `{epoch}` | Unix 时间戳 | `1734729600` |
-| `{level}` | 日志级别(`DEBUG`、`INFO`、`WARNING`、`ERROR`) | `INFO` |
-| `{duration}` | 请求耗时(已格式化) | `12ms`、`1.5s` |
+| `{level}` | 日志级别（`DEBUG`、`INFO`、`WARNING`、`ERROR`） | `INFO` |
+| `{duration}` | 请求耗时（已格式化） | `12ms`、`1.5s` |
 | `{method}` | HTTP 方法 | `GET` |
-| `{pathname}` | 请求路径(别名: `{path}`);`logQueryParams: true` 时带 query | `/users` |
+| `{pathname}` | 请求路径（别名：`{path}`）；`logQueryParams: true` 时带 query | `/users` |
 | `{query}` | 原始 query 字符串 | `?id=123` |
 | `{status}` | 响应状态码 | `200` |
 | `{statusText}` | HTTP 状态文本 | `Not Found` |
 | `{message}` | 自定义消息 | `User profile accessed` |
-| `{icon}` | Elogs 狐狸 `🦊`(颜色 + TTY 时为级别色块) | `🦊` |
-| `{speed}` | 慢请求徽章(耗时 ≥ `verySlowThreshold`) | ` ⚡ slow` |
+| `{icon}` | Elogs 狐狸 `🦊`（颜色 + TTY 时为级别色块） | `🦊` |
+| `{speed}` | 慢请求徽章（耗时 ≥ `verySlowThreshold`） | ` ⚡ slow` |
 | `{service}` | `config.service` 服务名前缀 | `[my-api] ` |
 | `{ip}` | 客户端 IP 地址 | `127.0.0.1` |
-| `{context}` | context 的 JSON 表示(树关掉或空时显示在主行) | `{"id":1}` |
-| `{requestId}` | `X-Request-Id` 值(未开启时为空) | `8c2f…` |
+| `{context}` | context 的 JSON 表示（树关掉或空时显示在主行） | `{"id":1}` |
+| `{requestId}` | `X-Request-Id` 值（未开启时为空） | `8c2f…` |
 
 ## 日志过滤
 
-`logFilter.level` 接受单个级别或数组:
+`logFilter.level` 接受单个级别或数组：
 
 ```ts
 createElogs({
@@ -119,7 +119,7 @@ createElogs({
 })
 ```
 
-根级有一个等价的 `logLevel` 简写:
+根级有一个等价的 `logLevel` 简写：
 
 ```ts
 createElogs({ logLevel: ['ERROR', 'WARNING'] })
@@ -129,17 +129,17 @@ createElogs({ logLevel: ['ERROR', 'WARNING'] })
 
 ## Pino 集成
 
-Elogs 由 Pino 驱动。Pino 实例可以通过 `store.pino` 访问,也可以从请求作用域 `log` 拿到:
+Elogs 由 Pino 驱动。Pino 实例可以通过 `store.pino` 访问，也可以从请求作用域 `log` 拿到：
 
 ```ts
 app.get('/users/:id', async ({ log, params, store }) => {
   log.info({ userId: params.id, action: 'view_profile' }, 'profile accessed')
-  // 或者想用原始 Pino:store.pino.info({ ... }, '...')
+  // 或者想用原始 Pino：store.pino.info({ ... }, '...')
   return { user: 'data' }
 })
 ```
 
-配置 Pino 选项:
+配置 Pino 选项：
 
 ```ts
 createElogs({
@@ -153,7 +153,7 @@ createElogs({
 })
 ```
 
-Pino 在首次访问时按需构造 —— 错误的 Pino 选项只在真正 log 时才报错。如果想启动时立即校验,把 `config.pino` 设为真值,proxy 就会立刻初始化。
+Pino 在首次访问时按需构造 —— 错误的 Pino 选项只在真正 log 时才报错。如果想启动时立即校验，把 `config.pino` 设为真值，proxy 就会立刻初始化。
 
 见 [Pino](/docs/integrations/pino)。
 
@@ -173,7 +173,7 @@ createElogs({
 })
 ```
 
-文件 sink 通过 `queueMicrotask` 批写、缓存文件句柄,跨文件 rotation 用 keyed mutex 串行,不同文件之间不会互相阻塞。文件创建时默认 `0o600`(文件)和 `0o700`(目录);可以用 `logFileMode` / `logDirMode` 覆盖。
+文件 sink 通过 `queueMicrotask` 批写、缓存文件句柄，跨文件 rotation 用 keyed mutex 串行，不同文件之间不会互相阻塞。文件创建时默认 `0o600`（文件）和 `0o700`（目录）；可以用 `logFileMode` / `logDirMode` 覆盖。
 
 见 [File Logging](/docs/features/file-logging) 和 [Log Rotation](/docs/features/log-rotation)。
 
@@ -193,7 +193,7 @@ createElogs({
 })
 ```
 
-transport 抛出的同步异常和异步 reject 会被捕获并打印到 `console.error`,同一 transport 5s 窗口内只输出一次,坏的 target 不会拖慢请求路径。
+transport 抛出的同步异常和异步 reject 会被捕获并打印到 `console.error`，同一 transport 5s 窗口内只输出一次，坏的 target 不会拖慢请求路径。
 
 见 [Transports](/docs/features/transports)。
 
@@ -211,7 +211,7 @@ app.request(({ request, store }) => {
 })
 ```
 
-当存在 active span 时,`trace_id` 和 `span_id` 会合并进请求 context 包,出现在 access log 上。Elogs 不启动 OpenTelemetry SDK —— 你需要自己装 tracer provider 和 instrumentation。
+当存在 active span 时，`trace_id` 和 `span_id` 会合并进请求 context 包，出现在 access log 上。Elogs 不启动 OpenTelemetry SDK —— 你需要自己装 tracer provider 和 instrumentation。
 
 见 [OpenTelemetry](/docs/integrations/otel)。
 
@@ -221,7 +221,7 @@ app.request(({ request, store }) => {
 import { mergeAIMetrics } from '@pori15/elogs/ai'
 
 app.post('/chat', async ({ request, store }) => {
-  // 在 AI SDK 调用之后:
+  // 在 AI SDK 调用之后：
   mergeAIMetrics(store.logger, request, {
     model: 'claude-sonnet',
     provider: 'anthropic',
@@ -235,18 +235,31 @@ app.post('/chat', async ({ request, store }) => {
 })
 ```
 
-access log 的 `context.ai` 字段沿用 evlog wide event 形态,方便两边仪表盘直接对比迁移。
+access log 的 `context.ai` 字段沿用 evlog wide event 形态，方便两边仪表盘直接对比迁移。
 
 见 [AI SDK](/docs/integrations/ai)。
 
+## 数据库错误翻译（Drizzle）
+
+在 `createElogs` 上开 `autoTranslate: { db: 'drizzle' }`，单点 onError 钩子就会把 Drizzle 抛出的 driver 错误（唯一约束、外键违反、连接失败等）翻译成合适的 HTTP 状态码来决定日志级别。**翻译只影响日志输出，不劫持错误响应格式**——原 error 继续传播，你的 `.error("DrizzleError", ...)` / Elysia 默认 `application/problem+json` 响应都按原逻辑走。
+
+```ts
+createElogs({
+  autoTranslate: { db: 'drizzle' },
+  config: { /* ... */ },
+})
+```
+
+也可以手动在 `try/catch` 里调 `translateDrizzleError(error)`（来自 `@pori15/elogs/translator`）。详见 [Database errors](/docs/features/database-errors)。
+
 ## AsyncLocalStorage
 
-深调用栈(服务层、helper、请求里的子任务)想拿到请求作用域 logger,不用逐层传 `request`,开启 ALS 即可:
+深调用栈（服务层、helper、请求里的子任务）想拿到请求作用域 logger，不用逐层传 `request`，开启 ALS 即可：
 
 ```ts
 createElogs({ config: { useAsyncLocalStorage: true } })
 
-// 在任意位置:
+// 在任意位置：
 import { useLogger } from '@pori15/elogs'
 
 const log = useLogger()
@@ -263,20 +276,47 @@ createElogs({
   config: {
     disableInternalLogger: false, // console 输出
     disableFileLogging: false,     // logFilePath 输出
-    useTransportsOnly: false,      // 同时禁用上面两个,只走 transport
+    useTransportsOnly: false,      // 同时禁用上面两个，只走 transport
     transports: [/* ... */],
   },
 })
 ```
+
+## 路由拆分模式
+
+跟 Elysia 2 推荐写法一致，把每个子路由写成 `<App extends CreateElogs>(app: App) => app` 的高阶函数，TypeScript 就能精确推断 `store.logger` / `log` 的类型：
+
+```ts
+import type { CreateElogs } from '@pori15/elogs'
+import { createElogs } from '@pori15/elogs'
+import { Elysia } from 'elysia'
+
+const chatRouter = <App extends CreateElogs>(app: App) =>
+  app.post('/chat', ({ request, store }) => {
+    store.logger.info(request, 'chat received')
+    return { ok: true }
+  })
+
+const app = new Elysia()
+  .use(createElogs())
+  .use(chatRouter)
+  .listen(3000)
+```
+
+参考 [`apps/elysia/src/routers/`](https://github.com/eastgold15/elogs/tree/main/apps/elysia/src/routers) 下的真实用法。
 
 ## 示例
 
 ### 生产配置
 
 ```ts
+import { Elysia } from 'elysia'
+import { createElogs } from '@pori15/elogs'
+
 const app = new Elysia().use(
   createElogs({
     preset: 'prod',
+    autoTranslate: { db: 'drizzle' },
     config: {
       service: 'my-api',
       logFilePath: './logs/production.log',
@@ -291,6 +331,9 @@ const app = new Elysia().use(
 ### 开发配置
 
 ```ts
+import { Elysia } from 'elysia'
+import { createElogs } from '@pori15/elogs'
+
 const app = new Elysia().use(
   createElogs({
     preset: 'dev',

@@ -13,7 +13,7 @@
  * - 错误继续以原 error 形态传播(用户 .error 看到的是原引用)
  */
 
-import type { Elogs } from "@pori15/elogs";
+import type { CreateElogs } from "@pori15/elogs";
 import { problem } from "elysia";
 
 const makeDrizzleError = (
@@ -28,7 +28,7 @@ const makeDrizzleError = (
   return e;
 };
 
-export const dbRouter = <App extends Elogs>(app: App) =>
+export const dbRouter = <App extends CreateElogs>(app: App) =>
   app
     // 用户用 Elysia 2 原生 .error() 接管 DrizzleError 的响应格式
     .error("DrizzleError", (ctx) => {

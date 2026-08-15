@@ -1,9 +1,9 @@
 ---
-title: Migrating from evlog
-description: Map evlog wide events to Elogs request context and access logs
+title: 从 evlog 迁移
+description: 把 evlog 的 wide event 风格映射到 Elogs 的请求 context 与 access log
 ---
 
-## Plugin setup
+## 插件 setup
 
 **evlog**
 
@@ -16,20 +16,20 @@ new Elysia().use(evlog({ drain: myDrain }))
 **Elogs**
 
 ```ts
-import { createElogs } from 'createElogs'
+import { createElogs } from '@pori15/elogs'
 
 new Elysia().use(createElogs({ preset: 'prod' }))
 ```
 
-## Context accumulation
+## Context 累积
 
-| evlog | Elogs |
-| ----- | ---------- |
-| `log.set({ userId: 'x' })` | `store.logger.mergeContext(request, { userId: 'x' })` |
+| evlog                              | Elogs                                                    |
+| ---------------------------------- | -------------------------------------------------------- |
+| `log.set({ userId: 'x' })`         | `store.logger.mergeContext(request, { userId: 'x' })`    |
 | `log.set({ cart: { total: 99 } })` | `store.logger.mergeContext(request, { cart: { total: 99 } })` |
-| `useLogger()` | `store.logger` in handlers |
+| `useLogger()`                      | handler 里解构 `({ log })`,或开 ALS 后用 `useLogger()`   |
 
-## Emitting the request log
+## 触发 request 日志
 
 evlog:
 
@@ -37,20 +37,20 @@ evlog:
 log.emit({ status: 200 })
 ```
 
-Elogs emits the access log automatically in `onAfterHandle`. Use a custom log only when you need to skip the default line:
+Elogs 在 `afterHandle` 钩子里自动写一条 access log。除非你想跳过默认行,否则不用手动 emit:
 
 ```ts
 store.logger.info(request, 'handled manually')
 ```
 
-## AI metrics
+## AI 指标
 
-**evlog** — automatic via `evlog/ai`.
+**evlog** —— 通过 `evlog/ai` 自动接入。
 
 **Elogs**
 
 ```ts
-import { mergeAIMetrics } from 'createElogs/ai'
+import { mergeAIMetrics } from '@pori15/elogs/ai'
 
 mergeAIMetrics(store.logger, request, {
   model: 'claude-sonnet',
@@ -62,11 +62,11 @@ mergeAIMetrics(store.logger, request, {
 
 ## Tracing
 
-Use `injectTraceContext` from `createElogs/otel` in the `request` hook (see [OpenTelemetry](/docs/integrations/otel)).
+在 `request` 钩子里用 `injectTraceContext`(见 [OpenTelemetry](/docs/integrations/otel))。
 
-## Drains vs transports
+## Drains vs Transports
 
-evlog **drains** map to Elogs **transports**:
+evlog 的 **drains** 对应 Elogs 的 **transports**:
 
 ```ts
 createElogs({
@@ -82,3 +82,36 @@ createElogs({
   }
 })
 ```
+
+## 数据库错误(Drizzle 翻译)
+
+evlog 时代用 `ErrorMapping` 字典把 Postgres driver code 翻译成 HTTP 状态。Elogs 2.x 改成 Elysia 2 原生 `class extends HTTPError` + `.error(MyClass, fn)`,但保留 `errorMap()` 工厂作为用户工具,翻译后**只影响日志级别**,响应格式仍由你用 Elysia 钩子控制。
+
+```ts
+import { Elysia, problem } from 'elysia'
+import { createElogs, errorMap } from '@pori15/elogs'
+import { translateDrizzleError } from '@pori15/elogs/translator'
+
+// 方式 1:autoTranslate —— 翻译后只决定日志级别
+const app = new Elysia()
+  .use(
+    createElogs({
+      autoTranslate: { db: 'drizzle' }
+    })
+  )
+  .error('DrizzleError', (ctx) => {
+    const code = (ctx.error as { code?: string }).code ?? 'UNKNOWN'
+    return problem(409, { detail: `duplicate: ${code}` })
+  })
+
+// 方式 2:在路由里手动翻译
+app.get('/users', () => {
+  try {
+    // db query
+  } catch (e) {
+    throw translateDrizzleError(e) // 已经替换成 HTTPError
+  }
+})
+```
+
+完整 Drizzle 翻译说明、errorMap 用法、`httpError` 工厂见 [Database errors](/docs/features/database-errors)。

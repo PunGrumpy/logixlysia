@@ -1,6 +1,6 @@
-import { Elogs } from "@pori15/elogs";
+import { CreateElogs } from "@pori15/elogs";
 
-export const boomRouter = <App extends Elogs>(app: App) =>
+export const boomRouter = <App extends CreateElogs>(app: App) =>
   app.get(
     "/boom",
     {

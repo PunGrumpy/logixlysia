@@ -1,6 +1,6 @@
-import type { Elogs } from "@pori15/elogs";
+import type { CreateElogs } from "@pori15/elogs";
 
-export const statusRouter = <App extends Elogs>(app: App) =>
+export const statusRouter = <App extends CreateElogs>(app: App) =>
   app.get(
     "/status/:code",
     {
