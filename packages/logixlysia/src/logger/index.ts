@@ -25,8 +25,8 @@ import {
   type RequestContextStore,
 } from "../context/request-context";
 import type {
+  CreateLogPluginOptions,
   Logger,
-  LogixlysiaOptions,
   LogLevel,
   Pino,
   StoreData,
@@ -57,7 +57,7 @@ const defaultPinoFactory: PinoFactory = (options) =>
 
 export interface CreateLoggerOptions {
   contextStore?: RequestContextStore;
-  options: LogixlysiaOptions;
+  options: CreateLogPluginOptions;
   pinoFactory?: PinoFactory;
 }
 
@@ -89,7 +89,7 @@ const createSilentPinoLogger = (): Pino =>
  * 构建 Pino 配置选项
  */
 const buildPinoOptions = (
-  config: LogixlysiaOptions["config"]
+  config: CreateLogPluginOptions["config"]
 ): PinoLoggerOptions => {
   const pinoOptions: PinoLoggerOptions = {
     level: "info",
@@ -117,12 +117,12 @@ const buildPinoOptions = (
  * 如果设置了 `config.pino`，则首次访问时若配置无效将快速失败（fail-fast）。
  */
 export const createLogger = (
-  optionsOrConfig?: LogixlysiaOptions | CreateLoggerOptions,
+  optionsOrConfig?: CreateLogPluginOptions | CreateLoggerOptions,
   externalPinoFactory?: PinoFactory,
   externalContextStore?: RequestContextStore
 ): Logger => {
   // ============ 1. 参数解析 ============
-  let options: LogixlysiaOptions;
+  let options: CreateLogPluginOptions;
   let pinoFactory: PinoFactory;
   let contextStore: RequestContextStore | undefined;
 

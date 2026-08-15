@@ -22,34 +22,19 @@ export {
   mergeLogDataContext,
   useLogger,
 } from "./context";
-export type { LogixlysiaErrorClass } from "./errors";
-export {
-  applyErrorLogging,
-  errorMap,
-  extractErrorFields,
-  extractStatus,
-  httpError,
-  levelForStatus,
-} from "./errors";
-export {
-  getGlobalLogger,
-  globalContextStore,
-  globalLogger,
-  initGlobalLogger,
-  isGlobalLoggerInitialized,
-  resetGlobalLogger,
-} from "./global-logger";
+export { errorMap, extractStatus, httpError, levelForStatus } from "./errors";
 export { getStatusCode } from "./helpers";
 export type {
+  AutoTranslateConfig,
+  CreateLogPluginOptions,
   ErrorConfig,
+  ErrorTranslator,
   FileConfig,
   FormatConfig,
   LogFilter,
   Logger,
   LogixlysiaConfig,
   LogixlysiaContext,
-  LogixlysiaErrorClasses,
-  LogixlysiaOptions,
   LogixlysiaStore,
   LogLevel,
   LogRotationConfig,
@@ -67,8 +52,8 @@ export type { ResolvedRequestIdConfig } from "./middleware";
 export { getOrCreateRequestId, resolveRequestIdConfig } from "./middleware";
 export type { TraceContextFields } from "./otel";
 export { __resetForTesting, injectTraceContext } from "./otel";
-export type { Logixlysia, LogixlysiaSingleton } from "./plugin";
-export { createLogPlugin, logixlysia } from "./plugin";
+export type { CreateLogPlugin } from "./plugin";
+export { createLogPlugin, createLogPlugin as logixlysia } from "./plugin";
 export type { NormalizedLoggedError, StructuredError } from "./utils";
 export {
   buildPinoRedactPaths,

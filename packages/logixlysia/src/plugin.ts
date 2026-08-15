@@ -1,5 +1,5 @@
 /**
- * logixlysia 2.0 — Elysia 2 日志插件（函数式插件）
+ * createLogPlugin 2.0 — Elysia 2 日志插件（函数式插件）
  *
  * 核心能力：
  * - 请求/响应访问日志（根据状态码自动选择 INFO/WARNING/ERROR）
@@ -11,16 +11,27 @@
  * - 预设配置（dev / prod / json）+ 自定义预设（`registerPreset`）
  * - Pino 集成（`store.pino` + 透传 pino options）
  * - 文件日志 + 日志轮转
- * - 4 层错误处理器注册：HTTPError 通用 + Elysia 内置 + 用户自定义 + 兜底
+ * - 单点 onError 钩子:只记录日志,不劫持错误响应格式
+ * - 可选 `autoTranslate`:在钩子里跑 Drizzle 等 DB 错误翻译,决定日志级别
  *
- * 设计原则：遵循 Elysia 2 官方推荐的函数式插件写法 —— `return new Elysia()...`
- * 单一链式调用，让 TypeScript 自行推断返回类型。brand 来自 elysia 模块内部，
+ * 设计原则:遵循 Elysia 2 官方推荐的函数式插件写法 —— `return new Elysia()...`
+ * 单一链式调用,让 TypeScript 自行推断返回类型。brand 来自 elysia 模块内部,
  * `.use()` 无需任何 `as` / `any` / `@ts-expect-error` 妥协。
+ *
+ * **错误处理模型**(本次重设计):
+ * - 插件**只**做一件事:记录错误日志
+ * - 单一 `.error(handler)` 钩子在框架错误链路上运行,**不 return value**,
+ *   让错误继续传播到用户的 `.error(MyClass, fn)` 或 Elysia 默认 problem 响应
+ * - 用户想要自定义错误类?用 Elysia 2 原生 `class extends HTTPError` +
+ *   `.error(MyClass, fn)`,**不**经过本插件
+ * - 用户想要 DB 错误翻译?用 `createLogPlugin/translator` 的 `translateDrizzleError`
+ *   或 `autoTranslate: { db: 'drizzle' }` 配置
  *
  * 依赖方向：
  *   用户代码  →  createLogPlugin(options)          →  Elysia 插件
  *   用户代码  →  createWsHandlerWrapper(...)       →  WebSocket hooks 工厂
- *   用户代码  →  errorMap(...) / httpError()       →  自定义 HTTPError 类
+ *   用户代码  →  httpError() / errorMap()          →  自定义 HTTPError 类
+ *   用户代码  →  translateDrizzleError() (optional) →  DB 错误翻译
  *
  * 注意事项：
  * 不要在插件实例上挂载额外方法（如 `.wrapWs` 之类）：Elysia 2 的 `#private` brand
@@ -29,20 +40,13 @@
  */
 
 import {
-  type AnyElysia,
   Elysia,
   type ErrorContext,
   HTTPError,
   type HTTPHeaders,
-  InternalServerError,
-  InvalidCookie,
-  NotFound,
-  ParseError,
-  problem,
   type StatusMap,
-  ValidationError,
 } from "elysia";
-import { ErrorHandler } from "elysia/types";
+import type { ErrorHandler } from "elysia/types";
 import { resolveOptions } from "./config/resolve-options";
 import { createRequestContextStore } from "./context/request-context";
 import { loggerStorage } from "./context/storage";
@@ -51,10 +55,12 @@ import { startServer } from "./extensions";
 import { initGlobalLogger } from "./global-logger";
 import { getStatusCode } from "./helpers/status";
 import type {
+  CreateLogPluginOptions,
+  ErrorTranslator,
   Logger,
-  LogixlysiaOptions,
   LogixlysiaStore,
   LogLevel,
+  Pino,
   RequestScopedLogger,
 } from "./interfaces";
 import { createLogger } from "./logger";
@@ -63,28 +69,29 @@ import {
   type ResolvedRequestIdConfig,
   resolveRequestIdConfig,
 } from "./middleware/request-id";
+import { translateDrizzleError } from "./translator/drizzle";
 
 // ============================================================
 // 类型定义
 // ============================================================
-/**
- * Elysia 2 单例接口 —— 注入到 Elysia 的 store / derive 中的类型定义。
- *
- * 关闭了 Elysia `SingletonBase.store` 的 `Record<string, unknown>` 索引签名
- * （我们使用 `LogixlysiaStore` 显式列举字段，合并后的 context / ws.data 能保持
- * 精确推断，不会退化成 `any`）。`resolve` 槽位在 Elysia 2 中已被移除，不再导出。
- */
-export interface LogixlysiaSingleton {
-  decorator: Record<string, never>;
-  derive: { log: RequestScopedLogger };
-  store: LogixlysiaStore;
-}
+// /**
+//  * Elysia 2 单例接口 —— 注入到 Elysia 的 store / derive 中的类型定义。
+//  *
+//  * 关闭了 Elysia `SingletonBase.store` 的 `Record<string, unknown>` 索引签名
+//  * （我们使用 `LogixlysiaStore` 显式列举字段，合并后的 context / ws.data 能保持
+//  * 精确推断，不会退化成 `any`）。`resolve` 槽位在 Elysia 2 中已被移除，不再导出。
+//  */
+// export interface LogixlysiaSingleton {
+//   decorator: Record<string, never>;
+//   derive: { log: RequestScopedLogger };
+//   store: LogixlysiaStore;
+// }
 
 // ============================================================
 // 主插件函数
 // ============================================================
 
-export const createLogPlugin = (rawOptions: LogixlysiaOptions = {}) => {
+export const createLogPlugin = (rawOptions: CreateLogPluginOptions = {}) => {
   // ---------- 1. 初始化 per-instance 状态 ----------
   const options = resolveOptions(rawOptions);
   const requestHasCustomLog = new WeakSet<Request>();
@@ -183,10 +190,11 @@ export const createLogPlugin = (rawOptions: LogixlysiaOptions = {}) => {
   };
 
   /**
-   * 从任意错误对象中提取状态码
-   * `error.status` 可能是 number 或 `keyof StatusMap`
+   * 从任意错误对象中提取 status 字段。
+   * 字段可能是 number、`keyof StatusMap` 字符串、或完全缺失。
+   * 缺失时返回 `undefined` 让调用方决定兜底值(通常是 500)。
    */
-  const extractStatusCode = (error: unknown): number | undefined => {
+  const extractErrorStatus = (error: unknown): number | undefined => {
     if (!error || typeof error !== "object") {
       return;
     }
@@ -199,140 +207,123 @@ export const createLogPlugin = (rawOptions: LogixlysiaOptions = {}) => {
     }
   };
 
-  // ---------- 4. 错误处理器工厂 ----------
   /**
-   * 创建特定错误类的处理器
-   *
-   * @param includeValidationDetails - 是否展开 `error.all`（Elysia 2 附加到
-   *   ValidationError / ParseError 的字段级验证错误数组）
-   *   - `true`  → 用于 Elysia 内置错误类（Validation/NotFound/Parse/ISE/InvalidCookie）
-   *   - `false` → 用于用户自定义 HTTPError 子类 + HTTPError 通用处理器
-   *
-   * Elysia 2 将 error 放在 ctx 上（ErrorHandler 的 ctx 类型中包含 `error` 字段）。
-   * 静态层使用 Elysia 的 ErrorContext，error / store / set 的具体类型通过内层
-   * 窄化为 logixlysia 所需的形态。`ErrorHandler` 让 Elysia 接受此函数作为
-   * `.error()` 的处理器，无需在调用点进行类型转换。
+   * 从 error 提取一行 message(优先 Error.message,降级 String(error))。
    */
-  const createErrorHandler =
-    (includeValidationDetails: boolean): ErrorHandler =>
-    (ctx) => {
-      const { request, error, store, set } = ctx as ErrorContext & {
-        error: unknown;
-        store: LogixlysiaStore;
-        set: { headers: HTTPHeaders; status?: number | keyof StatusMap };
+  const extractErrorMessage = (error: unknown): string =>
+    error instanceof Error ? error.message : String(error);
+
+  /**
+   * 从 error 提取 name(优先 Error.name,降级 "Error")。
+   */
+  const extractErrorName = (error: unknown): string =>
+    error instanceof Error ? error.name : "Error";
+
+  /**
+   * 解析 autoTranslate 配置为单一聚合 translator。
+   *
+   * 内部走 `translateDrizzleError(error, custom)` —— 它自己决定:
+   * 1. 先跑用户 custom(短链)
+   * 2. 再跑内置 DRIZZLE_TRANSLATORS
+   * 3. 不命中则原样返回
+   *
+   * 返回单元素数组让 onError 钩子的 `for...break` 循环天然短链。
+   */
+  const resolveTranslators = (): ErrorTranslator[] => {
+    const at = options.autoTranslate;
+    if (!at) {
+      return [];
+    }
+    if (at.db !== "drizzle") {
+      return [];
+    }
+    // 永远 canHandle: 内部 translateDrizzleError 决定是否真的换掉 error
+    return [
+      {
+        canHandle: () => true,
+        translate: (error) => translateDrizzleError(error, at.custom),
+      },
+    ];
+  };
+
+  // ---------- 5. 单点 onError 钩子 ----------
+  /**
+   * **核心设计**:
+   * 1. 钩子**不 return value** —— 错误继续传播到用户的 `.error(MyClass, fn)`
+   *    或 Elysia 默认 problem 响应。这是"不劫持错误处理流程"的根本。
+   * 2. 钩子捕获**所有**进入错误管道的错误 —— 无论路由 `throw` 还是 `return`
+   *    `Response(status >= 400)`,都会触发(Elysia 2 语义)。
+   * 3. 翻译(translator)只决定日志级别和内容;翻译后丢弃,原 error 继续传播。
+   *
+   * 行为:
+   * - 提取 status(从 error.status 或 HTTPError.status,默认 500)
+   * - 提取 name / message
+   * - 可选:跑 autoTranslate 链得到"翻译后 error"以决定 status(更准确的 4xx/5xx)
+   * - 写日志(按 status 决定 ERROR / WARNING / INFO)
+   * - 回显 request-id 到响应头
+   * - 不 return → 错误继续向下游传播
+   */
+  // 单点 onError 钩子 —— 显式标注 Singleton 形状,匹配链上 .state() 累积的 store
+  // Elysia 2 的 ErrorHandler 第三个泛型是 Singleton,默认值是 DefaultSingleton(store={}),
+  // 链上 .state("logger"/"pino"/"beforeTime") 后变成 { logger, pino, beforeTime },
+  // 必须显式标注才能赋值给 .error()。
+  const logOnErrorHook: ErrorHandler<
+    [],
+    {},
+    {
+      decorator: Record<string, never>;
+      store: {
+        logger: Logger;
+        pino: Pino;
+        beforeTime: bigint;
+        [key: string]: unknown;
       };
-      requestHasCustomLog.add(request);
-
-      // 提取状态码
-      const status = getStatusCode(
-        extractStatusCode(error) ??
-          (error instanceof HTTPError ? error.status : 500)
-      );
-      const data: Record<string, unknown> = { status };
-
-      // 构建错误数据
-      if (error instanceof HTTPError) {
-        data.type = error.type;
-        data.message = error.message ?? error.detail;
-      } else {
-        data.message = error instanceof Error ? error.message : String(error);
-      }
-
-      // 包含验证详情（用于 ValidationError / ParseError）
-      if (
-        includeValidationDetails &&
-        error &&
-        typeof error === "object" &&
-        "all" in error
-      ) {
-        const { all } = error as { all?: unknown };
-        if (Array.isArray(all)) {
-          data.errors = all.map((e) => {
-            const errObj = e as Record<string, unknown>;
-            return {
-              field:
-                (typeof errObj.instancePath === "string"
-                  ? errObj.instancePath
-                  : typeof errObj.path === "string"
-                    ? errObj.path
-                    : ""
-                ).replace(/^\//, "") || undefined,
-              message:
-                (errObj.summary as string | undefined) ??
-                (errObj.message as string | undefined) ??
-                "Validation error",
-            };
-          });
-        }
-      }
-
-      // 记录错误日志
-      logger.log(getLogLevelForStatus(status), request, data, store);
-
-      // 详细错误日志（开发环境开启 verbose 时）
-      if (includeValidationDetails && verboseErrorLogging) {
-        const errStr = JSON.stringify(error, null, 2);
-        logger.warn(request, "Verbose error context", { error: errStr });
-      }
-
-      setResponseRequestId(request, set);
-    };
-
-  /**
-   * 兜底错误处理器：处理未被任何特定错误类匹配的错误
-   */
-  const fallbackErrorHandler: ErrorHandler = (ctx) => {
+      derive: Record<string, never>;
+    }
+  > = (ctx) => {
     const { request, error, store, set } = ctx as ErrorContext & {
       error: unknown;
       store: LogixlysiaStore;
       set: { headers: HTTPHeaders; status?: number | keyof StatusMap };
     };
 
-    // 如果是 HTTPError，已被特定处理器处理，这里只做兜底响应
-    if (error instanceof HTTPError) {
-      return;
+    // 1) 翻译(可选)—— 翻译后的 error 只用于决定 status,原 error 保持不变
+    const translators = resolveTranslators();
+    let effectiveError: unknown = error;
+    for (const t of translators) {
+      if (t.canHandle(error)) {
+        effectiveError = t.translate(error);
+        break;
+      }
     }
 
+    // 2) 提取
+    const rawStatus =
+      extractErrorStatus(effectiveError) ??
+      extractErrorStatus(error) ??
+      (error instanceof HTTPError ? error.status : 500);
+    const status = getStatusCode(rawStatus);
+    const name = extractErrorName(effectiveError);
+    const message = extractErrorMessage(effectiveError);
+
+    // 3) 标记已记录 + 写日志
     requestHasCustomLog.add(request);
-    const status = extractStatusCode(error) ?? 500;
-    const logErrorPayload = options.config?.logErrorPayload === true;
-    const message =
-      error instanceof Error ? error.message : "Internal Server Error";
-    const payload = logErrorPayload && error ? { error: String(error) } : {};
+    const data: Record<string, unknown> = { message, name, status };
+    if (effectiveError instanceof HTTPError) {
+      data.type = effectiveError.type;
+    }
+    logger.log(getLogLevelForStatus(status), request, data, store);
 
-    logger.log(
-      getLogLevelForStatus(status),
-      request,
-      { message, status, ...payload },
-      store
-    );
+    // 4) 详细错误日志(verbose 模式)
+    if (verboseErrorLogging) {
+      const errStr = JSON.stringify(error, null, 2);
+      logger.warn(request, "Verbose error context", { error: errStr });
+    }
 
-    set.status = status;
-    set.headers = {
-      ...set.headers,
-      "content-type": "application/problem+json",
-    };
+    // 5) 回显 request-id
     setResponseRequestId(request, set);
-    return problem(status, { detail: message });
+    // 不 return —— 错误继续传播
   };
-
-  // ---------- 5. 用户自定义错误插件 ----------
-  /**
-   * 构建用户自定义 HTTPError 类的错误处理插件
-   *
-   * 原因：Elysia 2 的 `.error(E, fn)` 每次调用都会改变返回类型
-   * （`error: [...prev, new]`），直接使用 `let app = app.error(...)`
-   * 会被 TypeScript 拒绝，违反"无 as"约束。
-   *
-   * 解决方案：将动态部分拆分为独立的子插件，再通过 `.use()` 合并回主插件。
-   * 这是 Elysia 2 官方推荐的做法 —— 插件组合天然支持类型合并，无需任何类型转换。
-   */
-  let userErrorHandlers: AnyElysia = new Elysia({
-    name: "LogixlysiaUserErrors",
-  });
-  for (const cls of options.errors ?? []) {
-    userErrorHandlers = userErrorHandlers.error(cls, createErrorHandler(false));
-  }
 
   // ---------- 6. 返回 Elysia 插件（单一链式调用） ----------
   return (
@@ -417,18 +408,8 @@ export const createLogPlugin = (rawOptions: LogixlysiaOptions = {}) => {
         }
       })
 
-      // 错误处理器注册（优先级从高到低）
-      .error(HTTPError, createErrorHandler(false))
-      .error(ValidationError, createErrorHandler(true))
-      .error(NotFound, createErrorHandler(true))
-      .error(ParseError, createErrorHandler(true))
-      .error(InternalServerError, createErrorHandler(true))
-      .error(InvalidCookie, createErrorHandler(true))
-      .error(fallbackErrorHandler)
-
-      // 用户自定义错误
-      .use(userErrorHandlers)
-
+      // 单点错误处理器:只记录日志,不 return value,让错误继续传播
+      .error(logOnErrorHook)
       .as("global")
   );
 };
@@ -436,10 +417,4 @@ export const createLogPlugin = (rawOptions: LogixlysiaOptions = {}) => {
 /**
  * 插件返回类型
  */
-export type Logixlysia = ReturnType<typeof createLogPlugin>;
-
-/**
- * 向后兼容别名：保留旧的函数名
- * @deprecated 请使用 `createLogPlugin`，该别名将在未来版本中移除
- */
-export const logixlysia = createLogPlugin;
+export type CreateLogPlugin = ReturnType<typeof createLogPlugin>;

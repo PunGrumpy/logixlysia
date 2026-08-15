@@ -11,9 +11,9 @@
  * - preset 的 schema 跟 `LogixlysiaConfig` 一致,不做轻量校验(让 `resolveOptions` 统一管)。
  */
 
-import type { LogixlysiaOptions } from "../interfaces";
+import type { CreateLogPluginOptions } from "../interfaces";
 
-export type PresetConfig = NonNullable<LogixlysiaOptions["config"]>;
+export type PresetConfig = NonNullable<CreateLogPluginOptions["config"]>;
 
 const registry = new Map<string, PresetConfig>();
 

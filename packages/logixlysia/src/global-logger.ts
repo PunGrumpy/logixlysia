@@ -13,7 +13,7 @@
  */
 
 import { createRequestContextStore } from "./context/request-context";
-import type { Logger, LogixlysiaOptions } from "./interfaces";
+import type { CreateLogPluginOptions, Logger } from "./interfaces";
 import { createLogger } from "./logger";
 
 /**
@@ -37,7 +37,7 @@ export const globalContextStore = createRequestContextStore();
  * @returns 初始化后的 Logger 实例
  */
 export const initGlobalLogger = (
-  options: LogixlysiaOptions = {},
+  options: CreateLogPluginOptions = {},
   contextStore = globalContextStore
 ): Logger => {
   // 如果已经初始化，返回已有的实例

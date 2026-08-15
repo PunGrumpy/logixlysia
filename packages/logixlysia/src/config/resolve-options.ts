@@ -1,4 +1,4 @@
-import type { LogixlysiaOptions } from "../interfaces";
+import type { CreateLogPluginOptions } from "../interfaces";
 import { parseInterval, parseRetention, parseSize } from "../utils/rotation";
 import { getPresetDefaults } from "./preset-registry";
 
@@ -9,7 +9,9 @@ import { getPresetDefaults } from "./preset-registry";
  */
 export type LogPreset = "dev" | "prod" | "json" | (string & {});
 
-const validateLogRotation = (config: LogixlysiaOptions["config"]): void => {
+const validateLogRotation = (
+  config: CreateLogPluginOptions["config"]
+): void => {
   const logRotation = config?.logRotation;
   if (!logRotation) {
     return;
@@ -42,14 +44,14 @@ const validateLogRotation = (config: LogixlysiaOptions["config"]): void => {
 };
 
 const mergeConfig = (
-  base: NonNullable<LogixlysiaOptions["config"]>,
-  override?: LogixlysiaOptions["config"]
-): NonNullable<LogixlysiaOptions["config"]> => {
+  base: NonNullable<CreateLogPluginOptions["config"]>,
+  override?: CreateLogPluginOptions["config"]
+): NonNullable<CreateLogPluginOptions["config"]> => {
   if (!override) {
     return base;
   }
 
-  const merged: NonNullable<LogixlysiaOptions["config"]> = {
+  const merged: NonNullable<CreateLogPluginOptions["config"]> = {
     ...base,
     ...override,
   };
@@ -87,7 +89,7 @@ const mergeConfig = (
     merged.timestamp = {
       ...baseTs,
       ...overrideTs,
-    } as NonNullable<LogixlysiaOptions["config"]>["timestamp"];
+    } as NonNullable<CreateLogPluginOptions["config"]>["timestamp"];
   }
 
   return merged;
@@ -95,8 +97,8 @@ const mergeConfig = (
 
 /** Applies preset defaults; explicit `config` keys override preset values. */
 export const resolveOptions = (
-  options: LogixlysiaOptions = {}
-): LogixlysiaOptions => {
+  options: CreateLogPluginOptions = {}
+): CreateLogPluginOptions => {
   const { preset } = options;
 
   const resolved = preset

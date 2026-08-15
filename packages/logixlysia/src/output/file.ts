@@ -10,7 +10,7 @@
  */
 
 import type {
-  LogixlysiaOptions,
+  CreateLogPluginOptions,
   LogLevel,
   LogRotationConfig,
   StoreData,
@@ -22,14 +22,14 @@ export interface LogToFileInput {
   data: Record<string, unknown>;
   filePath: string;
   level: LogLevel;
-  options: LogixlysiaOptions;
+  options: CreateLogPluginOptions;
   precomputed?: PrecomputedLogParts;
   request: Request;
   store: StoreData;
 }
 
 const resolveRotation = (
-  options: LogixlysiaOptions
+  options: CreateLogPluginOptions
 ): LogRotationConfig | undefined => {
   if (options.config?.logRotation) {
     return options.config.logRotation;

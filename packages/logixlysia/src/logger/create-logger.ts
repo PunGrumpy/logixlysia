@@ -16,7 +16,7 @@
 import chalk from "chalk";
 import { getStatusCode } from "../helpers/status";
 import type {
-  LogixlysiaOptions,
+  CreateLogPluginOptions,
   LogLevel,
   Pino,
   StoreData,
@@ -79,7 +79,7 @@ export interface FormatContext {
 }
 
 export const createFormatContext = (
-  options: LogixlysiaOptions
+  options: CreateLogPluginOptions
 ): FormatContext => {
   const config = options.config ?? {};
   const enabledByConfig = config.useColors ?? options.format?.colors ?? true;
@@ -265,7 +265,7 @@ export const formatLogOutput = ({
   data: Record<string, unknown>;
   formatContext?: FormatContext | null;
   level: LogLevel;
-  options: LogixlysiaOptions;
+  options: CreateLogPluginOptions;
   precomputed?: PrecomputedLogParts;
   request: Request;
   store: StoreData;
@@ -412,7 +412,7 @@ export const formatLogOutput = ({
 export const buildContextTreeLines = (
   level: LogLevel,
   data: Record<string, unknown>,
-  options: LogixlysiaOptions
+  options: CreateLogPluginOptions
 ): string[] => {
   const config = options.config ?? {};
   const { context: ctxObj, error } = data;

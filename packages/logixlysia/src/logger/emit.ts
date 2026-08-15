@@ -3,7 +3,7 @@ import {
   type RequestContextStore,
 } from "../context/request-context";
 import type {
-  LogixlysiaOptions,
+  CreateLogPluginOptions,
   LogLevel,
   StoreData,
   Transport,
@@ -37,7 +37,9 @@ export interface Sinks {
  * supporting both legacy shape (`transports: Transport[]`) and
  * the `TransportsConfig` envelope (`{ targets, only }`).
  */
-export const resolveTransports = (options: LogixlysiaOptions): Transport[] => {
+export const resolveTransports = (
+  options: CreateLogPluginOptions
+): Transport[] => {
   const configTransports = options.config?.transports;
   if (configTransports && configTransports.length > 0) {
     return configTransports;
@@ -57,7 +59,9 @@ export const resolveTransports = (options: LogixlysiaOptions): Transport[] => {
  * `config` (via `useTransportsOnly`) or on the legacy root-level
  * `transports: { only: true }` envelope.
  */
-export const resolveTransportsOnly = (options: LogixlysiaOptions): boolean => {
+export const resolveTransportsOnly = (
+  options: CreateLogPluginOptions
+): boolean => {
   if (options.config?.useTransportsOnly === true) {
     return true;
   }
@@ -72,7 +76,7 @@ export const resolveTransportsOnly = (options: LogixlysiaOptions): boolean => {
   return false;
 };
 
-export const resolveSinks = (options: LogixlysiaOptions): Sinks => {
+export const resolveSinks = (options: CreateLogPluginOptions): Sinks => {
   const { config } = options;
   const useTransportsOnly =
     resolveTransportsOnly(options) || config?.useTransportsOnly === true;
@@ -116,7 +120,7 @@ export const shouldLog = (
  */
 export const shouldLogForOptions = (
   level: LogLevel,
-  options: LogixlysiaOptions
+  options: CreateLogPluginOptions
 ): boolean => {
   const configLevel = options.config?.logFilter?.level;
   if (configLevel && configLevel.length > 0 && !configLevel.includes(level)) {
@@ -193,7 +197,7 @@ export interface EmitInput {
   /** Hoisted per-logger constants for `formatLogOutput`; only read when the internal console logger is active. */
   formatContext: FormatContext;
   level: LogLevel;
-  options: LogixlysiaOptions;
+  options: CreateLogPluginOptions;
   /** Pre-sampled duration/pathname/search. If absent, emit falls back to store. */
   precomputed?: PrecomputedLogParts;
   request: Request;

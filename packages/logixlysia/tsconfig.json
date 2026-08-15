@@ -8,8 +8,9 @@
     "esModuleInterop": true,
     "allowJs": false,
     "declaration": true,
-    "declarationMap": true,
-    "sourceMap": true,
+    "declarationMap": false,
+    "emitDeclarationOnly": true, // ⭐ 关键：只生成声明文件，不生成 .js 文件
+    "sourceMap": false,
     "outDir": "dist",
     "rootDir": "src",
     "strict": true,
@@ -21,7 +22,7 @@
     "isolatedModules": true,
     "moduleDetection": "force",
     "resolveJsonModule": true,
-    "lib": ["ES2022", "DOM"]
+    "lib": ["ES2022"]
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]

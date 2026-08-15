@@ -14,7 +14,11 @@ import { extractStatus, levelForStatus } from "../errors";
 
 export { extractStatus, levelForStatus } from "../errors";
 
-import type { LogixlysiaOptions, LogLevel, StoreData } from "../interfaces";
+import type {
+  CreateLogPluginOptions,
+  LogLevel,
+  StoreData,
+} from "../interfaces";
 import { isStructuredError, normalizeLoggedError } from "../utils/error";
 import { createFormatContext } from "./create-logger";
 import { computePrecomputedLogParts, emit, resolveSinks } from "./emit";
@@ -26,7 +30,7 @@ export const handleHttpError = (
   request: Request,
   error: unknown,
   store: StoreData,
-  options: LogixlysiaOptions
+  options: CreateLogPluginOptions
 ): void => {
   const status = extractStatus(error) ?? 500;
   const level: LogLevel = levelForStatus(status);

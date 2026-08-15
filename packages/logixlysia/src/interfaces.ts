@@ -11,7 +11,6 @@
  * - RFC 9457 错误桥接
  */
 
-import type { TaggedHTTPError } from "elysia";
 import type {
   Logger as PinoLogger,
   LoggerOptions as PinoLoggerOptions,
@@ -154,14 +153,32 @@ export interface ErrorConfig {
 }
 
 /**
- * 用户自定义 HTTPError 类列表
+ * 错误翻译器接口 —— 把任意错误转换为更合适的 Error 实例
  *
- * 这些类会通过 Elysia 2.0 的 `.error(Class, handler)` 逐个注册,
- * logixlysia 在 handler 内写日志,响应交还给 Elysia(自动 application/problem+json)。
- *
- * 用 `logixlysia.errorMap(...)` 工厂可以快速从 `{ code: { status, title } }` 字典生成。
+ * 用法见 `translator/drizzle.ts`(`translateDrizzleError`)
+ * 和 `plugin.ts` 的 `autoTranslate.custom` 配置。
  */
-export type LogixlysiaErrorClasses = TaggedHTTPError<string, any>[];
+export type ErrorTranslator = {
+  /** 判断是否能处理该 error */
+  canHandle: (error: unknown) => boolean;
+  /** 翻译为新的 Error(通常是 HTTPError / 自定义 Error 子类) */
+  translate: (error: unknown) => Error;
+};
+
+/**
+ * 自动翻译配置 —— 在单点 onError 钩子里跑一组 translator,
+ * 翻译后的 error 决定日志级别和记录内容,但**不**改变错误传播。
+ *
+ * **关键不变量**:翻译只影响日志输出,不劫持错误处理流程。错误继续
+ * 以原 error 形态传播,用户的 `.error(MyClass, fn)` / Elysia 默认
+ * `application/problem+json` 响应都不受影响。
+ */
+export interface AutoTranslateConfig {
+  /** 用户自定义 translator(在内置之后执行,优先匹配) */
+  custom?: ErrorTranslator[];
+  /** 启用的 DB 类型,选择内置 translator 集合 */
+  db: "drizzle";
+}
 
 /**
  * 新版(上游 main)配置 — 所有 logixlysia 行为参数集中在 `config` 字段下。
@@ -250,13 +267,13 @@ export interface LogixlysiaConfig {
  * 新版推荐:`{ config: {...}, preset?: 'dev' | 'prod' | 'json' }`
  * 同时兼容 root-level 字段(legacy tests)
  */
-export interface LogixlysiaOptions {
+export interface CreateLogPluginOptions {
+  /** 自动翻译错误:在单点 onError 钩子里跑 translator 链 */
+  autoTranslate?: AutoTranslateConfig;
   /** 新版配置块 */
   config?: LogixlysiaConfig;
   /** 错误处理配置 */
   error?: ErrorConfig;
-  /** 用户自定义 HTTPError 类 */
-  errors?: LogixlysiaErrorClasses;
   /** 文件日志配置(legacy) */
   file?: false | FileConfig;
   /** 日志格式配置(legacy) */
@@ -313,7 +330,7 @@ export interface Logger {
     request: Request,
     error: unknown,
     store: StoreData,
-    options?: LogixlysiaOptions
+    options?: CreateLogPluginOptions
   ) => void;
   /** 记录 INFO 级别日志 */
   info: (
