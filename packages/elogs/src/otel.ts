@@ -1,5 +1,6 @@
 import type { GlobalLogger } from "./interfaces";
 
+/** @public */
 export interface TraceContextFields {
   span_id?: string;
   trace_id?: string;
@@ -47,6 +48,8 @@ const getOtelApi = async (): Promise<OtelApi | null> => {
  *
  * 接受 GlobalLogger —— 无需手动传 request,GlobalLogger 自己从 ALS 拿
  * (若在请求作用域外,mergeContext 为 noop + warn 一次)。
+ *
+ * @public
  */
 export const injectTraceContext = async (
   logger: Pick<GlobalLogger, "mergeContext">

@@ -1,3 +1,4 @@
+/** @internal */
 export const parseError = (error: unknown): string => {
   if (error instanceof Error) {
     return error.message;
@@ -8,6 +9,7 @@ export const parseError = (error: unknown): string => {
   return String(error);
 };
 
+/** @internal */
 export interface StructuredError {
   fix?: string;
   internal?: unknown;
@@ -15,6 +17,7 @@ export interface StructuredError {
   why?: string;
 }
 
+/** @internal */
 export const isStructuredError = (
   value: unknown
 ): value is StructuredError & Record<string, unknown> =>
@@ -22,6 +25,7 @@ export const isStructuredError = (
   value !== null &&
   ("why" in value || "fix" in value || "link" in value || "internal" in value);
 
+/** @internal */
 export interface NormalizedLoggedError {
   /** Safe structured representation for data/transport meta. */
   error: Record<string, unknown>;
@@ -63,6 +67,7 @@ const copyStructuredErrorFields = (
   return safe;
 };
 
+/** @internal */
 export const normalizeLoggedError = (
   error: unknown,
   logErrorPayload: boolean

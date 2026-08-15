@@ -15,13 +15,8 @@
 
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 import { Elysia, HTTPError } from "elysia";
-import {
-  createElogs,
-  errorMap,
-  globalLogger,
-  httpError,
-  resetGlobalLogger,
-} from "../../src";
+import { createElogs, errorMap, globalLogger, httpError } from "../../src";
+import { resetGlobalLogger } from "../../src/global-logger";
 import type { CreateElogsOptions } from "../../src/interfaces";
 import { createMockRequest } from "../_helpers/request";
 

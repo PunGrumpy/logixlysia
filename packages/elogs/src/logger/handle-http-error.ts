@@ -19,6 +19,7 @@ import { computePrecomputedLogParts, emit, resolveSinks } from "./emit";
 
 /**
  * 旧版 entry — 直接调用,不依赖 RequestContextStore(用于 createLogger 的 fallback 路径)。
+ * @internal
  */
 export const handleHttpError = (
   request: Request,

@@ -1,6 +1,11 @@
 import { CreateElogsOptions } from "../interfaces";
 import { renderBanner } from "./banner";
 
+/**
+ * Prints Elysia startup banner (or simple URL line) to stdout.
+ *
+ * @internal
+ */
 export const startServer = (
   server: { port?: number; hostname?: string; protocol?: string | null },
   options: CreateElogsOptions

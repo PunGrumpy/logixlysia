@@ -7,7 +7,10 @@
 const isControlCodePoint = (code: number): boolean =>
   code <= 8 || (code >= 11 && code <= 31) || (code >= 127 && code <= 159);
 
-/** Strips C0/C1 control chars (keeps none -- \n and \r become visible escapes) and bounds length. */
+/**
+ * Strips C0/C1 control chars (keeps none -- \n and \r become visible escapes) and bounds length.
+ * @internal
+ */
 export const sanitizeLogText = (value: string, maxLength = 2048): string => {
   const escaped = value
     .replaceAll("\r", String.raw`\r`)

@@ -19,6 +19,8 @@ import type { LogLevel } from "./interfaces";
 /**
  * Elysia 错误实例 → createElogs 日志级别
  * 4xx → WARNING,5xx → ERROR,其他 → INFO
+ *
+ * @internal
  */
 export const levelForStatus = (status?: number | keyof StatusMap): LogLevel => {
   const numeric = typeof status === "number" ? status : 500;
@@ -31,7 +33,10 @@ export const levelForStatus = (status?: number | keyof StatusMap): LogLevel => {
   return "INFO";
 };
 
-/** 内部:从任意 error 中提取 status 数字 */
+/** 内部:从任意 error 中提取 status 数字
+ *
+ * @internal
+ */
 export const extractStatus = (error: unknown): number | undefined => {
   if (typeof error !== "object" || error === null) {
     return;
@@ -83,6 +88,8 @@ export const extractStatus = (error: unknown): number | undefined => {
  *     throw new errors[0]();
  *   });
  * ```
+ *
+ * @public
  */
 export const errorMap = (
   map: Record<string, { status: number; title: string; type?: string }>
@@ -121,6 +128,8 @@ const httpErrorType = (status: number): string =>
  * throw httpError(404, "user not found", { userId: 42 });
  * // → 响应 404 + application/problem+json + createElogs 写一条 WARNING 日志
  * ```
+ *
+ * @public
  */
 export const httpError = (
   status: number | keyof StatusMap,

@@ -43,6 +43,7 @@ const reportTransportError = (transport: Transport, error: unknown): void => {
   console.error("[createElogs] transport error", error);
 };
 
+/** @internal */
 export const logToTransports = (input: LogToTransportsInput): void => {
   const { level, request, data, precomputed, store, transports } = input;
   if (transports.length === 0) {

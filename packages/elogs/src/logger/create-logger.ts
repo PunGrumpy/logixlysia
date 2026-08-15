@@ -38,7 +38,10 @@ const collectTokens = (template: string): Set<string> => {
   return tokens;
 };
 
-/** 数字 → "0ms" / "12ms" / "0.34ms" / "1s" / "1.5s" / "11s" */
+/**
+ * 数字 → "0ms" / "12ms" / "0.34ms" / "1s" / "1.5s" / "11s"
+ * @internal
+ */
 export const formatDuration = (ms: number): string => {
   if (ms === 0) {
     return "0ms";
@@ -62,6 +65,7 @@ export const formatDuration = (ms: number): string => {
 /**
  * 一次性 hoist 的 per-logger 常量。
  * createLogger 调用时计算,后续每条 emit 直接读取,避免重复 `padStart`/颜色开关判断。
+ * @internal
  */
 export interface FormatContext {
   /** 慢请求阈值 (ms) — duration >= 此值打 slow 标记 */
@@ -76,6 +80,7 @@ export interface FormatContext {
   verySlowThreshold: number;
 }
 
+/** @internal */
 export const createFormatContext = (
   options: CreateElogsOptions
 ): FormatContext => {
@@ -95,7 +100,10 @@ export const createFormatContext = (
   };
 };
 
-/** 在 emit pipeline 里 precomputed 一次,所有 sink 共享(避免重复 `process.hrtime`) */
+/**
+ * 在 emit pipeline 里 precomputed 一次,所有 sink 共享(避免重复 `process.hrtime`)
+ * @internal
+ */
 export interface PrecomputedLogParts {
   /** 渲染好的耗时字符串,如 "0.34ms" / "1.5s" */
   durationMs: number;
@@ -250,6 +258,7 @@ const getStatusText = (code: number): string => STATUS_TEXT_BY_CODE[code] ?? "";
 /**
  * 渲染单条日志的主行 + 上下文树行数组。
  * main 是单行字符串,contextLines 是每行 `├─ key: value` 风格(没 context 就是空数组)。
+ * @internal
  */
 export const formatLogOutput = ({
   data,
@@ -406,6 +415,7 @@ export const formatLogOutput = ({
 /**
  * 上下文树行:ERROR 时展开 error.why/fix/link/internal,其他只展开 context 对象。
  * 永远不泄露 secret-like key 的值(尽管 redact 已经在 emit 之前跑了 — 这里再做一次防御)。
+ * @internal
  */
 export const buildContextTreeLines = (
   level: LogLevel,
@@ -503,6 +513,7 @@ export const buildContextTreeLines = (
   return lines;
 };
 
+/** @internal */
 export const logWithPino = (
   logger: Pino,
   level: LogLevel,

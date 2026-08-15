@@ -11,12 +11,14 @@ import { performRotation } from "./rotation-manager";
  * some filesystems report 0/absent birthtime — fall back to `now`
  * (losing restart-survival for the interval clock, but never wrong
  * by more than the process lifetime).
+ * @internal
  */
 export const resolveOpenedAt = (
   birthtimeMs: number | undefined,
   now: number
 ): number => (birthtimeMs && birthtimeMs > 0 ? birthtimeMs : now);
 
+/** @internal */
 export interface FileSinkOptions {
   logDirMode?: number;
   logFileMode?: number;
@@ -25,6 +27,7 @@ export interface FileSinkOptions {
   onRotationError?: (error: unknown) => void;
 }
 
+/** @internal */
 export interface FileSink {
   /** Resolves after `line` is durably written to disk. */
   write: (line: string, options: FileSinkOptions) => Promise<void>;
@@ -178,6 +181,7 @@ class FileSinkImpl implements FileSink {
 
 const sinks = new Map<string, FileSink>();
 
+/** @internal */
 export const getFileSink = (filePath: string): FileSink => {
   let sink = sinks.get(filePath);
   if (!sink) {

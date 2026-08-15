@@ -1,5 +1,11 @@
 import type { GlobalLogger } from "./interfaces";
 
+/**
+ * AI SDK / LLM usage metrics that can be attached to a request context for
+ * observability dashboards.
+ *
+ * @public
+ */
 export interface AIMetrics {
   calls?: number;
   finishReason?: string;
@@ -20,6 +26,8 @@ export interface AIMetrics {
  *
  * 接受 GlobalLogger —— 无需手动传 request,GlobalLogger 自己从 ALS 拿
  * (若在请求作用域外,mergeContext 为 noop + warn 一次)。
+ *
+ * @public
  */
 export const mergeAIMetrics = (
   logger: Pick<GlobalLogger, "mergeContext">,

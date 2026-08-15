@@ -18,6 +18,7 @@ import type {
 import type { PrecomputedLogParts } from "../logger/create-logger";
 import { getFileSink } from "./file-sink";
 
+/** @internal */
 export interface LogToFileInput {
   data: Record<string, unknown>;
   filePath: string;
@@ -44,6 +45,7 @@ const resolveRotation = (
   }
 };
 
+/** @internal */
 export const logToFile = async (input: LogToFileInput): Promise<void> => {
   const { filePath, level, request, data, store, options, precomputed } = input;
   const message = typeof data.message === "string" ? data.message : "";

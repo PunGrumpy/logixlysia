@@ -30,7 +30,10 @@
 
 import type { LogLevel, Transport } from "../interfaces";
 
-/** 单条 log 的最小元组(给 batch/dedupe 等组合器用) */
+/**
+ * 单条 log 的最小元组(给 batch/dedupe 等组合器用)
+ * @internal
+ */
 export interface LogEntry {
   level: LogLevel;
   message: string;
@@ -44,6 +47,7 @@ export interface LogEntry {
 /**
  * 把一条 log 同时发到多个 transport。每个分支都跑,互不影响。
  * 任一分支 reject 不会短路其它分支(用 Promise.allSettled 兜底)。
+ * @internal
  */
 export const tee = (targets: Transport[]): Transport => ({
   log: (level, message, meta) => {
@@ -66,6 +70,7 @@ export const tee = (targets: Transport[]): Transport => ({
 /**
  * 以 `rate` (0-1) 的概率把 log 转发给 `transport`。
  * `rate=0` 完全丢弃;`rate=1` 等于直通;`rate=0.1` 采样 10%。
+ * @internal
  */
 export const sample = (rate: number, transport: Transport): Transport => {
   if (!(rate >= 0 && rate <= 1)) {
@@ -84,6 +89,7 @@ export const sample = (rate: number, transport: Transport): Transport => {
 /**
  * 仅当 `predicate(level, message, meta)` 返回 truthy 时才转发。
  * 常见用法:`filter((lvl) => lvl === "ERROR", errorTarget)`。
+ * @internal
  */
 export const filter = (
   predicate: (
@@ -106,6 +112,7 @@ export const filter = (
 /**
  * 对每条 log 跑 `fn`,然后**总是**转发给 `transport`。
  * 适合打 metrics / 计数 / 调试 trace,**绝不**用来丢日志(用 `filter`)。
+ * @internal
  */
 export const tap = (
   fn: (
@@ -137,6 +144,7 @@ export const tap = (
  *
  * **注意**:程序退出时未刷的 buffer 会丢 —— 自己 `process.on("beforeExit", ...)` 调
  * `(transport as { flush?: () => void }).flush?.()`(如果 transport 暴露了 flush)。
+ * @internal
  */
 export const batch = (
   size: number,

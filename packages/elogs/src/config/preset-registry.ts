@@ -13,6 +13,11 @@
 
 import type { CreateElogsOptions } from "../interfaces";
 
+/**
+ * Preset 配置对象的类型别名(取 `CreateElogsOptions["config"]`)。
+ *
+ * @public
+ */
 export type PresetConfig = NonNullable<CreateElogsOptions["config"]>;
 
 const registry = new Map<string, PresetConfig>();
@@ -32,6 +37,8 @@ const registry = new Map<string, PresetConfig>();
  *
  * app.use(createElogs({ preset: "staging" }));
  * ```
+ *
+ * @public
  */
 export const registerPreset = (name: string, defaults: PresetConfig): void => {
   if (registry.has(name)) {
@@ -46,12 +53,16 @@ export const registerPreset = (name: string, defaults: PresetConfig): void => {
 /**
  * 取一个 preset 的默认配置(不区分内置 / 用户注册)。
  * `resolveOptions` 在这一步查表。
+ *
+ * @internal
  */
 export const getPresetDefaults = (name: string): PresetConfig | undefined =>
   registry.get(name);
 
 /**
  * 列出当前所有已注册的 preset 名(用于调试 / `--help` 输出)。
+ *
+ * @internal
  */
 export const listPresets = (): string[] => Array.from(registry.keys());
 
@@ -61,6 +72,8 @@ export const listPresets = (): string[] => Array.from(registry.keys());
  *
  * 注意命名:`__resetPresetRegistry` 而**不**是 `__resetForTesting` —— 跟
  * `otel.ts:__resetForTesting` 区分,避免 api-gen 生成的 barrel 里重复标识符。
+ *
+ * @internal
  */
 export const __resetPresetRegistry = (): void => {
   registry.clear();

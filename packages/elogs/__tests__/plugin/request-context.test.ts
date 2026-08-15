@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 import { Elysia } from "elysia";
 
-import { createElogs, globalLogger, resetGlobalLogger } from "../../src";
+import { createElogs, globalLogger } from "../../src";
+import { resetGlobalLogger } from "../../src/global-logger";
 import type { CreateElogsOptions } from "../../src/interfaces";
 
 describe("createElogs request context", () => {

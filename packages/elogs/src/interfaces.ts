@@ -16,13 +16,22 @@ import type {
   LoggerOptions as PinoLoggerOptions,
 } from "pino";
 
-/** Pino Logger 实例类型 */
+/**
+ * Pino Logger 实例类型
+ * @internal
+ */
 export type Pino = PinoLogger<never, boolean>;
 
-/** 日志级别 */
+/**
+ * 日志级别
+ * @internal
+ */
 export type LogLevel = "DEBUG" | "INFO" | "WARNING" | "ERROR";
 
-/** 单次请求携带的计时和路径数据 */
+/**
+ * 单次请求携带的计时和路径数据
+ * @internal
+ */
 export interface StoreData {
   /** 请求开始的纳秒时间戳（hrtime） */
   beforeTime?: bigint;
@@ -30,7 +39,10 @@ export interface StoreData {
   pathname?: string;
 }
 
-/** Elysia store 中挂载的 createElogs 状态 */
+/**
+ * Elysia store 中挂载的 createElogs 状态
+ * @internal
+ */
 export interface ElogsStore {
   /** 请求开始的纳秒时间戳,emit 算 durationMs 用 */
   beforeTime?: bigint;
@@ -39,7 +51,10 @@ export interface ElogsStore {
   [key: string]: unknown;
 }
 
-/** 自定义日志传输接口（如 Elasticsearch、Slack 等） */
+/**
+ * 自定义日志传输接口（如 Elasticsearch、Slack 等）
+ * @internal
+ */
 export interface Transport {
   /**
    * 接收一条日志并输出到外部系统
@@ -55,7 +70,10 @@ export interface Transport {
   ) => void | Promise<void>;
 }
 
-/** 日志文件轮转配置 */
+/**
+ * 日志文件轮转配置
+ * @internal
+ */
 export interface LogRotationConfig {
   /** 轮转后是否压缩旧文件 */
   compress?: boolean;
@@ -69,7 +87,10 @@ export interface LogRotationConfig {
   maxSize?: string | number;
 }
 
-/** request-id 中间件配置 */
+/**
+ * request-id 中间件配置
+ * @internal
+ */
 export interface RequestIdConfig {
   /** 显式启用/禁用(默认 true) */
   enabled?: boolean;
@@ -79,13 +100,19 @@ export interface RequestIdConfig {
   header?: string;
 }
 
-/** 日志级别过滤 */
+/**
+ * 日志级别过滤
+ * @internal
+ */
 export interface LogFilter {
   /** 只输出这些级别;空数组表示不过滤 */
   level?: LogLevel[];
 }
 
-/** Pino 配置(createElogs 透传) */
+/**
+ * Pino 配置(createElogs 透传)
+ * @internal
+ */
 export interface PinoConfig {
   /** 显式禁用 pino(测试中常用) */
   enabled?: boolean;
@@ -95,7 +122,10 @@ export interface PinoConfig {
   [key: string]: unknown;
 }
 
-/** 启动消息配置 */
+/**
+ * 启动消息配置
+ * @internal
+ */
 export interface StartupConfig {
   /** 启动消息格式，默认 `"banner"` */
   format?: "simple" | "banner";
@@ -103,7 +133,10 @@ export interface StartupConfig {
   show?: boolean;
 }
 
-/** 日志格式配置(legacy root-level;新代码用 `config.*`) */
+/**
+ * 日志格式配置(legacy root-level;新代码用 `config.*`)
+ * @internal
+ */
 export interface FormatConfig {
   /** 是否启用彩色输出，默认 `true`（仅 TTY） */
   colors?: boolean;
@@ -115,7 +148,10 @@ export interface FormatConfig {
   timestamp?: string;
 }
 
-/** 文件日志配置(legacy root-level) */
+/**
+ * 文件日志配置(legacy root-level)
+ * @internal
+ */
 export interface FileConfig {
   /** 日志文件路径（必填） */
   path: string;
@@ -123,7 +159,10 @@ export interface FileConfig {
   rotation?: LogRotationConfig;
 }
 
-/** 自定义传输配置(legacy root-level) */
+/**
+ * 自定义传输配置(legacy root-level)
+ * @internal
+ */
 export interface TransportsConfig {
   /** 设为 `true` 时只使用 transports，禁用控制台和文件输出 */
   only?: boolean;
@@ -131,7 +170,10 @@ export interface TransportsConfig {
   targets: Transport[];
 }
 
-/** 错误处理配置（createElogs 2.0 极简版） */
+/**
+ * 错误处理配置（createElogs 2.0 极简版）
+ * @internal
+ */
 export interface ErrorConfig {
   /** 是否在控制台显示完整错误详情，默认 `false` */
   verbose?: boolean;
@@ -142,6 +184,7 @@ export interface ErrorConfig {
  *
  * 用法见 `translator/drizzle.ts`(`translateDrizzleError`)
  * 和 `plugin.ts` 的 `autoTranslate.custom` 配置。
+ * @internal
  */
 export type ErrorTranslator = {
   /** 判断是否能处理该 error */
@@ -157,6 +200,7 @@ export type ErrorTranslator = {
  * **关键不变量**:翻译只影响日志输出,不劫持错误处理流程。错误继续
  * 以原 error 形态传播,用户的 `.error(MyClass, fn)` / Elysia 默认
  * `application/problem+json` 响应都不受影响。
+ * @internal
  */
 export interface AutoTranslateConfig {
   /** 用户自定义 translator(在内置之后执行,优先匹配) */
@@ -168,6 +212,7 @@ export interface AutoTranslateConfig {
 /**
  * 新版(上游 main)配置 — 所有 createElogs 行为参数集中在 `config` 字段下。
  * 同时保留 root-level 字段(legacy + 旧测试)以便向后兼容。
+ * @public
  */
 export interface ElogsConfig {
   /** 自动 redact 敏感信息(headers, body, query string) */
@@ -251,6 +296,7 @@ export interface ElogsConfig {
  *
  * 新版推荐:`{ config: {...}, preset?: 'dev' | 'prod' | 'json' }`
  * 同时兼容 root-level 字段(legacy tests)
+ * @public
  */
 export interface CreateElogsOptions {
   /** 自动翻译错误:在单点 onError 钩子里跑 translator 链 */
@@ -297,6 +343,7 @@ export interface CreateElogsOptions {
  *   logger.info(request, 'Fetching user data', { userId: '123' });
  * });
  * ```
+ * @public
  */
 export interface Logger {
   /**
@@ -510,6 +557,7 @@ export interface Logger {
 /**
  * Request-scoped Logger,挂在 `context.log` 上,不需要传 request 参数。
  * 由 AsyncLocalStorage `useLogger()` 也能拿到(深调用栈场景)。
+ * @internal
  */
 export interface RequestScopedLogger {
   /** 记录 DEBUG 级别日志 */
@@ -550,6 +598,7 @@ export interface RequestScopedLogger {
  *   globalLogger.error(err);
  * }
  * ```
+ * @public
  */
 export interface GlobalLogger {
   /**
@@ -584,20 +633,15 @@ export interface GlobalLogger {
   mergeContext: (partial: Record<string, unknown>) => void;
 
   /**
-   * 底层 pino 实例。
-   *
-   * @deprecated 请直接 `import { pino } from "@pori15/elogs"` 而不是 `globalLogger.pino`。
-   * 保留字段仅为向后兼容,新代码不应使用。
-   */
-  pino: Pino;
-
-  /**
    * 记录 WARNING 级别日志。作用域内走完整 emit,作用域外走 pino。
    */
   warn: (message: string, context?: Record<string, unknown>) => void;
 }
 
-/** Elogs 请求上下文 */
+/**
+ * Elogs 请求上下文
+ * @internal
+ */
 export interface ElogsContext {
   request: Request;
   store: ElogsStore;

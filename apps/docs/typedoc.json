@@ -1,0 +1,14 @@
+{
+  "plugin": ["typedoc-plugin-markdown"],
+  "out": "./content/api",
+  "$schema": "https://typedoc.org/schema.json",
+  "entryPoints": ["../../packages/elogs/src/index.ts"],
+  "entryPointStrategy": "expand",
+  "tsconfig": "../../packages/elogs/tsconfig.json",
+
+  "skipErrorChecking": true,
+  "excludePrivate": true,
+  "excludeInternal": true,
+  "readme": "none",
+  "githubPages": false
+}

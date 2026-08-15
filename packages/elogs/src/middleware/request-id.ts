@@ -3,6 +3,7 @@ import type { RequestIdConfig } from "../interfaces";
 const DEFAULT_HEADER = "X-Request-Id";
 const VALID_REQUEST_ID = /^[A-Za-z0-9._-]{1,128}$/;
 
+/** @internal */
 export interface ResolvedRequestIdConfig {
   enabled: boolean;
   generator: () => string;
@@ -15,6 +16,7 @@ export interface ResolvedRequestIdConfig {
  * - `undefined` / `false` → `null` (disabled)
  * - `true` → default config
  * - `RequestIdConfig` → merged with defaults; `enabled: false` inside the object disables the feature
+ * @internal
  */
 export const resolveRequestIdConfig = (
   raw?: boolean | RequestIdConfig
@@ -51,6 +53,7 @@ export const resolveRequestIdConfig = (
  * `.`, `_`, `-`, 1-128 chars) before being trusted — request IDs flow into log
  * lines, response headers, and context trees, so malformed or oversized
  * values are replaced with a freshly generated one rather than echoed back.
+ * @internal
  */
 export const getOrCreateRequestId = (
   request: Request,

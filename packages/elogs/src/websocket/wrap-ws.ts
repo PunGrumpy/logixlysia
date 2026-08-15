@@ -1,11 +1,13 @@
 import type { RequestContextStore } from "../context/request-context";
 import type { CreateElogsOptions, Logger, StoreData } from "../interfaces";
 
+/** @public */
 export interface WebSocketLike {
   readonly data?: { store?: { logger?: Logger } };
   readonly id?: string;
 }
 
+/** @public */
 export interface WsHandlerHooks<
   TMessage = unknown,
   TWs extends WebSocketLike = WebSocketLike,
@@ -18,6 +20,7 @@ export interface WsHandlerHooks<
 const wsSyntheticRequest = (path: string): Request =>
   new Request(`http://createElogs.local${path}`, { method: "WS" });
 
+/** @public */
 export const createWsHandlerWrapper = (
   options: CreateElogsOptions,
   logger: Logger,

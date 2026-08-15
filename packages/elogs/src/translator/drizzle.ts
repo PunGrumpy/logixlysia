@@ -18,6 +18,7 @@ import type { ErrorTranslator } from "../interfaces";
 /**
  * Drizzle 错误的最小形状(兼容 DrizzleError / DrizzleQueryError,
  * 不强制依赖 drizzle-orm 的类型 —— 只取 `.name` + `.code` 字段)。
+ * @public
  */
 export interface DrizzleLikeError {
   cause?: unknown;
@@ -26,7 +27,10 @@ export interface DrizzleLikeError {
   table?: string;
 }
 
-/** 类型守卫:是不是 Drizzle 抛的错误 */
+/**
+ * 类型守卫:是不是 Drizzle 抛的错误
+ * @public
+ */
 export const isDrizzleError = (e: unknown): e is DrizzleLikeError => {
   if (typeof e !== "object" || e === null) {
     return false;
@@ -111,6 +115,7 @@ const DRIZZLE_TRANSLATORS: ErrorTranslator[] = [
  * @param error - 任意 unknown(通常是 try/catch 块里的 e)
  * @param custom - 用户自定义 translator,会先于内置 translators 执行,
  *   命中后直接返回(短链)
+ * @public
  */
 export const translateDrizzleError = (
   error: unknown,

@@ -66,6 +66,7 @@ const CIRCULAR_REF = "[Circular]";
 /**
  * 默认敏感字段列表（不区分大小写）
  * 这些字段名的值将被自动脱敏
+ * @internal
  */
 export const DEFAULT_REDACT_KEYS: readonly string[] = [
   // 认证相关
@@ -131,6 +132,7 @@ const normalizeKeyName = (key: string): string =>
  * @param key - 字段名
  * @param extraKeys - 用户自定义敏感字段列表
  * @returns 是否为敏感字段
+ * @internal
  */
 export const isSensitiveKey = (
   key: string,
@@ -164,6 +166,7 @@ export const isSensitiveKey = (
  * @example
  * buildPinoRedactPaths(["api-key"])
  * // → ['api-key', '*.api-key', '["api-key"]', '*["api-key"]']
+ * @internal
  */
 export const buildPinoRedactPaths = (
   extraKeys?: readonly string[]
@@ -310,7 +313,7 @@ const redactCreditCardCandidates = (text: string): string =>
 /**
  * 对字符串进行全面的PII脱敏
  * 同时处理：邮箱、IP、信用卡号、JWT令牌
- *
+ * @internal
  * @param text - 原始文本
  * @returns 脱敏后的文本
  */
@@ -492,7 +495,7 @@ const redactInner = <T>(
 
 /**
  * 对任意值进行PII脱敏
- *
+ * @internal
  * @param value - 需要脱敏的数据（可以是任何类型）
  * @param extraKeys - 额外的敏感字段名
  * @returns 脱敏后的数据（深拷贝）
@@ -519,7 +522,7 @@ export const redact = <T>(value: T, extraKeys?: readonly string[]): T =>
 
 /**
  * 脱敏HTTP Request对象
- *
+ * @internal
  * 处理内容：
  * - URL中的用户名/密码/主机名/路径/查询参数
  * - Headers中的敏感字段
@@ -538,6 +541,7 @@ export const redact = <T>(value: T, extraKeys?: readonly string[]): T =>
  *   headers: safeRequest.headers // 已脱敏
  * });
  */
+
 export const redactRequest = (
   request: Request,
   extraKeys?: readonly string[]

@@ -7,7 +7,8 @@ import { beforeEach, describe, expect, mock, test } from "bun:test";
 // app under Bun (the supported runtime for the 2.0-exp series).
 import { Elysia } from "elysia";
 
-import { createElogs, resetGlobalLogger } from "../../src";
+import { createElogs } from "../../src";
+import { resetGlobalLogger } from "../../src/global-logger";
 import {
   createDemoApp,
   silentTestOptions,

@@ -90,6 +90,7 @@ import { translateDrizzleError } from "./translator/drizzle";
 // 主插件函数
 // ============================================================
 
+/** @public */
 export const createElogs = (rawOptions: CreateElogsOptions = {}) => {
   // ---------- 1. 初始化 per-instance 状态 ----------
   const options = resolveOptions(rawOptions);
@@ -422,5 +423,6 @@ export const createElogs = (rawOptions: CreateElogsOptions = {}) => {
 
 /**
  * 插件返回类型
+ * @public
  */
 export type CreateElogs = ReturnType<typeof createElogs>;

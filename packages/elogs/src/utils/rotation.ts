@@ -9,6 +9,7 @@ const INTERVAL_REGEX = /^(\d+)(h|d|w)$/i;
 const ROTATED_REGEX =
   /\.(\d{4}-\d{2}-\d{2}-\d{2}-\d{2}-\d{2}(?:-\d{3})?)(?:-\d+)?(?:\.gz)?$/;
 
+/** @internal */
 export const parseSize = (value: number | string): number => {
   if (typeof value === "number") {
     if (!Number.isFinite(value) || value <= 0) {
@@ -51,6 +52,7 @@ export const parseSize = (value: number | string): number => {
   return Math.floor(amount * base);
 };
 
+/** @internal */
 export const parseInterval = (value: string): number => {
   const match = value.trim().match(INTERVAL_REGEX);
   if (!match) {
@@ -70,6 +72,7 @@ export const parseInterval = (value: string): number => {
   return amount * ms;
 };
 
+/** @internal */
 export const parseRetention = (
   value: number | string
 ): { type: "count" | "time"; value: number } => {
@@ -79,6 +82,7 @@ export const parseRetention = (
   return { type: "time", value: parseInterval(value) };
 };
 
+/** @internal */
 export const shouldRotateBySize = async (
   filePath: string,
   maxSizeBytes: number
@@ -91,6 +95,7 @@ export const shouldRotateBySize = async (
   }
 };
 
+/** @internal */
 export const getRotatedFiles = async (filePath: string): Promise<string[]> => {
   const dir = dirname(filePath);
   const base = basename(filePath);

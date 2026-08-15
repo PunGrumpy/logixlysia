@@ -46,6 +46,7 @@ import {
 } from "./emit";
 import { handleHttpError } from "./handle-http-error";
 
+/** @internal */
 export type PinoFactory = (options: PinoLoggerOptions) => PinoLogger;
 
 /**
@@ -55,6 +56,7 @@ export type PinoFactory = (options: PinoLoggerOptions) => PinoLogger;
 const defaultPinoFactory: PinoFactory = (options) =>
   pino(options) as unknown as PinoLogger;
 
+/** @internal */
 export interface CreateLoggerOptions {
   contextStore?: RequestContextStore;
   options: CreateElogsOptions;
@@ -125,6 +127,7 @@ const buildPinoOptions = (
  * 构建一个与单一 emit 管道绑定的 Logger 实例。
  * `pino` 字段是一个懒加载的 Proxy：仅在首次访问时构建底层 Pino 实例。
  * 如果设置了 `config.pino`，则首次访问时若配置无效将快速失败（fail-fast）。
+ * @internal
  */
 export const createLogger = (
   optionsOrConfig?: CreateElogsOptions | CreateLoggerOptions,

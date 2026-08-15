@@ -21,6 +21,7 @@ import {
  * Which sinks are active for a given config, resolved once per logger
  * instance (see `createLogger`) since none of these depend on per-request
  * state.
+ * @internal
  */
 export interface Sinks {
   hasFileLogging: boolean;
@@ -36,6 +37,7 @@ export interface Sinks {
  * Extracts the `Transport[]` array from a `CreateElogsOptions` object,
  * supporting both legacy shape (`transports: Transport[]`) and
  * the `TransportsConfig` envelope (`{ targets, only }`).
+ * @internal
  */
 export const resolveTransports = (options: CreateElogsOptions): Transport[] => {
   const configTransports = options.config?.transports;
@@ -56,6 +58,7 @@ export const resolveTransports = (options: CreateElogsOptions): Transport[] => {
  * Returns true when the user set `transports.only: true` either on the
  * `config` (via `useTransportsOnly`) or on the legacy root-level
  * `transports: { only: true }` envelope.
+ * @internal
  */
 export const resolveTransportsOnly = (options: CreateElogsOptions): boolean => {
   if (options.config?.useTransportsOnly === true) {
@@ -72,6 +75,7 @@ export const resolveTransportsOnly = (options: CreateElogsOptions): boolean => {
   return false;
 };
 
+/** @internal */
 export const resolveSinks = (options: CreateElogsOptions): Sinks => {
   const { config } = options;
   const useTransportsOnly =
@@ -100,6 +104,7 @@ export const resolveSinks = (options: CreateElogsOptions): Sinks => {
   };
 };
 
+/** @internal */
 export const shouldLog = (
   level: LogLevel,
   logFilter?: { level?: LogLevel[] }
@@ -113,6 +118,7 @@ export const shouldLog = (
 /**
  * Combined filter check that also honors the root-level `logLevel` alias.
  * Empty / undefined level arrays mean "no filter" (all levels pass).
+ * @internal
  */
 export const shouldLogForOptions = (
   level: LogLevel,
@@ -153,6 +159,7 @@ const parseRequestUrlOnce = (
  * `logToTransports`' meta only reads `durationMs` (not pathname/search), so the URL is parsed
  * only when file logging or the internal console logger is active — skipping it entirely for
  * transports-only configs, matching that path's pre-optimization behavior.
+ * @internal
  */
 export const computePrecomputedLogParts = (
   store: StoreData,
@@ -187,6 +194,7 @@ const consoleForLevel = (level: LogLevel): typeof console.log => {
   }
 };
 
+/** @internal */
 export interface EmitInput {
   contextStore: RequestContextStore;
   data: Record<string, unknown>;
@@ -206,6 +214,7 @@ export interface EmitInput {
  * The single log-emission pipeline shared by the success path (`log()`) and
  * the error path (`handleHttpError()`): filter check -> context merge ->
  * redact -> transports -> file -> console, all gated by the same `sinks`.
+ * @internal
  */
 export const emit = ({
   contextStore,

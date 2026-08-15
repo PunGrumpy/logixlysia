@@ -41,6 +41,8 @@ let hasWarnedNoRequest = false;
  * WeakSet in addition to its own per-instance one, so that emitting through
  * `globalLogger` suppresses the auto access log the same way emitting
  * through the per-instance `logger` does.
+ *
+ * @internal
  */
 export const globalCustomLoggedRequests = new WeakSet<Request>();
 
@@ -121,7 +123,6 @@ const wrap = (logger: Logger): GlobalLogger => {
         warnOnceNoRequest("mergeContext");
       }
     },
-    pino: logger.pino,
     warn: (message, context) => emit("warn", message, context),
   };
 };
@@ -141,17 +142,30 @@ const wrap = (logger: Logger): GlobalLogger => {
  * import { pino } from "@pori15/elogs";
  * pino.info("module loaded");
  * ```
+ *
+ * @public
  */
 export let pino: Pino;
 
-/** 全局 Logger 实例,通过 `import { globalLogger } from "@pori15/elogs"` 拿到。 */
+/** 全局 Logger 实例,通过 `import { globalLogger } from "@pori15/elogs"` 拿到。
+ *
+ * @public
+ */
 export let globalLogger: GlobalLogger;
 
+/** Replaces the active global logger implementation (e.g. in custom bootstraps).
+ *
+ * @public
+ */
 export const setGlobalLogger = (impl: GlobalLogger) => {
   globalLogger = impl;
   globalLoggerImpl = impl;
 };
 
+/** Initializes the top-level `pino` + `globalLogger` exports.
+ *
+ * @public
+ */
 export const initGlobalLogger = (
   options: CreateElogsOptions = {},
   contextStore = globalContextStore

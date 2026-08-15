@@ -1,3 +1,4 @@
+/** @internal */
 export interface KeyedMutex {
   /**
    * Serializes work for `key`: resolves once any prior holder for the same
@@ -11,6 +12,7 @@ export interface KeyedMutex {
  * Creates an independent keyed mutex: acquisitions for different keys never
  * block each other, while acquisitions for the same key are serialized in
  * FIFO order.
+ * @internal
  */
 export const createKeyedMutex = (): KeyedMutex => {
   const locks = new Map<string, Promise<void>>();

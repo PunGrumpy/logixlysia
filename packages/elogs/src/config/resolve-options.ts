@@ -6,6 +6,8 @@ import { getPresetDefaults } from "./preset-registry";
  * 内置 preset 名 —— 给 IDE 自动补全。
  * 任意字符串都能传,运行时从 registry 查表(用户可以通过
  * `registerPreset` 加自己的 preset)。
+ *
+ * @public
  */
 export type LogPreset = "dev" | "prod" | "json" | (string & {});
 
@@ -93,7 +95,10 @@ const mergeConfig = (
   return merged;
 };
 
-/** Applies preset defaults; explicit `config` keys override preset values. */
+/** Applies preset defaults; explicit `config` keys override preset values.
+ *
+ * @internal
+ */
 export const resolveOptions = (
   options: CreateElogsOptions = {}
 ): CreateElogsOptions => {

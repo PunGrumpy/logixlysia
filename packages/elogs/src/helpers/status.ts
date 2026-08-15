@@ -39,6 +39,11 @@ const STATUS_BY_NORMALIZED_NAME = (() => {
   return map;
 })();
 
+/** Resolves an HTTP status from a number, status name, or `StatusMap` key.
+ * Falls back to 500 when the input does not map to a known status.
+ *
+ * @internal
+ */
 export const getStatusCode = (value: unknown): number => {
   if (typeof value === "number" && Number.isFinite(value)) {
     return value;

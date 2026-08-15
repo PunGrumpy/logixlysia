@@ -1,5 +1,6 @@
 import { promises as fs } from "node:fs";
 
+/** @internal */
 export const ensureDir = async (
   dirPath: string,
   mode = 0o700

@@ -3,139 +3,27 @@
 export type { AIMetrics } from "./ai";
 export { mergeAIMetrics } from "./ai";
 export type { LogPreset, PresetConfig } from "./config";
+export { registerPreset } from "./config";
+export type { ContextKey, RequestContextStore } from "./context";
+export { requestStorage, useLogger } from "./context";
+export { errorMap, httpError } from "./errors";
 export {
-  __resetPresetRegistry,
-  getPresetDefaults,
-  listPresets,
-  registerPreset,
-  resolveOptions,
-} from "./config";
-export type {
-  ContextKey,
-  RequestContextStore,
-  RequestScopedLoggerOptions,
-} from "./context";
-export {
-  createRequestContextStore,
-  createRequestScopedLogger,
-  loggerStorage,
-  mergeLogDataContext,
-  requestStorage,
-  useLogger,
-} from "./context";
-export { errorMap, extractStatus, httpError, levelForStatus } from "./errors";
-export { renderBanner, startServer } from "./extensions";
-export {
-  getGlobalLogger,
   globalLogger,
   initGlobalLogger,
-  isGlobalLoggerInitialized,
   pino,
-  resetGlobalLogger,
   setGlobalLogger,
 } from "./global-logger";
-export { getStatusCode } from "./helpers";
 export type {
-  AutoTranslateConfig,
   CreateElogsOptions,
   ElogsConfig,
-  ElogsContext,
-  ElogsStore,
-  ErrorConfig,
-  ErrorTranslator,
-  FileConfig,
-  FormatConfig,
   GlobalLogger,
-  LogFilter,
   Logger,
-  LogLevel,
-  LogRotationConfig,
-  Pino,
-  PinoConfig,
-  RequestIdConfig,
-  RequestScopedLogger,
-  StartupConfig,
-  StoreData,
-  Transport,
-  TransportsConfig,
 } from "./interfaces";
-export type {
-  CreateLoggerOptions,
-  EmitInput,
-  FormatContext,
-  PinoFactory,
-  PrecomputedLogParts,
-  Sinks,
-} from "./logger";
-export {
-  buildContextTreeLines,
-  computePrecomputedLogParts,
-  createFormatContext,
-  createLogger,
-  emit,
-  formatDuration,
-  formatLogOutput,
-  handleHttpError,
-  logWithPino,
-  resolveSinks,
-  resolveTransports,
-  resolveTransportsOnly,
-  shouldLog,
-  shouldLogForOptions,
-} from "./logger";
-export type { ResolvedRequestIdConfig } from "./middleware";
-export { getOrCreateRequestId, resolveRequestIdConfig } from "./middleware";
 export type { TraceContextFields } from "./otel";
-export { __resetForTesting, injectTraceContext } from "./otel";
-export type {
-  FileSink,
-  FileSinkOptions,
-  KeyedMutex,
-  LogEntry,
-  LogToFileInput,
-  RotationErrorReporter,
-} from "./output";
-export {
-  batch,
-  compressFile,
-  createKeyedMutex,
-  ensureDir,
-  filter,
-  getFileSink,
-  getRotatedFileName,
-  logToFile,
-  logToTransports,
-  performRotation,
-  resolveOpenedAt,
-  rotateFile,
-  sample,
-  shouldRotate,
-  tap,
-  tee,
-} from "./output";
+export { injectTraceContext } from "./otel";
 export type { CreateElogs } from "./plugin";
 export { createElogs } from "./plugin";
 export type { DrizzleLikeError } from "./translator";
 export { isDrizzleError, translateDrizzleError } from "./translator";
-export type { NormalizedLoggedError, StructuredError } from "./utils";
-export {
-  buildPinoRedactPaths,
-  DEFAULT_REDACT_KEYS,
-  getRotatedFiles,
-  isSensitiveKey,
-  isStructuredError,
-  normalizeLoggedError,
-  pad2,
-  pad3,
-  parseError,
-  parseInterval,
-  parseRetention,
-  parseSize,
-  redact,
-  redactRequest,
-  redactString,
-  sanitizeLogText,
-  shouldRotateBySize,
-} from "./utils";
 export type { WebSocketLike, WsHandlerHooks } from "./websocket";
 export { createWsHandlerWrapper } from "./websocket";

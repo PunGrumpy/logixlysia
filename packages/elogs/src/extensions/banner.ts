@@ -10,6 +10,9 @@ const centerText = (text: string, width: number): string => {
   return `${" ".repeat(left)}${text}${" ".repeat(right)}`;
 };
 
+/**
+ * @internal
+ */
 export const renderBanner = (message: string): string => {
   const versionLine = `Elysia v${elysiaPkg.version}`;
   const contentWidth = Math.max(message.length, versionLine.length);

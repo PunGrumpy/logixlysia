@@ -16,7 +16,10 @@ const gzipAsync = promisify(gzip);
 // Prevents concurrent compression of the same file (keyed by filePath).
 const compressionLock = createKeyedMutex();
 
-/** Reports a sink failure; when omitted, the caller falls back to stderr. */
+/**
+ * Reports a sink failure; when omitted, the caller falls back to stderr.
+ * @internal
+ */
 export type RotationErrorReporter = (error: unknown) => void;
 
 const reportRotationError = (
@@ -31,6 +34,7 @@ const reportRotationError = (
   console.error(message, error);
 };
 
+/** @internal */
 export const getRotatedFileName = (filePath: string, date: Date): string => {
   const yyyy = date.getFullYear();
   const mm = pad2(date.getMonth() + 1);
@@ -42,6 +46,7 @@ export const getRotatedFileName = (filePath: string, date: Date): string => {
   return `${filePath}.${yyyy}-${mm}-${dd}-${HH}-${MM}-${ss}-${SSS}`;
 };
 
+/** @internal */
 export const rotateFile = async (filePath: string): Promise<string> => {
   try {
     const stat = await fs.stat(filePath);
@@ -59,6 +64,7 @@ export const rotateFile = async (filePath: string): Promise<string> => {
   return rotated;
 };
 
+/** @internal */
 export const compressFile = async (
   filePath: string,
   onError?: RotationErrorReporter
@@ -89,6 +95,7 @@ export const compressFile = async (
   }
 };
 
+/** @internal */
 export const shouldRotate = async (
   filePath: string,
   config: LogRotationConfig
@@ -136,6 +143,7 @@ const cleanupByTime = async (
   await Promise.all(toDelete.map(({ path }) => fs.rm(path, { force: true })));
 };
 
+/** @internal */
 export const performRotation = async (
   filePath: string,
   config: LogRotationConfig,
