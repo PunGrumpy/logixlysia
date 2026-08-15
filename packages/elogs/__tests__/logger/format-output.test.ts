@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { Options } from "../../src/interfaces";
+import type { CreateElogsOptions } from "../../src/interfaces";
 import {
   buildContextTreeLines,
   formatDuration,
@@ -27,7 +27,7 @@ describe("formatDuration", () => {
 });
 
 describe("formatLogOutput", () => {
-  const baseOptions = (overrides?: Options): Options => ({
+  const baseOptions = (overrides?: CreateElogsOptions): CreateElogsOptions => ({
     config: {
       useColors: false,
       ...overrides?.config,

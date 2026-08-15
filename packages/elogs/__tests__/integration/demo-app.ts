@@ -1,26 +1,26 @@
 import { Elysia } from "elysia";
 
-import { createElogs } from "../../src";
+import { createElogs, globalLogger } from "../../src";
 import { mergeAIMetrics } from "../../src/ai";
-import type { Options } from "../../src/interfaces";
+import type { CreateElogsOptions } from "../../src/interfaces";
 import { injectTraceContext } from "../../src/otel";
 
 export type TransportLog = (lvl: unknown, msg: unknown, meta?: unknown) => void;
 
 /** Mirrors apps/elysia demo routes for integration tests (no cross-package import). */
-export const createDemoApp = (options: Options) => {
+export const createDemoApp = (options: CreateElogsOptions) => {
   const logging = createElogs(options);
 
   return new Elysia()
     .use(logging)
     .get("/", () => ({ message: "ok" }))
-    .get("/checkout", ({ request, store }) => {
-      store.logger.mergeContext(request, { userId: "usr_test" });
-      store.logger.mergeContext(request, { cart: { items: 1, total: 100 } });
+    .get("/checkout", () => {
+      globalLogger.mergeContext({ userId: "usr_test" });
+      globalLogger.mergeContext({ cart: { items: 1, total: 100 } });
       return { ok: true };
     })
-    .post("/chat", ({ request, store }) => {
-      mergeAIMetrics(store.logger, request, {
+    .post("/chat", () => {
+      mergeAIMetrics(globalLogger, {
         inputTokens: 10,
         model: "test-model",
         outputTokens: 5,
@@ -28,8 +28,8 @@ export const createDemoApp = (options: Options) => {
       });
       return { ok: true };
     })
-    .request(({ request, store }) => {
-      injectTraceContext(store.logger, request);
+    .request(() => {
+      injectTraceContext(globalLogger);
     })
     .get("/trace", () => ({ ok: true }))
     .get("/status/:code", ({ params, set }) => {
@@ -44,7 +44,9 @@ export const createDemoApp = (options: Options) => {
     });
 };
 
-export const silentTestOptions = (transport: TransportLog): Options => ({
+export const silentTestOptions = (
+  transport: TransportLog
+): CreateElogsOptions => ({
   config: {
     disableFileLogging: true,
     disableInternalLogger: true,

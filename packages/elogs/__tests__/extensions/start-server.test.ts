@@ -1,13 +1,13 @@
 import { describe, expect, test } from "bun:test";
 import { startServer } from "../../src/extensions";
-import type { Options } from "../../src/interfaces";
+import type { CreateElogsOptions } from "../../src/interfaces";
 import { spyConsole } from "../_helpers/console";
 
 describe("startServer", () => {
   test("renders banner by default", () => {
     const { spies, restore } = spyConsole(["log"]);
 
-    const options: Options = {};
+    const options: CreateElogsOptions = {};
     startServer(
       { hostname: "localhost", port: 3000, protocol: "http" },
       options
@@ -24,7 +24,7 @@ describe("startServer", () => {
   test("renders simple message when configured", () => {
     const { spies, restore } = spyConsole(["log"]);
 
-    const options: Options = { startup: { format: "simple" } };
+    const options: CreateElogsOptions = { startup: { format: "simple" } };
     startServer(
       { hostname: "localhost", port: 3000, protocol: "http" },
       options
@@ -43,7 +43,7 @@ describe("startServer", () => {
   test("does nothing when startup.show is false", () => {
     const { spies, restore } = spyConsole(["log"]);
 
-    const options: Options = { startup: { show: false } };
+    const options: CreateElogsOptions = { startup: { show: false } };
     startServer(
       { hostname: "localhost", port: 3000, protocol: "http" },
       options
@@ -57,7 +57,7 @@ describe("startServer", () => {
   test("does nothing when server info is incomplete", () => {
     const { spies, restore } = spyConsole(["log"]);
 
-    const options: Options = {};
+    const options: CreateElogsOptions = {};
     startServer({ hostname: "localhost", port: 3000, protocol: null }, options);
 
     expect(spies.log).not.toHaveBeenCalled();

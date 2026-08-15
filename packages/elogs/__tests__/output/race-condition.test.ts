@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { promises as fs } from "node:fs";
 import { join } from "node:path";
-import type { Options } from "../../src/interfaces";
+import type { CreateElogsOptions } from "../../src/interfaces";
 import { logToFile } from "../../src/output/file";
 import { createMockRequest } from "../_helpers/request";
 import { createTempDir, removeTempDir } from "../_helpers/tmp";
@@ -18,7 +18,7 @@ describe("logToFile race condition", () => {
     const dir = await createTempDir();
     try {
       const filePath = join(dir, "logs", "concurrent.log");
-      const options: Options = {
+      const options: CreateElogsOptions = {
         config: {
           // Very small size to trigger rotation quickly
           logRotation: { compress: false, maxSize: 100 },
@@ -83,7 +83,7 @@ describe("logToFile race condition", () => {
     const dir = await createTempDir();
     try {
       const filePath = join(dir, "logs", "serialize.log");
-      const options: Options = {
+      const options: CreateElogsOptions = {
         config: {
           // Trigger rotation on every write
           logRotation: { compress: false, maxSize: 1 },
@@ -128,7 +128,7 @@ describe("logToFile race condition", () => {
     const dir = await createTempDir();
     try {
       const filePath = join(dir, "logs", "exclusion.log");
-      const options: Options = {
+      const options: CreateElogsOptions = {
         config: {
           // Rotate on every write so the critical section races with rotation
           logRotation: { compress: false, maxSize: 1 },

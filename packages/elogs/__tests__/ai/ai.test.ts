@@ -1,10 +1,16 @@
-import { describe, expect, mock, test } from "bun:test";
+import { beforeEach, describe, expect, mock, test } from "bun:test";
 import { Elysia } from "elysia";
 
-import { createElogs } from "../../src";
+import { createElogs, globalLogger, resetGlobalLogger } from "../../src";
 import { mergeAIMetrics } from "../../src/ai";
 
 describe("createElogs/ai", () => {
+  beforeEach(() => {
+    // 每个测试用全新 createElogs,所以必须重置 globalLogger 让新实例
+    // 的 contextStore 能被 initGlobalLogger 正确接管
+    resetGlobalLogger();
+  });
+
   test("mergeAIMetrics adds ai object to access log context", async () => {
     const transport = mock<
       (lvl: unknown, msg: unknown, meta?: unknown) => void
@@ -22,8 +28,8 @@ describe("createElogs/ai", () => {
           },
         })
       )
-      .get("/chat", ({ request, store }) => {
-        mergeAIMetrics(store.logger, request, {
+      .get("/chat", () => {
+        mergeAIMetrics(globalLogger, {
           inputTokens: 100,
           model: "claude-sonnet",
           outputTokens: 50,
@@ -74,8 +80,8 @@ describe("createElogs/ai", () => {
           },
         })
       )
-      .get("/all-fields", ({ request, store }) => {
-        mergeAIMetrics(store.logger, request, allMetrics);
+      .get("/all-fields", () => {
+        mergeAIMetrics(globalLogger, allMetrics);
         return "ok";
       });
 
@@ -104,8 +110,8 @@ describe("createElogs/ai", () => {
           },
         })
       )
-      .get("/empty", ({ request, store }) => {
-        mergeAIMetrics(store.logger, request, {});
+      .get("/empty", () => {
+        mergeAIMetrics(globalLogger, {});
         return "ok";
       });
 

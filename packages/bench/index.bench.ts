@@ -1,5 +1,10 @@
 import { createPinoLogger as createBogeychan } from "@bogeychan/elysia-logger";
-import { createElogs, globalLogger, initGlobalLogger } from "@pori15/elogs";
+import {
+  createElogs,
+  globalLogger,
+  initGlobalLogger,
+  requestStorage,
+} from "@pori15/elogs";
 import { consola } from "consola";
 import { Elysia } from "elysia";
 import { createLogger as createEvlog } from "evlog";
@@ -58,7 +63,9 @@ const bc = createBogeychan({ enabled: false });
 
 describe("Simple Log (String)", () => {
   bench("createElogs", () => {
-    globalLogger.info(mockRequest, "Hello World");
+    requestStorage.run(mockRequest, () => {
+      globalLogger.info("Hello World");
+    });
   });
 
   bench("pino", () => {
@@ -92,7 +99,9 @@ describe("Structured Log (Object)", () => {
   };
 
   bench("createElogs", () => {
-    globalLogger.info(mockRequest, "Hello World", data);
+    requestStorage.run(mockRequest, () => {
+      globalLogger.info("Hello World", data);
+    });
   });
 
   bench("pino", () => {
@@ -130,7 +139,9 @@ describe("Deep Nested Log", () => {
   };
 
   bench("createElogs", () => {
-    globalLogger.info(mockRequest, "Deep nested", deepData);
+    requestStorage.run(mockRequest, () => {
+      globalLogger.info("Deep nested", deepData);
+    });
   });
 
   bench("pino", () => {

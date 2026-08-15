@@ -1,5 +1,5 @@
 import { describe, expect, mock, test } from "bun:test";
-import type { Options } from "../../src/interfaces";
+import type { CreateElogsOptions } from "../../src/interfaces";
 import { createLogger } from "../../src/logger";
 import { spyConsole } from "../_helpers/console";
 import { createMockRequest } from "../_helpers/request";
@@ -22,7 +22,7 @@ describe("createLogger", () => {
     >(() => {
       /* noop */
     });
-    const options: Options = {
+    const options: CreateElogsOptions = {
       transports: {
         only: true,
         targets: [{ log: transport }],
@@ -63,7 +63,7 @@ describe("createLogger", () => {
     >(() => {
       /* noop */
     });
-    const options: Options = {
+    const options: CreateElogsOptions = {
       transports: {
         only: true,
         targets: [{ log: transport }],

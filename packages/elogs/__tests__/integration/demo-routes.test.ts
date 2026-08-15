@@ -1,4 +1,4 @@
-import { describe, expect, mock, test } from "bun:test";
+import { beforeEach, describe, expect, mock, test } from "bun:test";
 // `@elysiajs/node` 1.x targets Elysia 1.x. The local fork still runs
 // Elysia 2.0.0-exp.62, so the Node adapter can't be loaded under this
 // combination. The integration test is therefore skipped — the demo-app
@@ -7,7 +7,7 @@ import { describe, expect, mock, test } from "bun:test";
 // app under Bun (the supported runtime for the 2.0-exp series).
 import { Elysia } from "elysia";
 
-import { createElogs } from "../../src";
+import { createElogs, resetGlobalLogger } from "../../src";
 import {
   createDemoApp,
   silentTestOptions,
@@ -20,6 +20,11 @@ const mockTransport = () =>
   });
 
 describe("demo routes (Bun)", () => {
+  beforeEach(() => {
+    // 每个测试用全新 createElogs,需重置 globalLogger 让新实例接管
+    resetGlobalLogger();
+  });
+
   test("GET / returns 200", async () => {
     const transport = mockTransport();
     const app = createDemoApp(silentTestOptions(transport));

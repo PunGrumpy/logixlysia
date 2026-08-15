@@ -13,9 +13,15 @@
  *     这些是上游实验版问题,跳过对应断言。
  */
 
-import { describe, expect, mock, test } from "bun:test";
+import { beforeEach, describe, expect, mock, test } from "bun:test";
 import { Elysia, HTTPError } from "elysia";
-import { createElogs, errorMap, httpError } from "../../src";
+import {
+  createElogs,
+  errorMap,
+  globalLogger,
+  httpError,
+  resetGlobalLogger,
+} from "../../src";
 import type { CreateElogsOptions } from "../../src/interfaces";
 import { createMockRequest } from "../_helpers/request";
 
@@ -31,6 +37,11 @@ const baseOptions = (
 });
 
 describe("createElogs plugin (Elysia 2.0)", () => {
+  beforeEach(() => {
+    // 每个测试用全新 createElogs,需重置 globalLogger 让新实例接管
+    resetGlobalLogger();
+  });
+
   test("afterHandle fires once for successful requests", async () => {
     const transport = makeTransport();
     const app = new Elysia()
@@ -49,8 +60,8 @@ describe("createElogs plugin (Elysia 2.0)", () => {
     const transport = makeTransport();
     const app = new Elysia()
       .use(createElogs(baseOptions(transport)))
-      .get("/test", ({ request, store }) => {
-        store.logger.info(request, "user-emitted");
+      .get("/test", () => {
+        globalLogger.info("user-emitted");
         return "ok";
       });
 
@@ -114,12 +125,10 @@ describe("createElogs plugin (Elysia 2.0)", () => {
       }
     }
     const app = new Elysia()
-      .use(
-        createElogs({
-          ...baseOptions(transport),
-          errors: [OutOfCredit as never],
-        })
-      )
+      .use(createElogs(baseOptions(transport)))
+      .error(OutOfCredit, ({ error }) => ({
+        balance: (error as { detail: { balance: number } }).detail.balance,
+      }))
       .get("/buy", () => {
         throw new OutOfCredit();
       });

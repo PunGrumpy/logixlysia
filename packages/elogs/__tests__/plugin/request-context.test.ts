@@ -1,10 +1,15 @@
-import { describe, expect, mock, test } from "bun:test";
+import { beforeEach, describe, expect, mock, test } from "bun:test";
 import { Elysia } from "elysia";
 
-import { createElogs } from "../../src";
+import { createElogs, globalLogger, resetGlobalLogger } from "../../src";
 import type { CreateElogsOptions } from "../../src/interfaces";
 
 describe("createElogs request context", () => {
+  beforeEach(() => {
+    // 每个测试用全新 createElogs,需重置 globalLogger 让新实例接管
+    resetGlobalLogger();
+  });
+
   test("merges accumulated context into auto access log", async () => {
     const transport = mock<
       (lvl: unknown, msg: unknown, meta?: unknown) => void
@@ -19,12 +24,10 @@ describe("createElogs request context", () => {
       },
     };
 
-    const app = new Elysia()
-      .use(createElogs(options))
-      .get("/test", ({ request, store }) => {
-        store.logger.mergeContext(request, { userId: "u1" });
-        return "ok";
-      });
+    const app = new Elysia().use(createElogs(options)).get("/test", () => {
+      globalLogger.mergeContext({ userId: "u1" });
+      return "ok";
+    });
 
     await app.handle(new Request("http://localhost/test"));
 
@@ -49,16 +52,14 @@ describe("createElogs request context", () => {
       },
     };
 
-    const app = new Elysia()
-      .use(createElogs(options))
-      .get("/test", ({ request, store }) => {
-        store.logger.mergeContext(request, {
-          plan: "pro",
-          userId: "accumulated",
-        });
-        store.logger.info(request, "custom", { userId: "override" });
-        return "ok";
+    const app = new Elysia().use(createElogs(options)).get("/test", () => {
+      globalLogger.mergeContext({
+        plan: "pro",
+        userId: "accumulated",
       });
+      globalLogger.info("custom", { userId: "override" });
+      return "ok";
+    });
 
     await app.handle(new Request("http://localhost/test"));
 
@@ -84,14 +85,12 @@ describe("createElogs request context", () => {
       },
     };
 
-    const app = new Elysia()
-      .use(createElogs(options))
-      .get("/test", ({ request, store }) => {
-        store.logger.mergeContext(request, {
-          email: "secret@example.com",
-        });
-        return "ok";
+    const app = new Elysia().use(createElogs(options)).get("/test", () => {
+      globalLogger.mergeContext({
+        email: "secret@example.com",
       });
+      return "ok";
+    });
 
     await app.handle(new Request("http://localhost/test"));
 

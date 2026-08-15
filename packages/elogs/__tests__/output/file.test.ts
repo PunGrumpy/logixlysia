@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { promises as fs } from "node:fs";
 import { join } from "node:path";
-import type { Options } from "../../src/interfaces";
+import type { CreateElogsOptions } from "../../src/interfaces";
 import { logToFile } from "../../src/output/file";
 import { createMockRequest } from "../_helpers/request";
 import { createTempDir, removeTempDir } from "../_helpers/tmp";
@@ -11,7 +11,7 @@ describe("logToFile", () => {
     const dir = await createTempDir();
     try {
       const filePath = join(dir, "logs", "app.log");
-      const options: Options = {};
+      const options: CreateElogsOptions = {};
 
       await logToFile({
         data: { message: "hello" },
@@ -33,7 +33,7 @@ describe("logToFile", () => {
     const dir = await createTempDir();
     try {
       const filePath = join(dir, "logs", "rotate.log");
-      const options: Options = {
+      const options: CreateElogsOptions = {
         file: {
           path: filePath,
           rotation: { compress: true, compression: "gzip", maxSize: 1 },

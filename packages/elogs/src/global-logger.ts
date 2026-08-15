@@ -35,6 +35,15 @@ let globalLoggerImpl: GlobalLogger | undefined;
 const globalContextStore = createRequestContextStore();
 let hasWarnedNoRequest = false;
 
+/**
+ * Requests that have been explicitly logged via `globalLogger` (i.e. caller
+ * emitted a custom log line). The plugin's afterHandle hook checks this
+ * WeakSet in addition to its own per-instance one, so that emitting through
+ * `globalLogger` suppresses the auto access log the same way emitting
+ * through the per-instance `logger` does.
+ */
+export const globalCustomLoggedRequests = new WeakSet<Request>();
+
 const unwrapError = (
   message: string | Error,
   context?: Record<string, unknown>
@@ -71,6 +80,9 @@ const wrap = (logger: Logger): GlobalLogger => {
   ) => {
     const request = requestStorage.getStore();
     if (request) {
+      // 标记:globalLogger 在请求作用域内的 emit 应当像 per-instance logger
+      // 一样,抑制 plugin 的 afterHandle 自动访问日志
+      globalCustomLoggedRequests.add(request);
       logger[method](request, message, context);
     } else {
       warnOnceNoRequest(method);
@@ -85,6 +97,7 @@ const wrap = (logger: Logger): GlobalLogger => {
       const { message: msg, context: ctx } = unwrapError(message, context);
       const request = requestStorage.getStore();
       if (request) {
+        globalCustomLoggedRequests.add(request);
         logger.error(request, msg, ctx);
       } else {
         warnOnceNoRequest("error");

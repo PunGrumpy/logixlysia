@@ -1,6 +1,11 @@
-import { afterEach, describe, expect, mock, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 
-import { createLogger } from "../../src/logger";
+import { requestStorage } from "../../src/context/storage";
+import {
+  globalLogger,
+  initGlobalLogger,
+  resetGlobalLogger,
+} from "../../src/global-logger";
 import { __resetForTesting, injectTraceContext } from "../../src/otel";
 
 const fakeSpanContext = {
@@ -20,9 +25,20 @@ mock.module("@opentelemetry/api", () => ({
 }));
 
 describe("createElogs/otel (mocked)", () => {
+  beforeEach(() => {
+    resetGlobalLogger();
+    initGlobalLogger({
+      config: {
+        disableFileLogging: true,
+        disableInternalLogger: true,
+      },
+    });
+  });
+
   afterEach(() => {
     // Reset the module-level cache so each test starts fresh
     __resetForTesting();
+    resetGlobalLogger();
     getSpanMock.mockImplementation(() => ({
       spanContext: () => fakeSpanContext,
     }));
@@ -32,21 +48,19 @@ describe("createElogs/otel (mocked)", () => {
     // Reset cache so it re-resolves from the mock
     __resetForTesting();
 
-    const logger = createLogger({
-      config: {
-        disableFileLogging: true,
-        disableInternalLogger: true,
-      },
-    });
     const request = new Request("http://localhost/");
 
-    const result = await injectTraceContext(logger, request);
+    const result = await requestStorage.run(request, () =>
+      injectTraceContext(globalLogger)
+    );
 
     expect(result).toEqual({
       span_id: fakeSpanContext.spanId,
       trace_id: fakeSpanContext.traceId,
     });
-    expect(logger.getContext(request)).toMatchObject({
+    expect(
+      requestStorage.run(request, () => globalLogger.getContext())
+    ).toMatchObject({
       span_id: fakeSpanContext.spanId,
       trace_id: fakeSpanContext.traceId,
     });
@@ -56,17 +70,15 @@ describe("createElogs/otel (mocked)", () => {
     __resetForTesting();
     getSpanMock.mockImplementation(() => undefined as any);
 
-    const logger = createLogger({
-      config: {
-        disableFileLogging: true,
-        disableInternalLogger: true,
-      },
-    });
     const request = new Request("http://localhost/");
 
-    const result = await injectTraceContext(logger, request);
+    const result = await requestStorage.run(request, () =>
+      injectTraceContext(globalLogger)
+    );
 
     expect(result).toBeUndefined();
-    expect(logger.getContext(request)).toEqual({});
+    expect(
+      requestStorage.run(request, () => globalLogger.getContext())
+    ).toEqual({});
   });
 });

@@ -52,7 +52,7 @@ import { createRequestContextStore } from "./context/request-context";
 import { loggerStorage, requestStorage } from "./context/storage";
 import { startServer } from "./extensions";
 // 导入全局 Logger 管理
-import { initGlobalLogger } from "./global-logger";
+import { globalCustomLoggedRequests, initGlobalLogger } from "./global-logger";
 import { getStatusCode } from "./helpers/status";
 import type {
   CreateElogsOptions,
@@ -384,8 +384,11 @@ export const createElogs = (rawOptions: CreateElogsOptions = {}) => {
             }
           }
 
-          // 如果已自定义记录日志，跳过自动访问日志
-          if (requestHasCustomLog.has(request)) {
+          // 如果已自定义记录日志(per-instance logger 或 globalLogger),跳过自动访问日志
+          if (
+            requestHasCustomLog.has(request) ||
+            globalCustomLoggedRequests.has(request)
+          ) {
             return;
           }
 

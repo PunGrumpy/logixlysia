@@ -1,5 +1,4 @@
 import { describe, expect, test } from "bun:test";
-import { HttpError } from "../../src/interfaces";
 import {
   buildPinoRedactPaths,
   isSensitiveKey,
@@ -7,6 +6,16 @@ import {
   redactRequest,
   redactString,
 } from "../../src/utils/redact";
+
+/** Mock HTTP error shape (HttpError class was removed; redact only needs .status + .message). */
+class MockHttpError extends Error {
+  override name = "HttpError";
+  status: number;
+  constructor(status: number, message: string) {
+    super(message);
+    this.status = status;
+  }
+}
 
 describe("redactString", () => {
   test("redacts emails", () => {
@@ -85,10 +94,10 @@ describe("redact", () => {
   });
 
   test("preserves HttpError subclass and status", () => {
-    const err = new HttpError(404, "Not found: test@example.com");
+    const err = new MockHttpError(404, "Not found: test@example.com");
     const result = redact(err);
-    expect(result).toBeInstanceOf(HttpError);
-    expect((result as HttpError).status).toBe(404);
+    expect(result).toBeInstanceOf(MockHttpError);
+    expect((result as MockHttpError).status).toBe(404);
     expect(result.message).toBe("Not found: [REDACTED]");
   });
 

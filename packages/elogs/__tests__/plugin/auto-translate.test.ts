@@ -30,18 +30,17 @@ const silent = (
   },
 });
 
-/** 构造一个 Drizzle 风格的错误(name="DrizzleError" + .code) */
-const makeDrizzleError = (
-  code: string
-): Error & { code: string; name: string } => {
-  const e = new Error(`driver error: ${code}`) as Error & {
-    code: string;
-    name: string;
-  };
-  e.name = "DrizzleError";
-  e.code = code;
-  return e;
-};
+/** Mock Drizzle 风格错误类 —— name="DrizzleError" + .code,用于 Elysia .error() 匹配 */
+class DrizzleError extends Error {
+  override name = "DrizzleError";
+  code: string;
+  constructor(code: string) {
+    super(`driver error: ${code}`);
+    this.code = code;
+  }
+}
+
+const makeDrizzleError = (code: string): DrizzleError => new DrizzleError(code);
 
 describe("autoTranslate: { db: 'drizzle' }", () => {
   test("Drizzle 23505 唯一约束 → 日志 WARNING + 用户 .error 返回 409", async () => {
@@ -53,7 +52,7 @@ describe("autoTranslate: { db: 'drizzle' }", () => {
           autoTranslate: { db: "drizzle" },
         })
       )
-      .error("DrizzleError", () => problem(409, { detail: "Conflict" }))
+      .error(DrizzleError, () => problem(409, { detail: "Conflict" }))
       .get("/users", () => {
         throw makeDrizzleError("23505");
       });
@@ -165,7 +164,7 @@ describe("autoTranslate: { db: 'drizzle' }", () => {
           autoTranslate: { db: "drizzle" },
         })
       )
-      .error("DrizzleError", (ctx) => {
+      .error(DrizzleError, (ctx) => {
         receivedError = ctx.error;
         return problem(409, { detail: "Conflict" });
       })

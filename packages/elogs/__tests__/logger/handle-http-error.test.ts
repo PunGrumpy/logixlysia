@@ -1,8 +1,8 @@
 import { describe, expect, mock, test } from "bun:test";
 import { Elysia, t } from "elysia";
 
-import { createElogs } from "../../src";
-import { type CreateElogsOptions, HttpError } from "../../src/interfaces";
+import { createElogs, httpError } from "../../src";
+import type { CreateElogsOptions } from "../../src/interfaces";
 import { normalizeLoggedError } from "../../src/utils/error";
 
 interface CapturedEvent {
@@ -26,12 +26,16 @@ const createCaptureTransport = () => {
 const SECRET_PASSWORD = "hunter2-secret-value";
 
 const buildLoginApp = (options: CreateElogsOptions) =>
-  new Elysia().use(createElogs(options)).post("/login", () => "ok", {
-    body: t.Object({
-      email: t.String(),
-      password: t.String({ minLength: 60 }),
-    }),
-  });
+  new Elysia().use(createElogs(options)).post(
+    "/login",
+    {
+      body: t.Object({
+        email: t.String(),
+        password: t.String({ minLength: 60 }),
+      }),
+    },
+    () => "ok"
+  );
 
 describe("handleHttpError", () => {
   // Elysia 2.0.0-exp.62 body validation returns HTTP 200 (instead of 422)
@@ -114,7 +118,7 @@ describe("handleHttpError", () => {
     };
 
     const app = new Elysia().use(createElogs(options)).get("/down", () => {
-      throw new HttpError(503, "downstream");
+      throw httpError(503, "downstream");
     });
 
     await app.handle(new Request("http://localhost/down"));
