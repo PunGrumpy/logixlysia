@@ -1,12 +1,14 @@
 #!/usr/bin/env node
 // @ts-nocheck — JSDoc typedefs in .mjs are not picked up by tsc when
 // invoked from the docs tsconfig; runtime behaviour is what matters here.
-// Generate the `/docs/api` MDX files from typedoc JSON output.
+// Generate the `/api` MDX files from typedoc JSON output.
 //
 // Why this exists: createElogs exports a ~75-symbol public surface, and
-// hand-keeping `apps/docs/content/api/*.mdx` in sync with `src/*.ts`
+// hand-keeping `apps/docs/content-api/*.mdx` in sync with `src/*.ts`
 // drifts. typedoc gives us an authoritative JSON dump; we slice it into
-// per-topic MDX that blume can render alongside the hand-written docs.
+// per-topic MDX that blume renders as a separate top-level "API" tab
+// (see `blume.config.ts`) so the auto-generated reference is independent
+// from the hand-written guide under `/docs`.
 //
 // Run with `bun run typedoc` (see package.json). The script:
 //   1. ensures `node_modules/typedoc/node_modules/typescript` resolves to
@@ -14,7 +16,7 @@
 //      TS 7 removed — without this symlink the whole CLI crashes on import)
 //   2. shells out to `typedoc --json` against packages/elogs
 //   3. walks the JSON and emits 4 MDX files under
-//      apps/docs/content/api/
+//      apps/docs/content-api/
 
 import { spawnSync } from "node:child_process";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -26,7 +28,7 @@ const DOCS_ROOT = resolve(__dirname, "..");
 const REPO_ROOT = resolve(DOCS_ROOT, "..", "..");
 const PKG_ROOT = join(REPO_ROOT, "packages", "elogs");
 const SRC_ENTRY = join(PKG_ROOT, "src", "index.ts");
-const OUT_DIR = join(DOCS_ROOT, "content", "api");
+const OUT_DIR = join(DOCS_ROOT, "content-api");
 const TYPEDOC_JSON = join(DOCS_ROOT, ".blume", "typedoc.json");
 const TYPEDOC_TSCONFIG = join(PKG_ROOT, ".typedoc-tsconfig.json");
 
@@ -513,14 +515,14 @@ writeFileSync(join(OUT_DIR, "configuration.mdx"), configBody);
 
 const indexBody = [
   frontmatter(
-    "API reference",
+    "API",
     "Auto-generated reference for `@pori15/elogs` exports, types, and configuration."
   ),
   "本页是 [`@pori15/elogs`](https://www.npmjs.com/package/@pori15/elogs) 的 API 参考。每当 `packages/elogs/src/*.ts` 变化,运行 `bun run typedoc` 重新生成。\n",
   "## Sections\n",
-  "- [Exports](/docs/api/exports) — public functions and values",
-  "- [Types](/docs/api/types) — interfaces, type aliases, classes",
-  "- [Configuration](/docs/api/configuration) — every `ElogsConfig` field",
+  "- [Exports](/api/exports) — public functions and values",
+  "- [Types](/api/types) — interfaces, type aliases, classes",
+  "- [Configuration](/api/configuration) — every `ElogsConfig` field",
   "",
   "## At a glance\n",
   `| Kind | Count |\n| --- | --- |\n| Functions | ${functions.length} |\n| Variables | ${variables.length} |\n| Interfaces | ${interfaces.length} |\n| Type Aliases | ${typeAliases.length} |\n| Classes | ${classes.length} |\n`,

@@ -17,15 +17,15 @@ Elogs 支持三种输出目标,**互不冲突**:
 
 | 字段 | 作用 |
 | --- | --- |
-| [`disableInternalLogger`](/docs/api/configuration#elogs-config) | 只关 console |
-| [`disableFileLogging`](/docs/api/configuration#elogs-config) | 只关 file |
-| [`useTransportsOnly`](/docs/api/configuration#elogs-config) | 同时关 console + file,只走 transport |
+| [`disableInternalLogger`](/api/configuration#elogs-config) | 只关 console |
+| [`disableFileLogging`](/api/configuration#elogs-config) | 只关 file |
+| [`useTransportsOnly`](/api/configuration#elogs-config) | 同时关 console + file,只走 transport |
 
 默认:console + file(如果设置了 `logFilePath`)+ transports 同时生效。详见 [Log Filtering](/docs/features/filtering#输出-sink-开关)。
 
 ## Transport 接口
 
-[`Transport`](/docs/api/types#transport) 是**只有一个方法**的纯接口,所有组合器、sink 出口都走它:
+[`Transport`](/api/types#transport) 是**只有一个方法**的纯接口,所有组合器、sink 出口都走它:
 
 ```ts
 import type { LogLevel, Transport } from '@pori15/elogs'
@@ -39,7 +39,7 @@ export interface Transport {
 }
 ```
 
-`meta` 由 [`logToTransports`](/docs/api/exports#logtotransports) 装配,固定包含 `request.method`、`request.url`、`durationMs`、`pathname`、原始 `data` 字段(包含 `status`、`requestId` 等)。
+`meta` 由 [`logToTransports`](/api/exports#logtotransports) 装配,固定包含 `request.method`、`request.url`、`durationMs`、`pathname`、原始 `data` 字段(包含 `status`、`requestId` 等)。
 
 ## 基本 transport
 
@@ -183,7 +183,7 @@ app.use(
 
 ## 错误处理 & 节流
 
-transport 抛出的同步异常和异步 reject 都会被 [`logToTransports`](/docs/api/exports#logtotransports) 捕获并打印到 `console.error`,**不会**让请求挂掉。但为了防止坏掉的 transport 把 stderr 刷爆,同一 transport 的同一错误在 [`transportThrottleMs`](/docs/api/configuration#elogs-config)(默认 `5000`ms)窗口内合并为一条 `console.error`。
+transport 抛出的同步异常和异步 reject 都会被 [`logToTransports`](/api/exports#logtotransports) 捕获并打印到 `console.error`,**不会**让请求挂掉。但为了防止坏掉的 transport 把 stderr 刷爆,同一 transport 的同一错误在 [`transportThrottleMs`](/api/configuration#elogs-config)(默认 `5000`ms)窗口内合并为一条 `console.error`。
 
 ```ts
 createElogs({
@@ -210,13 +210,13 @@ createElogs({
 
 | 组合器 | 用途 |
 | --- | --- |
-| [`tee([t1, t2, ...])`](/docs/api/exports#tee) | 多路 fan-out,任一失败不短路 |
-| [`sample(rate, t)`](/docs/api/exports#sample) | 概率采样(0-1) |
-| [`filter(predicate, t)`](/docs/api/exports#filter) | 谓词过滤 |
-| [`tap(fn, t)`](/docs/api/exports#tap) | 旁路(metrics / 计数),不影响主链路 |
-| [`batch(size, ms, t)`](/docs/api/exports#batch) | 缓冲 `size` 条或 `ms` 毫秒,合成一条发 |
+| [`tee([t1, t2, ...])`](/api/exports#tee) | 多路 fan-out,任一失败不短路 |
+| [`sample(rate, t)`](/api/exports#sample) | 概率采样(0-1) |
+| [`filter(predicate, t)`](/api/exports#filter) | 谓词过滤 |
+| [`tap(fn, t)`](/api/exports#tap) | 旁路(metrics / 计数),不影响主链路 |
+| [`batch(size, ms, t)`](/api/exports#batch) | 缓冲 `size` 条或 `ms` 毫秒,合成一条发 |
 
-所有组合器都在 `output/composers.ts` 里实现,签名见 [`LogEntry`](/docs/api/types#log-entry)。
+所有组合器都在 `output/composers.ts` 里实现,签名见 [`LogEntry`](/api/types#log-entry)。
 
 ### tee —— 多路 fan-out
 
@@ -358,11 +358,11 @@ createElogs({
 
 ## API 参考
 
-- [`Transport`](/docs/api/types#transport) — 接口定义
-- [`ElogsConfig.transports`](/docs/api/configuration#elogs-config) — 启用 transport 列表
-- [`ElogsConfig.useTransportsOnly`](/docs/api/configuration#elogs-config) — 只走 transport
-- [`ElogsConfig.transportThrottleMs`](/docs/api/configuration#elogs-config) — 错误节流窗口
-- [`logToTransports`](/docs/api/exports#logtotransports) — 内部 transport 出口
-- [`tee`](/docs/api/exports#tee) / [`sample`](/docs/api/exports#sample) / [`filter`](/docs/api/exports#filter) / [`tap`](/docs/api/exports#tap) / [`batch`](/docs/api/exports#batch) — 组合器
-- [`LogEntry`](/docs/api/types#log-entry) — 组合器用的条目类型
+- [`Transport`](/api/types#transport) — 接口定义
+- [`ElogsConfig.transports`](/api/configuration#elogs-config) — 启用 transport 列表
+- [`ElogsConfig.useTransportsOnly`](/api/configuration#elogs-config) — 只走 transport
+- [`ElogsConfig.transportThrottleMs`](/api/configuration#elogs-config) — 错误节流窗口
+- [`logToTransports`](/api/exports#logtotransports) — 内部 transport 出口
+- [`tee`](/api/exports#tee) / [`sample`](/api/exports#sample) / [`filter`](/api/exports#filter) / [`tap`](/api/exports#tap) / [`batch`](/api/exports#batch) — 组合器
+- [`LogEntry`](/api/types#log-entry) — 组合器用的条目类型
 - [Log Filtering](/docs/features/filtering#transport-谓词过滤) — transport 层谓词过滤

@@ -4,10 +4,10 @@ import { defineConfig } from "blume";
 // root, e.g. /introduction and /features/log-levels. Those URLs are indexed
 // and linked externally, so each one 301s to its /docs counterpart.
 //
-// `api-reference` was a hand-written page before the auto-generated
-// `/reference/*` set landed; the typedoc output now lives at `/docs/api/*`
-// (a top-level "API" navbar entry) and we keep a 301 from `/api-reference`
-// and from the older `/docs/reference` for SEO continuity.
+// `api-reference` was a hand-written page; the auto-generated reference
+// (typedoc) now lives at `/api` (a top-level "API" tab) and we keep 301s
+// from `/api-reference` and the older `/docs/reference` and `/docs/api`
+// for SEO continuity.
 const legacyDocsPaths = [
   "comparison",
   "configuration",
@@ -54,6 +54,10 @@ export default defineConfig({
   content: {
     sources: [
       { prefix: "docs", root: "content", type: "filesystem" },
+      // Auto-generated API reference (typedoc) lives at /api, separate from
+      // the hand-written guide at /docs — different ownership, different
+      // review cadence, different failure mode. See apps/docs/scripts/typedoc.mjs.
+      { prefix: "api", root: "content-api", type: "filesystem" },
       // Elogs's GitHub releases become the changelog timeline at /changelog
       // (each release is a type:changelog entry). Set GITHUB_TOKEN in CI to
       // avoid rate limits; a failed fetch degrades to an empty changelog.
@@ -96,6 +100,10 @@ export default defineConfig({
         path: "/docs",
       },
       {
+        label: "API",
+        path: "/api",
+      },
+      {
         label: "Changelog",
         path: "/changelog",
       },
@@ -108,8 +116,9 @@ export default defineConfig({
       from: `/${path}`,
       to: `/docs/${path}`,
     })),
-    { from: "/api-reference", to: "/docs/api" },
-    { from: "/docs/reference", to: "/docs/api" },
+    { from: "/api-reference", to: "/api" },
+    { from: "/docs/api", to: "/api" },
+    { from: "/docs/reference", to: "/api" },
     { from: "/rss.xml", to: "/changelog/rss.xml" },
     { from: "/2025", to: "/2026" },
   ],

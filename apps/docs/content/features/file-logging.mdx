@@ -3,7 +3,7 @@ title: File Logging
 description: 把日志写入文件以便持久化
 ---
 
-用 Elogs 的 file sink 把日志写到本地文件,持久化、归档、离线分析都用得上。所有文件行为都集中在 [`ElogsConfig`](/docs/api/types#elogs-config) 的几个字段上,不需要碰 plugin 选项。
+用 Elogs 的 file sink 把日志写到本地文件,持久化、归档、离线分析都用得上。所有文件行为都集中在 [`ElogsConfig`](/api/types#elogs-config) 的几个字段上,不需要碰 plugin 选项。
 
 ## 基本用法
 
@@ -31,14 +31,14 @@ const app = new Elysia().use(
 | `logFilePath` | `string` | 日志文件路径;不设即关闭文件输出 | `undefined` |
 | `logFileMode` | `number` | 文件权限位(`chmod` 形式) | `0o600` |
 | `logDirMode` | `number` | 目录权限位 | `0o700` |
-| `logRotation` | [`LogRotationConfig`](/docs/api/types#log-rotation-config) | 轮转策略(大小 / 间隔 / 保留 / 压缩) | `undefined` |
+| `logRotation` | [`LogRotationConfig`](/api/types#log-rotation-config) | 轮转策略(大小 / 间隔 / 保留 / 压缩) | `undefined` |
 | `disableFileLogging` | `boolean` | 即使配了 `logFilePath` 也关掉 file sink | `false` |
 
-字段定义见 [`ElogsConfig`](/docs/api/configuration#elogs-config),类型见 [`LogRotationConfig`](/docs/api/types#log-rotation-config)。
+字段定义见 [`ElogsConfig`](/api/configuration#elogs-config),类型见 [`LogRotationConfig`](/api/types#log-rotation-config)。
 
 ## 工作机制
 
-file sink 走的是单 emit 管道的 file 出口([`emit.ts`](/docs/api/exports#emit)),核心四点:
+file sink 走的是单 emit 管道的 file 出口([`emit.ts`](/api/exports#emit)),核心四点:
 
 1. **句柄缓存** —— 同路径复用同一 `FileHandle`,免去每次 `open` 的系统调用开销。句柄按 path 在模块级 `Map` 里缓存。
 2. **微任务批写** —— `write` 不立刻落盘,把同 tick 内的多条 log 入队,下一个 `queueMicrotask` 一次性 `handle.write()` 写完,降低 syscall 次数。
@@ -134,13 +134,13 @@ createElogs({
 
 ## API 参考
 
-- [`ElogsConfig.logFilePath`](/docs/api/configuration#elogs-config) — 启用文件输出
-- [`ElogsConfig.logFileMode`](/docs/api/configuration#elogs-config) — 文件权限
-- [`ElogsConfig.logDirMode`](/docs/api/configuration#elogs-config) — 目录权限
-- [`ElogsConfig.logRotation`](/docs/api/configuration#elogs-config) — 轮转配置
-- [`ElogsConfig.disableFileLogging`](/docs/api/configuration#elogs-config) — 关闭 file sink
-- [`LogRotationConfig`](/docs/api/types#log-rotation-config) — rotation 字段类型
-- [`FileSink`](/docs/api/types#file-sink) / [`FileSinkOptions`](/docs/api/types#file-sink-options) — 底层 file sink 抽象
-- [`getFileSink(path)`](/docs/api/exports#getfilesink) — 按 path 拿复用 sink
-- [`logToFile`](/docs/api/exports#logtofile) — 内部 file 出口
+- [`ElogsConfig.logFilePath`](/api/configuration#elogs-config) — 启用文件输出
+- [`ElogsConfig.logFileMode`](/api/configuration#elogs-config) — 文件权限
+- [`ElogsConfig.logDirMode`](/api/configuration#elogs-config) — 目录权限
+- [`ElogsConfig.logRotation`](/api/configuration#elogs-config) — 轮转配置
+- [`ElogsConfig.disableFileLogging`](/api/configuration#elogs-config) — 关闭 file sink
+- [`LogRotationConfig`](/api/types#log-rotation-config) — rotation 字段类型
+- [`FileSink`](/api/types#file-sink) / [`FileSinkOptions`](/api/types#file-sink-options) — 底层 file sink 抽象
+- [`getFileSink(path)`](/api/exports#getfilesink) — 按 path 拿复用 sink
+- [`logToFile`](/api/exports#logtofile) — 内部 file 出口
 - [Log Rotation](/docs/features/log-rotation) — 轮转 / 压缩 / 保留

@@ -144,11 +144,11 @@ async function findUser(id: string) {
 
 ## 相关 API
 
-- [`RequestScopedLogger`](/docs/api/types#requestscopedlogger) — `({ log })` / `useLogger()` 的返回类型
-- [`useLogger`](/docs/api/exports#uselogger) — 从 `AsyncLocalStorage` 拿当前请求 logger
-- [`createRequestScopedLogger`](/docs/api/exports#createrequestscopedlogger) — 工厂函数(测试 / 自定义中间件)
-- [`createRequestContextStore`](/docs/api/exports#createrequestcontextstore) — 底层 `RequestContextStore` 工厂
-- [`mergeLogDataContext`](/docs/api/exports#mergelogdatacontext) — 显式 vs 累积的 merge 逻辑
-- [`RequestContextStore`](/docs/api/types#requestcontextstore) — 累积 / 读取 / 清空 context 的接口
-- [`ContextKey`](/docs/api/types#contextkey) — `Request | object`(WebSocket 也用它作 key)
-- [`useAsyncLocalStorage`](/docs/api/types#elogsconfig) — `ElogsConfig` 上的开关
+- [`RequestScopedLogger`](/api/types#requestscopedlogger) — `({ log })` / `useLogger()` 的返回类型
+- [`useLogger`](/api/exports#uselogger) — 从 `AsyncLocalStorage` 拿当前请求 logger
+- [`createRequestScopedLogger`](/api/exports#createrequestscopedlogger) — 工厂函数(测试 / 自定义中间件)
+- [`createRequestContextStore`](/api/exports#createrequestcontextstore) — 底层 `RequestContextStore` 工厂
+- [`mergeLogDataContext`](/api/exports#mergelogdatacontext) — 显式 vs 累积的 merge 逻辑
+- [`RequestContextStore`](/api/types#requestcontextstore) — 累积 / 读取 / 清空 context 的接口
+- [`ContextKey`](/api/types#contextkey) — `Request | object`(WebSocket 也用它作 key)
+- [`useAsyncLocalStorage`](/api/types#elogsconfig) — `ElogsConfig` 上的开关

@@ -3,7 +3,7 @@ title: Log Rotation
 description: 管理日志文件大小、轮转间隔、压缩和保留策略
 ---
 
-Elogs 的 rotation 在 file sink 内部跑 —— [`FileSink`](/docs/api/types#file-sink) 每次 flush 后检查触发条件,触发就把当前文件改名、压缩、按保留策略清理。整套行为只用一个 [`LogRotationConfig`](/docs/api/types#log-rotation-config) 块配置。
+Elogs 的 rotation 在 file sink 内部跑 —— [`FileSink`](/api/types#file-sink) 每次 flush 后检查触发条件,触发就把当前文件改名、压缩、按保留策略清理。整套行为只用一个 [`LogRotationConfig`](/api/types#log-rotation-config) 块配置。
 
 ## 基本配置
 
@@ -37,7 +37,7 @@ createElogs({
 | `compress` | `boolean` | 轮转后是否 gzip 压缩(默认 `false`) |
 | `compression` | `'gzip'` | 压缩算法,目前仅 `gzip`(留作后续扩展) |
 
-完整类型见 [`LogRotationConfig`](/docs/api/types#log-rotation-config)。
+完整类型见 [`LogRotationConfig`](/api/types#log-rotation-config)。
 
 ## 触发条件
 
@@ -78,7 +78,7 @@ logRotation: { compress: true }
 
 `compress: true` 时,轮转(rename)完成后立刻 gzip 压缩新文件,然后按 `maxFiles` 清理。`compression` 字段当前只接受 `'gzip'`,留作 API 占位(未来可能加 zstd / brotli)。`compress: false`(默认)保留未压缩的明文轮转文件。
 
-压缩跑在 keyed mutex 锁内,跨文件互不阻塞;但同文件并发 rotation 会被串行化。压缩失败不会让主流程挂掉 —— 错误经 [`RotationErrorReporter`](/docs/api/types#rotation-error-reporter) 上报,默认打 `console.error`。
+压缩跑在 keyed mutex 锁内,跨文件互不阻塞;但同文件并发 rotation 会被串行化。压缩失败不会让主流程挂掉 —— 错误经 [`RotationErrorReporter`](/api/types#rotation-error-reporter) 上报,默认打 `console.error`。
 
 ## 轮转文件命名
 
@@ -156,13 +156,13 @@ logRotation: {
 
 ## API 参考
 
-- [`ElogsConfig.logRotation`](/docs/api/configuration#elogs-config) — rotation 配置入口
-- [`LogRotationConfig`](/docs/api/types#log-rotation-config) — 字段类型
-- [`FileSink`](/docs/api/types#file-sink) — 内部 file sink 抽象
-- [`shouldRotate`](/docs/api/exports#shouldrotate) — 大小触发的预检查
-- [`performRotation`](/docs/api/exports#performrotation) — 执行 rename + compress + cleanup
-- [`rotateFile`](/docs/api/exports#rotatefile) — 单次 rename
-- [`compressFile`](/docs/api/exports#compressfile) — 单次 gzip
-- [`getRotatedFileName`](/docs/api/exports#getrotatedfilename) — 生成归档文件名
-- [`RotationErrorReporter`](/docs/api/types#rotation-error-reporter) — 错误回调签名
+- [`ElogsConfig.logRotation`](/api/configuration#elogs-config) — rotation 配置入口
+- [`LogRotationConfig`](/api/types#log-rotation-config) — 字段类型
+- [`FileSink`](/api/types#file-sink) — 内部 file sink 抽象
+- [`shouldRotate`](/api/exports#shouldrotate) — 大小触发的预检查
+- [`performRotation`](/api/exports#performrotation) — 执行 rename + compress + cleanup
+- [`rotateFile`](/api/exports#rotatefile) — 单次 rename
+- [`compressFile`](/api/exports#compressfile) — 单次 gzip
+- [`getRotatedFileName`](/api/exports#getrotatedfilename) — 生成归档文件名
+- [`RotationErrorReporter`](/api/types#rotation-error-reporter) — 错误回调签名
 - [File Logging](/docs/features/file-logging) — file sink 基础

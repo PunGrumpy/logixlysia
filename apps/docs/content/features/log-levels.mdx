@@ -121,8 +121,8 @@ Pino logger 通过 lazy proxy 实现,首次访问时按需构造。把 `config.p
 
 ## API 参考
 
-- [`LogLevel`](https://elogs.vercel.app/docs/api/types#log-level) — 4 个字面量
-- [`LogFilter`](https://elogs.vercel.app/docs/api/types#log-filter) — `{ level?: LogLevel[] }`
-- [`ElogsConfig.logFilter`](https://elogs.vercel.app/docs/api/configuration#elogs-config) — 配置字段
-- [`CreateElogsOptions.logLevel`](https://elogs.vercel.app/docs/api/configuration#create-elogs-options) — 根级别名
+- [`LogLevel`](https://elogs.vercel.app/api/types#log-level) — 4 个字面量
+- [`LogFilter`](https://elogs.vercel.app/api/types#log-filter) — `{ level?: LogLevel[] }`
+- [`ElogsConfig.logFilter`](https://elogs.vercel.app/api/configuration#elogs-config) — 配置字段
+- [`CreateElogsOptions.logLevel`](https://elogs.vercel.app/api/configuration#create-elogs-options) — 根级别名
 - `levelForStatus(status)` — 公开工具函数,从 `@pori15/elogs` 直接 import
