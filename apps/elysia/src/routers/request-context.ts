@@ -1,5 +1,5 @@
-import type { Logixlysia } from "@pori15/logixlysia";
-import { useLogger } from "@pori15/logixlysia";
+import type { Logixlysia } from "@pori15/createLogPlugin";
+import { useLogger } from "@pori15/createLogPlugin";
 
 const dbQueryHelper = async () => {
   const log = useLogger();

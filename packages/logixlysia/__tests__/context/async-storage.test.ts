@@ -1,14 +1,14 @@
 import { describe, expect, mock, test } from "bun:test";
 import { Elysia } from "elysia";
-import { logixlysia, useLogger } from "../../src";
-import type { LogixlysiaOptions } from "../../src/interfaces";
+import { createLogPlugin, useLogger } from "../../src";
+import type { CreateLogPluginOptions } from "../../src/interfaces";
 
 describe("AsyncLocalStorage & useLogger() context integration", () => {
   test("derived log object is available on context and logs to transport", async () => {
     const transport = mock<(lvl: any, msg: any, meta?: any) => void>(
       () => undefined
     );
-    const options: LogixlysiaOptions = {
+    const options: CreateLogPluginOptions = {
       config: {
         disableFileLogging: true,
         disableInternalLogger: true,
@@ -17,7 +17,7 @@ describe("AsyncLocalStorage & useLogger() context integration", () => {
     };
 
     const app = new Elysia()
-      .use(logixlysia(options))
+      .use(createLogPlugin(options))
       .get("/test", ({ log }) => {
         log.mergeContext({ custom: "val" });
         log.info("hello from derive");
@@ -41,7 +41,7 @@ describe("AsyncLocalStorage & useLogger() context integration", () => {
     const transport = mock<(lvl: any, msg: any, meta?: any) => void>(
       () => undefined
     );
-    const options: LogixlysiaOptions = {
+    const options: CreateLogPluginOptions = {
       config: {
         disableFileLogging: true,
         disableInternalLogger: true,
@@ -50,20 +50,22 @@ describe("AsyncLocalStorage & useLogger() context integration", () => {
       },
     };
 
-    const app = new Elysia().use(logixlysia(options)).get("/test", async () => {
-      const log = useLogger();
-      log.mergeContext({ deep: "context" });
-      log.info("hello from useLogger");
+    const app = new Elysia()
+      .use(createLogPlugin(options))
+      .get("/test", async () => {
+        const log = useLogger();
+        log.mergeContext({ deep: "context" });
+        log.info("hello from useLogger");
 
-      // Nested async operation using actual Promise resolve to verify async hook context
-      await new Promise<void>((resolve) => {
-        const nestedLog = useLogger();
-        nestedLog.info("hello from nested");
-        resolve();
+        // Nested async operation using actual Promise resolve to verify async hook context
+        await new Promise<void>((resolve) => {
+          const nestedLog = useLogger();
+          nestedLog.info("hello from nested");
+          resolve();
+        });
+
+        return "ok";
       });
-
-      return "ok";
-    });
 
     await app.handle(new Request("http://localhost/test"));
 
@@ -84,7 +86,7 @@ describe("AsyncLocalStorage & useLogger() context integration", () => {
     const transport = mock<(lvl: any, msg: any, meta?: any) => void>(
       () => undefined
     );
-    const options: LogixlysiaOptions = {
+    const options: CreateLogPluginOptions = {
       config: {
         disableFileLogging: true,
         disableInternalLogger: true,
@@ -93,7 +95,7 @@ describe("AsyncLocalStorage & useLogger() context integration", () => {
       },
     };
 
-    const app = new Elysia().use(logixlysia(options)).get("/test", () => {
+    const app = new Elysia().use(createLogPlugin(options)).get("/test", () => {
       const log = useLogger();
       log.info("this should be ignored");
       return "ok";

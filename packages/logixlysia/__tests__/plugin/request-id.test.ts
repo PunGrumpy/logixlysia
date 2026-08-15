@@ -1,8 +1,8 @@
 import { describe, expect, mock, test } from "bun:test";
 import { Elysia } from "elysia";
 
-import { logixlysia } from "../../src";
-import type { LogixlysiaOptions } from "../../src/interfaces";
+import { createLogPlugin } from "../../src";
+import type { CreateLogPluginOptions } from "../../src/interfaces";
 
 const UUID_V4_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -14,7 +14,7 @@ describe("request ID plugin integration", () => {
     >(() => {
       /* noop */
     });
-    const options: LogixlysiaOptions = {
+    const options: CreateLogPluginOptions = {
       config: {
         disableFileLogging: true,
         disableInternalLogger: true,
@@ -23,7 +23,9 @@ describe("request ID plugin integration", () => {
       },
     };
 
-    const app = new Elysia().use(logixlysia(options)).get("/test", () => "ok");
+    const app = new Elysia()
+      .use(createLogPlugin(options))
+      .get("/test", () => "ok");
 
     await app.handle(new Request("http://localhost/test"));
 
@@ -38,7 +40,7 @@ describe("request ID plugin integration", () => {
   });
 
   test("sets X-Request-Id response header", async () => {
-    const options: LogixlysiaOptions = {
+    const options: CreateLogPluginOptions = {
       config: {
         disableFileLogging: true,
         disableInternalLogger: true,
@@ -46,7 +48,9 @@ describe("request ID plugin integration", () => {
       },
     };
 
-    const app = new Elysia().use(logixlysia(options)).get("/test", () => "ok");
+    const app = new Elysia()
+      .use(createLogPlugin(options))
+      .get("/test", () => "ok");
 
     const response = await app.handle(new Request("http://localhost/test"));
 
@@ -61,7 +65,7 @@ describe("request ID plugin integration", () => {
     >(() => {
       /* noop */
     });
-    const options: LogixlysiaOptions = {
+    const options: CreateLogPluginOptions = {
       config: {
         disableFileLogging: true,
         disableInternalLogger: true,
@@ -70,7 +74,9 @@ describe("request ID plugin integration", () => {
       },
     };
 
-    const app = new Elysia().use(logixlysia(options)).get("/test", () => "ok");
+    const app = new Elysia()
+      .use(createLogPlugin(options))
+      .get("/test", () => "ok");
 
     const incomingId = "gateway-req-abc-123";
     const response = await app.handle(
@@ -95,7 +101,7 @@ describe("request ID plugin integration", () => {
     >(() => {
       /* noop */
     });
-    const options: LogixlysiaOptions = {
+    const options: CreateLogPluginOptions = {
       config: {
         disableFileLogging: true,
         disableInternalLogger: true,
@@ -103,7 +109,9 @@ describe("request ID plugin integration", () => {
       },
     };
 
-    const app = new Elysia().use(logixlysia(options)).get("/test", () => "ok");
+    const app = new Elysia()
+      .use(createLogPlugin(options))
+      .get("/test", () => "ok");
 
     const response = await app.handle(new Request("http://localhost/test"));
 
@@ -118,7 +126,7 @@ describe("request ID plugin integration", () => {
   });
 
   test("uses custom header name from RequestIdConfig", async () => {
-    const options: LogixlysiaOptions = {
+    const options: CreateLogPluginOptions = {
       config: {
         disableFileLogging: true,
         disableInternalLogger: true,
@@ -126,7 +134,9 @@ describe("request ID plugin integration", () => {
       },
     };
 
-    const app = new Elysia().use(logixlysia(options)).get("/test", () => "ok");
+    const app = new Elysia()
+      .use(createLogPlugin(options))
+      .get("/test", () => "ok");
 
     const response = await app.handle(new Request("http://localhost/test"));
 
@@ -138,7 +148,7 @@ describe("request ID plugin integration", () => {
 
   test("uses custom generator from RequestIdConfig", async () => {
     let counter = 0;
-    const options: LogixlysiaOptions = {
+    const options: CreateLogPluginOptions = {
       config: {
         disableFileLogging: true,
         disableInternalLogger: true,
@@ -158,7 +168,9 @@ describe("request ID plugin integration", () => {
       },
     };
 
-    const app = new Elysia().use(logixlysia(options)).get("/test", () => "ok");
+    const app = new Elysia()
+      .use(createLogPlugin(options))
+      .get("/test", () => "ok");
 
     const res1 = await app.handle(new Request("http://localhost/test"));
     const res2 = await app.handle(new Request("http://localhost/test"));
@@ -173,7 +185,7 @@ describe("request ID plugin integration", () => {
     >(() => {
       /* noop */
     });
-    const options: LogixlysiaOptions = {
+    const options: CreateLogPluginOptions = {
       config: {
         customLogFormat: "{method} {pathname} {requestId}",
         disableFileLogging: true,
@@ -182,7 +194,9 @@ describe("request ID plugin integration", () => {
       },
     };
 
-    const app = new Elysia().use(logixlysia(options)).get("/test", () => "ok");
+    const app = new Elysia()
+      .use(createLogPlugin(options))
+      .get("/test", () => "ok");
 
     await app.handle(new Request("http://localhost/test"));
 
@@ -201,7 +215,7 @@ describe("request ID plugin integration", () => {
     >(() => {
       /* noop */
     });
-    const options: LogixlysiaOptions = {
+    const options: CreateLogPluginOptions = {
       config: {
         disableFileLogging: true,
         disableInternalLogger: true,
@@ -210,7 +224,9 @@ describe("request ID plugin integration", () => {
       preset: "prod",
     };
 
-    const app = new Elysia().use(logixlysia(options)).get("/test", () => "ok");
+    const app = new Elysia()
+      .use(createLogPlugin(options))
+      .get("/test", () => "ok");
 
     await app.handle(new Request("http://localhost/test"));
 
@@ -222,7 +238,7 @@ describe("request ID plugin integration", () => {
   });
 
   test("sets X-Request-Id response header on errors", async () => {
-    const options: LogixlysiaOptions = {
+    const options: CreateLogPluginOptions = {
       config: {
         disableFileLogging: true,
         disableInternalLogger: true,
@@ -230,7 +246,7 @@ describe("request ID plugin integration", () => {
       },
     };
 
-    const app = new Elysia().use(logixlysia(options)).get("/error", () => {
+    const app = new Elysia().use(createLogPlugin(options)).get("/error", () => {
       throw new Error("something went wrong");
     });
 

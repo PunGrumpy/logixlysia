@@ -1,5 +1,5 @@
 /**
- * logixlysia 2.0 — 文件日志出口
+ * createLogPlugin 2.0 — 文件日志出口
  *
  * 通过 FileSink 写入(句柄缓存 + 批写 + flushChain 串行化,见 `./file-sink.ts`),
  * 在每批 flush 完成后检查 rotation(由 FileSink 内部触发,本函数不直接做轮转)。

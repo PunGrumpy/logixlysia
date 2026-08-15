@@ -1,8 +1,8 @@
-import { version } from "../../../packages/logixlysia/package.json";
+import { version } from "../../../packages/createLogPlugin/package.json";
 
-const repoUrl = "https://github.com/PunGrumpy/logixlysia";
+const repoUrl = "https://github.com/PunGrumpy/createLogPlugin";
 
 export const getLatestVersion = (): string => version;
 
 export const getReleaseUrl = (release: string): string =>
-  `${repoUrl}/releases/tag/logixlysia%40${release}`;
+  `${repoUrl}/releases/tag/createLogPlugin%40${release}`;

@@ -22,10 +22,10 @@ Logixlysia 是 [Elysia.js](https://elysiajs.com/) 的日志插件,基于 [Pino](
 
 ```ts
 import { Elysia } from 'elysia'
-import { logixlysia } from '@pori15/logixlysia'
+import { createLogPlugin } from '@pori15/createLogPlugin'
 
 const app = new Elysia()
-  .use(logixlysia())
+  .use(createLogPlugin())
   .get('/', () => 'Hello World')
   .listen(3000)
 ```
@@ -33,10 +33,10 @@ const app = new Elysia()
 ## 安装
 
 ```bash
-bun add @pori15/logixlysia elysia@next
+bun add @pori15/createLogPlugin elysia@next
 ```
 
-本版本面向 [Elysia 2 open beta](https://elysiajs.com/blog/elysia-20)。还在用 Elysia 1.4?继续用上游的 `logixlysia` 包,见 [Elysia 2 支持](/docs/elysia-2)。
+本版本面向 [Elysia 2 open beta](https://elysiajs.com/blog/elysia-20)。还在用 Elysia 1.4?继续用上游的 `createLogPlugin` 包,见 [Elysia 2 支持](/docs/elysia-2)。
 
 ## 下一步
 

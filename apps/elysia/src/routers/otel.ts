@@ -1,5 +1,5 @@
-import type { Logixlysia } from "@pori15/logixlysia";
-import { injectTraceContext } from "@pori15/logixlysia/otel";
+import type { Logixlysia } from "@pori15/createLogPlugin";
+import { injectTraceContext } from "@pori15/createLogPlugin/otel";
 import { Elysia } from "elysia";
 
 export const otelRouter = <App extends Logixlysia>(app: Elysia) =>

@@ -33,7 +33,7 @@ export interface Sinks {
 }
 
 /**
- * Extracts the `Transport[]` array from a `LogixlysiaOptions` object,
+ * Extracts the `Transport[]` array from a `CreateLogPluginOptions` object,
  * supporting both legacy shape (`transports: Transport[]`) and
  * the `TransportsConfig` envelope (`{ targets, only }`).
  */

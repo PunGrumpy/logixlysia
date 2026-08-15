@@ -1,19 +1,19 @@
 {
-  "name": "@pori15/logixlysia",
+  "name": "@pori15/createLogPlugin",
   "version": "7.1.1",
   "description": "🦊 Logixlysia is a logger for Elysia 2.0",
   "keywords": [
-    "logixlysia",
+    "createLogPlugin",
     "elysiajs",
     "logger"
   ],
-  "homepage": "https://logixlysia.vercel.app",
+  "homepage": "https://createLogPlugin.vercel.app",
   "bugs": {
-    "url": "https://github.com/pori15/logixlysia/issues"
+    "url": "https://github.com/pori15/createLogPlugin/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/eastgold15/logixlysia.git"
+    "url": "git+https://github.com/eastgold15/createLogPlugin.git"
   },
   "license": "MIT",
   "author": "Noppakorn Kaewsalabnil <hello@pungrumpy.com>",

@@ -1,16 +1,16 @@
 ---
 title: 'Configuration'
-description: 'All fields accepted by `logixlysia({ config: { ... } })`.'
+description: 'All fields accepted by `createLogPlugin({ config: { ... } })`.'
 ---
 
 
-本页是 [`LogixlysiaConfig`](https://github.com/eastgold15/logixlysia/blob/main/packages/logixlysia/src/interfaces.ts) 字段的自动生成参考。源代码变更后会重新生成。
+本页是 [`LogixlysiaConfig`](https://github.com/eastgold15/createLogPlugin/blob/main/packages/createLogPlugin/src/interfaces.ts) 字段的自动生成参考。源代码变更后会重新生成。
 
 ## LogixlysiaConfig
 
 ### `LogixlysiaConfig`
 
-新版(上游 main)配置 — 所有 logixlysia 行为参数集中在 ``config`` 字段下。
+新版(上游 main)配置 — 所有 createLogPlugin 行为参数集中在 ``config`` 字段下。
 同时保留 root-level 字段(legacy + 旧测试)以便向后兼容。
 
 | Field | Type | Optional | Description |
@@ -46,9 +46,9 @@ description: 'All fields accepted by `logixlysia({ config: { ... } })`.'
 | `useTransportsOnly` | `boolean` | ✓ | 只使用 transports,禁用控制台 + 文件 |
 | `verySlowThreshold` | `number` | ✓ | 极慢请求阈值(ms),超过显示更严重标记 |
 
-## LogixlysiaOptions
+## CreateLogPluginOptions
 
-### `LogixlysiaOptions`
+### `CreateLogPluginOptions`
 
 Logixlysia 插件配置
 

@@ -1,14 +1,14 @@
 ---
 title: 'Exports'
-description: 'Public functions and values exported by `@pori15/logixlysia`.'
+description: 'Public functions and values exported by `@pori15/createLogPlugin`.'
 ---
 
 
-本页是 [`@pori15/logixlysia`](https://www.npmjs.com/package/@pori15/logixlysia) 公共导出的自动生成参考。源代码变更后会重新生成。
+本页是 [`@pori15/createLogPlugin`](https://www.npmjs.com/package/@pori15/createLogPlugin) 公共导出的自动生成参考。源代码变更后会重新生成。
 
 ## Functions
 
-[__resetForTesting](#reset-for-testing) · [__resetPresetRegistry](#reset-preset-registry) · [applyErrorLogging](#apply-error-logging) · [buildPinoRedactPaths](#build-pino-redact-paths) · [createRequestContextStore](#create-request-context-store) · [createRequestScopedLogger](#create-request-scoped-logger) · [createWsHandlerWrapper](#create-ws-handler-wrapper) · [errorMap](#error-map) · [extractErrorFields](#extract-error-fields) · [extractStatus](#extract-status) · [getOrCreateRequestId](#get-or-create-request-id) · [getPresetDefaults](#get-preset-defaults) · [getRotatedFiles](#get-rotated-files) · [getStatusCode](#get-status-code) · [httpError](#http-error) · [injectTraceContext](#inject-trace-context) · [isSensitiveKey](#is-sensitive-key) · [isStructuredError](#is-structured-error) · [levelForStatus](#level-for-status) · [listPresets](#list-presets) · [logixlysia](#logixlysia) · [mergeAIMetrics](#merge-aimetrics) · [mergeLogDataContext](#merge-log-data-context) · [normalizeLoggedError](#normalize-logged-error) · [pad2](#pad2) · [pad3](#pad3) · [parseError](#parse-error) · [parseInterval](#parse-interval) · [parseRetention](#parse-retention) · [parseSize](#parse-size) · [redact](#redact) · [redactRequest](#redact-request) · [redactString](#redact-string) · [registerPreset](#register-preset) · [resolveOptions](#resolve-options) · [resolveRequestIdConfig](#resolve-request-id-config) · [sanitizeLogText](#sanitize-log-text) · [shouldRotateBySize](#should-rotate-by-size) · [useLogger](#use-logger)
+[__resetForTesting](#reset-for-testing) · [__resetPresetRegistry](#reset-preset-registry) · [applyErrorLogging](#apply-error-logging) · [buildPinoRedactPaths](#build-pino-redact-paths) · [createRequestContextStore](#create-request-context-store) · [createRequestScopedLogger](#create-request-scoped-logger) · [createWsHandlerWrapper](#create-ws-handler-wrapper) · [errorMap](#error-map) · [extractErrorFields](#extract-error-fields) · [extractStatus](#extract-status) · [getOrCreateRequestId](#get-or-create-request-id) · [getPresetDefaults](#get-preset-defaults) · [getRotatedFiles](#get-rotated-files) · [getStatusCode](#get-status-code) · [httpError](#http-error) · [injectTraceContext](#inject-trace-context) · [isSensitiveKey](#is-sensitive-key) · [isStructuredError](#is-structured-error) · [levelForStatus](#level-for-status) · [listPresets](#list-presets) · [createLogPlugin](#createLogPlugin) · [mergeAIMetrics](#merge-aimetrics) · [mergeLogDataContext](#merge-log-data-context) · [normalizeLoggedError](#normalize-logged-error) · [pad2](#pad2) · [pad3](#pad3) · [parseError](#parse-error) · [parseInterval](#parse-interval) · [parseRetention](#parse-retention) · [parseSize](#parse-size) · [redact](#redact) · [redactRequest](#redact-request) · [redactString](#redact-string) · [registerPreset](#register-preset) · [resolveOptions](#resolve-options) · [resolveRequestIdConfig](#resolve-request-id-config) · [sanitizeLogText](#sanitize-log-text) · [shouldRotateBySize](#should-rotate-by-size) · [useLogger](#use-logger)
 
 
 ## Variables
@@ -38,12 +38,12 @@ function __resetPresetRegistry() => void;
 ```
 ### `applyErrorLogging`
 
-给一个 Elysia app 装上 logixlysia 错误日志。
+给一个 Elysia app 装上 createLogPlugin 错误日志。
 
 工作方式:
 1. 注册 HTTPError 通用 handler → 任何 HTTPError 派生类都自动写日志
 2. 注册 Elysia 内置具体类
-3. 注册用户提供的 LogixlysiaOptions.errors
+3. 注册用户提供的 CreateLogPluginOptions.errors
 4. 兜底 onError:捕获所有未匹配错误
 
 ``requestIdHeader`` 决定回写到响应头的字段名(默认 ``"X-Request-Id"``),
@@ -52,7 +52,7 @@ function __resetPresetRegistry() => void;
 正常请求用 ``X-Correlation-Id``,错误请求仍会写 ``X-Request-Id``,现统一为同一来源。
 
 ```ts
-function applyErrorLogging<T>(app: T, logger: Logger, options: LogixlysiaOptions, didCustomLog?: WeakSet<Request>, requestIdHeader: string) => T;
+function applyErrorLogging<T>(app: T, logger: Logger, options: CreateLogPluginOptions, didCustomLog?: WeakSet<Request>, requestIdHeader: string) => T;
 ```
 
 **Parameters**
@@ -61,7 +61,7 @@ function applyErrorLogging<T>(app: T, logger: Logger, options: LogixlysiaOptions
 | --- | --- | --- |
 | `app` | `T` |  |
 | `logger` | `Logger` |  |
-| `options` | `LogixlysiaOptions` |  |
+| `options` | `CreateLogPluginOptions` |  |
 | `didCustomLog` | `WeakSet<Request>` |  |
 | `requestIdHeader` | `string` |  |
 
@@ -106,14 +106,14 @@ function createRequestScopedLogger(logger: Logger, request: Request, contextStor
 ### `createWsHandlerWrapper`
 
 ```ts
-function createWsHandlerWrapper(options: LogixlysiaOptions, logger: Logger, contextStore: RequestContextStore) => (path: string, hooks: THooks) => THooks;
+function createWsHandlerWrapper(options: CreateLogPluginOptions, logger: Logger, contextStore: RequestContextStore) => (path: string, hooks: THooks) => THooks;
 ```
 
 **Parameters**
 
 | Name | Type | Description |
 | --- | --- | --- |
-| `options` | `LogixlysiaOptions` |  |
+| `options` | `CreateLogPluginOptions` |  |
 | `logger` | `Logger` |  |
 | `contextStore` | `RequestContextStore` |  |
 
@@ -282,7 +282,7 @@ function isStructuredError(value: unknown) => undefined value;
 
 ### `levelForStatus`
 
-Elysia 错误实例 → logixlysia 日志级别
+Elysia 错误实例 → createLogPlugin 日志级别
 4xx → WARNING,5xx → ERROR,其他 → INFO
 
 ```ts
@@ -302,17 +302,17 @@ function levelForStatus(status?: number | "Continue" | "Switching Protocols" | "
 ```ts
 function listPresets() => string[];
 ```
-### `logixlysia`
+### `createLogPlugin`
 
 ```ts
-function logixlysia(rawOptions?: LogixlysiaOptions) => AnyElysia;
+function createLogPlugin(rawOptions?: CreateLogPluginOptions) => AnyElysia;
 ```
 
 **Parameters**
 
 | Name | Type | Description |
 | --- | --- | --- |
-| `rawOptions` | `LogixlysiaOptions` |  |
+| `rawOptions` | `CreateLogPluginOptions` |  |
 
 ### `mergeAIMetrics`
 
@@ -503,14 +503,14 @@ function registerPreset(name: string, defaults: LogixlysiaConfig) => void;
 Applies preset defaults; explicit ``config`` keys override preset values.
 
 ```ts
-function resolveOptions(options: LogixlysiaOptions) => LogixlysiaOptions;
+function resolveOptions(options: CreateLogPluginOptions) => CreateLogPluginOptions;
 ```
 
 **Parameters**
 
 | Name | Type | Description |
 | --- | --- | --- |
-| `options` | `LogixlysiaOptions` |  |
+| `options` | `CreateLogPluginOptions` |  |
 
 ### `resolveRequestIdConfig`
 

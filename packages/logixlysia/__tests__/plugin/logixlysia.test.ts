@@ -1,7 +1,7 @@
 /**
- * logixlysia 2.0 — 插件集成测试
+ * createLogPlugin 2.0 — 插件集成测试
  *
- * 覆盖 Elysia 2.0 原生错误系统 + logixlysia 日志管道:
+ * 覆盖 Elysia 2.0 原生错误系统 + createLogPlugin 日志管道:
  * - afterHandle 自动日志
  * - 用户自定义 logger.info() 抑制重复日志
  * - HTTPError 派生类触发对应级别日志
@@ -15,8 +15,8 @@
 
 import { describe, expect, mock, test } from "bun:test";
 import { Elysia, HTTPError } from "elysia";
-import { errorMap, httpError, logixlysia } from "../../src";
-import type { LogixlysiaOptions } from "../../src/interfaces";
+import { createLogPlugin, errorMap, httpError } from "../../src";
+import type { CreateLogPluginOptions } from "../../src/interfaces";
 import { createMockRequest } from "../_helpers/request";
 
 const makeTransport = () =>
@@ -26,15 +26,15 @@ const makeTransport = () =>
 
 const baseOptions = (
   transport: ReturnType<typeof makeTransport>
-): LogixlysiaOptions => ({
+): CreateLogPluginOptions => ({
   transports: { only: true, targets: [{ log: transport }] },
 });
 
-describe("logixlysia plugin (Elysia 2.0)", () => {
+describe("createLogPlugin plugin (Elysia 2.0)", () => {
   test("afterHandle fires once for successful requests", async () => {
     const transport = makeTransport();
     const app = new Elysia()
-      .use(logixlysia(baseOptions(transport)))
+      .use(createLogPlugin(baseOptions(transport)))
       .get("/test", () => "ok");
 
     const res = await app.handle(new Request("http://localhost/test"));
@@ -48,7 +48,7 @@ describe("logixlysia plugin (Elysia 2.0)", () => {
   test("custom log suppresses afterHandle log", async () => {
     const transport = makeTransport();
     const app = new Elysia()
-      .use(logixlysia(baseOptions(transport)))
+      .use(createLogPlugin(baseOptions(transport)))
       .get("/test", ({ request, store }) => {
         store.logger.info(request, "user-emitted");
         return "ok";
@@ -66,7 +66,7 @@ describe("logixlysia plugin (Elysia 2.0)", () => {
   test("HTTPError thrown inside route triggers ERROR level + Elysia problem response", async () => {
     const transport = makeTransport();
     const app = new Elysia()
-      .use(logixlysia(baseOptions(transport)))
+      .use(createLogPlugin(baseOptions(transport)))
       .get("/boom", () => {
         throw httpError(500, "server kaboom");
       });
@@ -89,7 +89,7 @@ describe("logixlysia plugin (Elysia 2.0)", () => {
   test("4xx HTTPError logged at WARNING level", async () => {
     const transport = makeTransport();
     const app = new Elysia()
-      .use(logixlysia(baseOptions(transport)))
+      .use(createLogPlugin(baseOptions(transport)))
       .get("/missing", () => {
         throw httpError(404, "user not found");
       });
@@ -115,7 +115,7 @@ describe("logixlysia plugin (Elysia 2.0)", () => {
     }
     const app = new Elysia()
       .use(
-        logixlysia({
+        createLogPlugin({
           ...baseOptions(transport),
           errors: [OutOfCredit as never],
         })
@@ -141,7 +141,7 @@ describe("logixlysia plugin (Elysia 2.0)", () => {
     });
     const app = new Elysia()
       .use(
-        logixlysia({
+        createLogPlugin({
           ...baseOptions(transport),
           errors,
         })
@@ -166,7 +166,7 @@ describe("logixlysia plugin (Elysia 2.0)", () => {
     const transport = makeTransport();
     const app = new Elysia()
       .use(
-        logixlysia({
+        createLogPlugin({
           ...baseOptions(transport),
           logLevel: ["ERROR"],
         })
@@ -188,7 +188,7 @@ describe("logixlysia plugin (Elysia 2.0)", () => {
     const transport = makeTransport();
     const app = new Elysia()
       .use(
-        logixlysia({
+        createLogPlugin({
           ...baseOptions(transport),
           logLevel: [],
         })
@@ -205,7 +205,7 @@ describe("logixlysia plugin (Elysia 2.0)", () => {
   test("store.beforeTime is populated by request hook", async () => {
     let captured: { beforeTime: bigint | undefined } | undefined;
     const app = new Elysia()
-      .use(logixlysia(baseOptions(makeTransport())))
+      .use(createLogPlugin(baseOptions(makeTransport())))
       .get("/captured", ({ store }) => {
         captured = {
           beforeTime: store.beforeTime,

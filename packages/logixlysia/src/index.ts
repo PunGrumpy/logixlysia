@@ -53,7 +53,7 @@ export { getOrCreateRequestId, resolveRequestIdConfig } from "./middleware";
 export type { TraceContextFields } from "./otel";
 export { __resetForTesting, injectTraceContext } from "./otel";
 export type { CreateLogPlugin } from "./plugin";
-export { createLogPlugin, createLogPlugin as logixlysia } from "./plugin";
+export { createLogPlugin, createLogPlugin } from "./plugin";
 export type { NormalizedLoggedError, StructuredError } from "./utils";
 export {
   buildPinoRedactPaths,

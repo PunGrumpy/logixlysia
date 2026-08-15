@@ -1,4 +1,4 @@
-import { Logixlysia } from "@pori15/logixlysia";
+import { Logixlysia } from "@pori15/createLogPlugin";
 
 const BASE64URL_PAD_STRIP = /[=]+$/;
 
@@ -35,7 +35,7 @@ export const autoRedactRouter = <App extends Logixlysia>(app: App) =>
     ({ request, store }) => {
       store.logger.info(request, "Hello, world!", {
         creditCard: mockCreditCard(),
-        email: "logixlysia@elysiajs.com",
+        email: "createLogPlugin@elysiajs.com",
         ip: "192.168.1.100",
         jwt: mockJwt(),
       });

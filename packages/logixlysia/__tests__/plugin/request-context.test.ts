@@ -1,17 +1,17 @@
 import { describe, expect, mock, test } from "bun:test";
 import { Elysia } from "elysia";
 
-import { logixlysia } from "../../src";
-import type { LogixlysiaOptions } from "../../src/interfaces";
+import { createLogPlugin } from "../../src";
+import type { CreateLogPluginOptions } from "../../src/interfaces";
 
-describe("logixlysia request context", () => {
+describe("createLogPlugin request context", () => {
   test("merges accumulated context into auto access log", async () => {
     const transport = mock<
       (lvl: unknown, msg: unknown, meta?: unknown) => void
     >(() => {
       /* noop */
     });
-    const options: LogixlysiaOptions = {
+    const options: CreateLogPluginOptions = {
       config: {
         disableFileLogging: true,
         disableInternalLogger: true,
@@ -20,7 +20,7 @@ describe("logixlysia request context", () => {
     };
 
     const app = new Elysia()
-      .use(logixlysia(options))
+      .use(createLogPlugin(options))
       .get("/test", ({ request, store }) => {
         store.logger.mergeContext(request, { userId: "u1" });
         return "ok";
@@ -41,7 +41,7 @@ describe("logixlysia request context", () => {
     >(() => {
       /* noop */
     });
-    const options: LogixlysiaOptions = {
+    const options: CreateLogPluginOptions = {
       config: {
         disableFileLogging: true,
         disableInternalLogger: true,
@@ -50,7 +50,7 @@ describe("logixlysia request context", () => {
     };
 
     const app = new Elysia()
-      .use(logixlysia(options))
+      .use(createLogPlugin(options))
       .get("/test", ({ request, store }) => {
         store.logger.mergeContext(request, {
           plan: "pro",
@@ -75,7 +75,7 @@ describe("logixlysia request context", () => {
     >(() => {
       /* noop */
     });
-    const options: LogixlysiaOptions = {
+    const options: CreateLogPluginOptions = {
       config: {
         autoRedact: true,
         disableFileLogging: true,
@@ -85,7 +85,7 @@ describe("logixlysia request context", () => {
     };
 
     const app = new Elysia()
-      .use(logixlysia(options))
+      .use(createLogPlugin(options))
       .get("/test", ({ request, store }) => {
         store.logger.mergeContext(request, {
           email: "secret@example.com",
@@ -107,7 +107,7 @@ describe("logixlysia request context", () => {
     >(() => {
       /* noop */
     });
-    const options: LogixlysiaOptions = {
+    const options: CreateLogPluginOptions = {
       config: {
         disableFileLogging: true,
         disableInternalLogger: true,
@@ -115,7 +115,9 @@ describe("logixlysia request context", () => {
       },
     };
 
-    const app = new Elysia().use(logixlysia(options)).get("/test", () => "ok");
+    const app = new Elysia()
+      .use(createLogPlugin(options))
+      .get("/test", () => "ok");
 
     await app.handle(new Request("http://localhost/test"));
 

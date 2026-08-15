@@ -8,7 +8,7 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "@pori15/logixlysia": "workspace:*",
+    "@pori15/createLogPlugin": "workspace:*",
     "elysia": ">=2.0.0-exp.62"
   },
   "devDependencies": {

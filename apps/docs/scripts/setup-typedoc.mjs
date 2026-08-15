@@ -26,7 +26,7 @@ import { fileURLToPath } from "node:url";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DOCS_ROOT = resolve(__dirname, "..");
 const REPO_ROOT = resolve(DOCS_ROOT, "..", "..");
-const PKG_ROOT = join(REPO_ROOT, "packages", "logixlysia");
+const PKG_ROOT = join(REPO_ROOT, "packages", "createLogPlugin");
 const TYPEDOC_DIR = join(REPO_ROOT, "node_modules", "typedoc");
 const TYPEDOC_LOCAL_TS = join(TYPEDOC_DIR, "node_modules", "typescript");
 const DOCS_LOCAL_TS = join(DOCS_ROOT, "node_modules", "typescript");

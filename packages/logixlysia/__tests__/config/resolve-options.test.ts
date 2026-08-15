@@ -54,19 +54,19 @@ describe("resolveOptions", () => {
   test("throws on an invalid logRotation.maxSize", () => {
     expect(() =>
       resolveOptions({ config: { logRotation: { maxSize: "" } } })
-    ).toThrow("logixlysia: invalid logRotation config");
+    ).toThrow("createLogPlugin: invalid logRotation config");
   });
 
   test("throws on an invalid logRotation.interval", () => {
     expect(() =>
       resolveOptions({ config: { logRotation: { interval: "nope" } } })
-    ).toThrow("logixlysia: invalid logRotation config");
+    ).toThrow("createLogPlugin: invalid logRotation config");
   });
 
   test("throws on an invalid logRotation.maxFiles", () => {
     expect(() =>
       resolveOptions({ config: { logRotation: { maxFiles: "nope" } } })
-    ).toThrow("logixlysia: invalid logRotation config");
+    ).toThrow("createLogPlugin: invalid logRotation config");
   });
 
   test("throws on an invalid logRotation.compression", () => {
@@ -76,7 +76,7 @@ describe("resolveOptions", () => {
           logRotation: { compression: "brotli" as never },
         },
       })
-    ).toThrow("logixlysia: invalid logRotation config");
+    ).toThrow("createLogPlugin: invalid logRotation config");
   });
 
   test("validates logRotation after preset merge", () => {
@@ -85,12 +85,12 @@ describe("resolveOptions", () => {
         config: { logRotation: { maxSize: -5 } },
         preset: "prod",
       })
-    ).toThrow("logixlysia: invalid logRotation config");
+    ).toThrow("createLogPlugin: invalid logRotation config");
   });
 
   test("throws on an unknown preset", () => {
     expect(() => resolveOptions({ preset: "staging" as never })).toThrow(
-      "logixlysia: invalid preset"
+      "createLogPlugin: invalid preset"
     );
   });
 });

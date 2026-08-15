@@ -16,7 +16,7 @@ export interface WsHandlerHooks<
 }
 
 const wsSyntheticRequest = (path: string): Request =>
-  new Request(`http://logixlysia.local${path}`, { method: "WS" });
+  new Request(`http://createLogPlugin.local${path}`, { method: "WS" });
 
 export const createWsHandlerWrapper = (
   options: CreateLogPluginOptions,

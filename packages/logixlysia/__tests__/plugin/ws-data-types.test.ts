@@ -2,13 +2,13 @@ import { describe, expectTypeOf, test } from "bun:test";
 import { Elysia } from "elysia";
 import { websocket } from "elysia/websocket";
 
-import { logixlysia } from "../../src";
+import { createLogPlugin } from "../../src";
 
-describe("logixlysia WebSocket typing (#220)", () => {
-  test("infers plugin store on ws.data when .ws follows .use(logixlysia()) on a bare Elysia", () => {
+describe("createLogPlugin WebSocket typing (#220)", () => {
+  test("infers plugin store on ws.data when .ws follows .use(createLogPlugin()) on a bare Elysia", () => {
     new Elysia()
       .use(websocket())
-      .use(logixlysia())
+      .use(createLogPlugin())
       .ws("/", {
         open(ws) {
           expectTypeOf(ws.data.store.logger).toHaveProperty("log");
@@ -17,11 +17,11 @@ describe("logixlysia WebSocket typing (#220)", () => {
       });
   });
 
-  test("preserves parent store keys on ws.data after .use(logixlysia())", () => {
+  test("preserves parent store keys on ws.data after .use(createLogPlugin())", () => {
     new Elysia()
       .use(websocket())
       .state("marker", 42 as const)
-      .use(logixlysia())
+      .use(createLogPlugin())
       .ws("/", {
         open(ws) {
           expectTypeOf(ws.data.store.marker).toEqualTypeOf<42>();

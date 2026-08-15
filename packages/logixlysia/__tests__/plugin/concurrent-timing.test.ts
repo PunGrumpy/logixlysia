@@ -1,13 +1,13 @@
 import { describe, expect, test } from "bun:test";
 import { Elysia } from "elysia";
 
-import { logixlysia } from "../../src";
-import type { LogixlysiaOptions } from "../../src/interfaces";
+import { createLogPlugin } from "../../src";
+import type { CreateLogPluginOptions } from "../../src/interfaces";
 
 const sleep = (ms: number): Promise<void> =>
   new Promise((resolve) => setTimeout(resolve, ms));
 
-describe("logixlysia plugin - per-request timing under concurrency", () => {
+describe("createLogPlugin plugin - per-request timing under concurrency", () => {
   test("overlapping requests report independent, correct durations", async () => {
     const calls: { url: string; durationMs: number }[] = [];
     const transport = (
@@ -22,7 +22,7 @@ describe("logixlysia plugin - per-request timing under concurrency", () => {
       });
     };
 
-    const options: LogixlysiaOptions = {
+    const options: CreateLogPluginOptions = {
       config: {
         disableFileLogging: true,
         disableInternalLogger: true,
@@ -31,7 +31,7 @@ describe("logixlysia plugin - per-request timing under concurrency", () => {
     };
 
     const app = new Elysia()
-      .use(logixlysia(options))
+      .use(createLogPlugin(options))
       .get("/slow", async () => {
         await sleep(120);
         return "slow";

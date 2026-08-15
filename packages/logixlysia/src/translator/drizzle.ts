@@ -1,5 +1,5 @@
 /**
- * logixlysia 2.0 — Drizzle ORM 错误翻译器
+ * createLogPlugin 2.0 — Drizzle ORM 错误翻译器
  *
  * 把 Drizzle 抛出的错误(`DrizzleError` / `DrizzleQueryError`,携带底层
  * driver 的错误码)翻译为 `httpError(status, message)` 抛回去。

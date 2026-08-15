@@ -11,8 +11,8 @@ Logixlysia cannot support both major versions from one build, so the two lines a
 
 | Elysia      | Logixlysia    | npm tag  | Install                                |
 | ----------- | ------------- | -------- | -------------------------------------- |
-| `1.4.x`     | `6.x`         | `latest` | `bun add logixlysia`                   |
-| `>= 2.0.0-beta.2` | `7.x-next` | `next`   | `bun add logixlysia@next elysia@next`  |
+| `1.4.x`     | `6.x`         | `latest` | `bun add createLogPlugin`                   |
+| `>= 2.0.0-beta.2` | `7.x-next` | `next`   | `bun add createLogPlugin@next elysia@next`  |
 
 The `next` line follows the Elysia 2 beta and may take further breaking changes until Elysia 2 is stable.
 
@@ -43,9 +43,9 @@ WebSocket routes need the opt-in provider before `createWsHandlerWrapper` has an
 ```ts
 import { Elysia } from 'elysia'
 import { websocket } from 'elysia/websocket'
-import { logixlysia, createWsHandlerWrapper } from 'logixlysia'
+import { createLogPlugin, createWsHandlerWrapper } from 'createLogPlugin'
 
-const logging = logixlysia()
+const logging = createLogPlugin()
 const wrapWs = createWsHandlerWrapper()
 
 const app = new Elysia()
@@ -64,8 +64,8 @@ const app = new Elysia()
 
 ## What did not change
 
-The Logixlysia API itself is unchanged: `logixlysia(options)`, the `preset`/`config` shape, `store.logger`,
-`ctx.log`, `useLogger()`, `createWsHandlerWrapper`, and the `logixlysia/otel` and `logixlysia/ai`
+The Logixlysia API itself is unchanged: `createLogPlugin(options)`, the `preset`/`config` shape, `store.logger`,
+`ctx.log`, `useLogger()`, `createWsHandlerWrapper`, and the `createLogPlugin/otel` and `createLogPlugin/ai`
 subpaths all behave exactly as they do on the 6.x line.
 
 ## Error logging under Elysia 2

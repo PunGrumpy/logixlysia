@@ -10,7 +10,7 @@ The source code is hosted on GitHub. The repository contains all source code, bu
 
 This is a single-package project. The main layout is:
 
-- `packages/logixlysia` - The main Logixlysia package
+- `packages/createLogPlugin` - The main Logixlysia package
   - `src/` - Core logger implementation for Elysia
   - `__tests__/` - Unit and integration tests
 - `apps/docs` - Documentation website built with [Fumadocs](https://fumadocs.dev/) and Next.js

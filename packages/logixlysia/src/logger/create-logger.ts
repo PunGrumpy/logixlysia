@@ -1,5 +1,5 @@
 /**
- * logixlysia 2.0 — 日志格式与样式
+ * createLogPlugin 2.0 — 日志格式与样式
  *
  * 提供:
  * - `formatDuration(ms)` — 数字 → "0.34ms" / "1.5s" / "11s"

@@ -16,9 +16,9 @@ new Elysia().use(evlog({ drain: myDrain }))
 **Logixlysia**
 
 ```ts
-import { logixlysia } from 'logixlysia'
+import { createLogPlugin } from 'createLogPlugin'
 
-new Elysia().use(logixlysia({ preset: 'prod' }))
+new Elysia().use(createLogPlugin({ preset: 'prod' }))
 ```
 
 ## Context accumulation
@@ -50,7 +50,7 @@ store.logger.info(request, 'handled manually')
 **Logixlysia**
 
 ```ts
-import { mergeAIMetrics } from 'logixlysia/ai'
+import { mergeAIMetrics } from 'createLogPlugin/ai'
 
 mergeAIMetrics(store.logger, request, {
   model: 'claude-sonnet',
@@ -62,14 +62,14 @@ mergeAIMetrics(store.logger, request, {
 
 ## Tracing
 
-Use `injectTraceContext` from `logixlysia/otel` in the `request` hook (see [OpenTelemetry](/docs/integrations/otel)).
+Use `injectTraceContext` from `createLogPlugin/otel` in the `request` hook (see [OpenTelemetry](/docs/integrations/otel)).
 
 ## Drains vs transports
 
 evlog **drains** map to Logixlysia **transports**:
 
 ```ts
-logixlysia({
+createLogPlugin({
   config: {
     transports: [
       {

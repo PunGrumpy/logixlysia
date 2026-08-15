@@ -10,7 +10,7 @@ If you omit `customLogFormat`, Logixlysia uses a built-in default that includes 
 ## Basic Usage
 
 ```ts
-logixlysia({
+createLogPlugin({
   config: {
     customLogFormat: '{now} {level} {duration}ms {method} {pathname} {status}'
   }
@@ -55,7 +55,7 @@ GET /api/users 200
 Use `{icon}` for the Logixlysia fox (level styling applies when colors and a TTY are available). Pair with `service` in config:
 
 ```ts
-logixlysia({
+createLogPlugin({
   config: {
     service: 'my-api',
     customLogFormat: '{now} {service}{icon} {method} {pathname} {status} {duration} {message}{speed}'
@@ -84,7 +84,7 @@ Example values: `404 Not Found`, `500 Internal Server Error`.
 Configure timestamp format separately:
 
 ```ts
-logixlysia({
+createLogPlugin({
   config: {
     customLogFormat: '{now} {level} {method} {pathname}',
     timestamp: {

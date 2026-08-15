@@ -8,7 +8,7 @@ Filter logs based on level, status, or HTTP method using Logixlysia's flexible f
 ## Basic Usage
 
 ```ts
-logixlysia({
+createLogPlugin({
   config: {
     logFilter: {
       level: ['ERROR', 'WARNING'],
@@ -68,7 +68,7 @@ logFilter: {
 ## Environment-Specific Filters
 
 ```ts
-logFilter: process.env.NODE_ENV === 'production' 
+logFilter: process.env.NODE_ENV === 'production'
   ? { level: ['ERROR'] }
   : null // Log everything in development
 ```

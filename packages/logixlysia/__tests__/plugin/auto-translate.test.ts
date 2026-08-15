@@ -1,5 +1,5 @@
 /**
- * logixlysia 2.0 — autoTranslate 集成测试
+ * createLogPlugin 2.0 — autoTranslate 集成测试
  *
  * 核心不变量(必须全部通过):
  * 1. 翻译后的 error 决定日志级别(409→WARNING,5xx→ERROR)
@@ -11,9 +11,9 @@
 import { describe, expect, mock, test } from "bun:test";
 import { Elysia, problem } from "elysia";
 
-import { logixlysia } from "../../src";
+import { createLogPlugin } from "../../src";
 import { httpError } from "../../src/errors";
-import type { LogixlysiaOptions } from "../../src/interfaces";
+import type { CreateLogPluginOptions } from "../../src/interfaces";
 
 const makeTransport = () =>
   mock<(lvl: unknown, msg: unknown, meta?: unknown) => void>(() => {
@@ -22,7 +22,7 @@ const makeTransport = () =>
 
 const silent = (
   transport: ReturnType<typeof makeTransport>
-): LogixlysiaOptions => ({
+): CreateLogPluginOptions => ({
   config: {
     disableFileLogging: true,
     disableInternalLogger: true,
@@ -48,7 +48,10 @@ describe("autoTranslate: { db: 'drizzle' }", () => {
     const transport = makeTransport();
     const app = new Elysia()
       .use(
-        logixlysia({ ...silent(transport), autoTranslate: { db: "drizzle" } })
+        createLogPlugin({
+          ...silent(transport),
+          autoTranslate: { db: "drizzle" },
+        })
       )
       .error("DrizzleError", () => problem(409, { detail: "Conflict" }))
       .get("/users", () => {
@@ -71,7 +74,10 @@ describe("autoTranslate: { db: 'drizzle' }", () => {
     const transport = makeTransport();
     const app = new Elysia()
       .use(
-        logixlysia({ ...silent(transport), autoTranslate: { db: "drizzle" } })
+        createLogPlugin({
+          ...silent(transport),
+          autoTranslate: { db: "drizzle" },
+        })
       )
       .get("/health", () => {
         throw makeDrizzleError("08006");
@@ -93,7 +99,10 @@ describe("autoTranslate: { db: 'drizzle' }", () => {
     const transport = makeTransport();
     const app = new Elysia()
       .use(
-        logixlysia({ ...silent(transport), autoTranslate: { db: "drizzle" } })
+        createLogPlugin({
+          ...silent(transport),
+          autoTranslate: { db: "drizzle" },
+        })
       )
       .get("/boom", () => {
         throw new Error("plain boom");
@@ -114,7 +123,7 @@ describe("autoTranslate: { db: 'drizzle' }", () => {
     const transport = makeTransport();
     const app = new Elysia()
       .use(
-        logixlysia({
+        createLogPlugin({
           ...silent(transport),
           autoTranslate: {
             custom: [
@@ -151,7 +160,10 @@ describe("autoTranslate: { db: 'drizzle' }", () => {
 
     const app = new Elysia()
       .use(
-        logixlysia({ ...silent(transport), autoTranslate: { db: "drizzle" } })
+        createLogPlugin({
+          ...silent(transport),
+          autoTranslate: { db: "drizzle" },
+        })
       )
       .error("DrizzleError", (ctx) => {
         receivedError = ctx.error;
@@ -170,7 +182,7 @@ describe("autoTranslate: { db: 'drizzle' }", () => {
   test("未配 autoTranslate 时,原 HTTPError 决定 status(向后兼容)", async () => {
     const transport = makeTransport();
     const app = new Elysia()
-      .use(logixlysia(silent(transport)))
+      .use(createLogPlugin(silent(transport)))
       .get("/missing", () => {
         throw httpError(404, "user not found");
       });

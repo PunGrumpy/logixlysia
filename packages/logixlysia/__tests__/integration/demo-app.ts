@@ -1,6 +1,6 @@
 import { Elysia } from "elysia";
 
-import { logixlysia } from "../../src";
+import { createLogPlugin } from "../../src";
 import { mergeAIMetrics } from "../../src/ai";
 import type { Options } from "../../src/interfaces";
 import { injectTraceContext } from "../../src/otel";
@@ -9,7 +9,7 @@ export type TransportLog = (lvl: unknown, msg: unknown, meta?: unknown) => void;
 
 /** Mirrors apps/elysia demo routes for integration tests (no cross-package import). */
 export const createDemoApp = (options: Options) => {
-  const logging = logixlysia(options);
+  const logging = createLogPlugin(options);
 
   return new Elysia()
     .use(logging)

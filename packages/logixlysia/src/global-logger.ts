@@ -6,7 +6,7 @@
  *
  * @example
  * // 在任意文件中使用
- * import { globalLogger } from 'logixlysia';
+ * import { globalLogger } from 'createLogPlugin';
  *
  * globalLogger.info('Hello world');
  * globalLogger.debug(request, 'Request processing', { userId: 123 });

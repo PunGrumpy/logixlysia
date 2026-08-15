@@ -19,7 +19,7 @@ mock.module("@opentelemetry/api", () => ({
   trace: { getSpan: getSpanMock },
 }));
 
-describe("logixlysia/otel (mocked)", () => {
+describe("createLogPlugin/otel (mocked)", () => {
   afterEach(() => {
     // Reset the module-level cache so each test starts fresh
     __resetForTesting();

@@ -28,13 +28,13 @@ Yes, Logixlysia is built for production environments. It's powered by Pino, whic
 ### How do I install Logixlysia?
 
 ```bash
-bun add logixlysia@next
+bun add createLogPlugin@next
 ```
 
 Or with npm:
 
 ```bash
-npm install logixlysia@next
+npm install createLogPlugin@next
 ```
 
 The `next` tag targets the Elysia 2 open beta. The `latest` tag stays on the Elysia 1.4 line — see [Elysia 2 support](/docs/elysia-2).
@@ -42,7 +42,7 @@ The `next` tag targets the Elysia 2 open beta. The `latest` tag stays on the Ely
 ### What are the requirements?
 
 - Node.js 18+ or Bun
-- Elysia 2.0.0-beta.2 or newer (`logixlysia@next`), or Elysia 1.4 (`logixlysia@latest`)
+- Elysia 2.0.0-beta.2 or newer (`createLogPlugin@next`), or Elysia 1.4 (`createLogPlugin@latest`)
 - TypeScript 5.7+
 
 ## Configuration
@@ -50,7 +50,7 @@ The `next` tag targets the Elysia 2 open beta. The `latest` tag stays on the Ely
 ### How do I disable console logging?
 
 ```ts
-logixlysia({
+createLogPlugin({
   config: {
     disableInternalLogger: true
   }
@@ -60,7 +60,7 @@ logixlysia({
 ### How do I use only file logging?
 
 ```ts
-logixlysia({
+createLogPlugin({
   config: {
     disableInternalLogger: true,
     logFilePath: './logs/app.log'
@@ -71,7 +71,7 @@ logixlysia({
 ### How do I use only transports?
 
 ```ts
-logixlysia({
+createLogPlugin({
   config: {
     useTransportsOnly: true,
     transports: [myTransport]
@@ -84,7 +84,7 @@ logixlysia({
 ```ts
 const isDev = process.env.NODE_ENV === 'development'
 
-logixlysia({
+createLogPlugin({
   config: {
     showStartupMessage: isDev,
     pino: {
@@ -102,13 +102,13 @@ logixlysia({
 ```ts
 app.get('/users/:id', ({ store, request }) => {
   const { logger, pino } = store
-  
+
   // Use logger helper
   logger.info(request, 'User accessed')
-  
+
   // Or use Pino directly
   pino.info('User accessed')
-  
+
   return { user: 'data' }
 })
 ```
@@ -118,11 +118,11 @@ app.get('/users/:id', ({ store, request }) => {
 ```ts
 app.post('/users', ({ store, body, request }) => {
   const { logger } = store
-  
+
   logger.info(request, 'Creating user', {
     email: body.email
   })
-  
+
   return createUser(body)
 })
 ```
@@ -132,14 +132,14 @@ app.post('/users', ({ store, body, request }) => {
 ```ts
 app.get('/orders/:id', ({ store, params }) => {
   const { pino } = store
-  
+
   const orderLogger = pino.child({
     orderId: params.id,
     module: 'order-service'
   })
-  
+
   orderLogger.info('Processing order')
-  
+
   return getOrder(params.id)
 })
 ```
@@ -150,9 +150,9 @@ app.get('/orders/:id', ({ store, params }) => {
 
 ```ts
 // logger.ts
-import { logixlysia } from 'logixlysia'
+import { createLogPlugin } from 'createLogPlugin'
 
-export const logixlysiaIns = logixlysia({
+export const logixlysiaIns = createLogPlugin({
   config: {
     logFilePath: './logs/app.log',
     pino: {
@@ -186,7 +186,7 @@ export class UserService {
 ### How do I enable file logging?
 
 ```ts
-logixlysia({
+createLogPlugin({
   config: {
     logFilePath: './logs/app.log'
   }
@@ -222,7 +222,7 @@ const myTransport = {
   }
 }
 
-logixlysia({
+createLogPlugin({
   config: {
     transports: [myTransport]
   }
@@ -234,7 +234,7 @@ logixlysia({
 Yes, you can use multiple transports:
 
 ```ts
-logixlysia({
+createLogPlugin({
   config: {
     transports: [
       elasticsearchTransport,
@@ -325,7 +325,7 @@ ERROR POST /api/users Validation failed
 ### How do I migrate from another logging library?
 
 1. Install Logixlysia
-2. Replace your logging setup with `logixlysia()`
+2. Replace your logging setup with `createLogPlugin()`
 3. Update log calls to use `store.logger` or `store.pino`
 4. Configure transports if needed
 
@@ -338,14 +338,13 @@ Logixlysia maintains backward compatibility within major versions. Check the cha
 ### Where can I get help?
 
 - [Documentation](/)
-- [GitHub Issues](https://github.com/PunGrumpy/logixlysia/issues)
+- [GitHub Issues](https://github.com/PunGrumpy/createLogPlugin/issues)
 
 ### How do I report a bug?
 
-Open an issue on [GitHub](https://github.com/PunGrumpy/logixlysia/issues) with:
+Open an issue on [GitHub](https://github.com/PunGrumpy/createLogPlugin/issues) with:
 - Description of the issue
 - Steps to reproduce
 - Expected behavior
 - Actual behavior
 - Environment details
-

@@ -6,33 +6,33 @@ description: 在 Elysia 应用中使用 Logixlysia
 ## 安装
 
 ```bash
-bun add @pori15/logixlysia elysia@next
+bun add @pori15/createLogPlugin elysia@next
 ```
 
-`next` 标签对应 [Elysia 2 open beta](/docs/elysia-2)。如果你还在 Elysia 1.4,装上游的 `logixlysia` 包(`latest` 标签)。
+`next` 标签对应 [Elysia 2 open beta](/docs/elysia-2)。如果你还在 Elysia 1.4,装上游的 `createLogPlugin` 包(`latest` 标签)。
 
 ## 基本用法
 
 ```ts
 import { Elysia } from 'elysia'
-import { logixlysia } from '@pori15/logixlysia'
+import { createLogPlugin } from '@pori15/createLogPlugin'
 
 const app = new Elysia()
-  .use(logixlysia())
+  .use(createLogPlugin())
   .get('/', () => 'Hello World')
   .listen(3000)
 ```
 
-`logixlysia()` 返回一个插件。`Logger` 挂在 Elysia store 上,可以通过 `store.logger` 访问;请求作用域的 `log` 也会派生到 handler context 上。插件同时注册 `.request`、`.afterHandle`、`.error` 和 `.start` 钩子,你不需要手动接线。
+`createLogPlugin()` 返回一个插件。`Logger` 挂在 Elysia store 上,可以通过 `store.logger` 访问;请求作用域的 `log` 也会派生到 handler context 上。插件同时注册 `.request`、`.afterHandle`、`.error` 和 `.start` 钩子,你不需要手动接线。
 
 ## 预设
 
 三个 preset 一行设好环境默认。显式 `config` 字段永远覆盖 preset。
 
 ```ts
-logixlysia({ preset: 'dev' })   // 美化 console + 启动 banner
-logixlysia({ preset: 'prod' })  // JSON console + autoRedact + requestId
-logixlysia({ preset: 'json' })  // 极简 JSON console,无附加
+createLogPlugin({ preset: 'dev' })   // 美化 console + 启动 banner
+createLogPlugin({ preset: 'prod' })  // JSON console + autoRedact + requestId
+createLogPlugin({ preset: 'json' })  // 极简 JSON console,无附加
 ```
 
 完整默认值见 [Presets](/docs/features/presets)。
@@ -42,7 +42,7 @@ logixlysia({ preset: 'json' })  // 极简 JSON console,无附加
 ### 最小化
 
 ```ts
-logixlysia({
+createLogPlugin({
   config: {
     showStartupMessage: true,
     ip: true,
@@ -69,7 +69,7 @@ logixlysia({
 开启 `X-Request-Id` 头透传用 `requestId: true`。插件入口读这个头,缺失时自动生成,出口回显——包括错误响应。
 
 ```ts
-logixlysia({ config: { requestId: true } })
+createLogPlugin({ config: { requestId: true } })
 ```
 
 见 [Request ID](/docs/features/request-id)。
@@ -79,7 +79,7 @@ logixlysia({ config: { requestId: true } })
 通过 `customLogFormat` 自定义 access log:
 
 ```ts
-logixlysia({
+createLogPlugin({
   config: {
     customLogFormat: '{now} {level} {duration}ms {method} {pathname} {status} {requestId}',
   },
@@ -112,7 +112,7 @@ logixlysia({
 `logFilter.level` 接受单个级别或数组:
 
 ```ts
-logixlysia({
+createLogPlugin({
   config: {
     logFilter: { level: ['ERROR', 'WARNING'] },
   },
@@ -122,7 +122,7 @@ logixlysia({
 根级有一个等价的 `logLevel` 简写:
 
 ```ts
-logixlysia({ logLevel: ['ERROR', 'WARNING'] })
+createLogPlugin({ logLevel: ['ERROR', 'WARNING'] })
 ```
 
 见 [Log Levels](/docs/features/log-levels)。
@@ -142,7 +142,7 @@ app.get('/users/:id', async ({ log, params, store }) => {
 配置 Pino 选项:
 
 ```ts
-logixlysia({
+createLogPlugin({
   config: {
     pino: {
       level: 'debug',
@@ -160,7 +160,7 @@ Pino 在首次访问时按需构造 —— 错误的 Pino 选项只在真正 log
 ## 文件日志
 
 ```ts
-logixlysia({
+createLogPlugin({
   config: {
     logFilePath: './logs/app.log',
     logRotation: {
@@ -186,7 +186,7 @@ const consoleTransport = {
   },
 }
 
-logixlysia({
+createLogPlugin({
   config: {
     transports: [consoleTransport],
   },
@@ -204,7 +204,7 @@ bun add @opentelemetry/api
 ```
 
 ```ts
-import { injectTraceContext } from '@pori15/logixlysia/otel'
+import { injectTraceContext } from '@pori15/createLogPlugin/otel'
 
 app.request(({ request, store }) => {
   injectTraceContext(store.logger, request)
@@ -218,7 +218,7 @@ app.request(({ request, store }) => {
 ## AI SDK 指标
 
 ```ts
-import { mergeAIMetrics } from '@pori15/logixlysia/ai'
+import { mergeAIMetrics } from '@pori15/createLogPlugin/ai'
 
 app.post('/chat', async ({ request, store }) => {
   // 在 AI SDK 调用之后:
@@ -244,10 +244,10 @@ access log 的 `context.ai` 字段沿用 evlog wide event 形态,方便两边仪
 深调用栈(服务层、helper、请求里的子任务)想拿到请求作用域 logger,不用逐层传 `request`,开启 ALS 即可:
 
 ```ts
-logixlysia({ config: { useAsyncLocalStorage: true } })
+createLogPlugin({ config: { useAsyncLocalStorage: true } })
 
 // 在任意位置:
-import { useLogger } from '@pori15/logixlysia'
+import { useLogger } from '@pori15/createLogPlugin'
 
 const log = useLogger()
 log.mergeContext({ stage: 'db' })
@@ -259,7 +259,7 @@ log.info('query started')
 ## 输出控制
 
 ```ts
-logixlysia({
+createLogPlugin({
   config: {
     disableInternalLogger: false, // console 输出
     disableFileLogging: false,     // logFilePath 输出
@@ -275,7 +275,7 @@ logixlysia({
 
 ```ts
 const app = new Elysia().use(
-  logixlysia({
+  createLogPlugin({
     preset: 'prod',
     config: {
       service: 'my-api',
@@ -292,7 +292,7 @@ const app = new Elysia().use(
 
 ```ts
 const app = new Elysia().use(
-  logixlysia({
+  createLogPlugin({
     preset: 'dev',
     config: {
       service: 'my-api',

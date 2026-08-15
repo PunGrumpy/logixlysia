@@ -1,5 +1,5 @@
 /**
- * logixlysia 2.0 — Drizzle 错误翻译器单元测试
+ * createLogPlugin 2.0 — Drizzle 错误翻译器单元测试
  *
  * 覆盖:
  * - PG/MySQL/SQLite 错误码 → 对应 HTTP 状态

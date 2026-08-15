@@ -23,7 +23,7 @@ Logixlysia 支持三种输出目标:
 ## 基本 transport
 
 ```ts
-import type { Transport } from '@pori15/logixlysia'
+import type { Transport } from '@pori15/createLogPlugin'
 
 const consoleTransport: Transport = {
   log: (level, message, meta) => {
@@ -32,7 +32,7 @@ const consoleTransport: Transport = {
 }
 
 app.use(
-  logixlysia({
+  createLogPlugin({
     config: {
       transports: [consoleTransport],
     },
@@ -102,7 +102,7 @@ const slackTransport: Transport = {
 
 ```ts
 app.use(
-  logixlysia({
+  createLogPlugin({
     config: {
       transports: [elasticsearchTransport, slackTransport],
     },
@@ -116,7 +116,7 @@ app.use(
 
 ```ts
 app.use(
-  logixlysia({
+  createLogPlugin({
     config: {
       useTransportsOnly: true,
       transports: [elasticsearchTransport, slackTransport],
@@ -130,7 +130,7 @@ app.use(
 transport 抛出的同步异常和异步 reject 都会被捕获并打印到 `console.error`。为了防止坏掉的 transport 每个请求都刷一屏 stderr,同一 transport 的同一错误在 `transportThrottleMs`(默认 5s)窗口内合并为一条 `console.error`。
 
 ```ts
-logixlysia({
+createLogPlugin({
   config: {
     transportThrottleMs: 10_000, // 10s 窗口
   },
@@ -141,8 +141,8 @@ logixlysia({
 
 ## 最佳实践
 
-- **在 transport 内部处理错误** —— logixlysia 捕获了 throw,但只打印到 `console.error`,不会送回你的目标。
-- **异步用 `Promise<void>`** —— logixlysia 会 await 异步 transport 的返回值。
+- **在 transport 内部处理错误** —— createLogPlugin 捕获了 throw,但只打印到 `console.error`,不会送回你的目标。
+- **异步用 `Promise<void>`** —— createLogPlugin 会 await 异步 transport 的返回值。
 - **避免在 `meta` 里写 secret / PII** —— 脱敏会处理 message 和 key 字段,但 transport 拿到的就是管道给的原始数据。
 - **生产只接外部聚合器时,设 `useTransportsOnly: true`**
 - **按重要性排 transport 顺序** —— 告警放最前,批写放最后
@@ -163,7 +163,7 @@ export type LogLevel = 'DEBUG' | 'INFO' | 'WARNING' | 'ERROR'
 
 ## 组合器(Composers)
 
-Transport 接口只有一个 `log` 方法,所以**(Transport) => Transport** 的纯函数可以任意堆叠,跟 pino multi-stream 一样。logixlysia 给了 5 个常用组合器,从 `@pori15/logixlysia` 直接 import:
+Transport 接口只有一个 `log` 方法,所以**(Transport) => Transport** 的纯函数可以任意堆叠,跟 pino multi-stream 一样。createLogPlugin 给了 5 个常用组合器,从 `@pori15/createLogPlugin` 直接 import:
 
 | 组合器 | 用途 |
 | --- | --- |
@@ -178,12 +178,12 @@ Transport 接口只有一个 `log` 方法,所以**(Transport) => Transport** 的
 把一条 log 同时发到多个 transport。任一分支 throw 或 reject 都不会短路其它分支(用 `Promise.allSettled` 兜底)。
 
 ```ts
-import logixlysia, { tee } from '@pori15/logixlysia'
+import createLogPlugin, { tee } from '@pori15/createLogPlugin'
 
 const consoleT = { log: (l, m) => console.log(l, m) }
 const metricsT = { log: (l, m, meta) => metrics.increment(m) }
 
-logixlysia({
+createLogPlugin({
   config: {
     transports: [tee([consoleT, metricsT])],
   },
@@ -195,9 +195,9 @@ logixlysia({
 以 `rate` (0-1) 的概率把 log 转发给 transport。`rate=0` 完全丢弃,`rate=1` 等于直通。`rate` 越界抛 `Error`。
 
 ```ts
-import logixlysia, { tee, sample } from '@pori15/logixlysia'
+import createLogPlugin, { tee, sample } from '@pori15/createLogPlugin'
 
-logixlysia({
+createLogPlugin({
   config: {
     transports: [
       tee([
@@ -214,11 +214,11 @@ logixlysia({
 仅当 `predicate(level, message, meta)` 返回 truthy 时才转发。最常见:ERROR 才告警。
 
 ```ts
-import logixlysia, { tee, filter, sample } from '@pori15/logixlysia'
+import createLogPlugin, { tee, filter, sample } from '@pori15/createLogPlugin'
 
 const slackAlerter = { log: async (l, m) => fetch(process.env.SLACK_WEBHOOK!, { ... }) }
 
-logixlysia({
+createLogPlugin({
   config: {
     transports: [
       tee([
@@ -236,11 +236,11 @@ logixlysia({
 对每条 log 跑 `fn`,**然后总是**转发给 transport。适合打 metrics / 计数 / 调试 trace。`fn` 抛错会被静默吞(不影响主链路)。
 
 ```ts
-import logixlysia, { tap, sample } from '@pori15/logixlysia'
+import createLogPlugin, { tap, sample } from '@pori15/createLogPlugin'
 
 let counter = 0
 
-logixlysia({
+createLogPlugin({
   config: {
     transports: [
       tap(
@@ -264,7 +264,7 @@ logixlysia({
 适合打远程服务(每次 HTTP 请求成本高):
 
 ```ts
-import logixlysia, { batch, filter, tee } from '@pori15/logixlysia'
+import createLogPlugin, { batch, filter, tee } from '@pori15/createLogPlugin'
 
 const httpSink = { log: async (lvl, msg, meta) => {
   await fetch('https://logs.example.com/ingest', {
@@ -273,7 +273,7 @@ const httpSink = { log: async (lvl, msg, meta) => {
   })
 }}
 
-logixlysia({
+createLogPlugin({
   config: {
     transports: [
       tee([

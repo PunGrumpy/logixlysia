@@ -47,9 +47,9 @@ app.get('/users/:id', async ({ log, params, store }) => {
 
 ```ts
 // logger.ts
-import { logixlysia } from '@pori15/logixlysia'
+import { createLogPlugin } from '@pori15/createLogPlugin'
 
-export const logixlysiaIns = logixlysia({
+export const logixlysiaIns = createLogPlugin({
   config: {
     logFilePath: './logs/app.log',
     pino: {
@@ -109,7 +109,7 @@ new Elysia()
 ### 日志级别
 
 ```ts
-logixlysia({
+createLogPlugin({
   config: {
     pino: {
       level: 'debug', // 'fatal' | 'error' | 'warn' | 'info' | 'debug' | 'trace'
@@ -121,7 +121,7 @@ logixlysia({
 ### 美化输出
 
 ```ts
-logixlysia({
+createLogPlugin({
   config: {
     pino: {
       prettyPrint: true,
@@ -133,7 +133,7 @@ logixlysia({
 或者自定义:
 
 ```ts
-logixlysia({
+createLogPlugin({
   config: {
     pino: {
       prettyPrint: {
@@ -153,7 +153,7 @@ logixlysia({
 Pino 自己的 `redact` 跟 Logixlysia 的 `autoRedact` 独立,可以同时跑:
 
 ```ts
-logixlysia({
+createLogPlugin({
   config: {
     autoRedact: true,                 // Logixlysia: 改写 meta + headers
     pino: { redact: ['password'] },   // Pino: 擦掉 JSON 输出
@@ -174,7 +174,7 @@ pino: {
 ### base 字段
 
 ```ts
-logixlysia({
+createLogPlugin({
   config: {
     pino: {
       base: {
@@ -192,7 +192,7 @@ logixlysia({
 Pino 有自己的 transport 体系,处理高级日志目标。用 `transport` 选项配置:
 
 ```ts
-logixlysia({
+createLogPlugin({
   config: {
     pino: {
       transport: {
@@ -210,7 +210,7 @@ logixlysia({
 - **Logixlysia transport**(`config.transports`)—— 影响 HTTP access log 管道
 
 ```ts
-logixlysia({
+createLogPlugin({
   config: {
     // Pino transport —— 只对 store.pino.* 日志生效
     pino: {
@@ -286,7 +286,7 @@ app.get('/api/risky', ({ store }) => {
 Pino 在首次访问时才构造。这意味着:
 
 ```ts
-const plugin = logixlysia({
+const plugin = createLogPlugin({
   config: {
     pino: { level: 'invalid-level' as any },
   },
@@ -303,7 +303,7 @@ const plugin = logixlysia({
 ```ts
 const isDev = process.env.NODE_ENV === 'development'
 
-logixlysia({
+createLogPlugin({
   config: {
     pino: {
       level: isDev ? 'debug' : 'info',

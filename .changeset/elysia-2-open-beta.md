@@ -1,5 +1,5 @@
 ---
-"logixlysia": major
+"createLogPlugin": major
 ---
 
 Target the Elysia 2 open beta (`>= 2.0.0-beta.2`).

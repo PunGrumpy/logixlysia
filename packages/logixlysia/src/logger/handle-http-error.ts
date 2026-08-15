@@ -1,5 +1,5 @@
 /**
- * logixlysia 2.0 — HTTP 错误日志处理
+ * createLogPlugin 2.0 — HTTP 错误日志处理
  *
  * 接受任意 `unknown` 错误(不再依赖自建 ProblemError),通过
  * `utils/error.ts:normalizeLoggedError` 提取安全结构化字段,再走单 emit 管道

@@ -9,10 +9,10 @@ description: Real-world examples and use cases for Logixlysia
 
 ```ts
 import { Elysia } from 'elysia'
-import { logixlysia } from 'logixlysia'
+import { createLogPlugin } from 'createLogPlugin'
 
 const app = new Elysia()
-  .use(logixlysia())
+  .use(createLogPlugin())
   .get('/', () => 'Hello World')
   .listen(3000)
 ```
@@ -22,7 +22,7 @@ const app = new Elysia()
 ```ts
 const app = new Elysia()
   .use(
-    logixlysia({
+    createLogPlugin({
       config: {
         showStartupMessage: true,
         startupMessageFormat: 'banner'
@@ -38,11 +38,11 @@ const app = new Elysia()
 
 ```ts
 import { Elysia } from 'elysia'
-import { logixlysia } from 'logixlysia'
+import { createLogPlugin } from 'createLogPlugin'
 
 const app = new Elysia()
   .use(
-    logixlysia({
+    createLogPlugin({
       config: {
         // Disable startup message in production
         showStartupMessage: false,
@@ -91,7 +91,7 @@ const app = new Elysia()
 ```ts
 const app = new Elysia()
   .use(
-    logixlysia({
+    createLogPlugin({
       config: {
         showStartupMessage: true,
         startupMessageFormat: 'banner',
@@ -223,7 +223,7 @@ app.error(({ code, error, store }) => {
 ### JSON Format for Error Logs
 
 ```ts
-app.use(logixlysia({
+app.use(createLogPlugin({
   config: {
     customLogFormat: '{"level": "{level}", "message": "{message}", "method": "{method}", "pathname": "{pathname}", "status": "{status}"}'
   }
@@ -265,7 +265,7 @@ const elasticsearchTransport = {
 }
 
 app.use(
-  logixlysia({
+  createLogPlugin({
     config: {
       transports: [elasticsearchTransport]
     }
@@ -332,7 +332,7 @@ const isDev = process.env.NODE_ENV === 'development'
 const isProd = process.env.NODE_ENV === 'production'
 
 app.use(
-  logixlysia({
+  createLogPlugin({
     config: {
       showStartupMessage: isDev,
       startupMessageFormat: isDev ? 'banner' : 'simple',
@@ -371,10 +371,10 @@ app.use(
 
 ```ts
 import { Elysia } from 'elysia'
-import { logixlysia } from 'logixlysia'
+import { createLogPlugin } from 'createLogPlugin'
 
 const app = new Elysia()
-  .use(logixlysia({
+  .use(createLogPlugin({
     config: {
       pino: {
         level: 'info',

@@ -7,7 +7,7 @@ import { describe, expect, mock, test } from "bun:test";
 // app under Bun (the supported runtime for the 2.0-exp series).
 import { Elysia } from "elysia";
 
-import { logixlysia } from "../../src";
+import { createLogPlugin } from "../../src";
 import {
   createDemoApp,
   silentTestOptions,
@@ -90,10 +90,10 @@ describe("Node adapter", () => {
   // @elysiajs/node 1.x targets Elysia 1.x. The local fork still runs
   // Elysia 2.0.0-exp.62, so this test is skipped under the current dep
   // matrix. The Bun path is covered by the tests above.
-  test("logixlysia resolves and handles GET / on @elysia/node", async () => {
+  test("createLogPlugin resolves and handles GET / on @elysia/node", async () => {
     const transport = mockTransport();
     const app = new Elysia()
-      .use(logixlysia(silentTestOptions(transport)))
+      .use(createLogPlugin(silentTestOptions(transport)))
       .get("/", () => ({ ok: true }));
 
     const response = await app.handle(new Request("http://localhost/"));

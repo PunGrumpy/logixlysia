@@ -1,5 +1,5 @@
 ---
-"@pori15/logixlysia": major
+"@pori15/createLogPlugin": major
 ---
 
 # 7.0.0 — Elysia 2.0 适配重写
@@ -17,7 +17,7 @@
 | `HttpError.NotFound(...)` 命名空间 | `httpError(404, "...")` 工厂或 `class extends HTTPError` |
 | `normalizeToProblem` | Elysia 原生 `.error(Class, handler)` |
 | `getErrorCode` / `getErrorMeta` | 同上 |
-| `ErrorMapping` / `ErrorResolver` / `ErrorConfig.errorMap` | `logixlysia.errorMap()` 工厂 |
+| `ErrorMapping` / `ErrorResolver` / `ErrorConfig.errorMap` | `createLogPlugin.errorMap()` 工厂 |
 | `Code` 联合类型 | Elysia 内置 Error class 类型 |
 
 ### 依赖
@@ -29,7 +29,7 @@
 
 ```ts
 import { Elysia, HTTPError } from "elysia";
-import { logixlysia, httpError, errorMap } from "@pori15/logixlysia";
+import { createLogPlugin, httpError, errorMap } from "@pori15/createLogPlugin";
 
 // 1. 直接用 Elysia 2.0 原生 HTTPError
 class OutOfCredit extends HTTPError<"OUT_OF_CREDIT"> {
@@ -38,24 +38,24 @@ class OutOfCredit extends HTTPError<"OUT_OF_CREDIT"> {
   override detail() { return { balance: 0 }; }
 }
 
-// 2. 用 logixlysia 提供的 httpError 工厂(类似 1.x 风格)
+// 2. 用 createLogPlugin 提供的 httpError 工厂(类似 1.x 风格)
 const userNotFound = httpError(404, "user not found", { userId: 42 });
 
-// 3. 用 logixlysia.errorMap() 批量生成 Error class
+// 3. 用 createLogPlugin.errorMap() 批量生成 Error class
 const pgErrors = errorMap({
   "23505": { status: 409, title: "Duplicate Key" },
   "23503": { status: 400, title: "Foreign Key Violation" },
 });
 
 new Elysia()
-  .use(logixlysia({
+  .use(createLogPlugin({
     logLevel: ["INFO", "WARNING", "ERROR"],
     errors: [OutOfCredit, ...pgErrors],
   }))
   .get("/buy", () => { throw new OutOfCredit(); });
 ```
 
-每次抛错,logixlysia 会:
+每次抛错,createLogPlugin 会:
 1. 通过 `.error(Class, handler)` 拦截特定类,handler 内写一条结构化日志
 2. 返回 `undefined` 让 Elysia 自动以 `application/problem+json` 响应
 3. 对未匹配的 unknown error,fallback `.error(fn)` 兜底

@@ -1,5 +1,5 @@
 /**
- * logixlysia 2.0 — Preset 注册表
+ * createLogPlugin 2.0 — Preset 注册表
  *
  * 内置 `dev` / `prod` / `json` 在模块加载时自动注册。
  * 用户可以用 `registerPreset("staging", { ... })` 加自己的 preset。
@@ -22,7 +22,7 @@ const registry = new Map<string, PresetConfig>();
  *
  * @example
  * ```ts
- * import { registerPreset } from "@pori15/logixlysia";
+ * import { registerPreset } from "@pori15/createLogPlugin";
  *
  * registerPreset("staging", {
  *   pino: { prettyPrint: true },
@@ -30,15 +30,15 @@ const registry = new Map<string, PresetConfig>();
  *   requestId: true,
  * });
  *
- * app.use(logixlysia({ preset: "staging" }));
+ * app.use(createLogPlugin({ preset: "staging" }));
  * ```
  */
 export const registerPreset = (name: string, defaults: PresetConfig): void => {
   if (registry.has(name)) {
-    throw new Error(`logixlysia: preset "${name}" already registered`);
+    throw new Error(`createLogPlugin: preset "${name}" already registered`);
   }
   if (typeof name !== "string" || name.length === 0) {
-    throw new Error("logixlysia: preset name must be a non-empty string");
+    throw new Error("createLogPlugin: preset name must be a non-empty string");
   }
   registry.set(name, defaults);
 };

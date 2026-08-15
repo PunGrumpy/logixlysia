@@ -1,5 +1,5 @@
 /**
- * logixlysia 2.0 — 公共类型
+ * createLogPlugin 2.0 — 公共类型
  *
  * 适配 Elysia 2.0(2.0.0-exp.62) + 上游 main (b173c44) 吸收:
  * - 单 emit 管道 (filter→context merge→redact→transports→file→console)
@@ -20,7 +20,7 @@ import type {
 export type Pino = PinoLogger<never, boolean>;
 
 /**
- * Minimal HTTP-aware Error used by logixlysia for non-Elysia call sites
+ * Minimal HTTP-aware Error used by createLogPlugin for non-Elysia call sites
  * (re-export pipeline, redact tests, integration helpers). Independent of
  * Elysia 2's `HTTPError` (note the capitalisation) — that one lives in
  * `elysia` and is the type the framework actually responds with.
@@ -45,7 +45,7 @@ export interface StoreData {
   pathname?: string;
 }
 
-/** Elysia store 中挂载的 logixlysia 状态 */
+/** Elysia store 中挂载的 createLogPlugin 状态 */
 export interface LogixlysiaStore {
   beforeTime?: bigint;
   logger: Logger;
@@ -100,7 +100,7 @@ export interface LogFilter {
   level?: LogLevel[];
 }
 
-/** Pino 配置(logixlysia 透传) */
+/** Pino 配置(createLogPlugin 透传) */
 export interface PinoConfig {
   /** 显式禁用 pino(测试中常用) */
   enabled?: boolean;
@@ -146,7 +146,7 @@ export interface TransportsConfig {
   targets: Transport[];
 }
 
-/** 错误处理配置（logixlysia 2.0 极简版） */
+/** 错误处理配置（createLogPlugin 2.0 极简版） */
 export interface ErrorConfig {
   /** 是否在控制台显示完整错误详情，默认 `false` */
   verbose?: boolean;
@@ -181,7 +181,7 @@ export interface AutoTranslateConfig {
 }
 
 /**
- * 新版(上游 main)配置 — 所有 logixlysia 行为参数集中在 `config` 字段下。
+ * 新版(上游 main)配置 — 所有 createLogPlugin 行为参数集中在 `config` 字段下。
  * 同时保留 root-level 字段(legacy + 旧测试)以便向后兼容。
  */
 export interface LogixlysiaConfig {

@@ -59,7 +59,7 @@ export default defineConfig({
       {
         owner: "eastgold15",
         prefix: "changelog",
-        repo: "logixlysia",
+        repo: "createLogPlugin",
         type: "github-releases",
       },
     ],
@@ -71,7 +71,7 @@ export default defineConfig({
     "The logger for Elysia.js — simple and easy to use, beautiful and powerful",
   github: {
     owner: "eastgold15",
-    repo: "logixlysia",
+    repo: "createLogPlugin",
   },
   lastModified: true,
   logo: {

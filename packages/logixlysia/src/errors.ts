@@ -1,5 +1,5 @@
 /**
- * logixlysia 2.0 — 错误模块
+ * createLogPlugin 2.0 — 错误模块
  *
  * 提供:
  * - `errorMap` — 用户可选用工具,把 `{ code: { status, title } }` 字典生成
@@ -17,7 +17,7 @@ import { getStatusCode } from "./helpers/status";
 import type { LogLevel } from "./interfaces";
 
 /**
- * Elysia 错误实例 → logixlysia 日志级别
+ * Elysia 错误实例 → createLogPlugin 日志级别
  * 4xx → WARNING,5xx → ERROR,其他 → INFO
  */
 export const levelForStatus = (status?: number | keyof StatusMap): LogLevel => {
@@ -68,7 +68,7 @@ export const extractStatus = (error: unknown): number | undefined => {
  *
  * @example
  * ```ts
- * import { errorMap } from "@pori15/logixlysia";
+ * import { errorMap } from "@pori15/createLogPlugin";
  * import { problem } from "elysia";
  *
  * const errors = errorMap({
@@ -77,7 +77,7 @@ export const extractStatus = (error: unknown): number | undefined => {
  * });
  *
  * new Elysia()
- *   .use(logixlysia())
+ *   .use(createLogPlugin())
  *   .error(errors[0], (ctx) => problem(409, { detail: "Duplicate" }))
  *   .get("/users", () => {
  *     throw new errors[0]();
@@ -119,7 +119,7 @@ const httpErrorType = (status: number): string =>
  * @example
  * ```ts
  * throw httpError(404, "user not found", { userId: 42 });
- * // → 响应 404 + application/problem+json + logixlysia 写一条 WARNING 日志
+ * // → 响应 404 + application/problem+json + createLogPlugin 写一条 WARNING 日志
  * ```
  */
 export const httpError = (

@@ -4,16 +4,16 @@ description: 'Public TypeScript types — interfaces, type aliases, and classes.
 ---
 
 
-本页是 [`@pori15/logixlysia`](https://www.npmjs.com/package/@pori15/logixlysia) 类型导出的自动生成参考。
+本页是 [`@pori15/createLogPlugin`](https://www.npmjs.com/package/@pori15/createLogPlugin) 类型导出的自动生成参考。
 
 ## Interfaces
 
-[AIMetrics](#aimetrics) · [ErrorConfig](#error-config) · [FileConfig](#file-config) · [FormatConfig](#format-config) · [LogFilter](#log-filter) · [Logger](#logger) · [LogixlysiaConfig](#logixlysia-config) · [LogixlysiaContext](#logixlysia-context) · [LogixlysiaOptions](#logixlysia-options) · [LogixlysiaSingleton](#logixlysia-singleton) · [LogixlysiaStore](#logixlysia-store) · [LogRotationConfig](#log-rotation-config) · [NormalizedLoggedError](#normalized-logged-error) · [PinoConfig](#pino-config) · [RequestContextStore](#request-context-store) · [RequestIdConfig](#request-id-config) · [RequestScopedLogger](#request-scoped-logger) · [RequestScopedLoggerOptions](#request-scoped-logger-options) · [ResolvedRequestIdConfig](#resolved-request-id-config) · [StartupConfig](#startup-config) · [StoreData](#store-data) · [StructuredError](#structured-error) · [TraceContextFields](#trace-context-fields) · [Transport](#transport) · [TransportsConfig](#transports-config) · [WebSocketLike](#web-socket-like) · [WsHandlerHooks](#ws-handler-hooks)
+[AIMetrics](#aimetrics) · [ErrorConfig](#error-config) · [FileConfig](#file-config) · [FormatConfig](#format-config) · [LogFilter](#log-filter) · [Logger](#logger) · [LogixlysiaConfig](#createLogPlugin-config) · [LogixlysiaContext](#createLogPlugin-context) · [CreateLogPluginOptions](#createLogPlugin-options) · [LogixlysiaSingleton](#createLogPlugin-singleton) · [LogixlysiaStore](#createLogPlugin-store) · [LogRotationConfig](#log-rotation-config) · [NormalizedLoggedError](#normalized-logged-error) · [PinoConfig](#pino-config) · [RequestContextStore](#request-context-store) · [RequestIdConfig](#request-id-config) · [RequestScopedLogger](#request-scoped-logger) · [RequestScopedLoggerOptions](#request-scoped-logger-options) · [ResolvedRequestIdConfig](#resolved-request-id-config) · [StartupConfig](#startup-config) · [StoreData](#store-data) · [StructuredError](#structured-error) · [TraceContextFields](#trace-context-fields) · [Transport](#transport) · [TransportsConfig](#transports-config) · [WebSocketLike](#web-socket-like) · [WsHandlerHooks](#ws-handler-hooks)
 
 
 ## Type Aliases
 
-[ContextKey](#context-key) · [Logixlysia](#logixlysia) · [LogixlysiaErrorClass](#logixlysia-error-class) · [LogixlysiaErrorClasses](#logixlysia-error-classes) · [LogLevel](#log-level) · [LogPreset](#log-preset) · [Pino](#pino) · [PresetConfig](#preset-config)
+[ContextKey](#context-key) · [Logixlysia](#createLogPlugin) · [LogixlysiaErrorClass](#createLogPlugin-error-class) · [LogixlysiaErrorClasses](#createLogPlugin-error-classes) · [LogLevel](#log-level) · [LogPreset](#log-preset) · [Pino](#pino) · [PresetConfig](#preset-config)
 
 
 ## Classes
@@ -91,7 +91,7 @@ Logger 实例,可通过 ``store.logger`` 访问
 | `debug` | `(request: Request, message: string, context: Record<string, unknown>) => void` |  | 记录 DEBUG 级别日志 |
 | `error` | `(request: Request, message: string, context: Record<string, unknown>) => void` |  | 记录 ERROR 级别日志 |
 | `getContext` | `(request: Request) => Readonly<Record<string, unknown>>` |  | 获取累积的 per-request context |
-| `handleHttpError` | `(request: Request, error: unknown, store: StoreData, options: LogixlysiaOptions) => void` |  | 处理 HTTP 错误并输出日志 |
+| `handleHttpError` | `(request: Request, error: unknown, store: StoreData, options: CreateLogPluginOptions) => void` |  | 处理 HTTP 错误并输出日志 |
 | `info` | `(request: Request, message: string, context: Record<string, unknown>) => void` |  | 记录 INFO 级别日志 |
 | `log` | `(level: LogLevel, request: Request, data: Record<string, unknown>, store: StoreData) => void` |  | 记录指定级别的日志 |
 | `mergeContext` | `(request: Request, partial: Record<string, unknown>) => void` |  | 合并 per-request context(后续 access log 带上) |
@@ -100,7 +100,7 @@ Logger 实例,可通过 ``store.logger`` 访问
 
 ### `LogixlysiaConfig`
 
-新版(上游 main)配置 — 所有 logixlysia 行为参数集中在 ``config`` 字段下。
+新版(上游 main)配置 — 所有 createLogPlugin 行为参数集中在 ``config`` 字段下。
 同时保留 root-level 字段(legacy + 旧测试)以便向后兼容。
 
 | Field | Type | Optional | Description |
@@ -145,7 +145,7 @@ Logixlysia 请求上下文
 | `request` | `Request` |  |  |
 | `store` | `LogixlysiaStore` |  |  |
 
-### `LogixlysiaOptions`
+### `CreateLogPluginOptions`
 
 Logixlysia 插件配置
 
@@ -181,7 +181,7 @@ Elysia 2 singleton —— 注入到 Elysia 的 store / derive 形状。
 
 ### `LogixlysiaStore`
 
-Elysia store 中挂载的 logixlysia 状态
+Elysia store 中挂载的 createLogPlugin 状态
 
 | Field | Type | Optional | Description |
 | --- | --- | --- | --- |
@@ -211,7 +211,7 @@ Elysia store 中挂载的 logixlysia 状态
 
 ### `PinoConfig`
 
-Pino 配置(logixlysia 透传)
+Pino 配置(createLogPlugin 透传)
 
 | Field | Type | Optional | Description |
 | --- | --- | --- | --- |
@@ -345,10 +345,10 @@ type ContextKey = Request | object;
 
 ### `Logixlysia`
 
-插件返回类型 —— ``ReturnType<typeof logixlysia>``,Elysia 自己推断。
+插件返回类型 —— ``ReturnType<typeof createLogPlugin>``,Elysia 自己推断。
 不手写 ``Elysia<...>`` 泛型,避免与 elysia 模块的 ``#private`` brand 冲突。
 
-必须在 ``logixlysia`` 函数声明**之后**导出 (因为下方 ``declare const logixlysia``
+必须在 ``createLogPlugin`` 函数声明**之后**导出 (因为下方 ``declare const createLogPlugin``
 才是它的类型来源)。
 
 **bunup 配套要求**:``bunup.config.ts`` 的 ``dts`` 必须开 ``inferTypes: true``,
@@ -357,16 +357,16 @@ type ContextKey = Request | object;
 **为什么返回类型是 ``AnyElysia`` 而不是精确泛型**:开了 ``inferTypes: true`` 之后
 真实类型是 ``Elysia<"", "local", {...}>``;它的 ``#private`` 跟 ``AnyElysia`` 的
 ``#private`` 被 TS 算成不同类,``.use()`` 会拒。在函数签名层加
-``(rawOptions?: LogixlysiaOptions) => AnyElysia`` 把出口拓宽到 ``AnyElysia``,
+``(rawOptions?: CreateLogPluginOptions) => AnyElysia`` 把出口拓宽到 ``AnyElysia``,
 函数体保持单链、零 ``as`` 零 ``any`` 零 ``@ts-expect-error``。
 
 ```ts
-type Logixlysia = ReturnType<typeof logixlysia>;
+type Logixlysia = ReturnType<typeof createLogPlugin>;
 ```
 
 ### `LogixlysiaErrorClass`
 
-HTTPError 子类 —— logixlysia 通过它知道哪些用户类需要 .error() 注册
+HTTPError 子类 —— createLogPlugin 通过它知道哪些用户类需要 .error() 注册
 
 ```ts
 type LogixlysiaErrorClass = TaggedHTTPError<string, any>;
@@ -377,9 +377,9 @@ type LogixlysiaErrorClass = TaggedHTTPError<string, any>;
 用户自定义 HTTPError 类列表
 
 这些类会通过 Elysia 2.0 的 ``.error(Class, handler)`` 逐个注册,
-logixlysia 在 handler 内写日志,响应交还给 Elysia(自动 application/problem+json)。
+createLogPlugin 在 handler 内写日志,响应交还给 Elysia(自动 application/problem+json)。
 
-用 ``logixlysia.errorMap(...)`` 工厂可以快速从 ``{ code: { status, title } }`` 字典生成。
+用 ``createLogPlugin.errorMap(...)`` 工厂可以快速从 ``{ code: { status, title } }`` 字典生成。
 
 ```ts
 type LogixlysiaErrorClasses = TaggedHTTPError<string, any>[];
@@ -414,14 +414,14 @@ type Pino = PinoLogger<never, boolean>;
 ### `PresetConfig`
 
 ```ts
-type PresetConfig = NonNullable<LogixlysiaOptions["config"]>;
+type PresetConfig = NonNullable<CreateLogPluginOptions["config"]>;
 ```
 
 ## Classes
 
 ### `HttpError`
 
-Minimal HTTP-aware Error used by logixlysia for non-Elysia call sites
+Minimal HTTP-aware Error used by createLogPlugin for non-Elysia call sites
 (re-export pipeline, redact tests, integration helpers). Independent of
 Elysia 2's ``HTTPError`` (note the capitalisation) — that one lives in
 ``elysia`` and is the type the framework actually responds with.

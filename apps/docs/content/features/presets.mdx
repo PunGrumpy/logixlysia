@@ -7,10 +7,10 @@ description: 现成的 dev、prod、json 日志默认值
 
 ```ts
 import { Elysia } from 'elysia'
-import { logixlysia } from '@pori15/logixlysia'
+import { createLogPlugin } from '@pori15/createLogPlugin'
 
 const app = new Elysia().use(
-  logixlysia({
+  createLogPlugin({
     preset: 'prod',
     config: {
       service: 'api',
@@ -33,7 +33,7 @@ const app = new Elysia().use(
 ## 覆盖示例
 
 ```ts
-logixlysia({
+createLogPlugin({
   preset: 'prod',
   config: {
     autoRedact: false,
@@ -47,21 +47,21 @@ logixlysia({
 如果想先看解析后的 options 再往下传,用 `resolveOptions`:
 
 ```ts
-import { resolveOptions } from '@pori15/logixlysia'
+import { resolveOptions } from '@pori15/createLogPlugin'
 
 const options = resolveOptions({ preset: 'dev', config: { service: 'api' } })
 // options.config.service === 'api'
 // options.config.showStartupMessage === true (来自 dev preset)
 ```
 
-`resolveOptions` 就是插件内部用的同一个 merge 函数,行为跟直接传给 `logixlysia()` 完全一致。
+`resolveOptions` 就是插件内部用的同一个 merge 函数,行为跟直接传给 `createLogPlugin()` 完全一致。
 
 ## 自定义 preset
 
 `registerPreset(name, defaults)` 在进程级注册一个 preset,跟内置 `dev` / `prod` / `json` 一样被 `resolveOptions` 查表。适合在 monorepo 里把"staging / edge / canary"等环境的默认值抽到一处,而不是每个项目复制粘贴 12 行 config。
 
 ```ts
-import { registerPreset } from '@pori15/logixlysia'
+import { registerPreset } from '@pori15/createLogPlugin'
 
 registerPreset('staging', {
   pino: { prettyPrint: true },
@@ -71,12 +71,12 @@ registerPreset('staging', {
   useColors: true,
 })
 
-const app = new Elysia().use(logixlysia({ preset: 'staging' }))
+const app = new Elysia().use(createLogPlugin({ preset: 'staging' }))
 ```
 
 **规则**
 
-- 重复注册同名 preset 抛 `Error("logixlysia: preset \"<name>\" already registered")` —— 防止 typo 静默覆盖。
+- 重复注册同名 preset 抛 `Error("createLogPlugin: preset \"<name>\" already registered")` —— 防止 typo 静默覆盖。
 - `name` 必须是非空字符串。
 - 用户 preset 的 schema 跟 `LogixlysiaConfig` 完全一致,**不**做轻量校验(`resolveOptions` 阶段统一管 `logRotation` 之类)。
 - 注册时机:模块加载时一次性注册,放**自己项目的初始化入口**(比如 `src/logging.ts`),**不要**在请求处理函数里注册 —— 重复抛错会让第一个请求 500。
@@ -84,7 +84,7 @@ const app = new Elysia().use(logixlysia({ preset: 'staging' }))
 **调试用 API**
 
 ```ts
-import { listPresets, getPresetDefaults } from '@pori15/logixlysia'
+import { listPresets, getPresetDefaults } from '@pori15/createLogPlugin'
 
 console.log(listPresets())
 // ['dev', 'prod', 'json', 'staging']
@@ -98,7 +98,7 @@ console.log(getPresetDefaults('staging'))
 单测之间清掉注册表用 `__resetPresetRegistry()`(注意:会**连同**内置 `dev` / `prod` / `json` 一起清掉,生产代码绝不能调):
 
 ```ts
-import { __resetPresetRegistry } from '@pori15/logixlysia'
+import { __resetPresetRegistry } from '@pori15/createLogPlugin'
 
 afterEach(() => {
   __resetPresetRegistry()
@@ -108,5 +108,5 @@ afterEach(() => {
 **类型上**(TypeScript):`preset` 字段的提示仍是 `'dev' | 'prod' | 'json'`,但运行时接受任意字符串。IDE 自动补全给内置,用户 preset 用 `as` 断言或 `satisfies` 收口:
 
 ```ts
-logixlysia({ preset: 'staging' as 'dev' | 'prod' | 'json' | 'staging' })
+createLogPlugin({ preset: 'staging' as 'dev' | 'prod' | 'json' | 'staging' })
 ```

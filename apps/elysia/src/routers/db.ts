@@ -1,5 +1,5 @@
 /**
- * logixlysia 2.0 — 数据库错误演示路由
+ * createLogPlugin 2.0 — 数据库错误演示路由
  *
  * 演示三种 Drizzle 错误翻译用法(均用 mock 错误,无需真实 DB):
  * - /demo/db-error/duplicate  : 模拟 23505(唯一约束冲突)
@@ -13,11 +13,12 @@
  * - 错误继续以原 error 形态传播(用户 .error 看到的是原引用)
  */
 
+import type { Logixlysia } from "@pori15/createLogPlugin";
 import { problem } from "elysia";
 
-import type { Logixlysia } from "@pori15/logixlysia";
-
-const makeDrizzleError = (code: string): Error & { code: string; name: string } => {
+const makeDrizzleError = (
+  code: string
+): Error & { code: string; name: string } => {
   const e = new Error(`PG driver reported: ${code}`) as Error & {
     code: string;
     name: string;
@@ -34,13 +35,19 @@ export const dbRouter = <App extends Logixlysia>(app: App) =>
       const code = (ctx.error as { code?: string }).code ?? "UNKNOWN";
       // 按 driver code 选不同的 problem detail
       if (code === "23505") {
-        return problem(409, { detail: "Duplicate key — that value already exists" });
+        return problem(409, {
+          detail: "Duplicate key — that value already exists",
+        });
       }
       if (code === "23503") {
-        return problem(400, { detail: "Foreign key violation — referenced row missing" });
+        return problem(400, {
+          detail: "Foreign key violation — referenced row missing",
+        });
       }
       if (code === "08006") {
-        return problem(503, { detail: "Database unavailable — try again later" });
+        return problem(503, {
+          detail: "Database unavailable — try again later",
+        });
       }
       return problem(500, { detail: `Unhandled DB error (code=${code})` });
     })

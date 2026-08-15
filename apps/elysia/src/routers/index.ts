@@ -1,4 +1,4 @@
-import { createLogPlugin } from "@pori15/logixlysia";
+import { createLogPlugin } from "@pori15/createLogPlugin";
 import Elysia, { t } from "elysia";
 import { aiMetricsRouter } from "./ai-metrics";
 import { boomRouter } from "./boom";

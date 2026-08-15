@@ -1,5 +1,5 @@
 ---
-name: logixlysia
+name: createLogPlugin
 description: Coding guidelines, API usage, and configuration standards for using the Logixlysia logger plugin in Elysia.js applications.
 ---
 
@@ -15,10 +15,10 @@ To register Logixlysia in an Elysia application:
 
 ```typescript
 import { Elysia } from 'elysia'
-import { logixlysia } from 'logixlysia'
+import { createLogPlugin } from 'createLogPlugin'
 
 const app = new Elysia()
-  .use(logixlysia()) // Register with default options
+  .use(createLogPlugin()) // Register with default options
   .get('/', () => 'Hello Elysia')
   .listen(3000)
 ```
@@ -43,7 +43,7 @@ You can append custom fields to the current request's log using `log.mergeContex
 ```typescript
 app.get('/order/checkout', ({ log }) => {
   log.mergeContext({ cartId: 'cart-123', promoUsed: true })
-  
+
   log.info('Cart validated') // Logs with cartId and promoUsed context
   return { status: 'processed' }
 })
@@ -57,14 +57,14 @@ Use the options object to configure presets, logging thresholds, filters, and fo
 
 ```typescript
 app.use(
-  logixlysia({
+  createLogPlugin({
     preset: 'prod', // Options: 'dev' | 'prod' | 'json'
     config: {
       showStartupMessage: true,
       startupMessageFormat: 'banner', // 'simple' | 'banner'
       ip: true, // Log client IP address
       logQueryParams: true, // Log URL query parameters
-      
+
       // Request tracing and propagation
       requestId: {
         enabled: true,
@@ -95,12 +95,12 @@ app.use(
 If `useAsyncLocalStorage` is enabled in configuration, you can retrieve the request-scoped logger anywhere in your codebase (e.g. inside database services, controllers, or helper files) using `useLogger()`.
 
 ```typescript
-import { useLogger } from 'logixlysia'
+import { useLogger } from 'createLogPlugin'
 
 export const fetchFromDatabase = async (userId: string) => {
   const log = useLogger() // Fetches the logger for the current async execution context
   log?.info('Querying database', { userId })
-  
+
   // Database logic...
 }
 ```
@@ -113,9 +113,9 @@ To enable request-scoped tracing and logging in WebSockets, wrap your WebSocket 
 
 ```typescript
 import { Elysia } from 'elysia'
-import { logixlysia } from 'logixlysia'
+import { createLogPlugin } from 'createLogPlugin'
 
-const logger = logixlysia()
+const logger = createLogPlugin()
 
 const app = new Elysia()
   .use(logger)

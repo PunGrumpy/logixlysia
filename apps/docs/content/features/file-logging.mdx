@@ -8,7 +8,7 @@ description: 把日志写入文件以便持久化
 ## 基本用法
 
 ```ts
-logixlysia({
+createLogPlugin({
   config: {
     logFilePath: './logs/app.log',
   },
@@ -47,7 +47,7 @@ file sink:
 ### 生产
 
 ```ts
-logixlysia({
+createLogPlugin({
   config: {
     logFilePath: './logs/production.log',
     logRotation: {
@@ -63,7 +63,7 @@ logixlysia({
 ### 开发
 
 ```ts
-logixlysia({
+createLogPlugin({
   config: {
     logFilePath: './logs/development.log',
   },
@@ -73,7 +73,7 @@ logixlysia({
 ### 自定义文件权限
 
 ```ts
-logixlysia({
+createLogPlugin({
   config: {
     logFilePath: '/var/log/myapp/app.log',
     logFileMode: 0o640,
@@ -85,7 +85,7 @@ logixlysia({
 ### 关闭文件输出
 
 ```ts
-logixlysia({
+createLogPlugin({
   config: {
     logFilePath: './logs/app.log', // 配置了
     disableFileLogging: true,      // ...但关闭

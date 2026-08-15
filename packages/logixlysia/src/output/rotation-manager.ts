@@ -79,7 +79,7 @@ export const compressFile = async (
     await fs.rm(filePath, { force: true });
   } catch (error) {
     reportRotationError(
-      `[logixlysia] Failed to compress file ${filePath}:`,
+      `[createLogPlugin] Failed to compress file ${filePath}:`,
       error,
       onError
     );

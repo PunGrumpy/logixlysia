@@ -37,9 +37,12 @@ const validateLogRotation = (
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    throw new Error(`logixlysia: invalid logRotation config — ${message}`, {
-      cause: error,
-    });
+    throw new Error(
+      `createLogPlugin: invalid logRotation config — ${message}`,
+      {
+        cause: error,
+      }
+    );
   }
 };
 
@@ -107,7 +110,7 @@ export const resolveOptions = (
         config: mergeConfig(
           getPresetDefaults(preset) ??
             (() => {
-              throw new Error(`logixlysia: invalid preset — ${preset}`);
+              throw new Error(`createLogPlugin: invalid preset — ${preset}`);
             })(),
           options.config
         ),

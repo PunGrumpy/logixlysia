@@ -45,7 +45,7 @@ precedence over `vercel.json` rules:
 
 ## Changelog
 
-`/changelog` is built from the GitHub Releases of `PunGrumpy/logixlysia` via
+`/changelog` is built from the GitHub Releases of `PunGrumpy/createLogPlugin` via
 Blume's `github-releases` content source at build time. Two things keep it
 healthy:
 

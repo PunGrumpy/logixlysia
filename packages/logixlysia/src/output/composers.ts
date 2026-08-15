@@ -1,5 +1,5 @@
 /**
- * logixlysia 2.0 — Transport 组合器
+ * createLogPlugin 2.0 — Transport 组合器
  *
  * `Transport` 接口只有一个 `log` 方法。组合器都是**纯函数**:
  *   (Transport) => Transport 或 (args, Transport) => Transport
@@ -8,13 +8,13 @@
  *
  * @example
  * ```ts
- * import { logixlysia } from "@pori15/logixlysia";
- * import { sample, filter, tap, batch, tee } from "@pori15/logixlysia";
+ * import { createLogPlugin } from "@pori15/createLogPlugin";
+ * import { sample, filter, tap, batch, tee } from "@pori15/createLogPlugin";
  *
  * const consoleTarget = { log: (lvl, msg, meta) => console.log(lvl, msg) };
  * const metricsTarget = { log: (lvl, msg, meta) => metrics.increment(...) };
  *
- * logixlysia({
+ * createLogPlugin({
  *   config: {
  *     transports: [
  *       // 10% 采样后送 metrics,100% 送 console
@@ -69,7 +69,9 @@ export const tee = (targets: Transport[]): Transport => ({
  */
 export const sample = (rate: number, transport: Transport): Transport => {
   if (!(rate >= 0 && rate <= 1)) {
-    throw new Error(`logixlysia: sample rate must be in [0, 1], got ${rate}`);
+    throw new Error(
+      `createLogPlugin: sample rate must be in [0, 1], got ${rate}`
+    );
   }
   return {
     log: (level, message, meta) =>
@@ -144,10 +146,12 @@ export const batch = (
   transport: Transport
 ): Transport => {
   if (size <= 0) {
-    throw new Error(`logixlysia: batch size must be > 0, got ${size}`);
+    throw new Error(`createLogPlugin: batch size must be > 0, got ${size}`);
   }
   if (flushMs <= 0) {
-    throw new Error(`logixlysia: batch flushMs must be > 0, got ${flushMs}`);
+    throw new Error(
+      `createLogPlugin: batch flushMs must be > 0, got ${flushMs}`
+    );
   }
 
   let buffer: LogEntry[] = [];

@@ -23,7 +23,7 @@ if (Object.keys(logger.getContext(request)).length > 0) {
 }
 `;
 
-describe("logixlysia/otel", () => {
+describe("createLogPlugin/otel", () => {
   test("injectTraceContext is a no-op when OpenTelemetry is not installed", () => {
     const result = spawnSync({
       cmd: ["bun", "-e", script],

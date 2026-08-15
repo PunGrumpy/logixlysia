@@ -1,5 +1,5 @@
 /**
- * logixlysia 2.0 — Logger 工厂
+ * createLogPlugin 2.0 — Logger 工厂
  *
  * 功能封装：
  * - 单一 emit 管道（emit.ts）：filter → context merge → redact → transports → file → console

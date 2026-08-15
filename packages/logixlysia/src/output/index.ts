@@ -1,5 +1,5 @@
 /**
- * logixlysia 2.0 — Transports 出口
+ * createLogPlugin 2.0 — Transports 出口
  *
  * 把日志转送到用户注册的 transports(Elasticsearch/Slack/... 等),
  * 同步 throw / 异步 Promise reject 都被吞掉(永不阻塞 logger 流程),
@@ -40,7 +40,7 @@ const reportTransportError = (transport: Transport, error: unknown): void => {
     return;
   }
   lastErrorAt.set(transport, now);
-  console.error("[logixlysia] transport error", error);
+  console.error("[createLogPlugin] transport error", error);
 };
 
 export const logToTransports = (input: LogToTransportsInput): void => {

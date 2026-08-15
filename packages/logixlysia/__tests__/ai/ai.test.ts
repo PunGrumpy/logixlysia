@@ -1,10 +1,10 @@
 import { describe, expect, mock, test } from "bun:test";
 import { Elysia } from "elysia";
 
-import { logixlysia } from "../../src";
+import { createLogPlugin } from "../../src";
 import { mergeAIMetrics } from "../../src/ai";
 
-describe("logixlysia/ai", () => {
+describe("createLogPlugin/ai", () => {
   test("mergeAIMetrics adds ai object to access log context", async () => {
     const transport = mock<
       (lvl: unknown, msg: unknown, meta?: unknown) => void
@@ -14,7 +14,7 @@ describe("logixlysia/ai", () => {
 
     const app = new Elysia()
       .use(
-        logixlysia({
+        createLogPlugin({
           config: {
             disableFileLogging: true,
             disableInternalLogger: true,
@@ -66,7 +66,7 @@ describe("logixlysia/ai", () => {
 
     const app = new Elysia()
       .use(
-        logixlysia({
+        createLogPlugin({
           config: {
             disableFileLogging: true,
             disableInternalLogger: true,
@@ -96,7 +96,7 @@ describe("logixlysia/ai", () => {
 
     const app = new Elysia()
       .use(
-        logixlysia({
+        createLogPlugin({
           config: {
             disableFileLogging: true,
             disableInternalLogger: true,

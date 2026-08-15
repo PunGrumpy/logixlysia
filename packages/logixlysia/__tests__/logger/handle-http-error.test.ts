@@ -1,8 +1,8 @@
 import { describe, expect, mock, test } from "bun:test";
 import { Elysia, t } from "elysia";
 
-import { logixlysia } from "../../src";
-import { HttpError, type LogixlysiaOptions } from "../../src/interfaces";
+import { createLogPlugin } from "../../src";
+import { type CreateLogPluginOptions, HttpError } from "../../src/interfaces";
 import { normalizeLoggedError } from "../../src/utils/error";
 
 interface CapturedEvent {
@@ -25,8 +25,8 @@ const createCaptureTransport = () => {
 
 const SECRET_PASSWORD = "hunter2-secret-value";
 
-const buildLoginApp = (options: LogixlysiaOptions) =>
-  new Elysia().use(logixlysia(options)).post("/login", () => "ok", {
+const buildLoginApp = (options: CreateLogPluginOptions) =>
+  new Elysia().use(createLogPlugin(options)).post("/login", () => "ok", {
     body: t.Object({
       email: t.String(),
       password: t.String({ minLength: 60 }),
@@ -105,7 +105,7 @@ describe("handleHttpError", () => {
 
   test("normalizes a thrown HttpError into a serializable, minimal shape", async () => {
     const { events, transport } = createCaptureTransport();
-    const options: LogixlysiaOptions = {
+    const options: CreateLogPluginOptions = {
       config: {
         disableFileLogging: true,
         disableInternalLogger: true,
@@ -113,7 +113,7 @@ describe("handleHttpError", () => {
       },
     };
 
-    const app = new Elysia().use(logixlysia(options)).get("/down", () => {
+    const app = new Elysia().use(createLogPlugin(options)).get("/down", () => {
       throw new HttpError(503, "downstream");
     });
 

@@ -168,7 +168,7 @@ class FileSinkImpl implements FileSink {
         options.onRotationError(error);
       } else {
         console.error(
-          `[logixlysia] Failed to rotate log file ${this.filePath}:`,
+          `[createLogPlugin] Failed to rotate log file ${this.filePath}:`,
           error
         );
       }
