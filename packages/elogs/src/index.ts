@@ -23,6 +23,15 @@ export {
   useLogger,
 } from "./context";
 export { errorMap, extractStatus, httpError, levelForStatus } from "./errors";
+export { renderBanner, startServer } from "./extensions";
+export {
+  getGlobalLogger,
+  globalContextStore,
+  globalLogger,
+  initGlobalLogger,
+  isGlobalLoggerInitialized,
+  resetGlobalLogger,
+} from "./global-logger";
 export { getStatusCode } from "./helpers";
 export type {
   AutoTranslateConfig,
@@ -48,12 +57,61 @@ export type {
   TransportsConfig,
 } from "./interfaces";
 export { HttpError } from "./interfaces";
+export type {
+  EmitInput,
+  FormatContext,
+  PrecomputedLogParts,
+  Sinks,
+} from "./logger";
+export {
+  buildContextTreeLines,
+  computePrecomputedLogParts,
+  createFormatContext,
+  emit,
+  formatDuration,
+  formatLogOutput,
+  handleHttpError,
+  logWithPino,
+  resolveSinks,
+  resolveTransports,
+  resolveTransportsOnly,
+  shouldLog,
+  shouldLogForOptions,
+} from "./logger";
 export type { ResolvedRequestIdConfig } from "./middleware";
 export { getOrCreateRequestId, resolveRequestIdConfig } from "./middleware";
 export type { TraceContextFields } from "./otel";
 export { __resetForTesting, injectTraceContext } from "./otel";
+export type {
+  FileSink,
+  FileSinkOptions,
+  KeyedMutex,
+  LogEntry,
+  LogToFileInput,
+  RotationErrorReporter,
+} from "./output";
+export {
+  batch,
+  compressFile,
+  createKeyedMutex,
+  ensureDir,
+  filter,
+  getFileSink,
+  getRotatedFileName,
+  logToFile,
+  logToTransports,
+  performRotation,
+  resolveOpenedAt,
+  rotateFile,
+  sample,
+  shouldRotate,
+  tap,
+  tee,
+} from "./output";
 export type { CreateElogs } from "./plugin";
-export { createElogs, createElogs as elogs } from "./plugin";
+export { createElogs } from "./plugin";
+export type { DrizzleLikeError } from "./translator";
+export { isDrizzleError, translateDrizzleError } from "./translator";
 export type { NormalizedLoggedError, StructuredError } from "./utils";
 export {
   buildPinoRedactPaths,

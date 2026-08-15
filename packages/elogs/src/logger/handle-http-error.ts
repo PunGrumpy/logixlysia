@@ -12,8 +12,6 @@
 import type { RequestContextStore } from "../context/request-context";
 import { extractStatus, levelForStatus } from "../errors";
 
-export { extractStatus, levelForStatus } from "../errors";
-
 import type { CreateElogsOptions, LogLevel, StoreData } from "../interfaces";
 import { isStructuredError, normalizeLoggedError } from "../utils/error";
 import { createFormatContext } from "./create-logger";

@@ -23,8 +23,6 @@ import type {
 } from "../interfaces";
 import { pad2, pad3 } from "../utils/format";
 
-export type { ElogsConfig } from "../interfaces";
-
 /** 默认日志格式(emoji + 完整 token 集合) */
 const DEFAULT_LOG_FORMAT =
   "🦊 {now} {level} {duration} {method} {pathname} {status} {message} {ip} {context}";
@@ -524,6 +522,3 @@ export const logWithPino = (
   }
   logger.info(data);
 };
-
-// Re-export for tests that still import the old symbol
-export const formatLine = formatLogOutput;
