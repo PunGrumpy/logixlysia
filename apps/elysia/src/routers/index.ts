@@ -1,4 +1,4 @@
-import { createLogPlugin } from "@pori15/createLogPlugin";
+import { createElogs } from "@pori15/elogs";
 import Elysia, { t } from "elysia";
 import { aiMetricsRouter } from "./ai-metrics";
 import { boomRouter } from "./boom";
@@ -11,7 +11,7 @@ import { statusRouter } from "./status";
 
 export const routers = new Elysia()
   .use(
-    createLogPlugin({
+    createElogs({
       // 启用 Drizzle 错误自动翻译 —— 翻译结果决定日志级别
       autoTranslate: { db: "drizzle" },
       config: {
@@ -50,7 +50,7 @@ export const routers = new Elysia()
       detail: {},
     },
     () => ({
-      summary: "Welcome to Basic Elysia with Logixlysia",
+      summary: "Welcome to Basic Elysia with Elogs",
     })
   )
   .use(customRouter)

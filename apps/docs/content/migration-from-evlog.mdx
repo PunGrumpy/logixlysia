@@ -1,6 +1,6 @@
 ---
 title: Migrating from evlog
-description: Map evlog wide events to Logixlysia request context and access logs
+description: Map evlog wide events to Elogs request context and access logs
 ---
 
 ## Plugin setup
@@ -13,17 +13,17 @@ import { evlog } from 'evlog/elysia'
 new Elysia().use(evlog({ drain: myDrain }))
 ```
 
-**Logixlysia**
+**Elogs**
 
 ```ts
-import { createLogPlugin } from 'createLogPlugin'
+import { createElogs } from 'createElogs'
 
-new Elysia().use(createLogPlugin({ preset: 'prod' }))
+new Elysia().use(createElogs({ preset: 'prod' }))
 ```
 
 ## Context accumulation
 
-| evlog | Logixlysia |
+| evlog | Elogs |
 | ----- | ---------- |
 | `log.set({ userId: 'x' })` | `store.logger.mergeContext(request, { userId: 'x' })` |
 | `log.set({ cart: { total: 99 } })` | `store.logger.mergeContext(request, { cart: { total: 99 } })` |
@@ -37,7 +37,7 @@ evlog:
 log.emit({ status: 200 })
 ```
 
-Logixlysia emits the access log automatically in `onAfterHandle`. Use a custom log only when you need to skip the default line:
+Elogs emits the access log automatically in `onAfterHandle`. Use a custom log only when you need to skip the default line:
 
 ```ts
 store.logger.info(request, 'handled manually')
@@ -47,10 +47,10 @@ store.logger.info(request, 'handled manually')
 
 **evlog** — automatic via `evlog/ai`.
 
-**Logixlysia**
+**Elogs**
 
 ```ts
-import { mergeAIMetrics } from 'createLogPlugin/ai'
+import { mergeAIMetrics } from 'createElogs/ai'
 
 mergeAIMetrics(store.logger, request, {
   model: 'claude-sonnet',
@@ -62,14 +62,14 @@ mergeAIMetrics(store.logger, request, {
 
 ## Tracing
 
-Use `injectTraceContext` from `createLogPlugin/otel` in the `request` hook (see [OpenTelemetry](/docs/integrations/otel)).
+Use `injectTraceContext` from `createElogs/otel` in the `request` hook (see [OpenTelemetry](/docs/integrations/otel)).
 
 ## Drains vs transports
 
-evlog **drains** map to Logixlysia **transports**:
+evlog **drains** map to Elogs **transports**:
 
 ```ts
-createLogPlugin({
+createElogs({
   config: {
     transports: [
       {

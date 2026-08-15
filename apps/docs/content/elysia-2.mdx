@@ -1,25 +1,25 @@
 ---
 title: Elysia 2 support
-description: How Logixlysia maps onto the Elysia 2 open beta, and what changes when you upgrade
+description: How Elogs maps onto the Elysia 2 open beta, and what changes when you upgrade
 ---
 
 [Elysia 2 "DayDream"](https://elysiajs.com/blog/elysia-20) is a full rewrite of the framework. It renames every
 lifecycle hook, changes the `Elysia` type parameters, and moves WebSocket support behind an opt-in plugin.
-Logixlysia cannot support both major versions from one build, so the two lines are published separately.
+Elogs cannot support both major versions from one build, so the two lines are published separately.
 
 ## Compatibility
 
-| Elysia      | Logixlysia    | npm tag  | Install                                |
+| Elysia      | Elogs    | npm tag  | Install                                |
 | ----------- | ------------- | -------- | -------------------------------------- |
-| `1.4.x`     | `6.x`         | `latest` | `bun add createLogPlugin`                   |
-| `>= 2.0.0-beta.2` | `7.x-next` | `next`   | `bun add createLogPlugin@next elysia@next`  |
+| `1.4.x`     | `6.x`         | `latest` | `bun add createElogs`                   |
+| `>= 2.0.0-beta.2` | `7.x-next` | `next`   | `bun add createElogs@next elysia@next`  |
 
 The `next` line follows the Elysia 2 beta and may take further breaking changes until Elysia 2 is stable.
 
 ## What changed in your app
 
 Elysia 2 dropped the `on` prefix from lifecycle methods, and there are no aliases left behind. If you register
-hooks around Logixlysia, rename them:
+hooks around Elogs, rename them:
 
 | Elysia 1.4         | Elysia 2       |
 | ------------------ | -------------- |
@@ -34,7 +34,7 @@ hooks around Logixlysia, rename them:
 | `.onError()`       | `.error()`     |
 | `.as('scoped')`    | `.as('plugin')` |
 
-`resolve` was removed and `derive` now runs during `beforeHandle`. Logixlysia derives `ctx.log` there, so it is
+`resolve` was removed and `derive` now runs during `beforeHandle`. Elogs derives `ctx.log` there, so it is
 available in `beforeHandle`, the route handler and `afterHandle` — but no longer in `parse` or `transform`. Use
 `store.logger` (which is set up in the `request` hook) if you need to log that early.
 
@@ -43,9 +43,9 @@ WebSocket routes need the opt-in provider before `createWsHandlerWrapper` has an
 ```ts
 import { Elysia } from 'elysia'
 import { websocket } from 'elysia/websocket'
-import { createLogPlugin, createWsHandlerWrapper } from 'createLogPlugin'
+import { createElogs, createWsHandlerWrapper } from 'createElogs'
 
-const logging = createLogPlugin()
+const logging = createElogs()
 const wrapWs = createWsHandlerWrapper()
 
 const app = new Elysia()
@@ -64,8 +64,8 @@ const app = new Elysia()
 
 ## What did not change
 
-The Logixlysia API itself is unchanged: `createLogPlugin(options)`, the `preset`/`config` shape, `store.logger`,
-`ctx.log`, `useLogger()`, `createWsHandlerWrapper`, and the `createLogPlugin/otel` and `createLogPlugin/ai`
+The Elogs API itself is unchanged: `createElogs(options)`, the `preset`/`config` shape, `store.logger`,
+`ctx.log`, `useLogger()`, `createWsHandlerWrapper`, and the `createElogs/otel` and `createElogs/ai`
 subpaths all behave exactly as they do on the 6.x line.
 
 ## Error logging under Elysia 2
@@ -76,5 +76,5 @@ Two framework behaviour changes show up in your logs:
 - When `NODE_ENV=production`, an unhandled error's `message` is no longer sent to the client, and a returned
   `Error` is serialized without its `cause`.
 
-Neither affects what Logixlysia writes — the full error is still logged server-side, subject to your
+Neither affects what Elogs writes — the full error is still logged server-side, subject to your
 `logErrorPayload` and `autoRedact` settings.

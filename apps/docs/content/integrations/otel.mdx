@@ -9,13 +9,13 @@ description: 把日志跟活动 trace 和 span 关联起来
 bun add @opentelemetry/api
 ```
 
-从 `@pori15/createLogPlugin/otel` 子路径导入:
+从 `@pori15/elogs/otel` 子路径导入:
 
 ```ts
-import { createLogPlugin } from '@pori15/createLogPlugin'
-import { injectTraceContext } from '@pori15/createLogPlugin/otel'
+import { createElogs } from '@pori15/elogs'
+import { injectTraceContext } from '@pori15/elogs/otel'
 
-const plugin = createLogPlugin()
+const plugin = createElogs()
 
 const app = new Elysia()
   .use(plugin)
@@ -32,7 +32,7 @@ const app = new Elysia()
 └─ trace: { trace_id: '8c2f…', span_id: '4a1d…' }
 ```
 
-Logixlysia 不启动 OpenTelemetry SDK —— 你需要自己装 tracer provider 和 instrumentation。
+Elogs 不启动 OpenTelemetry SDK —— 你需要自己装 tracer provider 和 instrumentation。
 
 ## API
 
@@ -83,12 +83,12 @@ sdk.start()
 ```ts
 // app.ts
 import { Elysia } from 'elysia'
-import { createLogPlugin } from '@pori15/createLogPlugin'
-import { injectTraceContext } from '@pori15/createLogPlugin/otel'
+import { createElogs } from '@pori15/elogs'
+import { injectTraceContext } from '@pori15/elogs/otel'
 import './tracing' // 先启动 OTel SDK
 
 const app = new Elysia()
-  .use(createLogPlugin())
+  .use(createElogs())
   .request(({ request, store }) => {
     injectTraceContext(store.logger, request)
   })
@@ -106,7 +106,7 @@ request ID 和 trace ID 是独立的关联键:
 两个都放进 `customLogFormat`:
 
 ```ts
-createLogPlugin({
+createElogs({
   config: {
     requestId: true,
     customLogFormat:

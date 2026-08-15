@@ -3,13 +3,13 @@ title: AI SDK metrics
 description: 把 LLM 用量指标挂到请求日志
 ---
 
-从 `@pori15/createLogPlugin/ai` 子路径导入(无必需 peer 依赖):
+从 `@pori15/elogs/ai` 子路径导入(无必需 peer 依赖):
 
 ```ts
-import { createLogPlugin } from '@pori15/createLogPlugin'
-import { mergeAIMetrics } from '@pori15/createLogPlugin/ai'
+import { createElogs } from '@pori15/elogs'
+import { mergeAIMetrics } from '@pori15/elogs/ai'
 
-const plugin = createLogPlugin()
+const plugin = createElogs()
 
 const app = new Elysia()
   .use(plugin)

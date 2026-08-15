@@ -3,7 +3,7 @@ title: Request ID
 description: 在请求和响应之间生成或透传唯一标识
 ---
 
-Logixlysia 自动生成或读取唯一请求标识(request ID),挂到请求 context、响应头和日志输出上。
+Elogs 自动生成或读取唯一请求标识(request ID),挂到请求 context、响应头和日志输出上。
 
 ## 基本用法
 
@@ -11,10 +11,10 @@ Logixlysia 自动生成或读取唯一请求标识(request ID),挂到请求 cont
 
 ```ts
 import { Elysia } from 'elysia'
-import { createLogPlugin } from '@pori15/createLogPlugin'
+import { createElogs } from '@pori15/elogs'
 
 const app = new Elysia().use(
-  createLogPlugin({
+  createElogs({
     config: {
       requestId: true,
     },
@@ -28,7 +28,7 @@ const app = new Elysia().use(
 
 ```ts
 const app = new Elysia().use(
-  createLogPlugin({
+  createElogs({
     preset: 'prod', // 自动开启 requestId
   })
 )
@@ -40,7 +40,7 @@ const app = new Elysia().use(
 
 ```ts
 const app = new Elysia().use(
-  createLogPlugin({
+  createElogs({
     config: {
       requestId: {
         // 自定义读取 / 写入的 header 名
@@ -75,7 +75,7 @@ const app = new Elysia().use(
 
 ```ts
 const app = new Elysia().use(
-  createLogPlugin({
+  createElogs({
     config: {
       requestId: true,
       customLogFormat: '{method} {pathname} - Request ID: {requestId}',
@@ -91,7 +91,7 @@ request ID 没开启或缺失时,token 渲染为空字符串。
 把 request ID 跟 `autoRedact: true` 配对,让 `authorization` 和 `cookie` 头在 access log 里被脱敏,但 request ID 仍能 grep:
 
 ```ts
-createLogPlugin({
+createElogs({
   config: {
     requestId: true,
     autoRedact: true,

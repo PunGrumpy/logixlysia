@@ -1,6 +1,6 @@
-# Elysia playground (Logixlysia demo)
+# Elysia playground (Elogs demo)
 
-Canonical demo for Logixlysia on **Bun + TypeScript**. Node.js compatibility is covered by integration tests in `packages/createLogPlugin/__tests__/integration`.
+Canonical demo for Elogs on **Bun + TypeScript**. Node.js compatibility is covered by integration tests in `packages/createElogs/__tests__/integration`.
 
 ![Preview](./public/preview.png)
 
@@ -8,8 +8,8 @@ Canonical demo for Logixlysia on **Bun + TypeScript**. Node.js compatibility is 
 
 - `preset: 'dev'` with service name and slow-request thresholds
 - Request context (`mergeContext`) on `/checkout`
-- AI metrics (`createLogPlugin/ai`) on `POST /chat`
-- OpenTelemetry hook (`createLogPlugin/otel`) on `/trace`
+- AI metrics (`createElogs/ai`) on `POST /chat`
+- OpenTelemetry hook (`createElogs/otel`) on `/trace`
 - WebSocket lifecycle via `createWsHandlerWrapper` on `/ws`
 - Classic examples: `/status/:code`, `/pino`, `/custom`, `/boom`, `/auto-redact`
 
@@ -30,7 +30,7 @@ Swagger UI: `http://localhost:3001/swagger`
 ## Configuration
 
 ```ts
-createLogPlugin({
+createElogs({
   preset: 'dev',
   config: {
     service: 'elysia-demo',
@@ -75,7 +75,7 @@ curl http://localhost:3001/boom
 ## Testing without this app
 
 ```bash
-cd packages/createLogPlugin
+cd packages/createElogs
 bun test
 bun test __tests__/integration
 ```
@@ -84,5 +84,5 @@ The integration suite mirrors these demo routes and includes a **Node adapter** 
 
 ## Learn more
 
-- [Logixlysia docs](https://createLogPlugin.vercel.app)
+- [Elogs docs](https://createElogs.vercel.app)
 - [Elysia.js](https://elysiajs.com)

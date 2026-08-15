@@ -1,6 +1,6 @@
-import type { Logixlysia } from "@pori15/createLogPlugin";
+import type { Elogs } from "@pori15/elogs";
 
-export const pinoRouter = <App extends Logixlysia>(app: App) =>
+export const pinoRouter = <App extends Elogs>(app: App) =>
   app.get(
     "/pino",
     {

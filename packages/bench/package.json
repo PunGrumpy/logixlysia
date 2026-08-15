@@ -9,7 +9,7 @@
   },
   "dependencies": {
     "@bogeychan/elysia-logger": "^0.1.10",
-    "@pori15/createLogPlugin": "workspace:*",
+    "@pori15/elogs": "workspace:*",
     "consola": "^3.4.2",
     "elysia": ">=2.0.0-exp.62",
     "evlog": "^2.24.0",

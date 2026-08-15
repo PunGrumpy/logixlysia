@@ -1,17 +1,17 @@
 ---
 title: FAQ
-description: Frequently asked questions about Logixlysia
+description: Frequently asked questions about Elogs
 ---
 
 ## General
 
-### What is Logixlysia?
+### What is Elogs?
 
-Logixlysia is a high-performance logging plugin for [Elysia.js](https://elysiajs.com/) that provides structured logging powered by [Pino](https://github.com/pinojs/pino). It offers flexible configuration, file logging, and seamless integration with Elysia applications.
+Elogs is a high-performance logging plugin for [Elysia.js](https://elysiajs.com/) that provides structured logging powered by [Pino](https://github.com/pinojs/pino). It offers flexible configuration, file logging, and seamless integration with Elysia applications.
 
-### Why use Logixlysia instead of plain Pino?
+### Why use Elogs instead of plain Pino?
 
-Logixlysia provides:
+Elogs provides:
 - Automatic request/response logging
 - Elysia plugin integration
 - Built-in file logging with rotation
@@ -19,22 +19,22 @@ Logixlysia provides:
 - Simple configuration API
 - TypeScript support
 
-### Is Logixlysia production-ready?
+### Is Elogs production-ready?
 
-Yes, Logixlysia is built for production environments. It's powered by Pino, which is battle-tested in production, and includes features like log rotation, filtering, and transport support.
+Yes, Elogs is built for production environments. It's powered by Pino, which is battle-tested in production, and includes features like log rotation, filtering, and transport support.
 
 ## Installation
 
-### How do I install Logixlysia?
+### How do I install Elogs?
 
 ```bash
-bun add createLogPlugin@next
+bun add createElogs@next
 ```
 
 Or with npm:
 
 ```bash
-npm install createLogPlugin@next
+npm install createElogs@next
 ```
 
 The `next` tag targets the Elysia 2 open beta. The `latest` tag stays on the Elysia 1.4 line — see [Elysia 2 support](/docs/elysia-2).
@@ -42,7 +42,7 @@ The `next` tag targets the Elysia 2 open beta. The `latest` tag stays on the Ely
 ### What are the requirements?
 
 - Node.js 18+ or Bun
-- Elysia 2.0.0-beta.2 or newer (`createLogPlugin@next`), or Elysia 1.4 (`createLogPlugin@latest`)
+- Elysia 2.0.0-beta.2 or newer (`createElogs@next`), or Elysia 1.4 (`createElogs@latest`)
 - TypeScript 5.7+
 
 ## Configuration
@@ -50,7 +50,7 @@ The `next` tag targets the Elysia 2 open beta. The `latest` tag stays on the Ely
 ### How do I disable console logging?
 
 ```ts
-createLogPlugin({
+createElogs({
   config: {
     disableInternalLogger: true
   }
@@ -60,7 +60,7 @@ createLogPlugin({
 ### How do I use only file logging?
 
 ```ts
-createLogPlugin({
+createElogs({
   config: {
     disableInternalLogger: true,
     logFilePath: './logs/app.log'
@@ -71,7 +71,7 @@ createLogPlugin({
 ### How do I use only transports?
 
 ```ts
-createLogPlugin({
+createElogs({
   config: {
     useTransportsOnly: true,
     transports: [myTransport]
@@ -84,7 +84,7 @@ createLogPlugin({
 ```ts
 const isDev = process.env.NODE_ENV === 'development'
 
-createLogPlugin({
+createElogs({
   config: {
     showStartupMessage: isDev,
     pino: {
@@ -150,9 +150,9 @@ app.get('/orders/:id', ({ store, params }) => {
 
 ```ts
 // logger.ts
-import { createLogPlugin } from 'createLogPlugin'
+import { createElogs } from 'createElogs'
 
-export const logixlysiaIns = createLogPlugin({
+export const elogsIns = createElogs({
   config: {
     logFilePath: './logs/app.log',
     pino: {
@@ -163,7 +163,7 @@ export const logixlysiaIns = createLogPlugin({
 })
 
 // Export Pino for standalone use
-export const logger = logixlysiaIns.store.pino
+export const logger = elogsIns.store.pino
 
 // services/user.service.ts
 import { logger } from '../logger'
@@ -186,7 +186,7 @@ export class UserService {
 ### How do I enable file logging?
 
 ```ts
-createLogPlugin({
+createElogs({
   config: {
     logFilePath: './logs/app.log'
   }
@@ -208,7 +208,7 @@ logRotation: {
 
 ### Can I use multiple log files?
 
-Currently, Logixlysia supports a single log file path. For multiple files, use custom transports.
+Currently, Elogs supports a single log file path. For multiple files, use custom transports.
 
 ## Transports
 
@@ -222,7 +222,7 @@ const myTransport = {
   }
 }
 
-createLogPlugin({
+createElogs({
   config: {
     transports: [myTransport]
   }
@@ -234,7 +234,7 @@ createLogPlugin({
 Yes, you can use multiple transports:
 
 ```ts
-createLogPlugin({
+createElogs({
   config: {
     transports: [
       elasticsearchTransport,
@@ -249,7 +249,7 @@ createLogPlugin({
 
 ### What is the performance impact?
 
-Logixlysia is built on Pino, one of the fastest Node.js loggers. The performance impact is minimal, especially when using async transports.
+Elogs is built on Pino, one of the fastest Node.js loggers. The performance impact is minimal, especially when using async transports.
 
 ### Should I use file logging in production?
 
@@ -308,7 +308,7 @@ Check:
 
 ### customLogFormat is not working for error logs
 
-Ensure you're using Logixlysia v6.0.2 or later. Earlier versions had a bug where error logs ignored the `customLogFormat` configuration and used a hardcoded format instead. This has been fixed in version 6.0.2+.
+Ensure you're using Elogs v6.0.2 or later. Earlier versions had a bug where error logs ignored the `customLogFormat` configuration and used a hardcoded format instead. This has been fixed in version 6.0.2+.
 
 **Before (v6.0.1 and earlier):**
 ```
@@ -324,25 +324,25 @@ ERROR POST /api/users Validation failed
 
 ### How do I migrate from another logging library?
 
-1. Install Logixlysia
-2. Replace your logging setup with `createLogPlugin()`
+1. Install Elogs
+2. Replace your logging setup with `createElogs()`
 3. Update log calls to use `store.logger` or `store.pino`
 4. Configure transports if needed
 
-### Is Logixlysia backward compatible?
+### Is Elogs backward compatible?
 
-Logixlysia maintains backward compatibility within major versions. Check the changelog for breaking changes between versions.
+Elogs maintains backward compatibility within major versions. Check the changelog for breaking changes between versions.
 
 ## Support
 
 ### Where can I get help?
 
 - [Documentation](/)
-- [GitHub Issues](https://github.com/PunGrumpy/createLogPlugin/issues)
+- [GitHub Issues](https://github.com/PunGrumpy/createElogs/issues)
 
 ### How do I report a bug?
 
-Open an issue on [GitHub](https://github.com/PunGrumpy/createLogPlugin/issues) with:
+Open an issue on [GitHub](https://github.com/PunGrumpy/createElogs/issues) with:
 - Description of the issue
 - Steps to reproduce
 - Expected behavior

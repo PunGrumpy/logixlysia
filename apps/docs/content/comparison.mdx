@@ -1,11 +1,11 @@
 ---
 title: Comparison
-description: How Logixlysia compares to evlog and other Elysia loggers
+description: How Elogs compares to evlog and other Elysia loggers
 ---
 
 ## Feature matrix
 
-| Capability | Logixlysia | [evlog](https://evlog.dev) | [@bogeychan/elysia-logger](https://github.com/bogeychan/elysia-logger) |
+| Capability | Elogs | [evlog](https://evlog.dev) | [@bogeychan/elysia-logger](https://github.com/bogeychan/elysia-logger) |
 | ---------- | ---------- | -------------------------- | ----------------------------------------------------------------------- |
 | Elysia plugin | Yes | Yes (`evlog/elysia`) | Yes |
 | Pino-backed | Yes | Optional drains | Yes |
@@ -14,11 +14,11 @@ description: How Logixlysia compares to evlog and other Elysia loggers
 | File rotation | Yes | Via drains | Limited |
 | `autoRedact` PII | Yes | Varies | Manual |
 | WebSocket lifecycle logs | `createWsHandlerWrapper` | Manual | Manual |
-| OTel trace correlation | `createLogPlugin/otel` | Built-in integrations | Manual |
-| AI usage on access log | `createLogPlugin/ai` | `evlog/ai` | Manual |
+| OTel trace correlation | `createElogs/otel` | Built-in integrations | Manual |
+| AI usage on access log | `createElogs/ai` | `evlog/ai` | Manual |
 | Presets (`dev` / `prod`) | Yes | N/A | N/A |
 
-## When to choose Logixlysia
+## When to choose Elogs
 
 - You want **Pino** performance with Elysia-native `store.logger` ergonomics.
 - You need **file logging and rotation** without wiring a separate drain.
@@ -37,4 +37,4 @@ Run the monorepo benchmark package:
 bun run bench
 ```
 
-The `Elysia plugin request path` suite compares full `handle()` overhead for Logixlysia, evlog, and elysia-logger. Results vary by machine—use them for regression tracking, not absolute rankings.
+The `Elysia plugin request path` suite compares full `handle()` overhead for Elogs, evlog, and elysia-logger. Results vary by machine—use them for regression tracking, not absolute rankings.

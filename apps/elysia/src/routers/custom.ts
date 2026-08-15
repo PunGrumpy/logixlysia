@@ -1,6 +1,6 @@
-import { Logixlysia } from "@pori15/createLogPlugin";
+import { Elogs } from "@pori15/elogs";
 
-export const customRouter = <App extends Logixlysia>(app: App) =>
+export const customRouter = <App extends Elogs>(app: App) =>
   app.get(
     "/custom",
     {

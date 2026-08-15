@@ -1,4 +1,4 @@
-# 🦊 Logixlysia's documentation website
+# 🦊 Elogs's documentation website
 
 Built with [Blume](https://github.com/haydenbleasel/blume) — a zero-config,
 Astro-powered docs framework. The site is fully static: landing page at `/`,
@@ -45,7 +45,7 @@ precedence over `vercel.json` rules:
 
 ## Changelog
 
-`/changelog` is built from the GitHub Releases of `PunGrumpy/createLogPlugin` via
+`/changelog` is built from the GitHub Releases of `PunGrumpy/createElogs` via
 Blume's `github-releases` content source at build time. Two things keep it
 healthy:
 

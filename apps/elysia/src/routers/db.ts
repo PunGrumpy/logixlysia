@@ -1,5 +1,5 @@
 /**
- * createLogPlugin 2.0 — 数据库错误演示路由
+ * createElogs 2.0 — 数据库错误演示路由
  *
  * 演示三种 Drizzle 错误翻译用法(均用 mock 错误,无需真实 DB):
  * - /demo/db-error/duplicate  : 模拟 23505(唯一约束冲突)
@@ -13,7 +13,7 @@
  * - 错误继续以原 error 形态传播(用户 .error 看到的是原引用)
  */
 
-import type { Logixlysia } from "@pori15/createLogPlugin";
+import type { Elogs } from "@pori15/elogs";
 import { problem } from "elysia";
 
 const makeDrizzleError = (
@@ -28,7 +28,7 @@ const makeDrizzleError = (
   return e;
 };
 
-export const dbRouter = <App extends Logixlysia>(app: App) =>
+export const dbRouter = <App extends Elogs>(app: App) =>
   app
     // 用户用 Elysia 2 原生 .error() 接管 DrizzleError 的响应格式
     .error("DrizzleError", (ctx) => {
@@ -61,7 +61,7 @@ export const dbRouter = <App extends Logixlysia>(app: App) =>
     })
 
     /**
-     * 方式 2/3:依赖 autoTranslate(已在外层 createLogPlugin 配)自动翻译
+     * 方式 2/3:依赖 autoTranslate(已在外层 createElogs 配)自动翻译
      * 路由本身只抛原 error,翻译发生在 onError 钩子里
      */
     .get("/demo/db-error/duplicate", () => {

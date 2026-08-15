@@ -1,4 +1,4 @@
-import { Logixlysia } from "@pori15/createLogPlugin";
+import { Elogs } from "@pori15/elogs";
 
 const BASE64URL_PAD_STRIP = /[=]+$/;
 
@@ -10,7 +10,7 @@ const b64urlJson = (value: object) =>
 /** Assembled at runtime so secret scanners do not match static JWT / PAN test vectors. */
 const mockJwt = () => {
   const header = b64urlJson({ alg: "EdDSA", typ: "JWT" });
-  const payload = b64urlJson({ name: "Logixlysia" });
+  const payload = b64urlJson({ name: "Elogs" });
   return `${header}.${payload}.mockEd25519SignatureForDemo`;
 };
 
@@ -23,7 +23,7 @@ const mockCreditCard = () =>
     .map((c) => String.fromCharCode(c))
     .join("");
 
-export const autoRedactRouter = <App extends Logixlysia>(app: App) =>
+export const autoRedactRouter = <App extends Elogs>(app: App) =>
   app.get(
     "/auto-redact",
     {
@@ -35,7 +35,7 @@ export const autoRedactRouter = <App extends Logixlysia>(app: App) =>
     ({ request, store }) => {
       store.logger.info(request, "Hello, world!", {
         creditCard: mockCreditCard(),
-        email: "createLogPlugin@elysiajs.com",
+        email: "createElogs@elysiajs.com",
         ip: "192.168.1.100",
         jwt: mockJwt(),
       });

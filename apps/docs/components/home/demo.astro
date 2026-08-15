@@ -1,5 +1,5 @@
 ---
-// Mirrors createLogPlugin's real output: the `banner` startup box from
+// Mirrors createElogs's real output: the `banner` startup box from
 // extensions/banner.ts and the default log format from logger/create-logger.ts
 // ({now} {service}{icon} {method} {pathname} {status} {duration} {message}{speed}),
 // including chalk colors, method padding, duration rounding, and the ⚡ slow badge.
@@ -37,7 +37,7 @@ const banner: TermPart[][] = [
   [["", "│       Elysia v1.4.28        │"]],
   [["", "│                             │"]],
   [["", "│  🦊  http://localhost:3000  │"]],
-  [["", "│       createLogPlugin v6.6.0     │"]],
+  [["", "│       createElogs v6.6.0     │"]],
   [["", "│                             │"]],
   [["", "└─────────────────────────────┘"]],
 ];
@@ -219,7 +219,7 @@ const termLines: TermLineData[] = [
       </button>
     </div>
     <div
-      aria-label="Example Logixlysia log output"
+      aria-label="Example Elogs log output"
       class="overflow-x-auto p-4 font-mono text-[#2D2D2D] text-[0.8rem] leading-relaxed dark:text-[#DADADA]"
       data-term-body
       role="img"

@@ -3,7 +3,7 @@ title: Log Levels
 description: 控制日志详细程度
 ---
 
-用 Logixlysia 的级别系统控制日志输出的详细程度。级别是大小写不敏感的字符串:`DEBUG`、`INFO`、`WARNING`、`ERROR`。
+用 Elogs 的级别系统控制日志输出的详细程度。级别是大小写不敏感的字符串:`DEBUG`、`INFO`、`WARNING`、`ERROR`。
 
 ## 可用级别
 
@@ -11,14 +11,14 @@ description: 控制日志详细程度
 DEBUG > INFO > WARNING > ERROR
 ```
 
-Logixlysia 用的是**白名单过滤**,不是层级。`logFilter.level: ['ERROR']` 只输出 `ERROR`;`['ERROR', 'WARNING']` 输出这两个。数组里的顺序无关紧要。
+Elogs 用的是**白名单过滤**,不是层级。`logFilter.level: ['ERROR']` 只输出 `ERROR`;`['ERROR', 'WARNING']` 输出这两个。数组里的顺序无关紧要。
 
 ## 配置
 
 ### 单个级别
 
 ```ts
-createLogPlugin({
+createElogs({
   config: {
     logFilter: { level: 'ERROR' },
   },
@@ -28,7 +28,7 @@ createLogPlugin({
 ### 多个级别
 
 ```ts
-createLogPlugin({
+createElogs({
   config: {
     logFilter: { level: ['INFO', 'ERROR'] },
   },
@@ -40,7 +40,7 @@ createLogPlugin({
 `logLevel` 在 options 根级,等价于 `config.logFilter.level`:
 
 ```ts
-createLogPlugin({ logLevel: ['ERROR', 'WARNING'] })
+createElogs({ logLevel: ['ERROR', 'WARNING'] })
 ```
 
 两种形式都会合并:同时设置时 `logLevel` 胜出(根级简写优先)。
@@ -48,7 +48,7 @@ createLogPlugin({ logLevel: ['ERROR', 'WARNING'] })
 ### 按环境配置
 
 ```ts
-createLogPlugin({
+createElogs({
   config: {
     logFilter: {
       level: process.env.NODE_ENV === 'production'
@@ -76,7 +76,7 @@ createLogPlugin({
 Pino 也有自己的级别系统(`fatal`、`error`、`warn`、`info`、`debug`、`trace`)。`config.pino.level` 控制 Pino 的门槛,跟 `logFilter.level` 相互独立:
 
 ```ts
-createLogPlugin({
+createElogs({
   config: {
     pino: { level: 'debug' },
   },

@@ -1,6 +1,6 @@
 {
-  "name": "createLogPlugin-monorepo",
-  "description": "🦊 Logixlysia is a logger for Elysia",
+  "name": "elogs-monorepo",
+  "description": "🦊 Elogs is a logger for Elysia",
   "workspaces": [
     "apps/*",
     "packages/*"

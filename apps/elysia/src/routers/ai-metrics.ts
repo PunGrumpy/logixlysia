@@ -1,13 +1,13 @@
-import { Logixlysia } from "@pori15/createLogPlugin";
-import { mergeAIMetrics } from "@pori15/createLogPlugin/ai";
+import { Elogs } from "@pori15/elogs";
+import { mergeAIMetrics } from "@pori15/elogs/ai";
 
-export const aiMetricsRouter = <App extends Logixlysia>(app: App) =>
+export const aiMetricsRouter = <App extends Elogs>(app: App) =>
   app.post(
     "/chat",
     {
       detail: {
         description:
-          "Uses `mergeAIMetrics` from `createLogPlugin/ai` so LLM usage appears in the request context tree.",
+          "Uses `mergeAIMetrics` from `createElogs/ai` so LLM usage appears in the request context tree.",
         summary: "AI metrics on access log",
         tags: ["logging", "ai"],
       },

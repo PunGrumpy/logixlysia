@@ -1,38 +1,38 @@
 ---
 title: Usage
-description: 在 Elysia 应用中使用 Logixlysia
+description: 在 Elysia 应用中使用 Elogs
 ---
 
 ## 安装
 
 ```bash
-bun add @pori15/createLogPlugin elysia@next
+bun add @pori15/elogs elysia@next
 ```
 
-`next` 标签对应 [Elysia 2 open beta](/docs/elysia-2)。如果你还在 Elysia 1.4,装上游的 `createLogPlugin` 包(`latest` 标签)。
+`next` 标签对应 [Elysia 2 open beta](/docs/elysia-2)。如果你还在 Elysia 1.4,装上游的 `createElogs` 包(`latest` 标签)。
 
 ## 基本用法
 
 ```ts
 import { Elysia } from 'elysia'
-import { createLogPlugin } from '@pori15/createLogPlugin'
+import { createElogs } from '@pori15/elogs'
 
 const app = new Elysia()
-  .use(createLogPlugin())
+  .use(createElogs())
   .get('/', () => 'Hello World')
   .listen(3000)
 ```
 
-`createLogPlugin()` 返回一个插件。`Logger` 挂在 Elysia store 上,可以通过 `store.logger` 访问;请求作用域的 `log` 也会派生到 handler context 上。插件同时注册 `.request`、`.afterHandle`、`.error` 和 `.start` 钩子,你不需要手动接线。
+`createElogs()` 返回一个插件。`Logger` 挂在 Elysia store 上,可以通过 `store.logger` 访问;请求作用域的 `log` 也会派生到 handler context 上。插件同时注册 `.request`、`.afterHandle`、`.error` 和 `.start` 钩子,你不需要手动接线。
 
 ## 预设
 
 三个 preset 一行设好环境默认。显式 `config` 字段永远覆盖 preset。
 
 ```ts
-createLogPlugin({ preset: 'dev' })   // 美化 console + 启动 banner
-createLogPlugin({ preset: 'prod' })  // JSON console + autoRedact + requestId
-createLogPlugin({ preset: 'json' })  // 极简 JSON console,无附加
+createElogs({ preset: 'dev' })   // 美化 console + 启动 banner
+createElogs({ preset: 'prod' })  // JSON console + autoRedact + requestId
+createElogs({ preset: 'json' })  // 极简 JSON console,无附加
 ```
 
 完整默认值见 [Presets](/docs/features/presets)。
@@ -42,7 +42,7 @@ createLogPlugin({ preset: 'json' })  // 极简 JSON console,无附加
 ### 最小化
 
 ```ts
-createLogPlugin({
+createElogs({
   config: {
     showStartupMessage: true,
     ip: true,
@@ -69,7 +69,7 @@ createLogPlugin({
 开启 `X-Request-Id` 头透传用 `requestId: true`。插件入口读这个头,缺失时自动生成,出口回显——包括错误响应。
 
 ```ts
-createLogPlugin({ config: { requestId: true } })
+createElogs({ config: { requestId: true } })
 ```
 
 见 [Request ID](/docs/features/request-id)。
@@ -79,7 +79,7 @@ createLogPlugin({ config: { requestId: true } })
 通过 `customLogFormat` 自定义 access log:
 
 ```ts
-createLogPlugin({
+createElogs({
   config: {
     customLogFormat: '{now} {level} {duration}ms {method} {pathname} {status} {requestId}',
   },
@@ -100,7 +100,7 @@ createLogPlugin({
 | `{status}` | 响应状态码 | `200` |
 | `{statusText}` | HTTP 状态文本 | `Not Found` |
 | `{message}` | 自定义消息 | `User profile accessed` |
-| `{icon}` | Logixlysia 狐狸 `🦊`(颜色 + TTY 时为级别色块) | `🦊` |
+| `{icon}` | Elogs 狐狸 `🦊`(颜色 + TTY 时为级别色块) | `🦊` |
 | `{speed}` | 慢请求徽章(耗时 ≥ `verySlowThreshold`) | ` ⚡ slow` |
 | `{service}` | `config.service` 服务名前缀 | `[my-api] ` |
 | `{ip}` | 客户端 IP 地址 | `127.0.0.1` |
@@ -112,7 +112,7 @@ createLogPlugin({
 `logFilter.level` 接受单个级别或数组:
 
 ```ts
-createLogPlugin({
+createElogs({
   config: {
     logFilter: { level: ['ERROR', 'WARNING'] },
   },
@@ -122,14 +122,14 @@ createLogPlugin({
 根级有一个等价的 `logLevel` 简写:
 
 ```ts
-createLogPlugin({ logLevel: ['ERROR', 'WARNING'] })
+createElogs({ logLevel: ['ERROR', 'WARNING'] })
 ```
 
 见 [Log Levels](/docs/features/log-levels)。
 
 ## Pino 集成
 
-Logixlysia 由 Pino 驱动。Pino 实例可以通过 `store.pino` 访问,也可以从请求作用域 `log` 拿到:
+Elogs 由 Pino 驱动。Pino 实例可以通过 `store.pino` 访问,也可以从请求作用域 `log` 拿到:
 
 ```ts
 app.get('/users/:id', async ({ log, params, store }) => {
@@ -142,7 +142,7 @@ app.get('/users/:id', async ({ log, params, store }) => {
 配置 Pino 选项:
 
 ```ts
-createLogPlugin({
+createElogs({
   config: {
     pino: {
       level: 'debug',
@@ -160,7 +160,7 @@ Pino 在首次访问时按需构造 —— 错误的 Pino 选项只在真正 log
 ## 文件日志
 
 ```ts
-createLogPlugin({
+createElogs({
   config: {
     logFilePath: './logs/app.log',
     logRotation: {
@@ -186,7 +186,7 @@ const consoleTransport = {
   },
 }
 
-createLogPlugin({
+createElogs({
   config: {
     transports: [consoleTransport],
   },
@@ -204,21 +204,21 @@ bun add @opentelemetry/api
 ```
 
 ```ts
-import { injectTraceContext } from '@pori15/createLogPlugin/otel'
+import { injectTraceContext } from '@pori15/elogs/otel'
 
 app.request(({ request, store }) => {
   injectTraceContext(store.logger, request)
 })
 ```
 
-当存在 active span 时,`trace_id` 和 `span_id` 会合并进请求 context 包,出现在 access log 上。Logixlysia 不启动 OpenTelemetry SDK —— 你需要自己装 tracer provider 和 instrumentation。
+当存在 active span 时,`trace_id` 和 `span_id` 会合并进请求 context 包,出现在 access log 上。Elogs 不启动 OpenTelemetry SDK —— 你需要自己装 tracer provider 和 instrumentation。
 
 见 [OpenTelemetry](/docs/integrations/otel)。
 
 ## AI SDK 指标
 
 ```ts
-import { mergeAIMetrics } from '@pori15/createLogPlugin/ai'
+import { mergeAIMetrics } from '@pori15/elogs/ai'
 
 app.post('/chat', async ({ request, store }) => {
   // 在 AI SDK 调用之后:
@@ -244,10 +244,10 @@ access log 的 `context.ai` 字段沿用 evlog wide event 形态,方便两边仪
 深调用栈(服务层、helper、请求里的子任务)想拿到请求作用域 logger,不用逐层传 `request`,开启 ALS 即可:
 
 ```ts
-createLogPlugin({ config: { useAsyncLocalStorage: true } })
+createElogs({ config: { useAsyncLocalStorage: true } })
 
 // 在任意位置:
-import { useLogger } from '@pori15/createLogPlugin'
+import { useLogger } from '@pori15/elogs'
 
 const log = useLogger()
 log.mergeContext({ stage: 'db' })
@@ -259,7 +259,7 @@ log.info('query started')
 ## 输出控制
 
 ```ts
-createLogPlugin({
+createElogs({
   config: {
     disableInternalLogger: false, // console 输出
     disableFileLogging: false,     // logFilePath 输出
@@ -275,7 +275,7 @@ createLogPlugin({
 
 ```ts
 const app = new Elysia().use(
-  createLogPlugin({
+  createElogs({
     preset: 'prod',
     config: {
       service: 'my-api',
@@ -292,7 +292,7 @@ const app = new Elysia().use(
 
 ```ts
 const app = new Elysia().use(
-  createLogPlugin({
+  createElogs({
     preset: 'dev',
     config: {
       service: 'my-api',

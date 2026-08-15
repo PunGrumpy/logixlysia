@@ -3,12 +3,12 @@ title: File Logging
 description: 把日志写入文件以便持久化
 ---
 
-用 Logixlysia 的 file sink 把日志写入文件,持久化和分析都用得上。
+用 Elogs 的 file sink 把日志写入文件,持久化和分析都用得上。
 
 ## 基本用法
 
 ```ts
-createLogPlugin({
+createElogs({
   config: {
     logFilePath: './logs/app.log',
   },
@@ -47,7 +47,7 @@ file sink:
 ### 生产
 
 ```ts
-createLogPlugin({
+createElogs({
   config: {
     logFilePath: './logs/production.log',
     logRotation: {
@@ -63,7 +63,7 @@ createLogPlugin({
 ### 开发
 
 ```ts
-createLogPlugin({
+createElogs({
   config: {
     logFilePath: './logs/development.log',
   },
@@ -73,7 +73,7 @@ createLogPlugin({
 ### 自定义文件权限
 
 ```ts
-createLogPlugin({
+createElogs({
   config: {
     logFilePath: '/var/log/myapp/app.log',
     logFileMode: 0o640,
@@ -85,7 +85,7 @@ createLogPlugin({
 ### 关闭文件输出
 
 ```ts
-createLogPlugin({
+createElogs({
   config: {
     logFilePath: './logs/app.log', // 配置了
     disableFileLogging: true,      // ...但关闭

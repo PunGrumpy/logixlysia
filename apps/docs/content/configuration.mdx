@@ -1,12 +1,12 @@
 ---
 title: Configuration
-description: Logixlysia 完整配置参考
+description: Elogs 完整配置参考
 ---
 
-完整 Logixlysia 配置选项参考。所有字段都放在 `createLogPlugin({...})` 的 `config` 键下,根级有一个 `logLevel` 简写。
+完整 Elogs 配置选项参考。所有字段都放在 `createElogs({...})` 的 `config` 键下,根级有一个 `logLevel` 简写。
 
 ```ts
-createLogPlugin({
+createElogs({
   preset: 'prod',  // 可选: 'dev' | 'prod' | 'json'
   config: {
     // ... 配置项(覆盖 preset)
@@ -26,7 +26,7 @@ createLogPlugin({
 - **默认:** `undefined`(无 preset)
 
 ```ts
-createLogPlugin({ preset: 'prod' })
+createElogs({ preset: 'prod' })
 ```
 
 ## 启动
@@ -133,7 +133,7 @@ customLogFormat: '{now} {level} {duration}ms {method} {pathname} {status}'
 | `{status}` | 响应状态码 |
 | `{statusText}` | HTTP 状态文本(例如 404 对应 `Not Found`) |
 | `{message}` | 自定义消息 |
-| `{icon}` | Logixlysia 狐狸 `🦊`(颜色 + TTY 时为级别色块) |
+| `{icon}` | Elogs 狐狸 `🦊`(颜色 + TTY 时为级别色块) |
 | `{speed}` | 慢请求徽章(耗时 ≥ `verySlowThreshold`) |
 | `{service}` | `config.service` 服务名 |
 | `{ip}` | 客户端 IP(从 `x-forwarded-for` 或 `x-real-ip`) |
@@ -209,7 +209,7 @@ logFilter: { level: ['ERROR', 'WARNING'] }
 - **默认:** `undefined`(全部级别)
 
 ```ts
-createLogPlugin({ logLevel: ['ERROR', 'WARNING'] })
+createElogs({ logLevel: ['ERROR', 'WARNING'] })
 ```
 
 ## Request ID
@@ -421,12 +421,12 @@ pino: {
 error: { verbose: true }
 ```
 
-`verbose` 开启时,createLogPlugin 会在 level 派生的日志之上,再写一条结构化 warn,带上完整错误上下文。
+`verbose` 开启时,createElogs 会在 level 派生的日志之上,再写一条结构化 warn,带上完整错误上下文。
 
 ## 完整示例
 
 ```ts
-createLogPlugin({
+createElogs({
   preset: 'prod',
   config: {
     showStartupMessage: false,

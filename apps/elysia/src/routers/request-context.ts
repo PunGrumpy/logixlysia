@@ -1,5 +1,5 @@
-import type { Logixlysia } from "@pori15/createLogPlugin";
-import { useLogger } from "@pori15/createLogPlugin";
+import type { Elogs } from "@pori15/elogs";
+import { useLogger } from "@pori15/elogs";
 
 const dbQueryHelper = async () => {
   const log = useLogger();
@@ -8,7 +8,7 @@ const dbQueryHelper = async () => {
   log.info("Running database query in nested service");
 };
 
-export const requestContextRouter = <App extends Logixlysia>(app: App) =>
+export const requestContextRouter = <App extends Elogs>(app: App) =>
   app
     .get(
       "/checkout",

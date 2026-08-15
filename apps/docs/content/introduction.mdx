@@ -1,13 +1,13 @@
 ---
 title: Introduction
-description: Logixlysia 入门 — Elysia.js 的高性能日志插件
+description: Elogs 入门 — Elysia.js 的高性能日志插件
 ---
 
-Logixlysia 是 [Elysia.js](https://elysiajs.com/) 的日志插件,基于 [Pino](https://github.com/pinojs/pino) 构建。面向 Elysia 2 的 open-beta 版本,提供请求作用域的 context API、`X-Request-Id` 头透传、OpenTelemetry trace 关联、AI-SDK 指标、WebSocket 日志,以及一条统一的 emit 管道,分发给 console、文件和任意 transport。
+Elogs 是 [Elysia.js](https://elysiajs.com/) 的日志插件,基于 [Pino](https://github.com/pinojs/pino) 构建。面向 Elysia 2 的 open-beta 版本,提供请求作用域的 context API、`X-Request-Id` 头透传、OpenTelemetry trace 关联、AI-SDK 指标、WebSocket 日志,以及一条统一的 emit 管道,分发给 console、文件和任意 transport。
 
 ![Preview](./preview.png)
 
-## 为什么选 Logixlysia
+## 为什么选 Elogs
 
 - **统一 emit 管道** — 每条日志走同一条 filter → context-merge → redact → transport → file → console 路径。format、level、目标地址由请求一次性决定,不再每个输出各自决定。
 - **请求作用域 context** — `logger.mergeContext(request, {...})` 在请求过程中累积字段,并合并到最终的 access log。开启 `useAsyncLocalStorage: true` 时,任意深度的调用栈都能通过 `useLogger()` 拿到同一份 context。
@@ -22,10 +22,10 @@ Logixlysia 是 [Elysia.js](https://elysiajs.com/) 的日志插件,基于 [Pino](
 
 ```ts
 import { Elysia } from 'elysia'
-import { createLogPlugin } from '@pori15/createLogPlugin'
+import { createElogs } from '@pori15/elogs'
 
 const app = new Elysia()
-  .use(createLogPlugin())
+  .use(createElogs())
   .get('/', () => 'Hello World')
   .listen(3000)
 ```
@@ -33,10 +33,10 @@ const app = new Elysia()
 ## 安装
 
 ```bash
-bun add @pori15/createLogPlugin elysia@next
+bun add @pori15/elogs elysia@next
 ```
 
-本版本面向 [Elysia 2 open beta](https://elysiajs.com/blog/elysia-20)。还在用 Elysia 1.4?继续用上游的 `createLogPlugin` 包,见 [Elysia 2 支持](/docs/elysia-2)。
+本版本面向 [Elysia 2 open beta](https://elysiajs.com/blog/elysia-20)。还在用 Elysia 1.4?继续用上游的 `createElogs` 包,见 [Elysia 2 支持](/docs/elysia-2)。
 
 ## 下一步
 

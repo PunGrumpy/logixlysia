@@ -1,16 +1,16 @@
 ---
 title: 'Configuration'
-description: 'All fields accepted by `createLogPlugin({ config: { ... } })`.'
+description: 'All fields accepted by `createElogs({ config: { ... } })`.'
 ---
 
 
-本页是 [`LogixlysiaConfig`](https://github.com/eastgold15/createLogPlugin/blob/main/packages/createLogPlugin/src/interfaces.ts) 字段的自动生成参考。源代码变更后会重新生成。
+本页是 [`ElogsConfig`](https://github.com/eastgold15/createElogs/blob/main/packages/createElogs/src/interfaces.ts) 字段的自动生成参考。源代码变更后会重新生成。
 
-## LogixlysiaConfig
+## ElogsConfig
 
-### `LogixlysiaConfig`
+### `ElogsConfig`
 
-新版(上游 main)配置 — 所有 createLogPlugin 行为参数集中在 ``config`` 字段下。
+新版(上游 main)配置 — 所有 createElogs 行为参数集中在 ``config`` 字段下。
 同时保留 root-level 字段(legacy + 旧测试)以便向后兼容。
 
 | Field | Type | Optional | Description |
@@ -46,20 +46,20 @@ description: 'All fields accepted by `createLogPlugin({ config: { ... } })`.'
 | `useTransportsOnly` | `boolean` | ✓ | 只使用 transports,禁用控制台 + 文件 |
 | `verySlowThreshold` | `number` | ✓ | 极慢请求阈值(ms),超过显示更严重标记 |
 
-## CreateLogPluginOptions
+## CreateElogsOptions
 
-### `CreateLogPluginOptions`
+### `CreateElogsOptions`
 
-Logixlysia 插件配置
+Elogs 插件配置
 
 新版推荐:``{ config: {...}, preset?: 'dev' | 'prod' | 'json' }``
 同时兼容 root-level 字段(legacy tests)
 
 | Field | Type | Optional | Description |
 | --- | --- | --- | --- |
-| `config` | `LogixlysiaConfig` | ✓ | 新版配置块 |
+| `config` | `ElogsConfig` | ✓ | 新版配置块 |
 | `error` | `ErrorConfig` | ✓ | 错误处理配置 |
-| `errors` | `LogixlysiaErrorClasses` | ✓ | 用户自定义 HTTPError 类 |
+| `errors` | `ElogsErrorClasses` | ✓ | 用户自定义 HTTPError 类 |
 | `file` | `false | FileConfig` | ✓ | 文件日志配置(legacy) |
 | `format` | `FormatConfig` | ✓ | 日志格式配置(legacy) |
 | `logLevel` | `LogLevel[]` | ✓ | 日志级别过滤 (root-level 别名,等价于 ``config.logFilter.level``) |

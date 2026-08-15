@@ -5,12 +5,12 @@ description: Create custom log message formats
 
 Customize log message formats using placeholders to match your logging needs.
 
-If you omit `customLogFormat`, Logixlysia uses a built-in default that includes the fox `{icon}`, optional `{service}` prefix, colored method and duration, `{speed}` for slow requests, and other common fields.
+If you omit `customLogFormat`, Elogs uses a built-in default that includes the fox `{icon}`, optional `{service}` prefix, colored method and duration, `{speed}` for slow requests, and other common fields.
 
 ## Basic Usage
 
 ```ts
-createLogPlugin({
+createElogs({
   config: {
     customLogFormat: '{now} {level} {duration}ms {method} {pathname} {status}'
   }
@@ -30,7 +30,7 @@ createLogPlugin({
 | `{status}` | Response status code |
 | `{statusText}` | Status text from Node’s `http.STATUS_CODES` (e.g. `Not Found` for 404) |
 | `{message}` | Custom message |
-| `{icon}` | Logixlysia fox `🦊`; plain emoji when `useColors` is off or output is not a TTY; with colors on a TTY, a **level-colored background** around the fox (green INFO, yellow WARNING, red ERROR, blue DEBUG) |
+| `{icon}` | Elogs fox `🦊`; plain emoji when `useColors` is off or output is not a TTY; with colors on a TTY, a **level-colored background** around the fox (green INFO, yellow WARNING, red ERROR, blue DEBUG) |
 | `{speed}` | When duration ≥ `verySlowThreshold`, appends ` ⚡ slow` (yellow with colors) |
 | `{service}` | From `config.service`, rendered as `[name] ` (dim with colors); empty if unset |
 | `{context}` | JSON string of `data.context` when the context tree is off or context is empty; omitted on the main line when the context tree is shown (see below) |
@@ -52,10 +52,10 @@ GET /api/users 200
 
 ### Branded line with `{icon}` and `{service}`
 
-Use `{icon}` for the Logixlysia fox (level styling applies when colors and a TTY are available). Pair with `service` in config:
+Use `{icon}` for the Elogs fox (level styling applies when colors and a TTY are available). Pair with `service` in config:
 
 ```ts
-createLogPlugin({
+createElogs({
   config: {
     service: 'my-api',
     customLogFormat: '{now} {service}{icon} {method} {pathname} {status} {duration} {message}{speed}'
@@ -84,7 +84,7 @@ Example values: `404 Not Found`, `500 Internal Server Error`.
 Configure timestamp format separately:
 
 ```ts
-createLogPlugin({
+createElogs({
   config: {
     customLogFormat: '{now} {level} {method} {pathname}',
     timestamp: {

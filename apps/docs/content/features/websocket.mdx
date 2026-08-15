@@ -7,14 +7,14 @@ Use `createWsHandlerWrapper` to add lifecycle logs for WebSocket routes:
 
 ```ts
 import { Elysia } from 'elysia'
-import { createLogPlugin, createWsHandlerWrapper } from 'createLogPlugin'
+import { createElogs, createWsHandlerWrapper } from 'createElogs'
 
-const plugin = createLogPlugin({
+const plugin = createElogs({
   config: {
     service: 'chat'
   }
 })
-// 跟 createLogPlugin 共享同一份 logger / context store,
+// 跟 createElogs 共享同一份 logger / context store,
 // 所以 wrap 出来的事件能直接走 access log 管道。
 const wrapWs = createWsHandlerWrapper()
 
@@ -56,7 +56,7 @@ Accumulate context with the WebSocket instance as the key:
 ## Disable WebSocket logs
 
 ```ts
-createLogPlugin({
+createElogs({
   config: {
     disableWebSocketLogging: true
   }
@@ -67,4 +67,4 @@ createLogPlugin({
 
 Elysia 2 用 `#private` brand 标记合法 plugin 实例,直接在 plugin 上挂额外字段(像
 `plugin.wrapWs`)会破坏这个 brand,导致 `.use()` 报类型错误。`createWsHandlerWrapper`
-作为独立函数导出,绕开这个限制,同时保证它和 `createLogPlugin` 跑在同一份 logger 上下文。
+作为独立函数导出,绕开这个限制,同时保证它和 `createElogs` 跑在同一份 logger 上下文。

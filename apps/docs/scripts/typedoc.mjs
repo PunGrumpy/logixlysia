@@ -3,7 +3,7 @@
 // invoked from the docs tsconfig; runtime behaviour is what matters here.
 // Generate the `/docs/reference` MDX files from typedoc JSON output.
 //
-// Why this exists: createLogPlugin exports a ~75-symbol public surface, and
+// Why this exists: createElogs exports a ~75-symbol public surface, and
 // hand-keeping `apps/docs/content/reference/*.mdx` in sync with `src/*.ts`
 // drifts. typedoc gives us an authoritative JSON dump; we slice it into
 // per-topic MDX that blume can render alongside the hand-written docs.
@@ -12,7 +12,7 @@
 //   1. ensures `node_modules/typedoc/node_modules/typescript` resolves to
 //      a TS 5.x copy (typedoc 0.27 still imports `ts.SyntaxKind.*` which
 //      TS 7 removed — without this symlink the whole CLI crashes on import)
-//   2. shells out to `typedoc --json` against packages/createLogPlugin
+//   2. shells out to `typedoc --json` against packages/createElogs
 //   3. walks the JSON and emits 4 MDX files under
 //      apps/docs/content/reference/
 
@@ -24,7 +24,7 @@ import { fileURLToPath } from "node:url";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DOCS_ROOT = resolve(__dirname, "..");
 const REPO_ROOT = resolve(DOCS_ROOT, "..", "..");
-const PKG_ROOT = join(REPO_ROOT, "packages", "createLogPlugin");
+const PKG_ROOT = join(REPO_ROOT, "packages", "createElogs");
 const SRC_ENTRY = join(PKG_ROOT, "src", "index.ts");
 const OUT_DIR = join(DOCS_ROOT, "content", "reference");
 const TYPEDOC_JSON = join(DOCS_ROOT, ".blume", "typedoc.json");
@@ -78,7 +78,7 @@ if (result.status !== 0) {
 //
 // typedoc follows every reachable symbol from the entry point, so without
 // filtering we'd surface internal helpers (`buildDeriveSlot`,
-// `LogixlysiaCore`, etc.) as if they were part of the API. We parse the
+// `ElogsCore`, etc.) as if they were part of the API. We parse the
 // barrel in `src/index.ts` and only emit references for what is actually
 // re-exported to library users.
 
@@ -248,7 +248,7 @@ const fmtComment = (node) => {
 
 const slug = (name) => {
   // Strip backtick wrappers and parens that show up in headings like
-  // `### \`createLogPlugin\`` and `### \`__resetForTesting\`` so the anchor
+  // `### \`createElogs\`` and `### \`__resetForTesting\`` so the anchor
   // matches what blume/fumadocs derives from the rendered heading text.
   const stripped = String(name).replace(/`/g, "").replace(/[()]/g, "");
   return stripped
@@ -417,7 +417,7 @@ const fmtClass = (node) => {
 mkdirSync(OUT_DIR, { recursive: true });
 
 // YAML single-quote strings: only `'` itself needs escaping (double it).
-// Without this, descriptions containing `:` + `{` (e.g. `` `createLogPlugin({ config: { ... } })` ``)
+// Without this, descriptions containing `:` + `{` (e.g. `` `createElogs({ config: { ... } })` ``)
 // get parsed as flow mappings and blume dies with "bad indentation of a
 // mapping entry" at frontmatter parse time.
 const yamlSingleQuoted = (s) => `'${String(s ?? "").replace(/'/g, "''")}'`;
@@ -446,9 +446,9 @@ const classes = all.filter((c) => c.kind === KIND.CLASS && isPublic(c));
 const exportsBody = [
   frontmatter(
     "Exports",
-    "Public functions and values exported by `@pori15/createLogPlugin`."
+    "Public functions and values exported by `@pori15/elogs`."
   ),
-  "本页是 [`@pori15/createLogPlugin`](https://www.npmjs.com/package/@pori15/createLogPlugin) 公共导出的自动生成参考。源代码变更后会重新生成。\n",
+  "本页是 [`@pori15/elogs`](https://www.npmjs.com/package/@pori15/elogs) 公共导出的自动生成参考。源代码变更后会重新生成。\n",
   section("Functions", functions),
   section("Variables", variables),
   "## Functions\n",
@@ -464,7 +464,7 @@ const typesBody = [
     "Types",
     "Public TypeScript types — interfaces, type aliases, and classes."
   ),
-  "本页是 [`@pori15/createLogPlugin`](https://www.npmjs.com/package/@pori15/createLogPlugin) 类型导出的自动生成参考。\n",
+  "本页是 [`@pori15/elogs`](https://www.npmjs.com/package/@pori15/elogs) 类型导出的自动生成参考。\n",
   section("Interfaces", interfaces),
   section("Type Aliases", typeAliases),
   section("Classes", classes),
@@ -478,24 +478,22 @@ const typesBody = [
 
 writeFileSync(join(OUT_DIR, "types.mdx"), typesBody);
 
-const config = all.find((c) => c.name === "LogixlysiaConfig" && isPublic(c));
-const opts = all.find(
-  (c) => c.name === "CreateLogPluginOptions" && isPublic(c)
-);
+const config = all.find((c) => c.name === "ElogsConfig" && isPublic(c));
+const opts = all.find((c) => c.name === "CreateElogsOptions" && isPublic(c));
 const configBody = [
   frontmatter(
     "Configuration",
-    "All fields accepted by `createLogPlugin({ config: { ... } })`."
+    "All fields accepted by `createElogs({ config: { ... } })`."
   ),
-  "本页是 [`LogixlysiaConfig`](https://github.com/eastgold15/createLogPlugin/blob/main/packages/createLogPlugin/src/interfaces.ts) 字段的自动生成参考。源代码变更后会重新生成。\n",
-  "## LogixlysiaConfig\n",
+  "本页是 [`ElogsConfig`](https://github.com/eastgold15/createElogs/blob/main/packages/createElogs/src/interfaces.ts) 字段的自动生成参考。源代码变更后会重新生成。\n",
+  "## ElogsConfig\n",
   config
     ? fmtInterface(config)
-    : "_LogixlysiaConfig not found in typedoc output._\n",
-  "## CreateLogPluginOptions\n",
+    : "_ElogsConfig not found in typedoc output._\n",
+  "## CreateElogsOptions\n",
   opts
     ? fmtInterface(opts)
-    : "_CreateLogPluginOptions not found in typedoc output._\n",
+    : "_CreateElogsOptions not found in typedoc output._\n",
 ].join("\n");
 
 writeFileSync(join(OUT_DIR, "configuration.mdx"), configBody);
@@ -503,18 +501,18 @@ writeFileSync(join(OUT_DIR, "configuration.mdx"), configBody);
 const indexBody = [
   frontmatter(
     "API reference",
-    "Auto-generated reference for `@pori15/createLogPlugin` exports, types, and configuration."
+    "Auto-generated reference for `@pori15/elogs` exports, types, and configuration."
   ),
-  "本页是 [`@pori15/createLogPlugin`](https://www.npmjs.com/package/@pori15/createLogPlugin) 的 API 参考。每当 `packages/createLogPlugin/src/*.ts` 变化,运行 `bun run typedoc` 重新生成。\n",
+  "本页是 [`@pori15/elogs`](https://www.npmjs.com/package/@pori15/elogs) 的 API 参考。每当 `packages/createElogs/src/*.ts` 变化,运行 `bun run typedoc` 重新生成。\n",
   "## Sections\n",
   "- [Exports](/docs/reference/exports) — public functions and values",
   "- [Types](/docs/reference/types) — interfaces, type aliases, classes",
-  "- [Configuration](/docs/reference/configuration) — every `LogixlysiaConfig` field",
+  "- [Configuration](/docs/reference/configuration) — every `ElogsConfig` field",
   "",
   "## At a glance\n",
   `| Kind | Count |\n| --- | --- |\n| Functions | ${functions.length} |\n| Variables | ${variables.length} |\n| Interfaces | ${interfaces.length} |\n| Type Aliases | ${typeAliases.length} |\n| Classes | ${classes.length} |\n`,
   "## Source\n",
-  "Reference content is generated from [`packages/createLogPlugin/src/`](https://github.com/eastgold15/createLogPlugin/tree/main/packages/createLogPlugin/src) via [TypeDoc](https://typedoc.org/) — see `apps/docs/scripts/typedoc.mjs`.\n",
+  "Reference content is generated from [`packages/createElogs/src/`](https://github.com/eastgold15/createElogs/tree/main/packages/createElogs/src) via [TypeDoc](https://typedoc.org/) — see `apps/docs/scripts/typedoc.mjs`.\n",
 ].join("\n");
 
 writeFileSync(join(OUT_DIR, "index.mdx"), indexBody);

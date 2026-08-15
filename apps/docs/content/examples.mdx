@@ -1,6 +1,6 @@
 ---
 title: Examples
-description: Real-world examples and use cases for Logixlysia
+description: Real-world examples and use cases for Elogs
 ---
 
 ## Basic Setup
@@ -9,10 +9,10 @@ description: Real-world examples and use cases for Logixlysia
 
 ```ts
 import { Elysia } from 'elysia'
-import { createLogPlugin } from 'createLogPlugin'
+import { createElogs } from 'createElogs'
 
 const app = new Elysia()
-  .use(createLogPlugin())
+  .use(createElogs())
   .get('/', () => 'Hello World')
   .listen(3000)
 ```
@@ -22,7 +22,7 @@ const app = new Elysia()
 ```ts
 const app = new Elysia()
   .use(
-    createLogPlugin({
+    createElogs({
       config: {
         showStartupMessage: true,
         startupMessageFormat: 'banner'
@@ -38,11 +38,11 @@ const app = new Elysia()
 
 ```ts
 import { Elysia } from 'elysia'
-import { createLogPlugin } from 'createLogPlugin'
+import { createElogs } from 'createElogs'
 
 const app = new Elysia()
   .use(
-    createLogPlugin({
+    createElogs({
       config: {
         // Disable startup message in production
         showStartupMessage: false,
@@ -91,7 +91,7 @@ const app = new Elysia()
 ```ts
 const app = new Elysia()
   .use(
-    createLogPlugin({
+    createElogs({
       config: {
         showStartupMessage: true,
         startupMessageFormat: 'banner',
@@ -223,7 +223,7 @@ app.error(({ code, error, store }) => {
 ### JSON Format for Error Logs
 
 ```ts
-app.use(createLogPlugin({
+app.use(createElogs({
   config: {
     customLogFormat: '{"level": "{level}", "message": "{message}", "method": "{method}", "pathname": "{pathname}", "status": "{status}"}'
   }
@@ -265,7 +265,7 @@ const elasticsearchTransport = {
 }
 
 app.use(
-  createLogPlugin({
+  createElogs({
     config: {
       transports: [elasticsearchTransport]
     }
@@ -332,7 +332,7 @@ const isDev = process.env.NODE_ENV === 'development'
 const isProd = process.env.NODE_ENV === 'production'
 
 app.use(
-  createLogPlugin({
+  createElogs({
     config: {
       showStartupMessage: isDev,
       startupMessageFormat: isDev ? 'banner' : 'simple',
@@ -371,10 +371,10 @@ app.use(
 
 ```ts
 import { Elysia } from 'elysia'
-import { createLogPlugin } from 'createLogPlugin'
+import { createElogs } from 'createElogs'
 
 const app = new Elysia()
-  .use(createLogPlugin({
+  .use(createElogs({
     config: {
       pino: {
         level: 'info',

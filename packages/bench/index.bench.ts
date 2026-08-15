@@ -1,5 +1,5 @@
 import { createPinoLogger as createBogeychan } from "@bogeychan/elysia-logger";
-import createLogPlugin, { createLogger } from "@pori15/createLogPlugin";
+import createElogs, { createLogger } from "@pori15/elogs";
 import { consola } from "consola";
 import { Elysia } from "elysia";
 import { createLogger as createEvlog } from "evlog";
@@ -10,7 +10,7 @@ import winston from "winston";
 const mockRequest = new Request("http://localhost:3000/");
 
 describe("Logger Creation", () => {
-  bench("createLogPlugin", () => {
+  bench("createElogs", () => {
     createLogger();
   });
 
@@ -52,7 +52,7 @@ const ev = createEvlog();
 const bc = createBogeychan({ enabled: false });
 
 describe("Simple Log (String)", () => {
-  bench("createLogPlugin", () => {
+  bench("createElogs", () => {
     logix.info(mockRequest, "Hello World");
   });
 
@@ -86,7 +86,7 @@ describe("Structured Log (Object)", () => {
     user: "John Doe",
   };
 
-  bench("createLogPlugin", () => {
+  bench("createElogs", () => {
     logix.info(mockRequest, "Hello World", data);
   });
 
@@ -124,7 +124,7 @@ describe("Deep Nested Log", () => {
     },
   };
 
-  bench("createLogPlugin", () => {
+  bench("createElogs", () => {
     logix.info(mockRequest, "Deep nested", deepData);
   });
 
@@ -155,15 +155,15 @@ const silentLogixConfig = {
   pino: { enabled: false },
 } as const;
 
-const logixlysiaApp = new Elysia()
-  .use(createLogPlugin({ config: silentLogixConfig }))
+const elogsApp = new Elysia()
+  .use(createElogs({ config: silentLogixConfig }))
   .get("/", () => "ok");
 
 // `evlog/elysia` and `@bogeychan/elysia-logger` still declare an Elysia 1 peer and
 // use the pre-2.0 lifecycle names, so their plugin-path benchmarks are parked until
 // they ship Elysia 2 builds. Their raw-logger benchmarks above are unaffected.
 describe("Elysia plugin request path", () => {
-  bench("createLogPlugin", async () => {
-    await logixlysiaApp.handle(new Request("http://localhost/"));
+  bench("createElogs", async () => {
+    await elogsApp.handle(new Request("http://localhost/"));
   });
 });

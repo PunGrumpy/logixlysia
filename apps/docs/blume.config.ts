@@ -53,13 +53,13 @@ export default defineConfig({
   content: {
     sources: [
       { prefix: "docs", root: "content", type: "filesystem" },
-      // Logixlysia's GitHub releases become the changelog timeline at /changelog
+      // Elogs's GitHub releases become the changelog timeline at /changelog
       // (each release is a type:changelog entry). Set GITHUB_TOKEN in CI to
       // avoid rate limits; a failed fetch degrades to an empty changelog.
       {
         owner: "eastgold15",
         prefix: "changelog",
-        repo: "createLogPlugin",
+        repo: "createElogs",
         type: "github-releases",
       },
     ],
@@ -71,13 +71,13 @@ export default defineConfig({
     "The logger for Elysia.js — simple and easy to use, beautiful and powerful",
   github: {
     owner: "eastgold15",
-    repo: "createLogPlugin",
+    repo: "createElogs",
   },
   lastModified: true,
   logo: {
     href: "/",
     image: "/icon.png",
-    text: "Logixlysia",
+    text: "Elogs",
   },
   markdown: {
     codeBlocks: {
@@ -126,5 +126,5 @@ export default defineConfig({
       mono: "ibm-plex-mono", // 代码块、行内代码
     },
   },
-  title: "Logixlysia",
+  title: "Elogs",
 });

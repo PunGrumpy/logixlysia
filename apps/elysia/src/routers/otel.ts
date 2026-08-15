@@ -1,8 +1,8 @@
-import type { Logixlysia } from "@pori15/createLogPlugin";
-import { injectTraceContext } from "@pori15/createLogPlugin/otel";
+import type { Elogs } from "@pori15/elogs";
+import { injectTraceContext } from "@pori15/elogs/otel";
 import { Elysia } from "elysia";
 
-export const otelRouter = <App extends Logixlysia>(app: Elysia) =>
+export const otelRouter = <App extends Elogs>(app: Elysia) =>
   app
     .request(({ request, store }) => {
       injectTraceContext(store.logger, request);
