@@ -52,12 +52,38 @@ export default defineConfig({
     ],
   },
   content: {
+    // Two filesystem sources split the same `content/` tree. Blume resolves
+    // entry IDs as `relative(collectionBase, sourcePath)`, where collectionBase
+    // for >1 filesystem source is `content.root` (set to "content" here). Every
+    // source must therefore also root at `content/`, and the per-source
+    // `include` globs partition ownership. The api source has no `prefix`, so
+    // its `ref` (e.g. `api/configuration.mdx`) is used as-is → route
+    // `/api/configuration` after `mapRoute`. The docs source uses prefix
+    // `docs` so `comparison.mdx` → `/docs/comparison`. The api tab path
+    // `/api` resolves to `api/index.mdx` via the docs-collection glob loader,
+    // whose base is the shared `content/` directory.
+    root: "content",
     sources: [
-      { prefix: "docs", root: "content", type: "filesystem" },
-      // Auto-generated API reference (typedoc) lives at /api, separate from
-      // the hand-written guide at /docs — different ownership, different
-      // review cadence, different failure mode. See apps/docs/scripts/typedoc.mjs.
-      { prefix: "api", root: "content-api", type: "filesystem" },
+      // Hand-written guide under /docs. Excludes the `api/` subdirectory and
+      // `meta.ts` so each file is owned by exactly one source and meta
+      // files don't become pages.
+      {
+        exclude: ["**/meta.ts"],
+        include: ["!(api)/**"],
+        prefix: "docs",
+        root: "content",
+        type: "filesystem",
+      },
+      // Auto-generated API reference (typedoc) lives at /api, separate
+      // from the hand-written guide at /docs — different ownership,
+      // different review cadence, different failure mode. No prefix: the
+      // api/ folder is already in the ref, so we don't want it doubled.
+      {
+        exclude: ["**/meta.ts"],
+        include: ["api/**"],
+        root: "content",
+        type: "filesystem",
+      },
       // Elogs's GitHub releases become the changelog timeline at /changelog
       // (each release is a type:changelog entry). Set GITHUB_TOKEN in CI to
       // avoid rate limits; a failed fetch degrades to an empty changelog.
@@ -132,9 +158,59 @@ export default defineConfig({
       light: "oklch(1 0 0)",
     },
     fonts: {
-      body: "inter", // 正文、UI、散文
-      display: "inter-tight", // 标题 (h1-h6)
-      mono: "ibm-plex-mono", // 代码块、行内代码
+      // Self-hosted via @fontsource(-variable)/*. The build sandbox has no
+      // access to fonts.google.com, and unifont's google/fontsource providers
+      // both hit remote metadata APIs at build time. Local variants embed
+      // the woff2 files directly so no network is needed. Paths resolve
+      // against `apps/docs/` (blume's project root).
+      body: {
+        fallback: "sans",
+        name: "Inter",
+        variants: [
+          {
+            src: "../../node_modules/@fontsource-variable/inter/files/inter-latin-wght-normal.woff2",
+            style: "normal",
+            weight: "100..900",
+          },
+          {
+            src: "../../node_modules/@fontsource-variable/inter/files/inter-latin-wght-italic.woff2",
+            style: "italic",
+            weight: "100..900",
+          },
+        ],
+      },
+      display: {
+        fallback: "sans",
+        name: "Inter Tight",
+        variants: [
+          {
+            src: "../../node_modules/@fontsource-variable/inter-tight/files/inter-tight-latin-wght-normal.woff2",
+            style: "normal",
+            weight: "100..900",
+          },
+          {
+            src: "../../node_modules/@fontsource-variable/inter-tight/files/inter-tight-latin-wght-italic.woff2",
+            style: "italic",
+            weight: "100..900",
+          },
+        ],
+      },
+      mono: {
+        fallback: "mono",
+        name: "IBM Plex Mono",
+        variants: [400, 500, 600, 700].flatMap((w) => [
+          {
+            src: `../../node_modules/@fontsource/ibm-plex-mono/files/ibm-plex-mono-latin-${w}-normal.woff2`,
+            style: "normal",
+            weight: String(w),
+          },
+          {
+            src: `../../node_modules/@fontsource/ibm-plex-mono/files/ibm-plex-mono-latin-${w}-italic.woff2`,
+            style: "italic",
+            weight: String(w),
+          },
+        ]),
+      },
     },
   },
   title: "Elogs",

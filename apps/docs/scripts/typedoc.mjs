@@ -28,7 +28,7 @@ const DOCS_ROOT = resolve(__dirname, "..");
 const REPO_ROOT = resolve(DOCS_ROOT, "..", "..");
 const PKG_ROOT = join(REPO_ROOT, "packages", "elogs");
 const SRC_ENTRY = join(PKG_ROOT, "src", "index.ts");
-const OUT_DIR = join(DOCS_ROOT, "content-api");
+const OUT_DIR = join(DOCS_ROOT, "content", "api");
 const TYPEDOC_JSON = join(DOCS_ROOT, ".blume", "typedoc.json");
 const TYPEDOC_TSCONFIG = join(PKG_ROOT, ".typedoc-tsconfig.json");
 
