@@ -48,7 +48,7 @@ app.use(createElogs({
 }))
 ```
 
-完整字段见 [Configuration](https://createElogs.vercel.app/docs/configuration)。预设见 [Presets](https://createElogs.vercel.app/docs/features/presets)。
+完整字段见 [Configuration](https://elogs.vercel.app/docs/configuration)。预设见 [Presets](https://elogs.vercel.app/docs/features/presets)。
 
 ### WebSocket logging
 
@@ -75,14 +75,14 @@ new Elysia()
 
 ## `📚` Documentation
 
-完整文档:[createElogs.vercel.app](https://createElogs.vercel.app)
+完整文档:[elogs.vercel.app](https://elogs.vercel.app)
 
-- [Usage](https://createElogs.vercel.app/docs/usage)
-- [Configuration](https://createElogs.vercel.app/docs/configuration)
-- [WebSocket](https://createElogs.vercel.app/docs/features/websocket)
-- [Pino integration](https://createElogs.vercel.app/docs/integrations/pino)
-- [OpenTelemetry](https://createElogs.vercel.app/docs/integrations/otel)
-- [AI SDK](https://createElogs.vercel.app/docs/integrations/ai)
+- [Usage](https://elogs.vercel.app/docs/usage)
+- [Configuration](https://elogs.vercel.app/docs/configuration)
+- [WebSocket](https://elogs.vercel.app/docs/features/websocket)
+- [Pino integration](https://elogs.vercel.app/docs/integrations/pino)
+- [OpenTelemetry](https://elogs.vercel.app/docs/integrations/otel)
+- [AI SDK](https://elogs.vercel.app/docs/integrations/ai)
 
 ## `📄` License
 
