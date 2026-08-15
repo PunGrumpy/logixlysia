@@ -1,7 +1,8 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "bunVersion": "1.x",
-  "framework": null,
-  "ignoreCommand": "node scripts/skip-ci.js",
-  "outputDirectory": "dist"
+  "framework": "astro",
+  "buildCommand": "bun run build",
+  "outputDirectory": "dist",
+  "installCommand": "bun install",
+  "devCommand": "bun run dev"
 }
