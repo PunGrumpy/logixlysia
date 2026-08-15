@@ -13,7 +13,7 @@
  * - 错误继续以原 error 形态传播(用户 .error 看到的是原引用)
  */
 
-import type { CreateElogs } from "@pori15/elogs";
+import { type CreateElogs, globalLogger, pino } from "@pori15/elogs";
 import { problem } from "elysia";
 
 /** Mock Drizzle error class — mirrors drizzle-orm's `DrizzleError` shape (name
@@ -74,6 +74,34 @@ export const dbRouter = <App extends CreateElogs>(app: App) =>
     })
     .get("/demo/db-error/connect", () => {
       throw makeDrizzleError("08006");
+    })
+
+    /**
+     * globalLogger.error(err) 重载演示 —— 一行,自动 unwrap .message + .stack
+     * 对比 manual 路径:这里不依赖 autoTranslate,直接用 globalLogger 记录错误
+     */
+    .get("/demo/db-error/global", () => {
+      try {
+        throw makeDrizzleError("23505");
+      } catch (err) {
+        // globalLogger.error 接受 string | Error,这里 narrow 一下
+        if (err instanceof Error) {
+          globalLogger.error(err);
+        }
+      }
+      return { ok: true };
+    })
+
+    /**
+     * 顶层 pino 演示 —— 无 request 场景,直接调 pino.info()
+     * 用于模块顶层 banner / 后台任务 / DB 层独立调用
+     */
+    .get("/demo/db-error/pino", () => {
+      pino.info(
+        { source: "demo" },
+        "Direct pino call — bypasses emit pipeline"
+      );
+      return { ok: true };
     })
 
     // 抛一个完全没被翻译的错误(非 Drizzle 形态),作为对照

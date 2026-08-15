@@ -1,4 +1,4 @@
-import { CreateElogs } from "@pori15/elogs";
+import { CreateElogs, globalLogger } from "@pori15/elogs";
 import { mergeAIMetrics } from "@pori15/elogs/ai";
 
 export const aiMetricsRouter = <App extends CreateElogs>(app: App) =>
@@ -7,8 +7,8 @@ export const aiMetricsRouter = <App extends CreateElogs>(app: App) =>
     {
       detail: {},
     },
-    ({ request, store }) => {
-      mergeAIMetrics(store.logger, request, {
+    () => {
+      mergeAIMetrics(globalLogger, {
         inputTokens: 1200,
         model: "demo-model",
         msToFinish: 890,

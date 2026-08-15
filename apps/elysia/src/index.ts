@@ -5,15 +5,7 @@ import { routers } from "./routers";
 // release is published. Route `detail` metadata below is kept intact for it.
 export const app = new Elysia({
   name: "Elysia with Elogs",
-})
-  .get(
-    "/",
-    {
-      detail: {},
-    },
-    () => "ok"
-  )
-  .use(routers);
+}).use(routers);
 
 app.listen({
   port: env.PORT,

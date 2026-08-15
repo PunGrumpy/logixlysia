@@ -1,4 +1,4 @@
-import { CreateElogs } from "@pori15/elogs";
+import { CreateElogs, globalLogger } from "@pori15/elogs";
 
 const BASE64URL_PAD_STRIP = /[=]+$/;
 
@@ -24,8 +24,8 @@ const mockCreditCard = () =>
     .join("");
 
 export const autoRedactRouter = <App extends CreateElogs>(app: App) =>
-  app.get("/auto-redact", {}, ({ request, store }) => {
-    store.logger.info(request, "Hello, world!", {
+  app.get("/auto-redact", {}, () => {
+    globalLogger.info("Hello, world!", {
       creditCard: mockCreditCard(),
       email: "createElogs@elysiajs.com",
       ip: "192.168.1.100",

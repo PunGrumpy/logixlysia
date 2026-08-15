@@ -18,7 +18,7 @@ description: 'Public TypeScript types — interfaces, type aliases, and classes.
 
 ## Classes
 
-[HttpError](#http-error)
+[`httpError()` factory](#http-error-factory)
 
 
 ## Interfaces
@@ -510,23 +510,18 @@ type RotationErrorReporter = (error: unknown) => void;
 
 ## Classes
 
-### `HttpError`
+### `httpError()` factory
 
-Minimal HTTP-aware Error used by createElogs for non-Elysia call sites
-(re-export pipeline, redact tests, integration helpers). Independent of
-Elysia 2's ``HTTPError`` (note the capitalisation) — that one lives in
-``elysia`` and is the type the framework actually responds with.
+Use the `httpError()` factory from `elogs` to throw RFC 9457-compliant errors. The factory returns
+an Elysia 2 `HTTPError` instance with `type` (URI), `status`, and `detail()` correctly populated,
+so Elysia automatically serves the response as `application/problem+json`.
 
 ```ts
-class HttpError {
-  cause?: unknown;
-  message: string;
-  name: string;
-  stack?: string;
-  status: number;
-  stackTraceLimit: number;
-  captureStackTrace(targetObject: object, constructorOpt: Function): void;
-  isError(value: unknown): undefined value;
-  prepareStackTrace(err: Error, stackTraces: CallSite[]): any;
-}
+import { httpError } from "@pori15/elogs";
+
+throw httpError(404, "user not found", { userId: 42 });
+// → 404 + application/problem+json + elogs 写一条 WARNING 日志
 ```
+
+> The previous lowercase `HttpError` class has been removed. If you were using it, migrate to
+> `httpError()` (or extend Elysia's `HTTPError` directly for more control).

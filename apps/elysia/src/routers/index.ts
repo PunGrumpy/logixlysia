@@ -1,4 +1,4 @@
-import { createElogs } from "@pori15/elogs";
+import { createElogs, globalLogger } from "@pori15/elogs";
 import Elysia, { t } from "elysia";
 import { aiMetricsRouter } from "./ai-metrics";
 import { boomRouter } from "./boom";
@@ -18,7 +18,7 @@ export const routers = new Elysia()
         customLogFormat:
           "🦊 {now} {level} {duration} {method} {pathname} {status} {message} {ip}",
         logFilePath: "./logs/example.log",
-        logFilter: { level: ["ERROR", "WARNING"] },
+        // logFilter: { level: ["ERROR", "WARNING"] },
         logRotation: {
           compress: true,
           interval: "1d",
@@ -29,13 +29,13 @@ export const routers = new Elysia()
         service: "my-api",
         showStartupMessage: true,
       },
-      preset: "prod", // 'dev' | 'prod' | 'json',或自定义
+      preset: "dev", // 'dev' | 'prod' | 'json',或自定义
     })
   )
-  .get("/log", {}, ({ request, store, log }) => {
+  .get("/log", {}, ({ log }) => {
     console.log("Check console logs for log output");
     log.info("Hello from Elysia with Elogs");
-    store.logger.info(request, "Hello from Elysia with Elogs");
+    globalLogger.info("Hello from Elysia with Elogs");
   })
   .get(
     "/health",

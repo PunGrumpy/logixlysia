@@ -1,5 +1,5 @@
 import type { CreateElogs } from "@pori15/elogs";
-import { useLogger } from "@pori15/elogs";
+import { globalLogger, useLogger } from "@pori15/elogs";
 
 const dbQueryHelper = async () => {
   const log = useLogger();
@@ -10,9 +10,9 @@ const dbQueryHelper = async () => {
 
 export const requestContextRouter = <App extends CreateElogs>(app: App) =>
   app
-    .get("/checkout", {}, ({ request, store }) => {
-      store.logger.mergeContext(request, { userId: "usr_demo" });
-      store.logger.mergeContext(request, {
+    .get("/checkout", {}, () => {
+      globalLogger.mergeContext({ userId: "usr_demo" });
+      globalLogger.mergeContext({
         cart: { items: 2, total: 4999 },
       });
       return {
