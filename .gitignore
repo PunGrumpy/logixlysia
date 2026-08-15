@@ -207,3 +207,6 @@ $RECYCLE.BIN/
 
 # npm configuration
 .npmrc
+
+# VHS terminal recordings
+artifacts
