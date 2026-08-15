@@ -29,7 +29,7 @@ export const routers = new Elysia()
         service: "my-api",
         showStartupMessage: true,
       },
-      preset: "dev", // 'dev' | 'prod' | 'json',或自定义
+      // preset: "dev", // 'dev' | 'prod' | 'json',或自定义
     })
   )
   .get("/log", {}, ({ log }) => {

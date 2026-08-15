@@ -91,13 +91,23 @@ const createSilentPinoLogger = (): Pino =>
 const buildPinoOptions = (
   config: CreateElogsOptions["config"]
 ): PinoLoggerOptions => {
+  // `prettyPrint` 是 elogs 侧的开关字段(不是 pino 自身的选项):
+  // - 当 `prettyPrint === true` 时,我们把它转译成 pino-pretty transport
+  //   (pino 7+ 已不再内置支持 prettyPrint 选项)
+  // - 字段本身**必须**在传到 pino 之前剥掉,否则 pino 会在 transport 之前
+  //   先抛 "prettyPrint option is no longer supported"
+  // destructure 比 spread + delete 更干净,也避免 TS 抱怨 prettyPrint 不在
+  // pino 的 LoggerOptions 类型上(pino 7+ 已移除该字段)。
+  const { prettyPrint, ...restPinoConfig } = (config?.pino ?? {}) as Record<
+    string,
+    unknown
+  >;
   const pinoOptions: PinoLoggerOptions = {
     level: "info",
-    ...((config?.pino as PinoLoggerOptions | undefined) ?? {}),
+    ...(restPinoConfig as PinoLoggerOptions | undefined),
   };
 
-  // 配置 prettyPrint
-  if (config?.pino?.prettyPrint === true) {
+  if (prettyPrint === true) {
     pinoOptions.transport = {
       options: {
         colorize: process.stdout?.isTTY === true,
