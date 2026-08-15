@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 // @ts-nocheck — JSDoc typedefs in .mjs are not picked up by tsc when
 // invoked from the docs tsconfig; runtime behaviour is what matters here.
-// Generate the `/docs/reference` MDX files from typedoc JSON output.
+// Generate the `/docs/api` MDX files from typedoc JSON output.
 //
 // Why this exists: createElogs exports a ~75-symbol public surface, and
-// hand-keeping `apps/docs/content/reference/*.mdx` in sync with `src/*.ts`
+// hand-keeping `apps/docs/content/api/*.mdx` in sync with `src/*.ts`
 // drifts. typedoc gives us an authoritative JSON dump; we slice it into
 // per-topic MDX that blume can render alongside the hand-written docs.
 //
@@ -12,9 +12,9 @@
 //   1. ensures `node_modules/typedoc/node_modules/typescript` resolves to
 //      a TS 5.x copy (typedoc 0.27 still imports `ts.SyntaxKind.*` which
 //      TS 7 removed — without this symlink the whole CLI crashes on import)
-//   2. shells out to `typedoc --json` against packages/createElogs
+//   2. shells out to `typedoc --json` against packages/elogs
 //   3. walks the JSON and emits 4 MDX files under
-//      apps/docs/content/reference/
+//      apps/docs/content/api/
 
 import { spawnSync } from "node:child_process";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -24,9 +24,9 @@ import { fileURLToPath } from "node:url";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DOCS_ROOT = resolve(__dirname, "..");
 const REPO_ROOT = resolve(DOCS_ROOT, "..", "..");
-const PKG_ROOT = join(REPO_ROOT, "packages", "createElogs");
+const PKG_ROOT = join(REPO_ROOT, "packages", "elogs");
 const SRC_ENTRY = join(PKG_ROOT, "src", "index.ts");
-const OUT_DIR = join(DOCS_ROOT, "content", "reference");
+const OUT_DIR = join(DOCS_ROOT, "content", "api");
 const TYPEDOC_JSON = join(DOCS_ROOT, ".blume", "typedoc.json");
 const TYPEDOC_TSCONFIG = join(PKG_ROOT, ".typedoc-tsconfig.json");
 
@@ -293,20 +293,33 @@ const fmtInterface = (node) => {
     lines.push("| Field | Type | Optional | Description |");
     lines.push("| --- | --- | --- | --- |");
     for (const p of props) {
+      // MDX parses `<T>` inside table cells as JSX, which fails the build on
+      // generic types like `Set<string>`. We HTML-escape the angle brackets
+      // *inside* the backtick code-span; backticks alone aren't enough because
+      // MDX still walks the cell text for JSX tokens.
+      const escapeAngle = (s) =>
+        String(s).replace(/</g, "&lt;").replace(/>/g, "&gt;");
       const t =
         p.kind === KIND.METHOD
           ? `<code>${(p.signatures ?? [])
-              .map(
-                (s) =>
+              .map((s) =>
+                escapeAngle(
                   s.name +
-                  "(" +
-                  (s.parameters ?? []).map((q) => q.name).join(", ") +
-                  ")"
+                    "(" +
+                    (s.parameters ?? []).map((q) => q.name).join(", ") +
+                    ")"
+                )
               )
               .join(" / ")}</code>`
-          : `\`${fmtType(p.type)}\``;
+          : `\`${escapeAngle(fmtType(p.type))}\``;
       const opt = p.flags?.isOptional ? "✓" : "";
-      const desc = fmtComment(p).replace(/\|/g, "\\|").replace(/\n/g, " ");
+      // Description may contain JSDoc text with generic types (`Set<string>`)
+      // — escape angle brackets so MDX's JSX parser doesn't blow up.
+      const desc = fmtComment(p)
+        .replace(/\|/g, "\\|")
+        .replace(/\n/g, " ")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
       lines.push(`| \`${p.name}\` | ${t} | ${opt} | ${desc} |`);
     }
     lines.push("");
@@ -485,7 +498,7 @@ const configBody = [
     "Configuration",
     "All fields accepted by `createElogs({ config: { ... } })`."
   ),
-  "本页是 [`ElogsConfig`](https://github.com/eastgold15/createElogs/blob/main/packages/createElogs/src/interfaces.ts) 字段的自动生成参考。源代码变更后会重新生成。\n",
+  "本页是 [`ElogsConfig`](https://github.com/eastgold15/elogs/blob/main/packages/elogs/src/interfaces.ts) 字段的自动生成参考。源代码变更后会重新生成。\n",
   "## ElogsConfig\n",
   config
     ? fmtInterface(config)
@@ -503,16 +516,16 @@ const indexBody = [
     "API reference",
     "Auto-generated reference for `@pori15/elogs` exports, types, and configuration."
   ),
-  "本页是 [`@pori15/elogs`](https://www.npmjs.com/package/@pori15/elogs) 的 API 参考。每当 `packages/createElogs/src/*.ts` 变化,运行 `bun run typedoc` 重新生成。\n",
+  "本页是 [`@pori15/elogs`](https://www.npmjs.com/package/@pori15/elogs) 的 API 参考。每当 `packages/elogs/src/*.ts` 变化,运行 `bun run typedoc` 重新生成。\n",
   "## Sections\n",
-  "- [Exports](/docs/reference/exports) — public functions and values",
-  "- [Types](/docs/reference/types) — interfaces, type aliases, classes",
-  "- [Configuration](/docs/reference/configuration) — every `ElogsConfig` field",
+  "- [Exports](/docs/api/exports) — public functions and values",
+  "- [Types](/docs/api/types) — interfaces, type aliases, classes",
+  "- [Configuration](/docs/api/configuration) — every `ElogsConfig` field",
   "",
   "## At a glance\n",
   `| Kind | Count |\n| --- | --- |\n| Functions | ${functions.length} |\n| Variables | ${variables.length} |\n| Interfaces | ${interfaces.length} |\n| Type Aliases | ${typeAliases.length} |\n| Classes | ${classes.length} |\n`,
   "## Source\n",
-  "Reference content is generated from [`packages/createElogs/src/`](https://github.com/eastgold15/createElogs/tree/main/packages/createElogs/src) via [TypeDoc](https://typedoc.org/) — see `apps/docs/scripts/typedoc.mjs`.\n",
+  "Reference content is generated from [`packages/elogs/src/`](https://github.com/eastgold15/elogs/tree/main/packages/elogs/src) via [TypeDoc](https://typedoc.org/) — see `apps/docs/scripts/typedoc.mjs`.\n",
 ].join("\n");
 
 writeFileSync(join(OUT_DIR, "index.mdx"), indexBody);

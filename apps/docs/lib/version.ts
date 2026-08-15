@@ -1,8 +1,8 @@
-import { version } from "../../../packages/createElogs/package.json";
+import { version } from "../../../packages/elogs/package.json";
 
-const repoUrl = "https://github.com/PunGrumpy/createElogs";
+const repoUrl = "https://github.com/eastgold15/elogs";
 
 export const getLatestVersion = (): string => version;
 
 export const getReleaseUrl = (release: string): string =>
-  `${repoUrl}/releases/tag/createElogs%40${release}`;
+  `${repoUrl}/releases/tag/elogs%40${release}`;

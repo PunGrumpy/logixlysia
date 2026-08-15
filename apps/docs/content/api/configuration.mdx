@@ -4,7 +4,7 @@ description: 'All fields accepted by `createElogs({ config: { ... } })`.'
 ---
 
 
-本页是 [`ElogsConfig`](https://github.com/eastgold15/createElogs/blob/main/packages/createElogs/src/interfaces.ts) 字段的自动生成参考。源代码变更后会重新生成。
+本页是 [`ElogsConfig`](https://github.com/eastgold15/elogs/blob/main/packages/elogs/src/interfaces.ts) 字段的自动生成参考。源代码变更后会重新生成。
 
 ## ElogsConfig
 
@@ -57,13 +57,13 @@ Elogs 插件配置
 
 | Field | Type | Optional | Description |
 | --- | --- | --- | --- |
+| `autoTranslate` | `AutoTranslateConfig` | ✓ | 自动翻译错误:在单点 onError 钩子里跑 translator 链 |
 | `config` | `ElogsConfig` | ✓ | 新版配置块 |
 | `error` | `ErrorConfig` | ✓ | 错误处理配置 |
-| `errors` | `ElogsErrorClasses` | ✓ | 用户自定义 HTTPError 类 |
 | `file` | `false | FileConfig` | ✓ | 文件日志配置(legacy) |
 | `format` | `FormatConfig` | ✓ | 日志格式配置(legacy) |
 | `logLevel` | `LogLevel[]` | ✓ | 日志级别过滤 (root-level 别名,等价于 ``config.logFilter.level``) |
 | `pino` | `LoggerOptions` | ✓ | Pino Logger 原生配置透传(legacy) |
 | `preset` | `"dev" | "prod" | "json" | string & object` | ✓ | 预设,应用一组默认 config 值。 内置:``"dev"`` / ``"prod"`` / ``"json"``(IDE 自动补全)。 任意字符串都行 —— 通过 ``registerPreset(name, defaults)`` 加自己的。 |
 | `startup` | `StartupConfig` | ✓ | 启动消息配置(legacy) |
-| `transports` | `TransportsConfig | Transport[]` | ✓ | 自定义传输(legacy) |
+| `transports` | `Transport[] | TransportsConfig` | ✓ | 自定义传输(legacy) |

@@ -5,8 +5,9 @@ import { defineConfig } from "blume";
 // and linked externally, so each one 301s to its /docs counterpart.
 //
 // `api-reference` was a hand-written page before the auto-generated
-// `/reference/*` set landed; we keep the legacy redirect for SEO so external
-// links still resolve.
+// `/reference/*` set landed; the typedoc output now lives at `/docs/api/*`
+// (a top-level "API" navbar entry) and we keep a 301 from `/api-reference`
+// and from the older `/docs/reference` for SEO continuity.
 const legacyDocsPaths = [
   "comparison",
   "configuration",
@@ -59,7 +60,7 @@ export default defineConfig({
       {
         owner: "eastgold15",
         prefix: "changelog",
-        repo: "createElogs",
+        repo: "elogs",
         type: "github-releases",
       },
     ],
@@ -71,7 +72,7 @@ export default defineConfig({
     "The logger for Elysia.js — simple and easy to use, beautiful and powerful",
   github: {
     owner: "eastgold15",
-    repo: "createElogs",
+    repo: "elogs",
   },
   lastModified: true,
   logo: {
@@ -107,7 +108,8 @@ export default defineConfig({
       from: `/${path}`,
       to: `/docs/${path}`,
     })),
-    { from: "/api-reference", to: "/docs/reference" },
+    { from: "/api-reference", to: "/docs/api" },
+    { from: "/docs/reference", to: "/docs/api" },
     { from: "/rss.xml", to: "/changelog/rss.xml" },
     { from: "/2025", to: "/2026" },
   ],
