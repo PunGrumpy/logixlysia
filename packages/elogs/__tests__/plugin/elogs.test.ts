@@ -122,7 +122,7 @@ describe("createElogs plugin (Elysia 2.0)", () => {
     const app = new Elysia()
       .use(createElogs(baseOptions(transport)))
       .error(OutOfCredit, ({ error }) => ({
-        balance: (error as { detail: { balance: number } }).detail.balance,
+        balance: error.detail().balance,
       }))
       .get("/buy", () => {
         throw new OutOfCredit();
@@ -130,8 +130,11 @@ describe("createElogs plugin (Elysia 2.0)", () => {
 
     const res = await app.handle(new Request("http://localhost/buy"));
     expect(res.status).toBe(402);
+    // Elysia 2.0 + `.error(OutOfCredit, fn)` 的 response body 只是 `fn` 的返回值,
+    // `status` 已经在 HTTP header 里。elogs 不应也不该把 status 塞进 body —
+    // body 内容完全由用户的 `.error(class, fn)` 决定,这是 Elysia 2 的设计。
     const body = (await res.json()) as Record<string, unknown>;
-    expect(body.status).toBe(402);
+    expect(body.balance).toBe(0);
 
     const [level, , meta] = transport.mock.calls[0] ?? [];
     expect(level).toBe("WARNING");
@@ -147,6 +150,7 @@ describe("createElogs plugin (Elysia 2.0)", () => {
       .use(
         createElogs({
           ...baseOptions(transport),
+        
           errors,
         })
       )

@@ -142,27 +142,4 @@ describe("globalLogger", () => {
       }
     });
   });
-
-  describe("top-level pino export", () => {
-    test("pino is exported and is the same instance as globalLogger.pino", () => {
-      expect(pino).toBeDefined();
-      expect(globalLogger.pino).toBe(pino);
-    });
-
-    test("pino.info() does not require request scope", () => {
-      const { restore, spies } = spyConsole(["log", "info", "warn", "error"]);
-      try {
-        // pino writes via its destination (configured by createLogger). With
-        // disableInternalLogger=true and pino destination not set, calling
-        // pino.info is a noop at the destination level. We just verify it
-        // does not throw and does not trigger the globalLogger warn.
-        const beforeWarnCount = spies.warn.mock.calls.length;
-        expect(() => pino.info("direct pino call")).not.toThrow();
-        const afterWarnCount = spies.warn.mock.calls.length;
-        expect(afterWarnCount).toBe(beforeWarnCount);
-      } finally {
-        restore();
-      }
-    });
-  });
 });

@@ -145,7 +145,17 @@ const wrap = (logger: Logger): GlobalLogger => {
  *
  * @public
  */
-export let pino: Pino;
+export let pino: Pino = (() => {
+  // 模块加载时立即初始化 fallback pino — 让 `import { pino }` 永远可用
+  // (无需先调 `initGlobalLogger`)。fallback 用 prod preset 默认配置;
+  // 用户调 `initGlobalLogger(options)` 后会替换这个实例。
+  try {
+    return createLogger({}, undefined, globalContextStore).pino;
+  } catch {
+    // 极端情况下 createLogger 失败,留 placeholder(调用方能 import 但不能 log)
+    return undefined as unknown as Pino;
+  }
+})();
 
 /** 全局 Logger 实例,通过 `import { globalLogger } from "@pori15/elogs"` 拿到。
  *
