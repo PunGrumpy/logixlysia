@@ -9,6 +9,7 @@ export default defineMeta({
     "examples",
     "faq",
     "contributing",
+    "development",
     "usage",
     "configuration",
     "features",

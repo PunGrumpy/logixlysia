@@ -1,0 +1,213 @@
+---
+title: 开发流程
+description: Conventional Commits + release-please 自动化发版规范,提交即版本
+---
+
+本仓库的版本号、CHANGELOG、npm 发布**完全自动化**。你只需要做一件事:**按规范写 commit message**。
+
+剩下的(算 semver、开 Release PR、推 tag、publish npm、开 GitHub Release)由 [release-please](https://github.com/googleapis/release-please) 在你 push 到 `main` 后自动完成。
+
+## 完整流程
+
+```
+  开发者本地                GitHub PR               main 合并后                 自动发布
+  ──────                   ──────                  ──────                    ──────
+  改代码                     CI 跑 type-check/test   release-please action      release-please
+   ↓                          reviewer 看代码         自动开/更新                 自动跑
+  git add                 合并 PR                   "chore(release): vX.Y.Z"    npm publish
+   ↓                                                                    ↓
+  git commit -m "feat:"                                                    GitHub Release
+   ↓                                                                       Tag 推送
+  git push origin
+```
+
+## 1. Conventional Commits 规范
+
+### 1.1 格式
+
+```
+<type>(<scope>): <description>
+
+<body>
+
+<footer>
+```
+
+### 1.2 type 与 semver 映射
+
+| type | 例子 | 触发什么版本 |
+| --- | --- | --- |
+| `feat` | `feat: 添加 file sink` | **minor** (X.**Y**.Z) |
+| `feat!` | `feat!: 升级 Elysia 主版本` | **major** (**X**.Y.Z) |
+| `fix` | `fix: logger 在 async context 下崩溃` | **patch** (X.Y.**Z**) |
+| `fix!` | `fix!: 修改 httpError 签名` | **major** |
+| `perf` | `perf: 缓存 pino transport 引用` | **patch** |
+| `refactor` | `refactor(logger): 抽取 format helper` | 不触发版本(隐藏) |
+| `docs` | `docs: 更新 usage 例子` | 不触发版本 |
+| `test` | `test: 加 ws 集成测试` | 不触发版本 |
+| `build` | `build: 升级 tsup 到 8.5` | 不触发版本 |
+| `ci` | `ci: 修 windows runner 缓存` | 不触发版本 |
+| `chore` | `chore: 清理 dead code` | 不触发版本 |
+
+### 1.3 scope
+
+可选,描述影响范围。推荐用 elogs 的子目录名(便于 CHANGELOG 分组):
+
+- `feat(otel): ...`
+- `fix(translator): ...`
+- `refactor(logger): ...`
+- `docs(docs): ...`(docs site)
+- `chore(release): ...`(release-please 自己的 commit)
+
+### 1.4 真实 commit 例子
+
+```bash
+# patch: 普通 bug 修复
+git commit -m "fix(context): 修复 useLogger 在非请求作用域下访问 store 报错"
+
+# minor: 新功能
+git commit -m "feat(otel): 支持自定义 span attribute 注入"
+
+# major: 升级 Elysia 主版本(必须用 ! 或 BREAKING CHANGE 标记)
+git commit -m "feat!: 升级到 Elysia 3.x 主版本"
+
+# major: 通过 footer 标记
+git commit -m "refactor(plugin): 重命名 createElogs → createLogger
+
+BREAKING CHANGE: \`createElogs\` 函数被移除,请改用 \`createLogger\`
+"
+
+# 不进 CHANGELOG 的杂项
+git commit -m "chore: 删 leftover 调试 log"
+git commit -m "refactor(utils): 抽取 pad2 helper(无 API 变化)"
+```
+
+## 2. 升级 Elysia 主版本(强约定)
+
+**`@pori15/elogs` 的 major 必须 = `elysia` 的 major。** 这样用户看一眼版本号就知道依赖兼容性。
+
+### 2.1 操作流程
+
+当你需要把 `peerDependencies.elysia` 升到下一个 major 时:
+
+1. **改代码** + `peerDependencies.elysia` 同步升
+2. **写带 `!` 的 commit** 触发 major bump:
+
+```bash
+git commit -m "feat!: 升级到 Elysia 3.x
+
+- peerDependencies.elysia: >=2.0.0-exp.62 → ^3.0.0
+- 适配 Elysia 3 的新 API"
+```
+
+3. push → release-please 自动算 `3.0.0` → 开 `chore(release): v3.0.0` PR
+4. reviewer **必须**在合并前确认 elogs major == elysia major
+
+### 2.2 为什么不用 CI 校验脚本
+
+理论上可以写个 step 读 `node_modules/elysia/package.json#version` 与 `package.json#version` 对比,major 不一致就 fail。但:
+
+- elogs 还没稳定,流程会随需求变
+- 人工 review 足够,自动化反而增加维护成本
+- 起步阶段先用文档约定,痛了再加脚本
+
+## 3. 合并 Release PR 的检查清单
+
+Release PR(`chore(release): vX.Y.Z`)合并前,reviewer 必须确认:
+
+- [ ] **CHANGELOG.md** 描述准确(无 typo、scope 正确)
+- [ ] **`package.json#version`** 与预期 semver 一致
+  - 改动里只有 `fix:` / `perf:` → patch
+  - 有 `feat:` 但无 `!` → minor
+  - 有 `feat!:` / `fix!:` / `BREAKING CHANGE:` → major
+- [ ] **major 与 Elysia 主版本一致**(若本次涉及 Elysia 升级)
+- [ ] 没有遗漏的 `feat!:` 应当走 major 而走了 minor(看 commits 列表)
+
+## 4. 本地试运行(可选)
+
+在 push 之前,你可以本地算一下 release-please 会推什么版本:
+
+```bash
+# 需要 GitHub token(GITHUB_TOKEN),因为 release-please 会调 GitHub API 看 commit 历史
+npx -y release-please manifest-pr \
+  --config-file .github/release-please-config.json \
+  --manifest-file .github/.release-please-manifest.json \
+  --token=$GITHUB_TOKEN
+```
+
+或在仓库根跑:
+
+```bash
+bun run release
+```
+
+## 5. 常见误区
+
+### 5.1 ❌ 不要写 `update:` / `add:` / `change:`
+
+只接受 conventional commits 标准的 type(feat / fix / perf / refactor / docs / test / build / ci / chore)。其他 type release-please 不会识别,可能算错版本。
+
+### 5.2 ❌ 不要把多个不相关的变更塞进一个 commit
+
+```bash
+# 错
+git commit -m "feat: 加 file sink + 修 translator bug + 删无用代码"
+
+# 对:拆三个 commit
+git commit -m "feat(output): 加 file sink"
+git commit -m "fix(translator): 修 Drizzle translator 空指针"
+git commit -m "chore: 删 leftover 调试 log"
+```
+
+### 5.3 ❌ 不要在 main 上直接 push 改 version
+
+release-please 会自动算 version,你手改 `package.json#version` 会被它的下一次 commit 覆盖回去。
+
+### 5.4 ❌ 不要在 PR description 里写变更说明
+
+变更说明放 **commit message** 里,不是 PR description。release-please 读 commit,不看 PR。
+
+### 5.5 ✅ squash merge 也 OK
+
+GitHub 的 "Squash and merge" 会把多个 commit 合成一个,只要合成后的 message 符合 conventional commits 规范,release-please 就能正确算版本。
+
+## 6. 提 PR 时的 PR title 规范
+
+PR title 也要遵循 conventional commits(虽然 release-please 看的是 merge commit,但保持一致更好 review):
+
+```
+feat(otel): 支持自定义 span attribute
+fix(translator): 修空指针
+docs: 更新 usage 例子
+```
+
+## 7. 调试发版问题
+
+如果 release-please 没自动开 PR,检查:
+
+1. **commit message 格式**:`git log --oneline -10` 看最近的 commit 是不是符合规范
+2. **workflow 权限**:`.github/workflows/release-please.yml` 里的 `permissions` 块要包含 `contents: write` + `pull-requests: write`
+3. **配置文件**:`.github/release-please-config.json` 的 `package` 字段要等于 `packages/elogs/package.json#name`(`@pori15/elogs`)
+4. **manifest 锁定**:`.github/.release-please-manifest.json` 里的 `.: "2.0.0"` 是起点
+5. **GitHub Actions 日志**:`gh run list --workflow=release-please.yml` 看最近一次跑的情况
+
+## 8. 进阶:多人协作场景
+
+### 8.1 多个 feat 同时合并到 main
+
+release-please 会把所有 feat 合并算成一次 minor。例:今天合并 2 个 feat,明天又合并 1 个 fix → release-please 开 1 个 PR 算 `X.Y+1.Z`(minor),下一个 release 算 `X.Y+1.Z+1`(patch)。
+
+### 8.2 一个 PR 包含 feat + fix
+
+release-please 看最高优先级的:`feat!` > `feat` > `fix` > `perf`。一个 PR 同时含 `feat:` 和 `fix:`,release-please 会算 minor。
+
+### 8.3 想撤回已发版
+
+**npm 版本号发布后不能复用** — `2.0.0` 发了就不能再发 `2.0.0`。要修复只能发 `2.0.1` 或 `2.1.0`。如果一定要"撤销",需要 `npm unpublish`(有 72 小时窗口限制,且 npm 公司政策越来越严格)。
+
+## 9. 相关链接
+
+- [Conventional Commits 规范](https://www.conventionalcommits.org/)
+- [release-please 文档](https://github.com/googleapis/release-please)
+- [`@pori15/elogs` CHANGELOG](https://github.com/eastgold15/elogs/blob/main/packages/elogs/CHANGELOG.md)
+- [`.github/RELEASE.md`](https://github.com/eastgold15/elogs/blob/main/.github/RELEASE.md) — 仓库内的发版规范简版
