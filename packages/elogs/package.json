@@ -1,6 +1,6 @@
 {
   "name": "@pori15/elogs",
-  "version": "7.1.1",
+  "version": "2.0.0",
   "description": "🦊 Elogs is a logger for Elysia 2.0",
   "keywords": [
     "elogs",
@@ -49,7 +49,6 @@
     "build": "tsup ",
     "clean": "git clean -fdx .turbo dist node_modules coverage",
     "dev": "tsup --watch",
-    "release": "bun pm version patch && bun  publish --registry=https://registry.npmjs.org/ --access public",
     "test": "bun test",
     "test:coverage": "bun test --coverage --coverage-reporter=lcov",
     "tsc:build": "tsc",

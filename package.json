@@ -10,9 +10,6 @@
     "build": "turbo run build",
     "bump-deps": "bunx npm-check-updates --deep -u && bun install",
     "bump-ui": "cd apps/docs && bunx --bun shadcn add --all --overwrite && bunx --bun shadcn migrate --yes radix",
-    "changeset": "changeset",
-    "changeset:publish": "bun build && changeset publish",
-    "changeset:version": "changeset version",
     "check": "ultracite check",
     "clean": " git clean -xdf .turbo node_modules",
     "dev": "turbo run dev",
@@ -29,7 +26,6 @@
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.6",
-    "@changesets/cli": "^3.0.0",
     "@typescript/native": "npm:typescript@^7.0.2",
     "lefthook": "^2.1.10",
     "tsup": "^8.5.1",

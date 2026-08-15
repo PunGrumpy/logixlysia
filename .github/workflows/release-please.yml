@@ -1,0 +1,35 @@
+name: release-please
+
+# release-please 监听 main 推送,自动检测 conventional commits 开/更新 Release PR。
+# Release PR 合并时,release-please action 内置的 node 策略会自动跑 npm publish
+# (provenance 由 OIDC + id-token: write 保证)。无需手写 publish step。
+#
+# 替代了原先的 .github/workflows/publish.yml (已被删除)。
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: # 允许手动触发重跑
+
+permissions:
+  contents: write       # 推送版本变更提交与 Git 标签
+  pull-requests: write  # 开/更新 Release PR
+  id-token: write       # npm provenance
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: googleapis/release-please-action@5d0db02b7d3cc0a9985a2059f2bfd2cc5e0e8d2b # v4
+        id: release
+        with:
+          config-file: .github/release-please-config.json
+          manifest-file: .github/.release-please-manifest.json
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 打印 release-please 输出(便于排查)
+        if: ${{ steps.release.outputs.release_created }}
+        env:
+          RP_OUT: ${{ toJson(steps.release.outputs) }}
+        run: echo "$RP_OUT"
