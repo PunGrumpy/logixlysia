@@ -1,5 +1,5 @@
 import { createPinoLogger as createBogeychan } from "@bogeychan/elysia-logger";
-import createElogs, { createLogger } from "@pori15/elogs";
+import { createElogs, globalLogger, initGlobalLogger } from "@pori15/elogs";
 import { consola } from "consola";
 import { Elysia } from "elysia";
 import { createLogger as createEvlog } from "evlog";
@@ -11,7 +11,7 @@ const mockRequest = new Request("http://localhost:3000/");
 
 describe("Logger Creation", () => {
   bench("createElogs", () => {
-    createLogger();
+    createElogs();
   });
 
   bench("pino", () => {
@@ -36,7 +36,12 @@ describe("Logger Creation", () => {
 });
 
 // Initialize loggers with output disabled for fair comparison of overhead
-const logix = createLogger({
+// createElogs is a plugin (returns an Elysia instance), so for per-call
+// logging we reach the underlying Logger via the global handle. The plugin
+// is the more realistic path — see "Elysia plugin request path" below — but
+// `globalLogger.info(...)` exercises the same emit code as `ctx.log.info(...)`
+// and is the apples-to-apples comparison with the raw loggers here.
+initGlobalLogger({
   config: {
     disableInternalLogger: true,
     pino: { enabled: false },
@@ -53,7 +58,7 @@ const bc = createBogeychan({ enabled: false });
 
 describe("Simple Log (String)", () => {
   bench("createElogs", () => {
-    logix.info(mockRequest, "Hello World");
+    globalLogger.info(mockRequest, "Hello World");
   });
 
   bench("pino", () => {
@@ -87,7 +92,7 @@ describe("Structured Log (Object)", () => {
   };
 
   bench("createElogs", () => {
-    logix.info(mockRequest, "Hello World", data);
+    globalLogger.info(mockRequest, "Hello World", data);
   });
 
   bench("pino", () => {
@@ -125,7 +130,7 @@ describe("Deep Nested Log", () => {
   };
 
   bench("createElogs", () => {
-    logix.info(mockRequest, "Deep nested", deepData);
+    globalLogger.info(mockRequest, "Deep nested", deepData);
   });
 
   bench("pino", () => {

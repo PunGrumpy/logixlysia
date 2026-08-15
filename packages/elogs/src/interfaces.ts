@@ -299,32 +299,106 @@ export interface CreateElogsOptions {
 // ==========================================
 
 /**
- * Logger 实例,可通过 `store.logger` 访问
+ * Logger 实例，可通过 `store.logger` 访问。
  *
- * 9 个方法:
- * - debug / info / warn / error: 便利级别快捷方法
- * - log: 显式 level + data 入口
- * - handleHttpError: 错误处理入口
- * - getContext / mergeContext: per-request 累积 context
- * - pino: 底层 Pino Logger
+ * 提供 9 个核心方法用于日志记录、上下文管理和错误处理。
+ * 所有日志方法都接收 `Request` 对象，用于自动关联请求 ID 和链路追踪信息。
+ *
+ * @example
+ * ```typescript
+ * // 在 Elysia 插件或路由中获取 Logger
+ * app.get('/user', ({ request, store }) => {
+ *   const logger = store.logger;
+ *   logger.info(request, 'Fetching user data', { userId: '123' });
+ * });
+ * ```
  */
 export interface Logger {
-  /** 记录 DEBUG 级别日志 */
+  /**
+   * 记录 DEBUG 级别的调试日志。
+   *
+   * @param request - 当前请求对象（必填），用于关联请求上下文
+   * @param message - 日志消息（必填），简要描述事件
+   * @param context - 可选，额外的结构化上下文数据，会被合并到日志记录中
+   *
+   * @example
+   * ```typescript
+   * logger.debug(request, 'Cache lookup', { cacheKey: 'user:123', hit: true });
+   * ```
+   */
   debug: (
     request: Request,
     message: string,
     context?: Record<string, unknown>
   ) => void;
-  /** 记录 ERROR 级别日志 */
+
+  /**
+   * 记录 ERROR 级别的错误日志。
+   * 通常用于记录需要立即关注的异常或失败情况。
+   *
+   * @param request - 当前请求对象（必填），用于关联请求上下文
+   * @param message - 错误消息（必填），描述发生了什么错误
+   * @param context - 可选，额外的错误上下文，如错误码、堆栈信息等
+   *
+   * @example
+   * ```typescript
+   * try {
+   *   await riskyOperation();
+   * } catch (err) {
+   *   logger.error(request, 'Database query failed', {
+   *     query: 'SELECT * FROM users',
+   *     error: err.message,
+   *     stack: err.stack
+   *   });
+   * }
+   * ```
+   */
   error: (
     request: Request,
     message: string,
     context?: Record<string, unknown>
   ) => void;
-  /** 获取累积的 per-request context */
-  getContext: (request: Request) => Readonly<Record<string, unknown>>;
+
   /**
-   * 处理 HTTP 错误并输出日志
+   * 获取当前请求累积的 per-request 上下文数据。
+   *
+   * 上下文数据通过 `mergeContext` 方法累积，会在 access log 中输出。
+   * 返回的对象是只读的，不应直接修改。
+   *
+   * @param request - 当前请求对象（必填）
+   * @returns 当前请求累积的上下文对象的只读快照
+   *
+   * @example
+   * ```typescript
+   * const ctx = logger.getContext(request);
+   * console.log('Current request context:', ctx);
+   * // 输出: { userId: '123', apiVersion: 'v2', processingTime: 45 }
+   * ```
+   */
+  getContext: (request: Request) => Readonly<Record<string, unknown>>;
+
+  /**
+   * 处理 HTTP 错误并记录详细的错误日志。
+   *
+   * 这是一个高级便捷方法，会自动从 `error` 中提取状态码、错误消息等信息，
+   * 并格式化输出到日志中，适合在全局错误处理中间件中使用。
+   *
+   * @param request - 当前请求对象（必填）
+   * @param error - 捕获的错误对象（必填），可以是 Error 实例、HTTPError 或任意值
+   * @param store - 存储数据（必填），包含日志器等上下文信息
+   * @param options - 可选的配置选项，可覆盖默认行为
+   *
+   * @example
+   * ```typescript
+   * // 在 Elysia 全局错误处理器中使用
+   * app.onError(({ request, error, store }) => {
+   *   store.logger.handleHttpError(request, error, store, {
+   *     logLevel: 'error',
+   *     includeStack: true
+   *   });
+   *   return { error: 'Internal Server Error' };
+   * });
+   * ```
    */
   handleHttpError: (
     request: Request,
@@ -332,24 +406,115 @@ export interface Logger {
     store: StoreData,
     options?: CreateElogsOptions
   ) => void;
-  /** 记录 INFO 级别日志 */
+
+  /**
+   * 记录 INFO 级别的信息日志。
+   *
+   * 通常用于记录重要的业务事件或系统状态变化。
+   *
+   * @param request - 当前请求对象（必填），用于关联请求上下文
+   * @param message - 信息消息（必填），描述事件
+   * @param context - 可选，额外的上下文数据
+   *
+   * @example
+   * ```typescript
+   * logger.info(request, 'User logged in successfully', {
+   *   userId: '123',
+   *   loginMethod: 'oauth'
+   * });
+   * ```
+   */
   info: (
     request: Request,
     message: string,
     context?: Record<string, unknown>
   ) => void;
-  /** 记录指定级别的日志 */
+
+  /**
+   * 记录指定级别的日志（通用方法）。
+   *
+   * 适用于需要动态指定日志级别的场景，比使用 `debug`、`info` 等快捷方法更灵活。
+   *
+   * @param level - 日志级别（必填），必须是 'debug' | 'info' | 'warn' | 'error' 之一
+   * @param request - 当前请求对象（必填）
+   * @param data - 要记录的日志数据对象（必填）
+   * @param store - 存储数据（必填），包含日志器等上下文信息
+   *
+   * @example
+   * ```typescript
+   * const level = isProduction ? 'error' : 'debug';
+   * logger.log(level, request, { event: 'UserAction', action: 'click' }, store);
+   * ```
+   */
   log: (
     level: LogLevel,
     request: Request,
     data: Record<string, unknown>,
     store: StoreData
   ) => void;
-  /** 合并 per-request context(后续 access log 带上) */
+
+  /**
+   * 合并额外的数据到当前请求的上下文中。
+   *
+   * 这些数据会在后续的 access log 中自动包含，非常适合在请求处理过程中
+   * 逐步累积上下文信息（如经过认证后注入用户 ID）。
+   *
+   * @param request - 当前请求对象（必填）
+   * @param partial - 要合并的部分上下文对象（必填），会与现有上下文进行浅合并
+   *
+   * @example
+   * ```typescript
+   * // 在认证中间件中记录用户信息
+   * app.use(({ request, store }) => {
+   *   const user = authenticate(request);
+   *   store.logger.mergeContext(request, {
+   *     userId: user.id,
+   *     userRole: user.role,
+   *     authenticated: true
+   *   });
+   *   // 这些数据会在后续的 access log 中自动出现
+   * });
+   * ```
+   */
   mergeContext: (request: Request, partial: Record<string, unknown>) => void;
-  /** 底层 Pino Logger 实例 */
+
+  /**
+   * 底层的 Pino Logger 实例。
+   *
+   * 当内置方法无法满足需求时，可以直接访问 Pino 实例进行高级操作，
+   * 如创建子 logger、使用 Pino 特定的 API 等。
+   *
+   * @example
+   * ```typescript
+   * // 创建子 logger 用于特定模块
+   * const moduleLogger = logger.pino.child({ module: 'UserService' });
+   * moduleLogger.info('UserService initialized');
+   *
+   * // 直接使用 Pino 的级别设置
+   * logger.pino.level = 'debug';
+   * ```
+   */
   pino: Pino;
-  /** 记录 WARNING 级别日志 */
+
+  /**
+   * 记录 WARNING 级别的警告日志。
+   *
+   * 用于记录非致命的异常情况、过时功能的使用或潜在问题，
+   * 需要关注但不至于立即影响系统运行。
+   *
+   * @param request - 当前请求对象（必填）
+   * @param message - 警告消息（必填），描述警告内容
+   * @param context - 可选，额外的上下文数据
+   *
+   * @example
+   * ```typescript
+   * logger.warn(request, 'Deprecated API version used', {
+   *   apiVersion: 'v1',
+   *   deprecatedSince: '2025-01-01',
+   *   recommendedVersion: 'v2'
+   * });
+   * ```
+   */
   warn: (
     request: Request,
     message: string,

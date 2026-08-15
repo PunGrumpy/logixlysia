@@ -10,46 +10,24 @@ const dbQueryHelper = async () => {
 
 export const requestContextRouter = <App extends CreateElogs>(app: App) =>
   app
-    .get(
-      "/checkout",
-      {
-        detail: {
-          description:
-            "Calls `mergeContext` during the handler. Fields appear on the automatic access log (no extra `logger.info` required).",
-          summary: "Request context accumulation",
-          tags: ["logging", "request-context"],
-        },
-      },
-      ({ request, store }) => {
-        store.logger.mergeContext(request, { userId: "usr_demo" });
-        store.logger.mergeContext(request, {
-          cart: { items: 2, total: 4999 },
-        });
-        return {
-          note: "See access log — context merged automatically",
-          ok: true,
-        };
-      }
-    )
-    .get(
-      "/async-context",
-      {
-        detail: {
-          description:
-            "Demonstrates request-scoped logging using derived `log` and global `useLogger()` inside async helper boundaries.",
-          summary: "AsyncLocalStorage logger context propagation",
-          tags: ["logging", "request-context"],
-        },
-      },
-      async ({ log }) => {
-        log.mergeContext({ userId: "usr_async" });
-        log.info("Starting async request processing");
+    .get("/checkout", {}, ({ request, store }) => {
+      store.logger.mergeContext(request, { userId: "usr_demo" });
+      store.logger.mergeContext(request, {
+        cart: { items: 2, total: 4999 },
+      });
+      return {
+        note: "See access log — context merged automatically",
+        ok: true,
+      };
+    })
+    .get("/async-context", {}, async ({ log }) => {
+      log.mergeContext({ userId: "usr_async" });
+      log.info("Starting async request processing");
 
-        await dbQueryHelper();
+      await dbQueryHelper();
 
-        return {
-          note: "Check console logs for useLogger() context propagation",
-          ok: true,
-        };
-      }
-    );
+      return {
+        note: "Check console logs for useLogger() context propagation",
+        ok: true,
+      };
+    });

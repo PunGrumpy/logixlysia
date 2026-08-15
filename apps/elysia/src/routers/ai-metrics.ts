@@ -5,12 +5,7 @@ export const aiMetricsRouter = <App extends CreateElogs>(app: App) =>
   app.post(
     "/chat",
     {
-      detail: {
-        description:
-          "Uses `mergeAIMetrics` from `createElogs/ai` so LLM usage appears in the request context tree.",
-        summary: "AI metrics on access log",
-        tags: ["logging", "ai"],
-      },
+      detail: {},
     },
     ({ request, store }) => {
       mergeAIMetrics(store.logger, request, {

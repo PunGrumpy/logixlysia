@@ -32,6 +32,11 @@ export const routers = new Elysia()
       preset: "prod", // 'dev' | 'prod' | 'json',或自定义
     })
   )
+  .get("/log", {}, ({ request, store, log }) => {
+    console.log("Check console logs for log output");
+    log.info("Hello from Elysia with Elogs");
+    store.logger.info(request, "Hello from Elysia with Elogs");
+  })
   .get(
     "/health",
     {

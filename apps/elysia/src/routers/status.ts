@@ -5,8 +5,7 @@ export const statusRouter = <App extends CreateElogs>(app: App) =>
     "/status/:code",
     {
       detail: {
-        summary: "Status example",
-        tags: ["status"],
+        hide: true,
       },
     },
     ({ params, set }) => {

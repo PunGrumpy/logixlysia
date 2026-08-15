@@ -16,22 +16,24 @@
 import type { CreateElogs } from "@pori15/elogs";
 import { problem } from "elysia";
 
-const makeDrizzleError = (
-  code: string
-): Error & { code: string; name: string } => {
-  const e = new Error(`PG driver reported: ${code}`) as Error & {
-    code: string;
-    name: string;
-  };
-  e.name = "DrizzleError";
-  e.code = code;
-  return e;
-};
+/** Mock Drizzle error class — mirrors drizzle-orm's `DrizzleError` shape (name
+ *  + driver code) so Elysia's `.error()` can match by class identity. In a
+ *  real app this would be `import { DrizzleError } from "drizzle-orm"`. */
+class DrizzleError extends Error {
+  code: string;
+  constructor(code: string) {
+    super(`PG driver reported: ${code}`);
+    this.name = "DrizzleError";
+    this.code = code;
+  }
+}
+
+const makeDrizzleError = (code: string): DrizzleError => new DrizzleError(code);
 
 export const dbRouter = <App extends CreateElogs>(app: App) =>
   app
     // 用户用 Elysia 2 原生 .error() 接管 DrizzleError 的响应格式
-    .error("DrizzleError", (ctx) => {
+    .error(DrizzleError, (ctx) => {
       const code = (ctx.error as { code?: string }).code ?? "UNKNOWN";
       // 按 driver code 选不同的 problem detail
       if (code === "23505") {
