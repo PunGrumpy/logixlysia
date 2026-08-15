@@ -20,6 +20,7 @@ export {
   createRequestScopedLogger,
   loggerStorage,
   mergeLogDataContext,
+  requestStorage,
   useLogger,
 } from "./context";
 export { errorMap, extractStatus, httpError, levelForStatus } from "./errors";
@@ -31,6 +32,7 @@ export {
   isGlobalLoggerInitialized,
   pino,
   resetGlobalLogger,
+  setGlobalLogger,
 } from "./global-logger";
 export { getStatusCode } from "./helpers";
 export type {
@@ -58,8 +60,10 @@ export type {
   TransportsConfig,
 } from "./interfaces";
 export type {
+  CreateLoggerOptions,
   EmitInput,
   FormatContext,
+  PinoFactory,
   PrecomputedLogParts,
   Sinks,
 } from "./logger";
@@ -67,6 +71,7 @@ export {
   buildContextTreeLines,
   computePrecomputedLogParts,
   createFormatContext,
+  createLogger,
   emit,
   formatDuration,
   formatLogOutput,
@@ -108,10 +113,6 @@ export {
   tap,
   tee,
 } from "./output";
-/**
- * 公开的插件实例类型别名 —— 与包名 `Elogs` 同名,比 `CreateElogs`(底层是
- * `ReturnType<typeof createElogs>`)更易读。建议用户写 `<App extends Elogs>(app: App) => ...`。
- */
 export type { CreateElogs } from "./plugin";
 export { createElogs } from "./plugin";
 export type { DrizzleLikeError } from "./translator";

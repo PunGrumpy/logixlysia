@@ -98,8 +98,10 @@ export const createElogs = (rawOptions: CreateElogsOptions = {}) => {
   const contextStore = createRequestContextStore();
   const baseLogger = createLogger(options, undefined, contextStore);
 
-  // 初始化全局 Logger（使用独立的上下文存储）
-  initGlobalLogger(options);
+  // 初始化全局 Logger —— 关键:复用本实例的 contextStore,这样
+  // `globalLogger.mergeContext({...})` 写入的数据会跟本实例的
+  // access log context 合并(否则数据会丢在全局另一个 store 里)。
+  initGlobalLogger(options, contextStore);
 
   /**
    * 创建带标记的 Logger 包装器
@@ -354,6 +356,12 @@ export const createElogs = (rawOptions: CreateElogsOptions = {}) => {
           contextStore.mergeContext(request, { requestId: id });
         }
 
+        // 总是把裸 request 放进 `requestStorage`,让 `globalLogger` (no-request API)
+        // 能在 route handler / 中间件 / hook 里自动拿到当前 request 走完整 emit。
+        // 这与 `useAsyncLocalStorage` 解耦 —— 该 flag 只控制 `loggerStorage`
+        // (供 `useLogger()` 使用的 RequestScopedLogger),不影响 `globalLogger`。
+        requestStorage.enterWith(request);
+
         // AsyncLocalStorage 支持
         // Elysia 2 在 hook 链路上有自己的 async scope，这里 enterWith
         // 设置的值会透传到 handler / afterHandle，只要 Elysia 不在中间
@@ -361,9 +369,6 @@ export const createElogs = (rawOptions: CreateElogsOptions = {}) => {
         if (useAsyncLocalStorage) {
           const scoped = createRequestScopedLogger(request);
           loggerStorage.enterWith(scoped);
-          // 同步把裸 request 也放进去，让 `globalLogger` (no-request API)
-          // 能在 ALS 内自动拿到当前 request 走完整 emit。
-          requestStorage.enterWith(request);
         }
       })
 
