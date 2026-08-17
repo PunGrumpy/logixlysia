@@ -1,0 +1,84 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "mint",
+  "name": "Logixlysia",
+  "description": "The logger for Elysia.js — simple and easy to use, beautiful and powerful",
+  "colors": {
+    "primary": "#b24b09",
+    "light": "#e27641",
+    "dark": "#b24b09"
+  },
+  "logo": "/icon.png",
+  "favicon": "/icon.png",
+  "seo": {
+    "indexing": "navigable",
+    "metatags": {
+      "robots": "noindex, nofollow"
+    }
+  },
+  "navigation": {
+    "groups": [
+      {
+        "group": "Documentation",
+        "pages": [
+          "introduction",
+          "comparison",
+          "migration-from-evlog",
+          "examples",
+          "faq",
+          "contributing",
+          "usage",
+          "configuration",
+          "api-reference"
+        ]
+      },
+      {
+        "group": "Features",
+        "pages": [
+          "features/startup",
+          "features/presets",
+          "features/request-context",
+          "features/request-id",
+          "features/websocket",
+          "features/formatting",
+          "features/filtering",
+          "features/log-levels",
+          "features/file-logging",
+          "features/transports",
+          "features/log-rotation"
+        ]
+      },
+      {
+        "group": "Integrations",
+        "pages": ["integrations/pino", "integrations/otel", "integrations/ai"]
+      }
+    ]
+  },
+  "navbar": {
+    "links": [
+      {
+        "label": "Documentation",
+        "href": "https://logixlysia.dev/docs/introduction"
+      },
+      {
+        "label": "Changelog",
+        "href": "https://logixlysia.dev/changelog"
+      }
+    ],
+    "primary": {
+      "type": "github",
+      "href": "https://github.com/PunGrumpy/logixlysia"
+    }
+  },
+  "footer": {
+    "socials": {
+      "github": "https://github.com/PunGrumpy/logixlysia",
+      "website": "https://logixlysia.dev"
+    }
+  },
+  "banner": {
+    "content": "The canonical Logixlysia documentation lives at [logixlysia.dev](https://logixlysia.dev/docs/introduction). This mirror exists to power the AI assistant.",
+    "type": "info",
+    "dismissible": true
+  }
+}

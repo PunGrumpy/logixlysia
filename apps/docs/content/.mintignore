@@ -1,0 +1,3 @@
+# Blume's sidebar ordering files. Mintlify takes its navigation from
+# docs.json instead, and these are TypeScript, not content.
+meta.ts
