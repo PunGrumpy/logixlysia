@@ -69,29 +69,31 @@ tree, so there is one copy of every page — Blume orders it with `meta.ts`,
 Mintlify with `content/docs.json`, and each ignores the other's file.
 
 The Mintlify deployment is a mirror, not a second docs site: it is marked
-`noindex, nofollow` and carries a banner pointing back to `logixlysia.dev`,
+`noindex, nofollow` and carries a banner pointing back to `logixlysia.vercel.app`,
 so it never competes with the canonical site in search results.
 
 Two constraints shape the shared content:
 
-- Mintlify does not support relative image paths, so images are referenced
-  root-relative (`/preview.png`). The files live in `public/` for Blume and
-  are symlinked into `content/` so Mintlify's repository-relative lookup
-  resolves them too.
+- Mintlify does not support relative image paths, so images shared by both
+  systems are referenced root-relative (`/preview.png`). Mintlify resolves
+  those against the repository and reads the file it finds committed, so the
+  real files live in `content/` and `public/` holds symlinks to them — Astro
+  dereferences those while copying `public/` into the build. The reverse
+  layout does not work: Mintlify clones symlinks as symlinks and serves the
+  link text instead of an image.
 - Anything Blume-specific (`meta.ts`) is listed in `content/.mintignore`.
 
 ### Setup
 
-The repository side is done. The rest is dashboard configuration:
+The repository side and the Mintlify git source are done. What remains is
+enabling the widget:
 
-1. **Git settings** — enable "docs.json is in a subdirectory" and set the path
-   to `/apps/docs/content`.
-2. **Widget settings** — enable the widget, add `logixlysia.dev` (and any
-   preview domains) as allowed origins, and copy the widget ID.
-3. **Vercel** — set `MINTLIFY_WIDGET_ID` to that ID for the docs project.
+1. **Widget settings** — enable the widget, add `logixlysia.vercel.app` (and
+   any preview domains) as allowed origins, and copy the widget ID.
+2. **Vercel** — set `MINTLIFY_WIDGET_ID` to that ID for the docs project.
 
 Without `MINTLIFY_WIDGET_ID` the config injects nothing, so builds work
-unchanged before step 3. Like the analytics scripts it rides along with, the
+unchanged before step 2. Like the analytics scripts it rides along with, the
 widget only loads in production builds — `blume dev` never mounts it.
 
 ## Deployment
