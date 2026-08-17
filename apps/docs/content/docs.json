@@ -8,8 +8,15 @@
     "light": "#e27641",
     "dark": "#b24b09"
   },
-  "logo": "/icon.png",
-  "favicon": "/icon.png",
+  "logo": {
+    "light": "/icon.png",
+    "dark": "/icon.png",
+    "href": "https://logixlysia.vercel.app/icon.png"
+  },
+  "favicon": {
+    "light": "/icon.png",
+    "dark": "/icon.png"
+  },
   "seo": {
     "indexing": "navigable",
     "metatags": {
@@ -83,5 +90,8 @@
   },
   "interaction": {
     "drilldown": true
+  },
+  "icons": {
+    "library": "lucide"
   }
 }
