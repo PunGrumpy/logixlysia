@@ -58,11 +58,11 @@
     "links": [
       {
         "label": "Documentation",
-        "href": "https://logixlysia.dev/docs/introduction"
+        "href": "https://logixlysia.vercel.app/docs/introduction"
       },
       {
         "label": "Changelog",
-        "href": "https://logixlysia.dev/changelog"
+        "href": "https://logixlysia.vercel.app/changelog"
       }
     ],
     "primary": {
@@ -73,12 +73,15 @@
   "footer": {
     "socials": {
       "github": "https://github.com/PunGrumpy/logixlysia",
-      "website": "https://logixlysia.dev"
+      "website": "https://logixlysia.vercel.app"
     }
   },
   "banner": {
-    "content": "The canonical Logixlysia documentation lives at [logixlysia.dev](https://logixlysia.dev/docs/introduction). This mirror exists to power the AI assistant.",
+    "content": "The canonical Logixlysia documentation lives at [logixlysia.vercel.app](https://logixlysia.vercel.app/docs/introduction). This mirror exists to power the AI assistant.",
     "type": "info",
     "dismissible": true
+  },
+  "interaction": {
+    "drilldown": true
   }
 }
