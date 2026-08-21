@@ -64,6 +64,11 @@
       "import": "./dist/datadog.js",
       "default": "./dist/datadog.js"
     },
+    "./better-stack": {
+      "types": "./dist/better-stack.d.ts",
+      "import": "./dist/better-stack.js",
+      "default": "./dist/better-stack.js"
+    },
     "./package.json": "./package.json"
   },
   "main": "dist/index.js",

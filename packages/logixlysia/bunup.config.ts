@@ -11,7 +11,8 @@ const config = defineConfig({
     'src/sentry.ts',
     'src/posthog.ts',
     'src/otlp.ts',
-    'src/datadog.ts'
+    'src/datadog.ts',
+    'src/better-stack.ts'
   ],
   external: ['elysia', 'chalk', 'pino', 'pino-pretty'],
   format: ['esm'],
