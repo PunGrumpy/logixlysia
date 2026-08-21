@@ -89,9 +89,56 @@ jobs:
             echo "[Download the GIF, MP4 and PNG](${ARTIFACT_URL})"
           } >> "$GITHUB_STEP_SUMMARY"
 
+  publish:
+    name: 📦 Publish recording to pre-release
+    needs: record
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      # actions:read lets `gh run download` fetch this run's artifact without
+      # a third-party download action; contents:write manages the release.
+      actions: read
+      contents: write
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      ARTIFACT_NAME: logixlysia-demo-${{ github.event.pull_request.number }}
+      PR_NUMBER: ${{ github.event.pull_request.number }}
+      HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+    outputs:
+      gif-url: ${{ steps.release.outputs.gif-url }}
+      mp4-url: ${{ steps.release.outputs.mp4-url }}
+      png-url: ${{ steps.release.outputs.png-url }}
+    steps:
+      - name: ⬇️ Download recording artifact
+        run: gh run download "${GITHUB_RUN_ID}" --name "${ARTIFACT_NAME}" --dir dist
+      - name: 📦 Upload assets to recording pre-release
+        id: release
+        run: |
+          set -euo pipefail
+          tag="recording-pr-${PR_NUMBER}"
+          base_url="https://github.com/${GITHUB_REPOSITORY}/releases/download/${tag}"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release upload "$tag" \
+              dist/logixlysia-demo.gif dist/logixlysia-demo.mp4 dist/logixlysia-demo.png --clobber
+          else
+            gh release create "$tag" \
+              dist/logixlysia-demo.gif dist/logixlysia-demo.mp4 dist/logixlysia-demo.png \
+              --prerelease \
+              --title "🎬 Terminal recording — PR #${PR_NUMBER}" \
+              --notes "Recording assets for \`${HEAD_SHA:0:7}\`." \
+              || gh release upload "$tag" \
+                dist/logixlysia-demo.gif dist/logixlysia-demo.mp4 dist/logixlysia-demo.png --clobber
+          fi
+          {
+            echo "gif-url=${base_url}/logixlysia-demo.gif"
+            echo "mp4-url=${base_url}/logixlysia-demo.mp4"
+            echo "png-url=${base_url}/logixlysia-demo.png"
+          } >> "$GITHUB_OUTPUT"
+
   comment:
     name: 💬 Post recording to PR
-    needs: record
+    needs: [record, publish]
     if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -102,7 +149,9 @@ jobs:
       - name: 🗒️ Upsert recording comment
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         env:
-          ARTIFACT_URL: ${{ needs.record.outputs.artifact-url }}
+          RECORDING_URL: ${{ needs.publish.outputs.gif-url }}
+          MP4_URL: ${{ needs.publish.outputs.mp4-url }}
+          PNG_URL: ${{ needs.publish.outputs.png-url }}
           COMMIT_SHA: ${{ github.event.pull_request.head.sha }}
         with:
           script: |
@@ -111,6 +160,10 @@ jobs:
               marker,
               '## 🎬 Playground terminal recording',
               '',
+              `![terminal recording](${process.env.RECORDING_URL})`,
+              '',
+              `[MP4](${process.env.MP4_URL}) · [PNG](${process.env.PNG_URL})`,
+              '',
               `VHS drove \`apps/elysia\` at \`${process.env.COMMIT_SHA.slice(0, 7)}\` in a real PTY and asserted that logixlysia still prints:`,
               '',
               '- the start banner, then a plain `200` request line',
@@ -118,8 +171,6 @@ jobs:
               '- `[REDACTED]` for the card, e-mail, IP and JWT on `/auto-redact`',
               '- `WARNING` on `/status/404` and a red `ERROR` on `/boom`',
               '- AI token metrics on `POST /chat`',
-              '',
-              `[Download the GIF, MP4 and PNG](${process.env.ARTIFACT_URL})`,
             ].join('\n')
             const { owner, repo } = context.repo
             const issue_number = context.payload.pull_request.number
