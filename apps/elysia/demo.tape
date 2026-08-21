@@ -5,9 +5,9 @@
 # tests cannot assert on.
 #
 # Every `Wait` is an assertion — vhs exits non-zero if the pattern never
-# appears, so a green recording is also a passing smoke test. Only the boot
-# banner uses `Wait+Screen` (it must be visible); the rest use plain `Wait`
-# so a little scrollback never breaks the run.
+# appears, so a green recording is also a passing smoke test. They all use
+# `Wait+Screen`: bare `Wait` is `Wait+Line`, which only ever sees the last
+# line, and that line is the prompt by the time curl has returned.
 #
 # Pacing notes: typing speed varies per command (config commands are typed
 # slower than muscle-memory curls), there are pauses before Enter, one
@@ -26,6 +26,10 @@ Output artifacts/logixlysia-demo.mp4
 
 Set Shell bash
 Set Theme "Catppuccin Mocha"
+# Sized so the whole demo fits on one screen without scrolling: `Wait+Screen`
+# reads buffer rows 0..term.rows-1, so it goes stale as soon as the terminal
+# scrolls and every assertion below would time out. Adding output means adding
+# height.
 Set FontSize 15
 Set Width 1400
 Set Height 940
@@ -67,35 +71,35 @@ Backspace Backspace Backspace Backspace
 Type@10ms "ckout"
 Sleep 250ms
 Enter
-Wait /usr_demo/
+Wait+Screen /usr_demo/
 Sleep 1100ms
 
 # autoRedact scrubs the card, e-mail, IP and JWT before they reach stdout.
 Type@12ms "curl localhost:3001/auto-redact"
 Sleep 300ms
 Enter
-Wait /REDACTED/
+Wait+Screen /REDACTED/
 Sleep 1300ms
 
 # 4xx degrades the line to WARNING.
 Type@12ms "curl localhost:3001/status/404"
 Sleep 200ms
 Enter
-Wait /"status":404/
+Wait+Screen /"status":404/
 Sleep 900ms
 
 # A thrown handler error becomes a red ERROR line with the message attached.
 Type@12ms "curl localhost:3001/boom"
 Sleep 350ms
 Enter
-Wait /Boom!/
+Wait+Screen /Boom!/
 Sleep 1300ms
 
 # AI metrics ride along on the request line.
 Type@14ms "curl -X POST localhost:3001/chat"
 Sleep 300ms
 Enter
-Wait /inputTokens/
+Wait+Screen /inputTokens/
 Sleep 1600ms
 
 Screenshot artifacts/logixlysia-demo.png
