@@ -69,6 +69,11 @@
       "import": "./dist/better-stack.js",
       "default": "./dist/better-stack.js"
     },
+    "./loki": {
+      "types": "./dist/loki.d.ts",
+      "import": "./dist/loki.js",
+      "default": "./dist/loki.js"
+    },
     "./package.json": "./package.json"
   },
   "main": "dist/index.js",
