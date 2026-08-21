@@ -37,19 +37,22 @@ Set WindowBar Colorful
 Set TypingSpeed 25ms
 Set WaitTimeout 60s
 
-# Setup is hidden so the recording opens on an empty prompt. The prompt
-# mimics an oh-my-zsh style theme (cwd + git branch) instead of a bare `$`.
+# Setup is hidden so the recording opens on an empty prompt. The prompt shows
+# cwd + branch like an oh-my-zsh theme; kept ASCII-only because ANSI escapes
+# typed through the PTY proved fragile under ttyd.
 Hide
 Type "cd apps/elysia" Enter
-Type "export PS1='\n\[\033[01;34m\]apps/elysia\[\033[00m\] \[\033[01;33m\]git:(\[\033[00;31m\]main\[\033[01;33m\])\[\033[00m\] \$ '" Enter
+Type "export PS1='\napps/elysia git:(main) \$ '" Enter
 Type "clear" Enter
 Show
 
-# The playground boots and logixlysia prints the start banner. Running it
-# backgrounded returns the prompt immediately, like a real session.
-Type@40ms "bun run src/index.ts &" Enter
+# The playground boots and logixlysia prints the start banner. The trailing
+# `sleep` keeps the prompt from being drawn into the middle of the banner.
+Type@40ms "bun run src/index.ts & sleep 2" Enter
 Wait+Screen /localhost:3001/
-Sleep 800ms
+# Outlast the `sleep` above: typing while it still holds the foreground would
+# leave the keystrokes buffered and shift every command that follows.
+Sleep 3s
 
 # A plain 200: level, service tag, method, path, status, duration.
 Type@12ms "curl -s localhost:3001/"
