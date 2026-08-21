@@ -74,6 +74,11 @@
       "import": "./dist/loki.js",
       "default": "./dist/loki.js"
     },
+    "./clickhouse": {
+      "types": "./dist/clickhouse.d.ts",
+      "import": "./dist/clickhouse.js",
+      "default": "./dist/clickhouse.js"
+    },
     "./package.json": "./package.json"
   },
   "main": "dist/index.js",

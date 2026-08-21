@@ -13,7 +13,8 @@ const config = defineConfig({
     'src/otlp.ts',
     'src/datadog.ts',
     'src/better-stack.ts',
-    'src/loki.ts'
+    'src/loki.ts',
+    'src/clickhouse.ts'
   ],
   external: ['elysia', 'chalk', 'pino', 'pino-pretty'],
   format: ['esm'],
