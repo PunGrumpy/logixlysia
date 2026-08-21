@@ -10,7 +10,8 @@ const config = defineConfig({
     'src/hyperdx.ts',
     'src/sentry.ts',
     'src/posthog.ts',
-    'src/otlp.ts'
+    'src/otlp.ts',
+    'src/datadog.ts'
   ],
   external: ['elysia', 'chalk', 'pino', 'pino-pretty'],
   format: ['esm'],

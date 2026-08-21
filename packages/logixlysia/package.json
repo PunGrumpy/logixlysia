@@ -59,6 +59,11 @@
       "import": "./dist/otlp.js",
       "default": "./dist/otlp.js"
     },
+    "./datadog": {
+      "types": "./dist/datadog.d.ts",
+      "import": "./dist/datadog.js",
+      "default": "./dist/datadog.js"
+    },
     "./package.json": "./package.json"
   },
   "main": "dist/index.js",
