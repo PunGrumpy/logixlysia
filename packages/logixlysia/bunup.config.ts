@@ -9,6 +9,7 @@ const config = defineConfig({
     'src/axiom.ts',
     'src/hyperdx.ts',
     'src/sentry.ts',
+    'src/posthog.ts',
     'src/otlp.ts'
   ],
   external: ['elysia', 'chalk', 'pino', 'pino-pretty'],

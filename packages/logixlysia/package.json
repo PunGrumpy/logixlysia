@@ -49,6 +49,11 @@
       "import": "./dist/sentry.js",
       "default": "./dist/sentry.js"
     },
+    "./posthog": {
+      "types": "./dist/posthog.d.ts",
+      "import": "./dist/posthog.js",
+      "default": "./dist/posthog.js"
+    },
     "./otlp": {
       "types": "./dist/otlp.d.ts",
       "import": "./dist/otlp.js",
