@@ -55,15 +55,13 @@ Wait+Screen /localhost:3001/
 Sleep 3s
 
 # A plain 200: level, service tag, method, path, status, duration.
-Type@12ms "curl -s localhost:3001/"
-Sleep 250ms
-Enter
-Wait /GET/
+Type "curl localhost:3001/" Enter
+Wait+Screen /GET/
 Sleep 900ms
 
 # Per-request context rendered as a tree under the request line. A typo gets
 # caught and fixed before Enter, the way a real keyboard slips sometimes.
-Type@12ms "curl -s localhost:3001/chekout"
+Type@12ms "curl localhost:3001/chekout"
 Sleep 450ms
 Backspace Backspace Backspace Backspace
 Type@10ms "ckout"
@@ -73,28 +71,28 @@ Wait /usr_demo/
 Sleep 1100ms
 
 # autoRedact scrubs the card, e-mail, IP and JWT before they reach stdout.
-Type@12ms "curl -s localhost:3001/auto-redact"
+Type@12ms "curl localhost:3001/auto-redact"
 Sleep 300ms
 Enter
 Wait /REDACTED/
 Sleep 1300ms
 
 # 4xx degrades the line to WARNING.
-Type@12ms "curl -s localhost:3001/status/404"
+Type@12ms "curl localhost:3001/status/404"
 Sleep 200ms
 Enter
 Wait /"status":404/
 Sleep 900ms
 
 # A thrown handler error becomes a red ERROR line with the message attached.
-Type@12ms "curl -s localhost:3001/boom"
+Type@12ms "curl localhost:3001/boom"
 Sleep 350ms
 Enter
 Wait /Boom!/
 Sleep 1300ms
 
 # AI metrics ride along on the request line.
-Type@14ms "curl -s -X POST localhost:3001/chat"
+Type@14ms "curl -X POST localhost:3001/chat"
 Sleep 300ms
 Enter
 Wait /inputTokens/
