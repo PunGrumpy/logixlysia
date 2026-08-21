@@ -34,6 +34,11 @@
       "import": "./dist/ai.js",
       "default": "./dist/ai.js"
     },
+    "./axiom": {
+      "types": "./dist/axiom.d.ts",
+      "import": "./dist/axiom.js",
+      "default": "./dist/axiom.js"
+    },
     "./package.json": "./package.json"
   },
   "main": "dist/index.js",
