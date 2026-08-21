@@ -42,7 +42,7 @@ Set WaitTimeout 60s
 # typed through the PTY proved fragile under ttyd.
 Hide
 Type "cd apps/elysia" Enter
-Type "export PS1='\napps/elysia git:(main) \$ '" Enter
+Type "export PS1='\napps/elysia git:(main) \$ ' PORT=3001" Enter
 Type "clear" Enter
 Show
 
