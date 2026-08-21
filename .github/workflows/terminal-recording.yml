@@ -102,6 +102,9 @@ jobs:
       contents: write
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # No checkout in this job: point gh at the repo explicitly so it does
+      # not fall back to reading a git remote.
+      GH_REPO: ${{ github.repository }}
       ARTIFACT_NAME: logixlysia-demo-${{ github.event.pull_request.number }}
       PR_NUMBER: ${{ github.event.pull_request.number }}
       HEAD_SHA: ${{ github.event.pull_request.head.sha }}
