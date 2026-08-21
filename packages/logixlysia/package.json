@@ -39,6 +39,11 @@
       "import": "./dist/axiom.js",
       "default": "./dist/axiom.js"
     },
+    "./otlp": {
+      "types": "./dist/otlp.d.ts",
+      "import": "./dist/otlp.js",
+      "default": "./dist/otlp.js"
+    },
     "./package.json": "./package.json"
   },
   "main": "dist/index.js",

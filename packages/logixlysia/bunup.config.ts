@@ -2,7 +2,13 @@ import { defineConfig } from 'bunup'
 
 const config = defineConfig({
   dts: true,
-  entry: ['src/index.ts', 'src/otel.ts', 'src/ai.ts', 'src/axiom.ts'],
+  entry: [
+    'src/index.ts',
+    'src/otel.ts',
+    'src/ai.ts',
+    'src/axiom.ts',
+    'src/otlp.ts'
+  ],
   external: ['elysia', 'chalk', 'pino', 'pino-pretty'],
   format: ['esm'],
   minify: true,
