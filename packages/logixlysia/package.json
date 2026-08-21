@@ -44,6 +44,11 @@
       "import": "./dist/hyperdx.js",
       "default": "./dist/hyperdx.js"
     },
+    "./sentry": {
+      "types": "./dist/sentry.d.ts",
+      "import": "./dist/sentry.js",
+      "default": "./dist/sentry.js"
+    },
     "./otlp": {
       "types": "./dist/otlp.d.ts",
       "import": "./dist/otlp.js",

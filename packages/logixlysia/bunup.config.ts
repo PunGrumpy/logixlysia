@@ -8,6 +8,7 @@ const config = defineConfig({
     'src/ai.ts',
     'src/axiom.ts',
     'src/hyperdx.ts',
+    'src/sentry.ts',
     'src/otlp.ts'
   ],
   external: ['elysia', 'chalk', 'pino', 'pino-pretty'],
