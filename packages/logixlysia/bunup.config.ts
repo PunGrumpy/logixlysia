@@ -7,6 +7,7 @@ const config = defineConfig({
     'src/otel.ts',
     'src/ai.ts',
     'src/axiom.ts',
+    'src/hyperdx.ts',
     'src/otlp.ts'
   ],
   external: ['elysia', 'chalk', 'pino', 'pino-pretty'],

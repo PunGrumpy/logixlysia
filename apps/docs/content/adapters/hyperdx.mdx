@@ -1,0 +1,93 @@
+---
+title: HyperDX
+description: Ship logs to HyperDX as OTLP over HTTP
+---
+
+Send logs to [HyperDX](https://hyperdx.io) as standard OTLP JSON (`ExportLogsServiceRequest`). Works with HyperDX cloud and self-hosted collectors alike, and meta fields arrive as searchable log attributes.
+
+## Setup
+
+1. Copy the ingestion API key from your HyperDX team settings.
+2. Set the environment variable:
+
+```bash
+HYPERDX_API_KEY=your-ingestion-key
+```
+
+3. Wire the transport:
+
+```ts
+import { Elysia } from 'elysia'
+import logixlysia from 'logixlysia'
+import { createHyperDXTransport } from 'logixlysia/hyperdx'
+
+const app = new Elysia()
+  .use(
+    logixlysia({
+      config: {
+        transports: [createHyperDXTransport({ serviceName: 'my-api' })]
+      }
+    })
+  )
+  .get('/', () => 'ok')
+  .listen(3000)
+```
+
+4. Trigger a request and search the logs in the HyperDX UI.
+
+## Environment Variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `HYPERDX_API_KEY` | Yes | Ingestion key, sent as the `authorization` header |
+| `HYPERDX_OTLP_ENDPOINT` | No | OTLP HTTP base URL (default `https://in-otel.hyperdx.io`) |
+| `HYPERDX_SERVICE_NAME` | No | Value of the `service.name` resource attribute |
+| `OTEL_SERVICE_NAME` | No | Fallback for the service name |
+
+## Options
+
+```ts
+const hyperdx = createHyperDXTransport({
+  resourceAttributes: { 'deployment.environment': 'production' },
+  serviceName: 'my-api'
+})
+```
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `apiKey` | `string` | `HYPERDX_API_KEY` | Ingestion API key |
+| `endpoint` | `string` | `https://in-otel.hyperdx.io` | OTLP HTTP base URL — `/v1/logs` is appended |
+| `serviceName` | `string` | `logixlysia` | `service.name` resource attribute |
+| `resourceAttributes` | `Record<string, string>` | — | Extra OTLP resource attributes |
+
+Plus the shared batching options: `maxBatchSize`, `flushIntervalMs`, `timeout`, `retries` — see the [overview](/docs/adapters/overview#shared-behavior).
+
+## Payload
+
+Logs post to `{endpoint}/v1/logs` as OTLP JSON. Levels map to OpenTelemetry severity numbers (`DEBUG` → 5, `INFO` → 9, `WARNING` → 13, `ERROR` → 17), and meta fields flatten into dot-notation attributes:
+
+| Attribute | Example |
+|-----------|---------|
+| `request.method` | `GET` |
+| `request.url` | `http://localhost:3000/users` |
+| `status` | `200` |
+| `durationMs` | `12.4` |
+| `context.requestId` | `0d5e…` |
+
+Pair this with [`logixlysia/otel`](/docs/integrations/otel) to include `context.trace_id` / `context.span_id` and correlate logs with traces.
+
+## Self-Hosted Collectors
+
+Pass the OTLP HTTP **base URL only** (port 4318 by default) — the adapter appends `/v1/logs`:
+
+```ts
+createHyperDXTransport({
+  apiKey: 'local',
+  endpoint: 'http://otel-collector:4318'
+})
+```
+
+## Troubleshooting
+
+- **`401`** — the API key is wrong; use the *ingestion* key, not a personal API key.
+- **Nothing arrives** — logs flush in batches (2 s by default); call `flush()` before short-lived processes exit.

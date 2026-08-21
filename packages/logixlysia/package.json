@@ -39,6 +39,11 @@
       "import": "./dist/axiom.js",
       "default": "./dist/axiom.js"
     },
+    "./hyperdx": {
+      "types": "./dist/hyperdx.d.ts",
+      "import": "./dist/hyperdx.js",
+      "default": "./dist/hyperdx.js"
+    },
     "./otlp": {
       "types": "./dist/otlp.d.ts",
       "import": "./dist/otlp.js",
