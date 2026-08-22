@@ -3,9 +3,15 @@
 // extensions/banner.ts and the default log format from logger/create-logger.ts
 // ({now} {service}{icon} {method} {pathname} {status} {duration} {message}{speed}),
 // including chalk colors, method padding, duration rounding, and the ⚡ slow badge.
+//
+// The terminal is interactive, à la vercel.com/home: the route chips below it
+// append a freshly timestamped log line. The first click stops the scripted
+// replay and the terminal becomes an append-only session.
+import RouteButton from './route-button.astro'
+import RouteTemplate from './route-template.astro'
 import TermLine from './term-line.astro'
 
-type TermPart = [cls: string, text: string]
+type TermPart = [cls: string, text: string, hook?: string]
 
 interface TermLineData {
   cls?: string
@@ -161,6 +167,110 @@ const termLines: TermLineData[] = [
     parts: [[c.muted, '▌']]
   }
 ]
+
+// Routes the visitor can fire into the terminal. `min`/`max` bound the
+// randomized duration; the ts/dur hooks are filled by the script on click.
+const interactiveRoutes = [
+  {
+    id: 'home',
+    lines: [
+      [
+        [c.muted, '', 'ts'],
+        [c.foxInfo, ' 🦊 '],
+        ['', ' '],
+        [`${c.mint} ${c.bold}`, 'GET    '],
+        ['', ' '],
+        [c.fg, '/'],
+        ['', ' '],
+        [c.mint, '200'],
+        ['', ' '],
+        [c.mint, '', 'dur']
+      ]
+    ] as TermPart[][],
+    max: 6,
+    method: 'GET',
+    methodColor: c.mint,
+    min: 1,
+    path: '/',
+    status: '200'
+  },
+  {
+    id: 'login',
+    lines: [
+      [
+        [c.muted, '', 'ts'],
+        [c.foxInfo, ' 🦊 '],
+        ['', ' '],
+        [`${c.blue} ${c.bold}`, 'POST   '],
+        ['', ' '],
+        [c.fg, '/auth/login'],
+        ['', ' '],
+        [c.mint, '201'],
+        ['', ' '],
+        [c.mint, '', 'dur']
+      ]
+    ] as TermPart[][],
+    max: 60,
+    method: 'POST',
+    methodColor: c.blue,
+    min: 24,
+    path: '/auth/login',
+    status: '201'
+  },
+  {
+    id: 'export',
+    lines: [
+      [
+        [c.muted, '', 'ts'],
+        [c.foxInfo, ' 🦊 '],
+        ['', ' '],
+        [`${c.mint} ${c.bold}`, 'GET    '],
+        ['', ' '],
+        [c.fg, '/export'],
+        ['', ' '],
+        [c.mint, '200'],
+        ['', ' '],
+        [`${c.red} ${c.bold}`, '', 'dur'],
+        [c.orange, ' ⚡ slow']
+      ]
+    ] as TermPart[][],
+    max: 1600,
+    method: 'GET',
+    methodColor: c.mint,
+    min: 1100,
+    path: '/export',
+    status: '200'
+  },
+  {
+    id: 'crash',
+    lines: [
+      [
+        [c.muted, '', 'ts'],
+        [c.foxError, ' 🦊 '],
+        ['', ' '],
+        [`${c.mint} ${c.bold}`, 'GET    '],
+        ['', ' '],
+        [c.fg, '/crash'],
+        ['', ' '],
+        [c.red, '500'],
+        ['', ' '],
+        [c.mint, '', 'dur']
+      ],
+      [
+        ['', '  └─ '],
+        [c.mint, 'error'],
+        ['', '  '],
+        [c.fg, 'Route crashed']
+      ]
+    ] as TermPart[][],
+    max: 4,
+    method: 'GET',
+    methodColor: c.mint,
+    min: 1,
+    path: '/crash',
+    status: '500'
+  }
+]
 ---
 
 <section class="mx-auto w-full max-w-3xl">
@@ -219,7 +329,7 @@ const termLines: TermLineData[] = [
       </button>
     </div>
     <div
-      aria-label="Example Logixlysia log output"
+      aria-label="Example Logixlysia log output; requests sent with the buttons below append here"
       class="overflow-x-auto p-4 font-mono text-[#2D2D2D] text-[0.8rem] leading-relaxed dark:text-[#DADADA]"
       data-term-body
       role="img"
@@ -234,6 +344,30 @@ const termLines: TermLineData[] = [
       ))}
     </div>
   </div>
+
+  <div class="mt-4 flex flex-wrap items-center justify-center gap-2">
+    <span class="text-muted-foreground text-sm">Send a request</span>
+    {interactiveRoutes.map(route => (
+      <RouteButton
+        method={route.method}
+        methodCls={route.methodColor}
+        path={route.path}
+        route={route.id}
+      />
+    ))}
+  </div>
+  <span class="sr-only" data-demo-status role="status"></span>
+  {interactiveRoutes.map(route => (
+    <RouteTemplate
+      id={route.id}
+      lines={route.lines}
+      max={route.max}
+      method={route.method}
+      min={route.min}
+      path={route.path}
+      status={route.status}
+    />
+  ))}
 </section>
 
 <script>
@@ -243,14 +377,21 @@ const termLines: TermLineData[] = [
   const body = terminal?.querySelector<HTMLElement>('[data-term-body]')
   const cmd = terminal?.querySelector<HTMLElement>('[data-term-cmd]')
   const caret = terminal?.querySelector<HTMLElement>('[data-term-caret]')
+  const pauseButton =
+    terminal?.querySelector<HTMLElement>('[data-term-pause]') ?? null
+  const lines = body
+    ? [...body.querySelectorAll<HTMLElement>('[data-delay]')]
+    : []
+  const command = cmd?.textContent ?? ''
   const reduceMotion = window.matchMedia(
     '(prefers-reduced-motion: reduce)'
   ).matches
 
-  if (terminal && body && cmd && caret && !reduceMotion) {
-    const lines = [...body.querySelectorAll<HTMLElement>('[data-delay]')]
-    const command = cmd.textContent ?? ''
+  // Flips on the first user-sent request: the scripted replay parks itself
+  // and the terminal becomes an append-only session.
+  let interactive = false
 
+  if (terminal && body && cmd && caret && !reduceMotion) {
     // Reserve the final height up front so the replay never shifts layout.
     body.style.minHeight = `${body.offsetHeight}px`
     cmd.textContent = ''
@@ -258,15 +399,15 @@ const termLines: TermLineData[] = [
       line.style.display = 'none'
     }
 
-    // Replay only while the terminal is on screen and not paused by the user
-    // (the visible pause control keeps this indefinite replay WCAG 2.2.2
-    // compliant). One consumer awaits the gate at a time, so a single
-    // `onReady` slot is enough.
-    const pauseButton = terminal.querySelector<HTMLElement>('[data-term-pause]')
+    // Replay only while the terminal is on screen, not paused by the user,
+    // and not taken over by the interactive buttons (the visible pause
+    // control keeps this indefinite replay WCAG 2.2.2 compliant). One
+    // consumer awaits the gate at a time, so a single `onReady` slot is
+    // enough.
     let visible = false
     let paused = false
     let onReady: (() => void) | undefined
-    const ready = () => visible && !paused
+    const ready = () => visible && !paused && !interactive
     const notifyReady = () => {
       if (ready() && onReady) {
         const resume = onReady
@@ -365,8 +506,91 @@ const termLines: TermLineData[] = [
     }
 
     const play = () => {
-      playRound().then(play)
+      playRound().then(() => {
+        if (!interactive) {
+          play()
+        }
+      })
     }
     play()
+  }
+
+  // — Interactive demo: the route chips append real log lines. —
+  const statusRegion = document.querySelector<HTMLElement>('[data-demo-status]')
+
+  const pad = (value: number, length = 2) => String(value).padStart(length, '0')
+  const timestamp = () => {
+    const now = new Date()
+    return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}.${pad(now.getMilliseconds(), 3)} [api-server] `
+  }
+
+  const enterInteractive = () => {
+    if (interactive || !body) {
+      return
+    }
+    interactive = true
+    // Land the terminal in its finished state: full command, every line shown.
+    if (cmd) {
+      cmd.textContent = command
+    }
+    if (caret) {
+      caret.style.display = 'none'
+    }
+    for (const line of lines) {
+      line.style.display = ''
+    }
+    if (pauseButton) {
+      pauseButton.hidden = true
+    }
+    // Freeze the height: from here new lines scroll inside the terminal
+    // instead of growing the page on every click.
+    const height = body.style.minHeight || `${body.offsetHeight}px`
+    body.style.minHeight = height
+    body.style.maxHeight = height
+    body.style.overflowY = 'auto'
+  }
+
+  const appendLog = (id: string | undefined) => {
+    const template = id
+      ? document.querySelector<HTMLTemplateElement>(
+          `[data-route-template="${id}"]`
+        )
+      : null
+    if (!(template && body)) {
+      return
+    }
+    enterInteractive()
+    const min = Number(template.dataset.min) || 0
+    const max = Number(template.dataset.max) || min
+    const ms = Math.round(min + Math.random() * (max - min))
+    const durationText = ms >= 1000 ? `${(ms / 1000).toFixed(1)}s` : `${ms}ms`
+    const fragment = template.content.cloneNode(true) as DocumentFragment
+    const ts = fragment.querySelector<HTMLElement>('[data-hook="ts"]')
+    if (ts) {
+      ts.textContent = timestamp()
+    }
+    const duration = fragment.querySelector<HTMLElement>('[data-hook="dur"]')
+    if (duration) {
+      duration.textContent = durationText
+    }
+    // Keep the blinking block cursor as the last line.
+    const cursor = lines.at(-1)
+    if (cursor && cursor.parentElement === body) {
+      cursor.before(fragment)
+    } else {
+      body.append(fragment)
+    }
+    // Bounded backlog: the oldest lines scroll away like a real terminal.
+    while (body.childElementCount > 28) {
+      body.firstElementChild?.remove()
+    }
+    body.scrollTop = body.scrollHeight
+    if (statusRegion) {
+      statusRegion.textContent = `${template.dataset.method} ${template.dataset.path} responded ${template.dataset.status} in ${durationText}`
+    }
+  }
+
+  for (const button of document.querySelectorAll<HTMLElement>('[data-route]')) {
+    button.addEventListener('click', () => appendLog(button.dataset.route))
   }
 </script>
