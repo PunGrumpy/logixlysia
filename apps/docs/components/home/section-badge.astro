@@ -1,0 +1,14 @@
+---
+// The small rounded chip beside a section label, à la Vercel's plan badges.
+interface Props {
+  label: string
+}
+
+const { label } = Astro.props
+---
+
+<span
+  class="whitespace-nowrap rounded-full bg-black/4 px-2 py-0.5 text-[11px] text-muted-foreground dark:bg-white/8"
+>
+  {label}
+</span>

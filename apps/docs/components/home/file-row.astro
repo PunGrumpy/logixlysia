@@ -4,19 +4,21 @@ import LiveBadge from './live-badge.astro'
 interface Props {
   live: boolean
   name: string
+  /** Fill of the size meter, as a percentage of the 10 MB rotation cap. */
+  pct: number
   size: string
 }
 
-const { live, name, size } = Astro.props
+const { live, name, pct, size } = Astro.props
 ---
 
 <div
   data-live-row={live ? '' : undefined}
   class:list={[
-    'flex w-max min-w-full items-center justify-between gap-4',
+    'flex w-max items-center justify-between gap-4',
     live &&
-      '-mx-1.5 rounded-md px-1.5 transition-[background-color] duration-500',
-    !live && 'opacity-45'
+      '-mx-1.5 min-w-[calc(100%+0.75rem)] rounded-md px-1.5 transition-[background-color] duration-500',
+    !live && 'min-w-full opacity-45'
   ]}
 >
   <span class="flex items-center gap-2">
@@ -25,10 +27,22 @@ const { live, name, size } = Astro.props
     </span>
     {live ? <LiveBadge /> : null}
   </span>
-  <span
-    class="whitespace-nowrap text-black/45 tabular-nums dark:text-white/40"
-    data-live-size={live ? '' : undefined}
-  >
-    {size}
+  <span class="flex items-center gap-3">
+    <span
+      aria-hidden="true"
+      class="inline-block h-1 w-24 overflow-hidden rounded-full bg-black/6 dark:bg-white/10"
+    >
+      <span
+        class="block h-full rounded-full bg-[#067647] transition-[width] duration-150 ease-out dark:bg-[#99ffe4]"
+        data-live-bar={live ? '' : undefined}
+        style={`width: ${pct}%`}
+      ></span>
+    </span>
+    <span
+      class="w-[7ch] whitespace-nowrap text-right text-black/45 tabular-nums dark:text-white/40"
+      data-live-size={live ? '' : undefined}
+    >
+      {size}
+    </span>
   </span>
 </div>
