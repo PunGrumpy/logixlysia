@@ -1,0 +1,22 @@
+---
+// Monochrome brand mark rendered in currentColor so it follows the card's
+// text color in both themes. Paths come from simple-icons (CC0) unless a
+// brand ships its own (then viewBox matches that asset).
+interface Props {
+  /** 'evenodd' lets a mark punch holes through overlapping subpaths. */
+  fillRule?: 'evenodd'
+  path: string
+  viewBox?: string
+}
+
+const { fillRule, path, viewBox = '0 0 24 24' } = Astro.props
+---
+
+<svg
+  aria-hidden="true"
+  class="size-4 shrink-0"
+  fill="currentColor"
+  viewBox={viewBox}
+>
+  <path d={path} fill-rule={fillRule}></path>
+</svg>
