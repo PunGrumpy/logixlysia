@@ -119,6 +119,11 @@ export default defineConfig({
   description:
     'The logger for Elysia.js — simple and easy to use, beautiful and powerful',
   github: {
+    // `dir` is the path from the repo root to this project, which the "Edit
+    // this page" links prepend to each page's project-relative source path.
+    // Without it every link 404s, since the content lives in the monorepo at
+    // apps/docs/content, not at the repo root.
+    dir: 'apps/docs',
     owner: 'PunGrumpy',
     repo: 'logixlysia'
   },
