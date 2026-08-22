@@ -1,33 +1,11 @@
-import type {
-  LogLevel,
-  Options,
-  RequestInfo,
-  SinkErrorContext,
-  StoreData
-} from '../interfaces'
+import type { LogLevel, Options, RequestInfo, StoreData } from '../interfaces'
+import { elapsedMs } from '../utils/duration'
+import { createErrorReporter } from '../utils/report'
 
-let lastTransportErrorAt = 0
-const TRANSPORT_ERROR_INTERVAL_MS = 5000
-
-const reportTransportError = (
-  error: unknown,
-  onError?: (context: SinkErrorContext) => void
-): void => {
-  if (onError) {
-    try {
-      onError({ error, sink: 'transport' })
-    } catch {
-      // Swallow errors thrown by the hook itself.
-    }
-    return
-  }
-  const now = Date.now()
-  if (now - lastTransportErrorAt < TRANSPORT_ERROR_INTERVAL_MS) {
-    return
-  }
-  lastTransportErrorAt = now
-  console.error('[logixlysia] transport failed:', error)
-}
+const reportTransportError = createErrorReporter(
+  'transport',
+  'transport failed'
+)
 
 interface LogToTransportsInput {
   data: Record<string, unknown>
@@ -54,11 +32,7 @@ export const logToTransports = (input: LogToTransportsInput): void => {
       url: request.url
     },
     ...data,
-    durationMs:
-      precomputed?.durationMs ??
-      (store.beforeTime === BigInt(0)
-        ? 0
-        : Number(process.hrtime.bigint() - store.beforeTime) / 1_000_000)
+    durationMs: precomputed?.durationMs ?? elapsedMs(store.beforeTime)
   }
 
   for (const transport of transports) {

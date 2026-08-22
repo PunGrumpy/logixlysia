@@ -1,5 +1,6 @@
 import type { RequestContextStore } from '../context/request-context'
 import type { LogLevel, Options, RequestInfo, StoreData } from '../interfaces'
+import type { SamplingRuntime } from '../sampling'
 import { normalizeLoggedError } from '../utils/error'
 import type { FormatContext } from './create-logger'
 import { emit, type Sinks, shouldLog } from './emit'
@@ -12,6 +13,10 @@ const isErrorWithStatus = (
   'status' in value &&
   typeof (value as { status?: unknown }).status === 'number'
 
+/** The status a thrown value maps to; anything without one is a 500. */
+export const errorStatus = (error: unknown): number =>
+  isErrorWithStatus(error) ? error.status : 500
+
 export const handleHttpError = (
   request: RequestInfo,
   error: unknown,
@@ -19,11 +24,12 @@ export const handleHttpError = (
   options: Options,
   contextStore: RequestContextStore,
   sinks: Sinks,
-  formatContext: FormatContext
+  formatContext: FormatContext,
+  sampling?: SamplingRuntime
 ): void => {
   const { config } = options
 
-  const status = isErrorWithStatus(error) ? error.status : 500
+  const status = errorStatus(error)
   const level: LogLevel = status >= 400 && status < 500 ? 'WARNING' : 'ERROR'
 
   // Mirrors emit()'s own gate check, but performed *before* normalizing the
@@ -48,6 +54,7 @@ export const handleHttpError = (
     level,
     options,
     request,
+    sampling,
     sinks,
     store
   })

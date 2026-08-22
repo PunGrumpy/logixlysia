@@ -280,9 +280,9 @@ disableFileLogging: true
 
 ### `onError`
 
-Called when a sink (transport, file, or rotation) fails. Errors thrown by the hook itself are swallowed. When absent, failures go to stderr (rate-limited for transports).
+Called when a sink (transport, file, or rotation) or an [enricher](/docs/features/enrichers) fails. Errors thrown by the hook itself are swallowed. When absent, failures go to stderr (rate-limited for transports and enrichers).
 
-- **Type:** `(context: { sink: 'transport' | 'file' | 'rotation'; error: unknown }) => void`
+- **Type:** `(context: { sink: 'transport' | 'file' | 'rotation' | 'enricher'; error: unknown }) => void`
 - **Default:** `undefined`
 
 ```ts
@@ -290,6 +290,46 @@ onError: ({ sink, error }) => {
   metrics.increment(`logixlysia.sink_error.${sink}`)
 }
 ```
+
+### `enrichers`
+
+Context contributors run on every request. Whatever they return is merged into the request context, so the fields reach the console tree, file logs, and every transport at once. See [Enrichers](/docs/features/enrichers).
+
+- **Type:** `EnricherLike[]`
+- **Default:** `undefined`
+
+```ts
+import { geoEnricher, traceparentEnricher } from 'logixlysia/enrichers'
+
+enrichers: [
+  traceparentEnricher(),
+  geoEnricher(),
+  request => ({ tenant: request.headers.get('x-tenant') })
+]
+```
+
+## Sampling Options
+
+### `sampling`
+
+Head + tail sampling. Head sampling keeps a percentage of records per level; tail sampling replays what head dropped once the finished request matches a rule. See [Sampling](/docs/features/sampling) for the full guide.
+
+- **Type:** `{ head?: Partial<Record<LogLevel, number>>; tail?: { status?: number; durationMs?: number; paths?: string[] }; maxBufferedPerRequest?: number }`
+- **Default:** `undefined` (no sampling)
+
+```ts
+sampling: {
+  head: { DEBUG: 1, INFO: 10 }, // levels left out keep 100%
+  tail: {
+    status: 400, // rescue any response at or above 400
+    durationMs: 1000, // rescue anything that took a second or longer
+    paths: ['/checkout/**'] // rescue these routes whatever happened
+  },
+  maxBufferedPerRequest: 100
+}
+```
+
+Sampling is off unless at least one head rate is below `100` — `tail` alone rescues nothing, because only head-dropped records are buffered. Invalid values throw at plugin construction.
 
 ## File Logging Options
 

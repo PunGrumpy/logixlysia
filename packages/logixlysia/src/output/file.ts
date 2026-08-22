@@ -5,6 +5,7 @@ import type {
   SinkErrorContext,
   StoreData
 } from '../interfaces'
+import { elapsedMs } from '../utils/duration'
 import { sanitizeLogText } from '../utils/sanitize'
 import { getFileSink } from './file-sink'
 
@@ -68,11 +69,7 @@ export const logToFile = async (input: LogToFileInput): Promise<void> => {
   }
 
   const message = typeof data.message === 'string' ? data.message : ''
-  const durationMs =
-    precomputed?.durationMs ??
-    (store.beforeTime === BigInt(0)
-      ? 0
-      : Number(process.hrtime.bigint() - store.beforeTime) / 1_000_000)
+  const durationMs = precomputed?.durationMs ?? elapsedMs(store.beforeTime)
 
   const pathname = resolvePathname(request, config?.logQueryParams, precomputed)
   const line = `${level} ${durationMs.toFixed(2)}ms ${request.method} ${sanitizeLogText(pathname, 1024)} ${sanitizeLogText(message)}\n`

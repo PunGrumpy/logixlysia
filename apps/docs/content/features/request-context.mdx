@@ -74,3 +74,44 @@ async function findUser(id: string) {
   return { id, name: 'John Doe' }
 }
 ```
+
+## Typed Fields
+
+`userId` on one route and `user_id` on the next is the kind of drift that makes a dashboard query quietly incomplete. Pass a field type to the plugin and TypeScript catches it at compile time:
+
+```ts
+import { Elysia } from 'elysia'
+import logixlysia from 'logixlysia'
+
+interface CheckoutFields {
+  cartId: string
+  itemCount: number
+  userId: string
+}
+
+const app = new Elysia()
+  .use(logixlysia<CheckoutFields>())
+  .post('/pay', ({ log }) => {
+    log.mergeContext({ userId: 'usr_123' }) // ✓
+    log.info('charged', { itemCount: 3 }) // ✓
+
+    log.mergeContext({ user_id: 'usr_123' }) // ✗ not in CheckoutFields
+    log.mergeContext({ itemCount: 'three' }) // ✗ wrong type
+    return { ok: true }
+  })
+```
+
+Every field stays optional — you declare the vocabulary, not a requirement to fill it in on every route.
+
+`useLogger()` takes the same parameter, so context stays typed outside the handler too:
+
+```ts
+import { useLogger } from 'logixlysia'
+
+const chargeCard = async (amount: number) => {
+  const log = useLogger<CheckoutFields>()
+  log.mergeContext({ cartId: 'cart_9' })
+}
+```
+
+This is type-only: there is no runtime cost, and leaving the parameter off keeps every key allowed, exactly as before.

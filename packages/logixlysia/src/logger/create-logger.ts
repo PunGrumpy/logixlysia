@@ -2,6 +2,7 @@ import { STATUS_CODES } from 'node:http'
 import chalk from 'chalk'
 import { getStatusCode } from '../helpers/status'
 import type { LogLevel, Options, RequestInfo, StoreData } from '../interfaces'
+import { elapsedMs } from '../utils/duration'
 import { isStructuredError, parseError } from '../utils/error'
 import { sanitizeLogText } from '../utils/sanitize'
 
@@ -373,6 +374,9 @@ const collectStructuredErrorEntries = (error: unknown): [string, string][] => {
     entries.push(['error', msg])
   }
   if (isStructuredError(error)) {
+    if (error.code !== undefined) {
+      entries.push(['error.code', String(error.code)])
+    }
     if (error.why !== undefined) {
       entries.push(['error.why', String(error.why)])
     }
@@ -416,7 +420,9 @@ export const buildContextTreeLines = (
     )
   }
 
-  if (level === 'ERROR' && 'error' in data && data.error !== undefined) {
+  // WARNING as well as ERROR: a 4xx is logged at WARNING, and its
+  // `why`/`fix`/`link` are exactly as worth showing as a 5xx's.
+  if ((level === 'ERROR' || level === 'WARNING') && data.error !== undefined) {
     entries.push(...collectStructuredErrorEntries(data.error))
   }
 
@@ -571,11 +577,7 @@ const getDurationTokens = (
   if (!(needsDuration || needsSpeed)) {
     return { coloredDuration: '', speedToken: '' }
   }
-  const durationMs =
-    precomputed?.durationMs ??
-    (store.beforeTime === BigInt(0)
-      ? 0
-      : Number(process.hrtime.bigint() - store.beforeTime) / 1_000_000)
+  const durationMs = precomputed?.durationMs ?? elapsedMs(store.beforeTime)
   const { text, isVerySlow } = colorDurationText(
     durationMs,
     useColors,

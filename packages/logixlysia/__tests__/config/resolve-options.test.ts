@@ -93,4 +93,48 @@ describe('resolveOptions', () => {
       'logixlysia: invalid preset'
     )
   })
+
+  test('rejects unsupported head sampling levels', () => {
+    expect(() =>
+      resolveOptions({
+        config: { sampling: { head: { TRACE: 50 } as never } }
+      })
+    ).toThrow('head.TRACE is not a valid level')
+  })
+
+  test('accepts valid head sampling levels', () => {
+    const resolved = resolveOptions({
+      config: {
+        sampling: {
+          head: { DEBUG: 10, ERROR: 100, INFO: 50, WARNING: 75 }
+        }
+      }
+    })
+
+    expect(resolved.config?.sampling?.head).toEqual({
+      DEBUG: 10,
+      ERROR: 100,
+      INFO: 50,
+      WARNING: 75
+    })
+  })
+
+  test('validates tail.paths is an array', () => {
+    expect(() =>
+      resolveOptions({
+        config: { sampling: { tail: { paths: 'not-an-array' as never } } }
+      })
+    ).toThrow('tail.paths must be an array')
+  })
+
+  test('validates tail.paths array contains non-empty strings', () => {
+    const resolved = resolveOptions({
+      config: { sampling: { tail: { paths: ['/api/*', '/checkout/**'] } } }
+    })
+
+    expect(resolved.config?.sampling?.tail?.paths).toEqual([
+      '/api/*',
+      '/checkout/**'
+    ])
+  })
 })

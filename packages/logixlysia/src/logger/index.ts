@@ -12,10 +12,14 @@ import type {
   RequestInfo,
   StoreData
 } from '../interfaces'
+import { resolveSampling } from '../sampling'
+import { elapsedMs } from '../utils/duration'
 import { buildPinoRedactPaths } from '../utils/redact'
 import { createFormatContext } from './create-logger'
-import { emit, resolveSinks, shouldLog } from './emit'
+import { emit, parseRequestUrlOnce, resolveSinks, shouldLog } from './emit'
 import { handleHttpError } from './handle-http-error'
+
+const ZERO_STORE: StoreData = { beforeTime: BigInt(0) }
 
 export const createLogger = (
   options: Options = {},
@@ -112,6 +116,7 @@ export const createLogger = (
 
   // Resolved once per logger instance: none of these depend on per-request state.
   const sinks = resolveSinks(config)
+  const sampling = resolveSampling(config?.sampling)
 
   const log = (
     level: LogLevel,
@@ -126,9 +131,45 @@ export const createLogger = (
       level,
       options,
       request,
+      sampling,
       sinks,
       store
     })
+  }
+
+  /** Resolves the tail verdict and re-emits whatever it rescued. */
+  const finalizeRequest = (
+    request: RequestInfo,
+    store: StoreData,
+    status: number
+  ): void => {
+    if (!sampling) {
+      return
+    }
+
+    const outcome = {
+      durationMs: elapsedMs(store.beforeTime),
+      pathname: parseRequestUrlOnce(request).pathname,
+      status
+    }
+
+    for (const record of sampling.finalize(request, outcome)) {
+      emit({
+        bypassSampling: true,
+        contextStore,
+        data: record.data,
+        durationOverride: record.durationMs,
+        formatContext,
+        level: record.level,
+        options,
+        request,
+        sampling,
+        sinks,
+        // Unread on this path: `durationOverride` supplies the duration each
+        // record had when it was captured.
+        store: ZERO_STORE
+      })
+    }
   }
 
   const logWithContext = (
@@ -145,12 +186,16 @@ export const createLogger = (
   }
 
   return {
+    beginRequest: request => {
+      sampling?.begin(request)
+    },
     debug: (request, message, context) => {
       logWithContext('DEBUG', request, message, context)
     },
     error: (request, message, context) => {
       logWithContext('ERROR', request, message, context)
     },
+    finalizeRequest,
     getContext: request => contextStore.getContext(request),
     handleHttpError: (request, error, store) => {
       handleHttpError(
@@ -160,7 +205,8 @@ export const createLogger = (
         options,
         contextStore,
         sinks,
-        formatContext
+        formatContext,
+        sampling
       )
     },
     info: (request, message, context) => {

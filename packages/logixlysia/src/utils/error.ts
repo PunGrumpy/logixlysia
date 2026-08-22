@@ -9,6 +9,7 @@ export const parseError = (error: unknown): string => {
 }
 
 export interface StructuredError {
+  code?: string
   fix?: string
   internal?: unknown
   link?: string
@@ -20,7 +21,11 @@ export const isStructuredError = (
 ): value is StructuredError & Record<string, unknown> =>
   typeof value === 'object' &&
   value !== null &&
-  ('why' in value || 'fix' in value || 'link' in value || 'internal' in value)
+  ('why' in value ||
+    'fix' in value ||
+    'link' in value ||
+    'code' in value ||
+    'internal' in value)
 
 export interface NormalizedLoggedError {
   /** Safe structured representation for data/transport meta. */
@@ -42,6 +47,7 @@ const isValidationErrorLike = (
     value.constructor?.name === 'ValidationError')
 
 const STRUCTURED_ERROR_KEYS = [
+  'code',
   'fix',
   'internal',
   'link',
