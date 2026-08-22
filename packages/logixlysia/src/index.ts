@@ -1,5 +1,10 @@
 import { Elysia } from 'elysia'
 import { resolveOptions } from './config/resolve-options'
+import {
+  applyRequestEnrichers,
+  applyResponseEnrichers,
+  resolveEnrichers
+} from './context/enrich'
 import { createRequestContextStore } from './context/request-context'
 import { loggerStorage } from './context/storage'
 import { startServer } from './extensions'
@@ -54,6 +59,13 @@ const logixlysia = (rawOptions: Options = {}): LogixlysiaPlugin => {
   const baseLogger = createPluginLogger(options, contextStore)
   const wrapWs = createWsHandlerWrapper(options, baseLogger, contextStore)
   const requestIdConfig = resolveRequestIdConfig(options.config?.requestId)
+  const enrichers = resolveEnrichers(options.config?.enrichers)
+  const onSinkError = options.config?.onError
+
+  const elapsedMs = (beforeTime: bigint): number =>
+    beforeTime === BigInt(0)
+      ? 0
+      : Number(process.hrtime.bigint() - beforeTime) / 1_000_000
   const logger = {
     ...baseLogger,
     debug: (
@@ -132,6 +144,10 @@ const logixlysia = (rawOptions: Options = {}): LogixlysiaPlugin => {
         contextStore.mergeContext(request, { requestId })
       }
 
+      if (enrichers) {
+        applyRequestEnrichers(enrichers, contextStore, request, onSinkError)
+      }
+
       if (options.config?.useAsyncLocalStorage) {
         loggerStorage.enterWith(createRequestScopedLogger(request))
       }
@@ -151,11 +167,28 @@ const logixlysia = (rawOptions: Options = {}): LogixlysiaPlugin => {
             ? 200
             : getStatusCode(set.status)
 
-        // Resolve tail sampling before the early return: a request that only
-        // emitted custom logs still needs its buffered records replayed.
         const store = {
           beforeTime: requestStartTimes.get(request) ?? BigInt(0)
         }
+
+        // Enrich first so replayed records and the access log both see the
+        // response-phase fields.
+        if (enrichers) {
+          applyResponseEnrichers(
+            enrichers,
+            contextStore,
+            {
+              durationMs: elapsedMs(store.beforeTime),
+              headers: set.headers,
+              request,
+              status
+            },
+            onSinkError
+          )
+        }
+
+        // Resolve tail sampling before the early return: a request that only
+        // emitted custom logs still needs its buffered records replayed.
         logger.finalizeRequest(request, store, status)
 
         if (didCustomLog.has(request)) {
@@ -193,7 +226,23 @@ const logixlysia = (rawOptions: Options = {}): LogixlysiaPlugin => {
         const store = {
           beforeTime: requestStartTimes.get(request) ?? BigInt(0)
         }
-        logger.finalizeRequest(request, store, errorStatus(error))
+        const status = errorStatus(error)
+
+        if (enrichers) {
+          applyResponseEnrichers(
+            enrichers,
+            contextStore,
+            {
+              durationMs: elapsedMs(store.beforeTime),
+              headers: set.headers,
+              request,
+              status
+            },
+            onSinkError
+          )
+        }
+
+        logger.finalizeRequest(request, store, status)
         logger.handleHttpError(request, error, store)
       } finally {
         requestStartTimes.delete(request)
@@ -209,6 +258,10 @@ const logixlysia = (rawOptions: Options = {}): LogixlysiaPlugin => {
 export { resolveOptions } from './config/resolve-options'
 export { useLogger } from './context/storage'
 export type {
+  Enricher,
+  EnricherFields,
+  EnricherLike,
+  EnricherResponseInput,
   HeadSamplingConfig,
   Logger,
   LogixlysiaContext,

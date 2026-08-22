@@ -29,6 +29,11 @@
       "import": "./dist/otel.js",
       "default": "./dist/otel.js"
     },
+    "./enrichers": {
+      "types": "./dist/enrichers.d.ts",
+      "import": "./dist/enrichers.js",
+      "default": "./dist/enrichers.js"
+    },
     "./ai": {
       "types": "./dist/ai.d.ts",
       "import": "./dist/ai.js",

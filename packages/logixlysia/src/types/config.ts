@@ -1,5 +1,6 @@
 import type { LoggerOptions as PinoLoggerOptions } from 'pino'
 import type { LogLevel } from './core'
+import type { Enricher, EnricherLike } from './enricher'
 
 export interface Transport {
   log: (
@@ -95,7 +96,7 @@ export type LogPreset = 'dev' | 'prod' | 'json'
 /** Context passed to {@link Options.config.onError} when a sink fails. */
 export interface SinkErrorContext {
   error: unknown
-  sink: 'file' | 'rotation' | 'transport'
+  sink: 'enricher' | 'file' | 'rotation' | 'transport'
 }
 
 export interface RequestIdConfig {
@@ -149,9 +150,9 @@ export interface OutputConfig {
   logFilePath?: string
   logRotation?: LogRotationConfig
   /**
-   * Called when a sink (transport, file, rotation) fails. Errors thrown by
-   * the hook itself are swallowed. When absent, failures go to stderr
-   * (rate-limited for transports).
+   * Called when a sink (transport, file, rotation) or an enricher fails.
+   * Errors thrown by the hook itself are swallowed. When absent, failures go
+   * to stderr (rate-limited for transports and enrichers).
    */
   onError?: (context: SinkErrorContext) => void
   transports?: Transport[]
@@ -184,6 +185,18 @@ export interface RedactionConfig {
 export interface RequestTrackingConfig {
   /** Skip automatic WebSocket lifecycle logs from `wrapWs`; default false. */
   disableWebSocketLogging?: boolean
+
+  /**
+   * Context contributors run on every request. Whatever they return is merged
+   * into the request context, so the fields reach the console tree, file logs,
+   * and every transport at once.
+   *
+   * Each entry is either an {@link Enricher} (a `request` phase, a `response`
+   * phase, or both) or a bare function, which is treated as the request phase.
+   * Ready-made ones — traceparent, user agent, geo, sizes — live in
+   * `logixlysia/enrichers`.
+   */
+  enrichers?: EnricherLike[]
 
   /**
    * Enable automatic request ID generation and propagation.

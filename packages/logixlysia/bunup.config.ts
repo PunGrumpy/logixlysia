@@ -5,6 +5,7 @@ const config = defineConfig({
   entry: [
     'src/index.ts',
     'src/otel.ts',
+    'src/enrichers.ts',
     'src/ai.ts',
     'src/axiom.ts',
     'src/hyperdx.ts',

@@ -6,6 +6,7 @@ export default defineMeta({
     'startup',
     'presets',
     'request-context',
+    'enrichers',
     'request-id',
     'websocket',
     'formatting',

@@ -280,15 +280,32 @@ disableFileLogging: true
 
 ### `onError`
 
-Called when a sink (transport, file, or rotation) fails. Errors thrown by the hook itself are swallowed. When absent, failures go to stderr (rate-limited for transports).
+Called when a sink (transport, file, or rotation) or an [enricher](/docs/features/enrichers) fails. Errors thrown by the hook itself are swallowed. When absent, failures go to stderr (rate-limited for transports and enrichers).
 
-- **Type:** `(context: { sink: 'transport' | 'file' | 'rotation'; error: unknown }) => void`
+- **Type:** `(context: { sink: 'transport' | 'file' | 'rotation' | 'enricher'; error: unknown }) => void`
 - **Default:** `undefined`
 
 ```ts
 onError: ({ sink, error }) => {
   metrics.increment(`logixlysia.sink_error.${sink}`)
 }
+```
+
+### `enrichers`
+
+Context contributors run on every request. Whatever they return is merged into the request context, so the fields reach the console tree, file logs, and every transport at once. See [Enrichers](/docs/features/enrichers).
+
+- **Type:** `EnricherLike[]`
+- **Default:** `undefined`
+
+```ts
+import { geoEnricher, traceparentEnricher } from 'logixlysia/enrichers'
+
+enrichers: [
+  traceparentEnricher(),
+  geoEnricher(),
+  request => ({ tenant: request.headers.get('x-tenant') })
+]
 ```
 
 ## Sampling Options

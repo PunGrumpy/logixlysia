@@ -45,6 +45,7 @@
           "features/startup",
           "features/presets",
           "features/request-context",
+          "features/enrichers",
           "features/request-id",
           "features/websocket",
           "features/formatting",

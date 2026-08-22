@@ -27,4 +27,10 @@ export type {
   RequestInfo,
   StoreData
 } from './types/core'
+export type {
+  Enricher,
+  EnricherFields,
+  EnricherLike,
+  EnricherResponseInput
+} from './types/enricher'
 export type { Logger, RequestScopedLogger } from './types/logger'
