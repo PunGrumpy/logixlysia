@@ -3,6 +3,7 @@ import data from 'blume:data'
 import PageLayout from 'blume/components/layout/PageLayout.astro'
 import '../styles/home.css'
 
+import Adapters from '../components/home/adapters.astro'
 import Demo from '../components/home/demo.astro'
 import Faq from '../components/home/faq.astro'
 import Features from '../components/home/features.astro'
@@ -49,6 +50,7 @@ const description =
       class="-my-8 sm:-my-12 md:-my-16 h-px w-full bg-linear-to-r from-transparent via-border to-transparent"
     ></div>
     <Features />
+    <Adapters />
     <div
       aria-hidden="true"
       class="-my-8 sm:-my-12 md:-my-16 h-px w-full bg-linear-to-r from-transparent via-border to-transparent"

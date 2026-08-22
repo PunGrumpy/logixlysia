@@ -1,0 +1,161 @@
+---
+import {
+  siBetterstack,
+  siClickhouse,
+  siDatadog,
+  siGrafana,
+  siOpentelemetry,
+  siPosthog,
+  siSentry
+} from 'simple-icons'
+import AdapterCard from './adapter-card.astro'
+import SectionLabel from './section-label.astro'
+
+// Nine built-in observability adapters (content/adapters/*.mdx), presented as
+// an integrations grid. Names and one-line descriptors mirror the "best for"
+// column in the adapters overview. Brand marks come from simple-icons (CC0),
+// rendered monochrome; Axiom and HyperDX have no entry there, so they fall
+// back to monogram chips. Loki uses the Grafana mark — it is a Grafana Labs
+// product.
+interface Adapter {
+  blurb: string
+  href: string
+  icon: string
+  iconFillRule?: 'evenodd'
+  iconViewBox?: string
+  name: string
+}
+
+// Axiom's own mark (axiom.co brand asset); not in simple-icons.
+const axiomPath =
+  'm12.12 7.27-2.48-4.3a.8.8 0 0 0-.62-.37H7.48c-.36 0-.5-.25-.33-.56L8 .57A.38.38 0 0 0 7.67 0H5.52a.8.8 0 0 0-.62.36L.7 7.6a.8.8 0 0 0 0 .72l1.08 1.86c.18.31.47.32.65 0l.84-1.44c.18-.31.48-.31.66 0l.76 1.32c.11.2.4.36.62.36h4.98a.8.8 0 0 0 .62-.36l1.2-2.07a.8.8 0 0 0 0-.72m-3.34-.2c.18.3.03.56-.33.56H4.58c-.36 0-.5-.26-.33-.57L6.2 3.71c.18-.31.47-.31.65 0z'
+
+// HyperDX's hexagon-and-bolt mark (hyperdx.io brand asset); the two paths are
+// merged so the even-odd rule punches the bolt out of the hexagon and the
+// whole mark renders in currentColor.
+const hyperdxPath =
+  'm256 0 221.7 128v256L256 512 34.3 384V128z M311.4 84.5c3.5 2.5 5.1 7.7 3.9 12.5l-30.9 126.6h57.1c3.4 0 6.5 2.6 7.9 6.5 1.4 4 .7 8.6-1.6 11.7L210.2 425.6c-2.7 3.7-7.1 4.5-10.6 1.9-3.5-2.5-5.1-7.7-3.9-12.5l30.9-126.6h-57.1c-3.4 0-6.5-2.6-7.9-6.5-1.4-4-.7-8.6 1.6-11.7L300.8 86.4c2.7-3.7 7.1-4.5 10.6-1.9'
+
+const adapters: Adapter[] = [
+  {
+    blurb: 'Schema-free log analytics',
+    href: '/docs/adapters/axiom',
+    icon: axiomPath,
+    iconViewBox: '0 0 13 11',
+    name: 'Axiom'
+  },
+  {
+    blurb: 'Logs, uptime, and alerting',
+    href: '/docs/adapters/better-stack',
+    icon: siBetterstack.path,
+    name: 'Better Stack'
+  },
+  {
+    blurb: 'Facets and pipelines',
+    href: '/docs/adapters/datadog',
+    icon: siDatadog.path,
+    name: 'Datadog'
+  },
+  {
+    blurb: 'Logs next to your errors',
+    href: '/docs/adapters/sentry',
+    icon: siSentry.path,
+    name: 'Sentry'
+  },
+  {
+    blurb: 'Logs beside product analytics',
+    href: '/docs/adapters/posthog',
+    icon: siPosthog.path,
+    name: 'PostHog'
+  },
+  {
+    blurb: 'Any OpenTelemetry backend',
+    href: '/docs/adapters/otlp',
+    icon: siOpentelemetry.path,
+    name: 'OTLP'
+  },
+  {
+    blurb: 'Open-source observability',
+    href: '/docs/adapters/hyperdx',
+    icon: hyperdxPath,
+    iconFillRule: 'evenodd',
+    iconViewBox: '0 0 512 512',
+    name: 'HyperDX'
+  },
+  {
+    blurb: 'Label-indexed for Grafana',
+    href: '/docs/adapters/loki',
+    icon: siGrafana.path,
+    name: 'Grafana Loki'
+  },
+  {
+    blurb: 'Your own SQL warehouse',
+    href: '/docs/adapters/clickhouse',
+    icon: siClickhouse.path,
+    name: 'ClickHouse'
+  }
+]
+---
+
+<section class="t-stagger mx-auto grid w-full max-w-5xl gap-8" data-reveal>
+  <div class="t-stagger-line grid justify-items-start gap-4">
+    <SectionLabel badge="9 platforms" name="Adapters">
+      <svg
+        aria-hidden="true"
+        class="size-4"
+        fill="none"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="1.5"
+        viewBox="0 0 24 24"
+      >
+        <path d="m22 2-7 20-4-9-9-4Z"></path>
+        <path d="M22 2 11 13"></path>
+      </svg>
+    </SectionLabel>
+    <div class="grid w-full gap-4 lg:grid-cols-2 lg:gap-12">
+      <h2
+        class="text-balance font-medium text-[25px] text-foreground leading-[130%] lg:text-[32px]"
+      >
+        Ship logs where you already look
+      </h2>
+      <div
+        class="grid justify-items-start gap-1 lg:max-w-md lg:justify-self-end"
+      >
+        <p
+          class="text-pretty text-[15px] text-muted-foreground leading-[160%] lg:text-[17px]"
+        >
+          Every adapter is a regular transport — batched, retried, and
+          non-blocking — so a slow sink never delays a response. Mix them with
+          console and file logging, or run them exclusively.
+        </p>
+        <a
+          class="group -my-2.5 py-2.5 font-medium text-[15px] text-foreground transition-colors hover:text-muted-foreground"
+          href="/docs/adapters/overview"
+        >
+          Explore adapters
+          <span
+            aria-hidden="true"
+            class="inline-block transition-[translate] group-hover:translate-x-0.5"
+            >→</span
+          >
+        </a>
+      </div>
+    </div>
+  </div>
+  <ul
+    class="t-stagger-line t-stagger-line--2 grid list-none grid-cols-2 gap-3 sm:grid-cols-3"
+  >
+    {adapters.map(adapter => (
+      <AdapterCard
+        blurb={adapter.blurb}
+        href={adapter.href}
+        icon={adapter.icon}
+        iconFillRule={adapter.iconFillRule}
+        iconViewBox={adapter.iconViewBox}
+        name={adapter.name}
+      />
+    ))}
+  </ul>
+</section>
