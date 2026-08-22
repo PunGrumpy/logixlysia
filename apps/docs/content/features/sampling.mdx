@@ -1,0 +1,119 @@
+---
+title: Sampling
+description: Keep a percentage of high-volume logs, and rescue the ones that turn out to matter
+---
+
+Sampling keeps your log bill flat as traffic grows. Head sampling thins noisy levels by percentage. Tail sampling puts the dropped records back when the request turns out to be interesting — an error, a slow response, a route you are watching.
+
+Unlike [log filtering](/docs/features/filtering), which is all-or-nothing per level, sampling is per-record and reversible.
+
+## Head Sampling
+
+Head sampling decides as each record is emitted: keep `n%` of a level, drop the rest.
+
+```ts
+logixlysia({
+  config: {
+    sampling: {
+      head: { DEBUG: 1, INFO: 10 }
+    }
+  }
+})
+```
+
+Levels you leave out keep everything, so `ERROR` and `WARNING` above are untouched. Set a level explicitly if you really do want to thin it — `{ ERROR: 50 }` is honored.
+
+Sampling is off unless at least one level is below `100`. A `tail` block on its own does nothing, because only head-dropped records are ever buffered.
+
+## Tail Sampling
+
+A 10% `INFO` rate is fine until a request fails and nine out of ten of its logs are gone. Tail sampling fixes that: head-dropped records are held for the duration of the request, then replayed if the finished request matches any tail rule.
+
+```ts
+logixlysia({
+  config: {
+    sampling: {
+      head: { INFO: 10 },
+      tail: {
+        status: 400, // any response at or above 400
+        durationMs: 1000, // anything that took a second or longer
+        paths: ['/checkout/**', '/api/v?/payments'] // routes worth every line
+      }
+    }
+  }
+})
+```
+
+Rules are OR-ed — a single match replays the whole request, including the access log line that would otherwise have been sampled away.
+
+### Path globs
+
+| Pattern | Matches                                          |
+| ------- | ------------------------------------------------ |
+| `**`    | Any characters, including `/`                    |
+| `*`     | Any characters except `/` — one path segment     |
+| `?`     | A single character except `/`                    |
+
+Everything else is literal, and patterns are anchored, so `/v1/users` matches only `/v1/users`.
+
+### Buffer cap
+
+Records are buffered per request, capped so a pathological handler cannot grow memory without bound. Anything past the cap is dropped and cannot be rescued.
+
+```ts
+sampling: {
+  head: { INFO: 10 },
+  tail: { status: 400 },
+  maxBufferedPerRequest: 250 // default: 100
+}
+```
+
+## What It Costs
+
+A head-dropped record skips context merging, redaction, formatting, and every sink — only its raw `data` and the duration at capture are retained. A request that is never rescued therefore pays close to nothing; a rescued one pays the full pipeline at replay time, with each record keeping the duration it had when it was captured rather than the duration at replay.
+
+## Scope
+
+Tail buffering applies to HTTP requests the plugin opens and closes. WebSocket lifecycle logs are head-sampled but never buffered — a long-lived socket has no request end to rescue against — and the same is true for a `createLogger` instance used outside the plugin.
+
+## Recipes
+
+Cost control — keep the shape of traffic, keep all the failures:
+
+```ts
+sampling: {
+  head: { DEBUG: 0, INFO: 5 },
+  tail: { status: 500 }
+}
+```
+
+Latency hunting — full logs for anything that crosses the SLO:
+
+```ts
+sampling: {
+  head: { INFO: 20 },
+  tail: { durationMs: 750 }
+}
+```
+
+Critical paths — thin everything except the routes that pay the bills:
+
+```ts
+sampling: {
+  head: { INFO: 2 },
+  tail: { paths: ['/checkout/**', '/webhooks/**'], status: 400 }
+}
+```
+
+## Sampling and Adapters
+
+Sampling runs before every sink, so a dropped record never reaches [transports](/docs/features/transports), file logging, or the console. That is the point: it is the cheapest place to cut what Datadog, Better Stack, or PostHog will charge you for.
+
+## Validation
+
+Bad sampling config throws at plugin construction rather than failing quietly at runtime:
+
+- `head.<LEVEL>` must be a number between `0` and `100`
+- `tail.status` and `tail.durationMs` must be non-negative numbers
+- `tail.paths` must contain non-empty strings
+- `maxBufferedPerRequest` must be a non-negative integer

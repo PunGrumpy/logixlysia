@@ -2,6 +2,7 @@
 export { HttpError } from './errors'
 export type {
   FormattingConfig,
+  HeadSamplingConfig,
   LogFilter,
   LogixlysiaConfig,
   LogPreset,
@@ -13,7 +14,9 @@ export type {
   RedactionConfig,
   RequestIdConfig,
   RequestTrackingConfig,
+  SamplingConfig,
   SinkErrorContext,
+  TailSamplingConfig,
   Transport
 } from './types/config'
 export type {
@@ -24,4 +27,10 @@ export type {
   RequestInfo,
   StoreData
 } from './types/core'
-export type { Logger, RequestScopedLogger } from './types/logger'
+export type {
+  Enricher,
+  EnricherFields,
+  EnricherLike,
+  EnricherResponseInput
+} from './types/enricher'
+export type { LogFields, Logger, RequestScopedLogger } from './types/logger'

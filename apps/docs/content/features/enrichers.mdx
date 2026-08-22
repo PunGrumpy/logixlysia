@@ -1,0 +1,130 @@
+---
+title: Enrichers
+description: Add context to every request once, and have it reach every sink
+---
+
+An enricher is a small function that contributes fields to the request context. Set it up once and the fields show up in the console tree, in file logs, and in every transport — Datadog, PostHog, Sentry, OTLP — without touching a single route.
+
+```ts
+import logixlysia from 'logixlysia'
+import { geoEnricher, traceparentEnricher } from 'logixlysia/enrichers'
+
+new Elysia().use(
+  logixlysia({
+    config: {
+      enrichers: [traceparentEnricher(), geoEnricher()]
+    }
+  })
+)
+```
+
+## Built-in Enrichers
+
+### `traceparentEnricher()`
+
+Parses the W3C `traceparent` header directly, with **no OpenTelemetry SDK required**. That is the difference from [`logixlysia/otel`](/docs/integrations/otel), which reads the ids of the currently active span and therefore needs the SDK installed and instrumenting your app.
+
+```ts
+traceparentEnricher()
+// → trace_id, span_id, trace_flags, trace_sampled
+```
+
+The `trace_id` / `span_id` naming matches what Sentry, HyperDX, and OTLP backends expect, so logs link to traces as soon as an upstream service propagates the header.
+
+| Option       | Type      | Default         | Description                                    |
+| ------------ | --------- | --------------- | ---------------------------------------------- |
+| `header`     | `string`  | `'traceparent'` | Header to read the trace context from          |
+| `tracestate` | `boolean` | `false`         | Also record `tracestate`, capped at 512 chars  |
+
+Malformed headers are ignored rather than partially parsed: the reserved `ff` version, all-zero trace or span ids, and a version `00` header carrying extra fields all add nothing.
+
+### `userAgentEnricher()`
+
+Turns `user-agent` into fields you can group by.
+
+```ts
+userAgentEnricher()
+// → ua.browser, ua.browserVersion, ua.os, ua.device, ua.bot
+```
+
+`ua.device` is one of `desktop`, `mobile`, `tablet`, or `bot`. This is a heuristic — user agents are not a parseable grammar — so treat it as a dashboard dimension, not as an access-control input.
+
+### `geoEnricher()`
+
+Reads the geo headers your platform already attaches. Vercel, Cloudflare, and Netlify are recognized.
+
+```ts
+geoEnricher()
+// → geo.city, geo.country, geo.region, geo.timezone, geo.latitude, geo.longitude
+```
+
+Nothing is derived from the IP address itself, and no lookup is performed. On a platform that does not set these headers, the enricher adds nothing. Vercel percent-encodes city names, which the enricher decodes for you.
+
+### `sizeEnricher()`
+
+Records payload sizes.
+
+```ts
+sizeEnricher()
+// → requestBytes, responseBytes
+```
+
+Both come from `content-length`, the only size available without buffering a body. A chunked or streamed response has no `content-length`, so `responseBytes` is omitted rather than guessed.
+
+## Writing Your Own
+
+An enricher is either a bare function — treated as the request phase — or an object with `request` and `response` phases.
+
+```ts
+// Request phase only.
+const tenantEnricher = (request: Request) => ({
+  tenant: request.headers.get('x-tenant-id') ?? 'unknown'
+})
+
+// Both phases.
+const cacheEnricher = {
+  request: (request: Request) => ({
+    cacheKey: new URL(request.url).pathname
+  }),
+  response: ({ headers, status }) => ({
+    cacheHit: headers['x-cache'] === 'HIT',
+    served: status
+  })
+}
+
+logixlysia({ config: { enrichers: [tenantEnricher, cacheEnricher] } })
+```
+
+Return `undefined` to add nothing.
+
+### Phases
+
+| Phase      | Runs                            | Receives                                   |
+| ---------- | ------------------------------- | ------------------------------------------ |
+| `request`  | At request start                | The `Request`                              |
+| `response` | Once the outcome is known       | `{ request, status, durationMs, headers }` |
+
+The response phase runs before the request's final log line on both the success and the error path, so its fields are on the access log and on the error log alike. Request-phase fields, being merged at the start, also reach any `log.info()` you make inside the handler.
+
+## Failure Handling
+
+Enrichment is decoration and must never take a request down. A hook that throws is caught, reported, and skipped — the remaining enrichers still run and the request completes normally.
+
+Failures go to [`onError`](/docs/configuration#onerror) with `sink: 'enricher'`, or to stderr (rate-limited) when no hook is configured.
+
+```ts
+logixlysia({
+  config: {
+    enrichers: [myEnricher],
+    onError: ({ sink, error }) => {
+      if (sink === 'enricher') {
+        metrics.increment('logixlysia.enricher_error')
+      }
+    }
+  }
+})
+```
+
+## Enrichers and Sampling
+
+Enricher fields live in the request context, which is merged at emit time. A record rescued by [tail sampling](/docs/features/sampling) is replayed after the response phase has run, so replayed records carry the response-phase fields too.
