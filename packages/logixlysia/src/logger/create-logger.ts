@@ -373,6 +373,9 @@ const collectStructuredErrorEntries = (error: unknown): [string, string][] => {
     entries.push(['error', msg])
   }
   if (isStructuredError(error)) {
+    if (error.code !== undefined) {
+      entries.push(['error.code', String(error.code)])
+    }
     if (error.why !== undefined) {
       entries.push(['error.why', String(error.why)])
     }
@@ -416,7 +419,9 @@ export const buildContextTreeLines = (
     )
   }
 
-  if (level === 'ERROR' && 'error' in data && data.error !== undefined) {
+  // WARNING as well as ERROR: a 4xx is logged at WARNING, and its
+  // `why`/`fix`/`link` are exactly as worth showing as a 5xx's.
+  if ((level === 'ERROR' || level === 'WARNING') && data.error !== undefined) {
     entries.push(...collectStructuredErrorEntries(data.error))
   }
 
