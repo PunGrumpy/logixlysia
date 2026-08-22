@@ -10,6 +10,7 @@ import { loggerStorage } from './context/storage'
 import { startServer } from './extensions'
 import { getStatusCode } from './helpers/status'
 import type {
+  LogFields,
   LogixlysiaStore,
   Options,
   RequestScopedLogger
@@ -34,24 +35,35 @@ export interface EmptyElysiaSlot {
  * Explicit singleton without Elysia's `SingletonBase` `Record<string, unknown>` on decorator/derive/resolve so
  * merged `Context` and WebSocket `ws.data` keep precise keys after `.use(logixlysia())`.
  */
-export interface LogixlysiaSingleton {
+export interface LogixlysiaSingleton<TFields extends object = LogFields> {
   decorator: EmptyElysiaSlot
   derive: {
-    log: RequestScopedLogger
+    log: RequestScopedLogger<TFields>
   }
   resolve: EmptyElysiaSlot
   store: LogixlysiaStore
 }
 
-// Elysia's `SingletonBase.store` is `Record<string, unknown>`; `LogixlysiaStore` is intentionally closed (see #220).
-// @ts-expect-error — closed store is correct at runtime and for merged `ws.data` inference.
-export type Logixlysia = Elysia<'', LogixlysiaSingleton>
+// Elysia's `SingletonBase` slots are `Record<string, unknown>`; ours are intentionally closed (see #220).
+export type Logixlysia<TFields extends object = LogFields> = Elysia<
+  '',
+  // @ts-expect-error — closed slots are correct at runtime and for merged `ws.data` inference.
+  LogixlysiaSingleton<TFields>
+>
 
-export type LogixlysiaPlugin = Logixlysia & {
-  wrapWs: ReturnType<typeof createWsHandlerWrapper>
-}
+export type LogixlysiaPlugin<TFields extends object = LogFields> =
+  Logixlysia<TFields> & {
+    wrapWs: ReturnType<typeof createWsHandlerWrapper>
+  }
 
-const logixlysia = (rawOptions: Options = {}): LogixlysiaPlugin => {
+/**
+ * @typeParam TFields - Field bag for the request-scoped `log`. Supply your own
+ * interface to have TypeScript reject misspelled context keys; the default
+ * allows any key, so untyped usage is unchanged.
+ */
+const logixlysia = <TFields extends object = LogFields>(
+  rawOptions: Options = {}
+): LogixlysiaPlugin<TFields> => {
   const options = resolveOptions(rawOptions)
   const didCustomLog = new WeakSet<Request>()
   const requestStartTimes = new WeakMap<Request, bigint>()
@@ -249,9 +261,9 @@ const logixlysia = (rawOptions: Options = {}): LogixlysiaPlugin => {
         contextStore.clearContext(request)
       }
     })
-    .as('scoped') as Logixlysia
+    .as('scoped') as Logixlysia<TFields>
 
-  return Object.assign(plugin, { wrapWs }) as LogixlysiaPlugin
+  return Object.assign(plugin, { wrapWs }) as LogixlysiaPlugin<TFields>
 }
 
 // biome-ignore lint/performance/noBarrelFile: public package entry re-exports
@@ -263,6 +275,7 @@ export type {
   EnricherLike,
   EnricherResponseInput,
   HeadSamplingConfig,
+  LogFields,
   Logger,
   LogixlysiaContext,
   LogixlysiaStore,
