@@ -12,7 +12,8 @@ import type {
   RequestInfo,
   StoreData
 } from '../interfaces'
-import { type BufferedRecord, resolveSampling } from '../sampling'
+import { resolveSampling } from '../sampling'
+import { elapsedMs } from '../utils/duration'
 import { buildPinoRedactPaths } from '../utils/redact'
 import { createFormatContext } from './create-logger'
 import { emit, parseRequestUrlOnce, resolveSinks, shouldLog } from './emit'
@@ -136,12 +137,23 @@ export const createLogger = (
     })
   }
 
-  /** Re-emits tail-rescued records with the duration each had when captured. */
-  const replay = (
+  /** Resolves the tail verdict and re-emits whatever it rescued. */
+  const finalizeRequest = (
     request: RequestInfo,
-    records: readonly BufferedRecord[]
+    store: StoreData,
+    status: number
   ): void => {
-    for (const record of records) {
+    if (!sampling) {
+      return
+    }
+
+    const outcome = {
+      durationMs: elapsedMs(store.beforeTime),
+      pathname: parseRequestUrlOnce(request).pathname,
+      status
+    }
+
+    for (const record of sampling.finalize(request, outcome)) {
       emit({
         bypassSampling: true,
         contextStore,
@@ -153,27 +165,10 @@ export const createLogger = (
         request,
         sampling,
         sinks,
+        // Unread on this path: `durationOverride` supplies the duration each
+        // record had when it was captured.
         store: ZERO_STORE
       })
-    }
-  }
-
-  const finalizeRequest = (
-    request: RequestInfo,
-    store: StoreData,
-    status: number
-  ): void => {
-    if (!sampling) {
-      return
-    }
-    const durationMs =
-      store.beforeTime === BigInt(0)
-        ? 0
-        : Number(process.hrtime.bigint() - store.beforeTime) / 1_000_000
-    const { pathname } = parseRequestUrlOnce(request)
-    const records = sampling.finalize(request, { durationMs, pathname, status })
-    if (records.length > 0) {
-      replay(request, records)
     }
   }
 

@@ -90,7 +90,13 @@ export class HttpError extends Error {
     // falls back to the plain message otherwise. Defining it only when there
     // is something structured to say keeps plain errors byte-identical to
     // their pre-`HttpErrorInit` behaviour.
-    if (init.code ?? init.why ?? init.fix ?? init.link) {
+    const hasClientFields =
+      init.code !== undefined ||
+      init.why !== undefined ||
+      init.fix !== undefined ||
+      init.link !== undefined
+
+    if (hasClientFields) {
       Object.defineProperty(this, 'toResponse', {
         configurable: true,
         enumerable: false,
@@ -101,15 +107,18 @@ export class HttpError extends Error {
     }
   }
 
-  /** The client-safe payload. `internal` is never part of it. */
+  /**
+   * The client-safe payload. `internal` is never part of it; unset fields are
+   * `undefined` and so are dropped by `JSON.stringify`.
+   */
   toJSON(): HttpErrorPayload {
     return {
-      ...(this.code === undefined ? {} : { code: this.code }),
-      ...(this.fix === undefined ? {} : { fix: this.fix }),
-      ...(this.link === undefined ? {} : { link: this.link }),
+      code: this.code,
+      fix: this.fix,
+      link: this.link,
       message: this.message,
       status: this.status,
-      ...(this.why === undefined ? {} : { why: this.why })
+      why: this.why
     }
   }
 }

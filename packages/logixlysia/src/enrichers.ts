@@ -16,11 +16,13 @@ const MAX_TRACESTATE_LENGTH = 512
 
 // version-trace_id-parent_id-flags, with an optional tail for versions > 00.
 const TRACEPARENT =
-  /^([\da-f]{2})-([\da-f]{32})-([\da-f]{16})-([\da-f]{2})(-.+)?$/
+  /^([\da-f]{2})-([\da-f]{32})-([\da-f]{16})-([\da-f]{2})(?:-.+)?$/
 const ZERO_TRACE_ID = '0'.repeat(32)
 const ZERO_SPAN_ID = '0'.repeat(16)
 const INVALID_VERSION = 'ff'
 const CURRENT_VERSION = '00'
+/** `00-` + 32 + `-` + 16 + `-` + 2: version 00 is exactly these four fields. */
+const VERSION_00_LENGTH = 55
 
 export interface TraceparentEnricherOptions {
   /**
@@ -57,27 +59,21 @@ export const traceparentEnricher = (
         return
       }
 
-      const match = TRACEPARENT.exec(raw.trim())
+      const value = raw.trim()
+      const match = TRACEPARENT.exec(value)
       if (!match) {
         return
       }
 
-      const [, version, traceId, spanId, flags, tail] = match as unknown as [
-        string,
-        string,
-        string,
-        string,
-        string,
-        string | undefined
-      ]
+      const [, version, traceId, spanId, flags] = match
 
-      // `ff` is reserved, all-zero ids are invalid, and version 00 is defined
-      // as exactly four fields — a tail means the header is malformed for it.
+      // `ff` is reserved, all-zero ids are invalid, and a version-00 header
+      // carrying extra fields is malformed rather than forward-compatible.
       if (
         version === INVALID_VERSION ||
         traceId === ZERO_TRACE_ID ||
         spanId === ZERO_SPAN_ID ||
-        (version === CURRENT_VERSION && tail !== undefined)
+        (version === CURRENT_VERSION && value.length !== VERSION_00_LENGTH)
       ) {
         return
       }

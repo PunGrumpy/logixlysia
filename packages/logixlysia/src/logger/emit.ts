@@ -12,6 +12,7 @@ import type {
 import { logToTransports } from '../output'
 import { logToFile } from '../output/file'
 import type { SamplingRuntime } from '../sampling'
+import { elapsedMs } from '../utils/duration'
 import { redact, redactRequest } from '../utils/redact'
 import {
   type FormatContext,
@@ -66,11 +67,6 @@ export const shouldLog = (level: LogLevel, logFilter?: LogFilter): boolean => {
   return logFilter.level.includes(level)
 }
 
-const computeDurationMs = (store: StoreData): number =>
-  store.beforeTime === BigInt(0)
-    ? 0
-    : Number(process.hrtime.bigint() - store.beforeTime) / 1_000_000
-
 /** Parses the URL once; only called when at least one active sink reads pathname/search. */
 export const parseRequestUrlOnce = (
   request: RequestInfo
@@ -95,7 +91,7 @@ export const computePrecomputedLogParts = (
   needsUrlParts: boolean,
   durationOverride?: number
 ): PrecomputedLogParts => {
-  const durationMs = durationOverride ?? computeDurationMs(store)
+  const durationMs = durationOverride ?? elapsedMs(store.beforeTime)
   const { pathname, search } = needsUrlParts
     ? parseRequestUrlOnce(request)
     : { pathname: '', search: '' }
@@ -177,7 +173,7 @@ export const emit = ({
       // replay, so a request that never gets rescued pays almost nothing.
       sampling.buffer(request, {
         data,
-        durationMs: computeDurationMs(store),
+        durationMs: elapsedMs(store.beforeTime),
         level
       })
       return

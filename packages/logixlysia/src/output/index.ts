@@ -1,4 +1,5 @@
 import type { LogLevel, Options, RequestInfo, StoreData } from '../interfaces'
+import { elapsedMs } from '../utils/duration'
 import { createErrorReporter } from '../utils/report'
 
 const reportTransportError = createErrorReporter(
@@ -31,11 +32,7 @@ export const logToTransports = (input: LogToTransportsInput): void => {
       url: request.url
     },
     ...data,
-    durationMs:
-      precomputed?.durationMs ??
-      (store.beforeTime === BigInt(0)
-        ? 0
-        : Number(process.hrtime.bigint() - store.beforeTime) / 1_000_000)
+    durationMs: precomputed?.durationMs ?? elapsedMs(store.beforeTime)
   }
 
   for (const transport of transports) {

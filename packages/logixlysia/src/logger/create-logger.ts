@@ -2,6 +2,7 @@ import { STATUS_CODES } from 'node:http'
 import chalk from 'chalk'
 import { getStatusCode } from '../helpers/status'
 import type { LogLevel, Options, RequestInfo, StoreData } from '../interfaces'
+import { elapsedMs } from '../utils/duration'
 import { isStructuredError, parseError } from '../utils/error'
 import { sanitizeLogText } from '../utils/sanitize'
 
@@ -576,11 +577,7 @@ const getDurationTokens = (
   if (!(needsDuration || needsSpeed)) {
     return { coloredDuration: '', speedToken: '' }
   }
-  const durationMs =
-    precomputed?.durationMs ??
-    (store.beforeTime === BigInt(0)
-      ? 0
-      : Number(process.hrtime.bigint() - store.beforeTime) / 1_000_000)
+  const durationMs = precomputed?.durationMs ?? elapsedMs(store.beforeTime)
   const { text, isVerySlow } = colorDurationText(
     durationMs,
     useColors,

@@ -13,7 +13,8 @@ import type {
   LogFields,
   LogixlysiaStore,
   Options,
-  RequestScopedLogger
+  RequestScopedLogger,
+  StoreData
 } from './interfaces'
 import { createPluginLogger } from './logger'
 import { errorStatus } from './logger/handle-http-error'
@@ -21,6 +22,7 @@ import {
   getOrCreateRequestId,
   resolveRequestIdConfig
 } from './middleware/request-id'
+import { elapsedMs } from './utils/duration'
 import { createWsHandlerWrapper } from './websocket/wrap-ws'
 
 /**
@@ -74,10 +76,6 @@ const logixlysia = <TFields extends object = LogFields>(
   const enrichers = resolveEnrichers(options.config?.enrichers)
   const onSinkError = options.config?.onError
 
-  const elapsedMs = (beforeTime: bigint): number =>
-    beforeTime === BigInt(0)
-      ? 0
-      : Number(process.hrtime.bigint() - beforeTime) / 1_000_000
   const logger = {
     ...baseLogger,
     debug: (
@@ -124,6 +122,48 @@ const logixlysia = <TFields extends object = LogFields>(
     warn: (message, context) => logger.warn(request, message, context)
   })
 
+  /**
+   * Everything both exits share once the status is known: echo the request id,
+   * run the response-phase enrichers, and resolve tail sampling — all before
+   * the request's final log line, so it and any replayed records see the same
+   * context. Returns the timing store for that final line.
+   */
+  const closeRequest = (
+    request: Request,
+    setHeaders: Record<string, string | number>,
+    status: number
+  ): StoreData => {
+    if (requestIdConfig) {
+      const id = contextStore.getContext(request).requestId as
+        | string
+        | undefined
+      if (id) {
+        setHeaders[requestIdConfig.header] = id
+      }
+    }
+
+    const store: StoreData = {
+      beforeTime: requestStartTimes.get(request) ?? BigInt(0)
+    }
+
+    if (enrichers) {
+      applyResponseEnrichers(
+        enrichers,
+        contextStore,
+        {
+          durationMs: elapsedMs(store.beforeTime),
+          headers: setHeaders,
+          request,
+          status
+        },
+        onSinkError
+      )
+    }
+
+    logger.finalizeRequest(request, store, status)
+    return store
+  }
+
   const app = new Elysia({
     detail: {
       description:
@@ -166,42 +206,14 @@ const logixlysia = <TFields extends object = LogFields>(
     })
     .onAfterHandle(({ request, set }) => {
       try {
-        if (requestIdConfig) {
-          const ctx = contextStore.getContext(request)
-          const id = ctx.requestId as string | undefined
-          if (id) {
-            set.headers[requestIdConfig.header] = id
-          }
-        }
-
         const status =
           set.status === undefined || set.status === null
             ? 200
             : getStatusCode(set.status)
 
-        const store = {
-          beforeTime: requestStartTimes.get(request) ?? BigInt(0)
-        }
-
-        // Enrich first so replayed records and the access log both see the
-        // response-phase fields.
-        if (enrichers) {
-          applyResponseEnrichers(
-            enrichers,
-            contextStore,
-            {
-              durationMs: elapsedMs(store.beforeTime),
-              headers: set.headers,
-              request,
-              status
-            },
-            onSinkError
-          )
-        }
-
-        // Resolve tail sampling before the early return: a request that only
-        // emitted custom logs still needs its buffered records replayed.
-        logger.finalizeRequest(request, store, status)
+        // Runs before the early return: a request that only emitted custom
+        // logs still needs its buffered records replayed.
+        const store = closeRequest(request, set.headers, status)
 
         if (didCustomLog.has(request)) {
           return
@@ -228,33 +240,7 @@ const logixlysia = <TFields extends object = LogFields>(
     })
     .onError(({ request, error, set }) => {
       try {
-        if (requestIdConfig) {
-          const ctx = contextStore.getContext(request)
-          const id = ctx.requestId as string | undefined
-          if (id) {
-            set.headers[requestIdConfig.header] = id
-          }
-        }
-        const store = {
-          beforeTime: requestStartTimes.get(request) ?? BigInt(0)
-        }
-        const status = errorStatus(error)
-
-        if (enrichers) {
-          applyResponseEnrichers(
-            enrichers,
-            contextStore,
-            {
-              durationMs: elapsedMs(store.beforeTime),
-              headers: set.headers,
-              request,
-              status
-            },
-            onSinkError
-          )
-        }
-
-        logger.finalizeRequest(request, store, status)
+        const store = closeRequest(request, set.headers, errorStatus(error))
         logger.handleHttpError(request, error, store)
       } finally {
         requestStartTimes.delete(request)
