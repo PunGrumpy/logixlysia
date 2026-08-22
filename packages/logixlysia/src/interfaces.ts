@@ -2,6 +2,7 @@
 export { HttpError } from './errors'
 export type {
   FormattingConfig,
+  HeadSamplingConfig,
   LogFilter,
   LogixlysiaConfig,
   LogPreset,
@@ -13,7 +14,9 @@ export type {
   RedactionConfig,
   RequestIdConfig,
   RequestTrackingConfig,
+  SamplingConfig,
   SinkErrorContext,
+  TailSamplingConfig,
   Transport
 } from './types/config'
 export type {

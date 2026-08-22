@@ -10,6 +10,7 @@ export default defineMeta({
     'websocket',
     'formatting',
     'filtering',
+    'sampling',
     'log-levels',
     'file-logging',
     'transports',

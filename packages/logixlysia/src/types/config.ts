@@ -37,6 +37,49 @@ export interface LogFilter {
 }
 
 /**
+ * Percentage of records to keep per level, `0`–`100`. Levels left out keep
+ * everything, so `{ INFO: 10 }` thins access logs while every `ERROR` still
+ * reaches the sinks.
+ */
+export type HeadSamplingConfig = Partial<Record<LogLevel, number>>
+
+/**
+ * Conditions that rescue a request's head-dropped records once its outcome is
+ * known. Rules are OR-ed: any single match replays the whole request.
+ */
+export interface TailSamplingConfig {
+  /** Rescue when the request took at least this many milliseconds. */
+  durationMs?: number
+  /**
+   * Rescue when the request pathname matches one of these globs.
+   * `**` crosses `/`, `*` and `?` do not — e.g. `/checkout/**`.
+   */
+  paths?: string[]
+  /** Rescue when the response status is at or above this code, e.g. `400`. */
+  status?: number
+}
+
+export interface SamplingConfig {
+  /**
+   * Head sampling: the share of records kept per level, decided as each record
+   * is emitted. Without this, sampling is off — `tail` alone rescues nothing,
+   * because only head-dropped records are buffered.
+   */
+  head?: HeadSamplingConfig
+  /**
+   * Cap on records buffered per request while awaiting a tail verdict.
+   * Records past the cap are dropped.
+   * @default 100
+   */
+  maxBufferedPerRequest?: number
+  /**
+   * Tail sampling: replays a request's head-dropped records when the finished
+   * request matches, so failures and slow paths keep their full log trail.
+   */
+  tail?: TailSamplingConfig
+}
+
+/**
  * Configuration for pino-pretty transport output.
  *
  * - `true`: Enable pretty printing with default options
@@ -176,6 +219,12 @@ export interface LogixlysiaConfig
     RequestTrackingConfig,
     PinoConfig {
   logFilter?: LogFilter
+  /**
+   * Head + tail sampling. Head sampling thins high-volume levels by
+   * percentage; tail sampling replays what head dropped once the request turns
+   * out to be interesting (an error, a slow path, a watched route).
+   */
+  sampling?: SamplingConfig
 }
 
 export interface Options {

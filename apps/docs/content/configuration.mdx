@@ -291,6 +291,29 @@ onError: ({ sink, error }) => {
 }
 ```
 
+## Sampling Options
+
+### `sampling`
+
+Head + tail sampling. Head sampling keeps a percentage of records per level; tail sampling replays what head dropped once the finished request matches a rule. See [Sampling](/docs/features/sampling) for the full guide.
+
+- **Type:** `{ head?: Partial<Record<LogLevel, number>>; tail?: { status?: number; durationMs?: number; paths?: string[] }; maxBufferedPerRequest?: number }`
+- **Default:** `undefined` (no sampling)
+
+```ts
+sampling: {
+  head: { DEBUG: 1, INFO: 10 }, // levels left out keep 100%
+  tail: {
+    status: 400, // rescue any response at or above 400
+    durationMs: 1000, // rescue anything that took a second or longer
+    paths: ['/checkout/**'] // rescue these routes whatever happened
+  },
+  maxBufferedPerRequest: 100
+}
+```
+
+Sampling is off unless at least one head rate is below `100` — `tail` alone rescues nothing, because only head-dropped records are buffered. Invalid values throw at plugin construction.
+
 ## File Logging Options
 
 ### `logFilePath`

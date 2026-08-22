@@ -10,6 +10,7 @@ import type {
   RequestScopedLogger
 } from './interfaces'
 import { createPluginLogger } from './logger'
+import { errorStatus } from './logger/handle-http-error'
 import {
   getOrCreateRequestId,
   resolveRequestIdConfig
@@ -125,6 +126,7 @@ const logixlysia = (rawOptions: Options = {}): LogixlysiaPlugin => {
     })
     .onRequest(({ request }) => {
       requestStartTimes.set(request, process.hrtime.bigint())
+      logger.beginRequest(request)
       if (requestIdConfig) {
         const requestId = getOrCreateRequestId(request, requestIdConfig)
         contextStore.mergeContext(request, { requestId })
@@ -144,14 +146,22 @@ const logixlysia = (rawOptions: Options = {}): LogixlysiaPlugin => {
           }
         }
 
-        if (didCustomLog.has(request)) {
-          return
-        }
-
         const status =
           set.status === undefined || set.status === null
             ? 200
             : getStatusCode(set.status)
+
+        // Resolve tail sampling before the early return: a request that only
+        // emitted custom logs still needs its buffered records replayed.
+        const store = {
+          beforeTime: requestStartTimes.get(request) ?? BigInt(0)
+        }
+        logger.finalizeRequest(request, store, status)
+
+        if (didCustomLog.has(request)) {
+          return
+        }
+
         let level: 'INFO' | 'WARNING' | 'ERROR' = 'INFO'
         if (status >= 500) {
           level = 'ERROR'
@@ -165,9 +175,7 @@ const logixlysia = (rawOptions: Options = {}): LogixlysiaPlugin => {
           data.context = { ...accumulated }
         }
 
-        logger.log(level, request, data, {
-          beforeTime: requestStartTimes.get(request) ?? BigInt(0)
-        })
+        logger.log(level, request, data, store)
       } finally {
         requestStartTimes.delete(request)
         contextStore.clearContext(request)
@@ -182,9 +190,11 @@ const logixlysia = (rawOptions: Options = {}): LogixlysiaPlugin => {
             set.headers[requestIdConfig.header] = id
           }
         }
-        logger.handleHttpError(request, error, {
+        const store = {
           beforeTime: requestStartTimes.get(request) ?? BigInt(0)
-        })
+        }
+        logger.finalizeRequest(request, store, errorStatus(error))
+        logger.handleHttpError(request, error, store)
       } finally {
         requestStartTimes.delete(request)
         contextStore.clearContext(request)
@@ -199,6 +209,7 @@ const logixlysia = (rawOptions: Options = {}): LogixlysiaPlugin => {
 export { resolveOptions } from './config/resolve-options'
 export { useLogger } from './context/storage'
 export type {
+  HeadSamplingConfig,
   Logger,
   LogixlysiaContext,
   LogixlysiaStore,
@@ -208,7 +219,9 @@ export type {
   Pino,
   RequestIdConfig,
   RequestScopedLogger,
+  SamplingConfig,
   StoreData,
+  TailSamplingConfig,
   Transport
 } from './interfaces'
 export { createLogger, createPluginLogger } from './logger'
@@ -217,6 +230,12 @@ export {
   getOrCreateRequestId,
   resolveRequestIdConfig
 } from './middleware/request-id'
+export type {
+  RequestOutcome,
+  SamplingDecision,
+  SamplingRuntime
+} from './sampling'
+export { resolveSampling } from './sampling'
 export type { WsHandlerHooks } from './websocket/wrap-ws'
 export { createWsHandlerWrapper } from './websocket/wrap-ws'
 

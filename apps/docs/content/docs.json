@@ -49,6 +49,7 @@
           "features/websocket",
           "features/formatting",
           "features/filtering",
+          "features/sampling",
           "features/log-levels",
           "features/file-logging",
           "features/transports",
