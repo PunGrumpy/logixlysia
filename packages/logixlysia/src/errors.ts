@@ -100,8 +100,18 @@ export class HttpError extends Error {
       Object.defineProperty(this, 'toResponse', {
         configurable: true,
         enumerable: false,
-        value: (): Response =>
-          Response.json(this.toJSON(), { status: this.status }),
+        value: (): Response => {
+          // Use the original status only when it's within 200-599 and permits a body.
+          // Fall back to 500 for invalid statuses (0, 600, etc.) or body-disallowed codes (204, 304, etc.)
+          const safeStatus =
+            this.status >= 200 &&
+            this.status < 600 &&
+            this.status !== 204 &&
+            this.status !== 304
+              ? this.status
+              : 500
+          return Response.json(this.toJSON(), { status: safeStatus })
+        },
         writable: true
       })
     }

@@ -42,4 +42,24 @@ describe('globToRegExp', () => {
     expect(pattern.test('')).toBe(true)
     expect(pattern.test('/')).toBe(false)
   })
+
+  test('rejects adjacent recursive wildcards to prevent ReDoS', () => {
+    expect(() => globToRegExp('**/**')).toThrow('repeated recursive wildcards')
+  })
+
+  test('rejects nearly-adjacent recursive wildcards', () => {
+    expect(() => globToRegExp('**//**')).toThrow('repeated recursive wildcards')
+  })
+
+  test('allows recursive wildcards separated by meaningful paths', () => {
+    const pattern = globToRegExp('**/foo/**/bar')
+    expect(pattern.test('a/b/foo/c/d/bar')).toBe(true)
+    expect(pattern.test('foo/bar')).toBe(true)
+  })
+
+  test('allows a single recursive wildcard', () => {
+    const pattern = globToRegExp('/api/**')
+    expect(pattern.test('/api/users')).toBe(true)
+    expect(pattern.test('/api/v1/users')).toBe(true)
+  })
 })

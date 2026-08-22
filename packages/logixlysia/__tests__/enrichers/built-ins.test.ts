@@ -143,6 +143,19 @@ describe('userAgentEnricher', () => {
     ).toMatchObject({ browser: 'Edge', os: 'Windows' })
   })
 
+  test('identifies Edge on iOS', () => {
+    expect(
+      parse(
+        'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 EdgiOS/131.0.2903.48 Mobile/15E148 Safari/605.1.15'
+      )
+    ).toMatchObject({
+      browser: 'Edge',
+      browserVersion: '131.0.2903.48',
+      device: 'mobile',
+      os: 'iOS'
+    })
+  })
+
   test('identifies mobile Safari on iOS', () => {
     expect(
       parse(
@@ -242,6 +255,21 @@ describe('geoEnricher', () => {
   test('ignores an unparseable Netlify blob', () => {
     expect(
       enricher.request?.(requestWith({ 'x-nf-geo': 'not-base64-json' }))
+    ).toBeUndefined()
+  })
+
+  test('ignores a Netlify blob containing null', () => {
+    expect(
+      enricher.request?.(requestWith({ 'x-nf-geo': btoa('null') }))
+    ).toBeUndefined()
+  })
+
+  test('ignores a Netlify blob containing a non-object primitive', () => {
+    expect(
+      enricher.request?.(requestWith({ 'x-nf-geo': btoa('"string"') }))
+    ).toBeUndefined()
+    expect(
+      enricher.request?.(requestWith({ 'x-nf-geo': btoa('123') }))
     ).toBeUndefined()
   })
 

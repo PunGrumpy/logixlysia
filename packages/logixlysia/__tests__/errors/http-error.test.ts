@@ -104,6 +104,41 @@ describe('HttpError responses', () => {
 
     expect(await response.text()).not.toContain(INTERNAL_SECRET)
   })
+
+  test('toResponse uses status 500 when the original status is invalid', () => {
+    const error = new HttpError(0, 'Bad status', { code: 'BAD_STATUS' })
+    const response = error.toResponse?.()
+
+    expect(response?.status).toBe(500)
+  })
+
+  test('toResponse uses status 500 when the original status is 600+', () => {
+    const error = new HttpError(600, 'Out of range', { code: 'OUT_OF_RANGE' })
+    const response = error.toResponse?.()
+
+    expect(response?.status).toBe(500)
+  })
+
+  test('toResponse uses status 500 for body-disallowed status like 204', () => {
+    const error = new HttpError(204, 'No Content', { code: 'NO_CONTENT' })
+    const response = error.toResponse?.()
+
+    expect(response?.status).toBe(500)
+  })
+
+  test('toResponse uses status 500 for body-disallowed status like 304', () => {
+    const error = new HttpError(304, 'Not Modified', { code: 'NOT_MODIFIED' })
+    const response = error.toResponse?.()
+
+    expect(response?.status).toBe(500)
+  })
+
+  test('toResponse uses the original valid status when appropriate', () => {
+    const error = new HttpError(400, 'Bad Request', { code: 'BAD_REQUEST' })
+    const response = error.toResponse?.()
+
+    expect(response?.status).toBe(400)
+  })
 })
 
 describe('HttpError logging', () => {

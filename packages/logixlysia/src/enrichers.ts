@@ -105,7 +105,7 @@ const ANDROID_MOBILE = /android.*mobile/i
 
 /** First match wins, so more specific engines are listed before their base. */
 const BROWSERS: readonly [name: string, pattern: RegExp][] = [
-  ['Edge', /edga?i?\/([\d.]+)/i],
+  ['Edge', /edg(?:a|ios)?\/([\d.]+)/i],
   ['Opera', /(?:opr|opios|opera)\/([\d.]+)/i],
   ['Samsung Internet', /samsungbrowser\/([\d.]+)/i],
   ['Firefox', /(?:firefox|fxios)\/([\d.]+)/i],
@@ -234,31 +234,36 @@ const readNetlifyGeo = (
     return
   }
 
-  let parsed: NetlifyGeo
+  let parsed: unknown
   try {
-    parsed = JSON.parse(atob(raw)) as NetlifyGeo
+    parsed = JSON.parse(atob(raw))
   } catch {
     return
   }
 
+  if (parsed === null || typeof parsed !== 'object') {
+    return
+  }
+
+  const data = parsed as NetlifyGeo
   const geo: Record<string, unknown> = {}
-  if (parsed.city) {
-    geo.city = parsed.city
+  if (data.city) {
+    geo.city = data.city
   }
-  if (parsed.country?.code) {
-    geo.country = parsed.country.code
+  if (data.country?.code) {
+    geo.country = data.country.code
   }
-  if (parsed.subdivision?.code) {
-    geo.region = parsed.subdivision.code
+  if (data.subdivision?.code) {
+    geo.region = data.subdivision.code
   }
-  if (parsed.timezone) {
-    geo.timezone = parsed.timezone
+  if (data.timezone) {
+    geo.timezone = data.timezone
   }
-  if (typeof parsed.latitude === 'number') {
-    geo.latitude = parsed.latitude
+  if (typeof data.latitude === 'number') {
+    geo.latitude = data.latitude
   }
-  if (typeof parsed.longitude === 'number') {
-    geo.longitude = parsed.longitude
+  if (typeof data.longitude === 'number') {
+    geo.longitude = data.longitude
   }
 
   return Object.keys(geo).length > 0 ? geo : undefined

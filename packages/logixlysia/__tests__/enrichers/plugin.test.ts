@@ -182,4 +182,57 @@ describe('enrichers through the plugin', () => {
 
     expect(contextOf(events[0])).toBeUndefined()
   })
+
+  test('sizeEnricher receives headers from a Response object', async () => {
+    const { events, transport } = createCaptureTransport()
+    const app = new Elysia()
+      .use(
+        logixlysia({
+          config: {
+            disableFileLogging: true,
+            disableInternalLogger: true,
+            enrichers: [sizeEnricher()],
+            transports: [{ log: transport }]
+          }
+        })
+      )
+      .get(
+        '/with-response',
+        () =>
+          new Response('body', {
+            headers: { 'content-length': '4' }
+          })
+      )
+
+    await app.handle(new Request('http://localhost/with-response'))
+
+    expect(contextOf(events[0])).toMatchObject({ responseBytes: 4 })
+  })
+
+  test('set.headers takes precedence over Response headers', async () => {
+    const { events, transport } = createCaptureTransport()
+    const app = new Elysia()
+      .use(
+        logixlysia({
+          config: {
+            disableFileLogging: true,
+            disableInternalLogger: true,
+            enrichers: [sizeEnricher()],
+            requestId: true,
+            transports: [{ log: transport }]
+          }
+        })
+      )
+      .get('/precedence', ({ set }) => {
+        set.headers['x-request-id'] = 'from-set-headers'
+        return new Response('body', {
+          headers: { 'x-request-id': 'from-response' }
+        })
+      })
+
+    await app.handle(new Request('http://localhost/precedence'))
+
+    // The request ID from set.headers should be preserved
+    expect(contextOf(events[0])?.requestId).toBe('from-set-headers')
+  })
 })

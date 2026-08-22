@@ -204,16 +204,26 @@ const logixlysia = <TFields extends object = LogFields>(
         loggerStorage.enterWith(createRequestScopedLogger(request))
       }
     })
-    .onAfterHandle(({ request, set }) => {
+    .onAfterHandle(({ request, set, response }) => {
       try {
         const status =
           set.status === undefined || set.status === null
             ? 200
             : getStatusCode(set.status)
 
+        // Merge response headers with set.headers, with set.headers taking precedence.
+        // This ensures enrichers see headers from Response objects and Elysia's set.headers.
+        const mergedHeaders: Record<string, unknown> = {}
+        if (response instanceof Response) {
+          response.headers.forEach((value, key) => {
+            mergedHeaders[key] = value
+          })
+        }
+        Object.assign(mergedHeaders, set.headers)
+
         // Runs before the early return: a request that only emitted custom
         // logs still needs its buffered records replayed.
-        const store = closeRequest(request, set.headers, status)
+        const store = closeRequest(request, mergedHeaders, status)
 
         if (didCustomLog.has(request)) {
           return

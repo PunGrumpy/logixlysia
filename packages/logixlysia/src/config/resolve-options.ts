@@ -46,6 +46,8 @@ const isPercentage = (value: unknown): boolean =>
 const isNonNegativeNumber = (value: unknown): boolean =>
   typeof value === 'number' && Number.isFinite(value) && value >= 0
 
+const VALID_SAMPLING_LEVELS = ['DEBUG', 'INFO', 'WARNING', 'ERROR'] as const
+
 const validateSampling = (config: Options['config']): void => {
   const sampling = config?.sampling
   if (!sampling) {
@@ -57,6 +59,11 @@ const validateSampling = (config: Options['config']): void => {
   }
 
   for (const [level, rate] of Object.entries(sampling.head ?? {})) {
+    if (!VALID_SAMPLING_LEVELS.includes(level as never)) {
+      invalid(
+        `head.${level} is not a valid level (must be DEBUG, INFO, WARNING, or ERROR)`
+      )
+    }
     if (!isPercentage(rate)) {
       invalid(`head.${level} must be a number between 0 and 100`)
     }
@@ -69,10 +76,15 @@ const validateSampling = (config: Options['config']): void => {
   if (tail?.durationMs !== undefined && !isNonNegativeNumber(tail.durationMs)) {
     invalid('tail.durationMs must be a non-negative number')
   }
-  if (
-    tail?.paths?.some(path => typeof path !== 'string' || path.length === 0)
-  ) {
-    invalid('tail.paths must contain non-empty glob strings')
+  if (tail?.paths !== undefined) {
+    if (!Array.isArray(tail.paths)) {
+      invalid('tail.paths must be an array')
+    }
+    if (
+      tail.paths.some(path => typeof path !== 'string' || path.length === 0)
+    ) {
+      invalid('tail.paths must contain non-empty glob strings')
+    }
   }
 
   const { maxBufferedPerRequest } = sampling
