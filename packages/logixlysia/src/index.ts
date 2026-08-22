@@ -123,15 +123,36 @@ const logixlysia = <TFields extends object = LogFields>(
   })
 
   /**
+   * The response headers an enricher gets to read. `set.headers` alone misses
+   * anything a handler put on a returned `Response` (a `content-length`, say),
+   * so the two are merged — with `set.headers` winning, since Elysia applies
+   * it last. Only built when an enricher will actually read it.
+   */
+  const readableResponseHeaders = (
+    setHeaders: Record<string, string | number>,
+    responseHeaders?: Headers
+  ): Record<string, unknown> => {
+    const merged: Record<string, unknown> = {}
+    responseHeaders?.forEach((value, key) => {
+      merged[key] = value
+    })
+    return Object.assign(merged, setHeaders)
+  }
+
+  /**
    * Everything both exits share once the status is known: echo the request id,
    * run the response-phase enrichers, and resolve tail sampling — all before
    * the request's final log line, so it and any replayed records see the same
    * context. Returns the timing store for that final line.
+   *
+   * `setHeaders` is the live `set.headers` and is written to; the merged view
+   * handed to enrichers is read-only, so it must not stand in for it.
    */
   const closeRequest = (
     request: Request,
     setHeaders: Record<string, string | number>,
-    status: number
+    status: number,
+    responseHeaders?: Headers
   ): StoreData => {
     if (requestIdConfig) {
       const id = contextStore.getContext(request).requestId as
@@ -152,7 +173,7 @@ const logixlysia = <TFields extends object = LogFields>(
         contextStore,
         {
           durationMs: elapsedMs(store.beforeTime),
-          headers: setHeaders,
+          headers: readableResponseHeaders(setHeaders, responseHeaders),
           request,
           status
         },
@@ -211,19 +232,14 @@ const logixlysia = <TFields extends object = LogFields>(
             ? 200
             : getStatusCode(set.status)
 
-        // Merge response headers with set.headers, with set.headers taking precedence.
-        // This ensures enrichers see headers from Response objects and Elysia's set.headers.
-        const mergedHeaders: Record<string, unknown> = {}
-        if (response instanceof Response) {
-          response.headers.forEach((value, key) => {
-            mergedHeaders[key] = value
-          })
-        }
-        Object.assign(mergedHeaders, set.headers)
-
         // Runs before the early return: a request that only emitted custom
         // logs still needs its buffered records replayed.
-        const store = closeRequest(request, mergedHeaders, status)
+        const store = closeRequest(
+          request,
+          set.headers,
+          status,
+          response instanceof Response ? response.headers : undefined
+        )
 
         if (didCustomLog.has(request)) {
           return

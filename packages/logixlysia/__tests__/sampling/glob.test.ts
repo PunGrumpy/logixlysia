@@ -54,7 +54,9 @@ describe('globToRegExp', () => {
   test('allows recursive wildcards separated by meaningful paths', () => {
     const pattern = globToRegExp('**/foo/**/bar')
     expect(pattern.test('a/b/foo/c/d/bar')).toBe(true)
-    expect(pattern.test('foo/bar')).toBe(true)
+    expect(pattern.test('/foo/x/bar')).toBe(true)
+    // The literal `/foo/` and `/bar` segments are still required.
+    expect(pattern.test('foo/bar')).toBe(false)
   })
 
   test('allows a single recursive wildcard', () => {

@@ -209,8 +209,32 @@ describe('enrichers through the plugin', () => {
     expect(contextOf(events[0])).toMatchObject({ responseBytes: 4 })
   })
 
-  test('set.headers takes precedence over Response headers', async () => {
+  test('set.headers wins over a header of the same name on the Response', async () => {
     const { events, transport } = createCaptureTransport()
+    const app = new Elysia()
+      .use(
+        logixlysia({
+          config: {
+            disableFileLogging: true,
+            disableInternalLogger: true,
+            enrichers: [sizeEnricher()],
+            transports: [{ log: transport }]
+          }
+        })
+      )
+      .get('/precedence', ({ set }) => {
+        set.headers['content-length'] = '99'
+        return new Response('body', { headers: { 'content-length': '4' } })
+      })
+
+    await app.handle(new Request('http://localhost/precedence'))
+
+    // Elysia applies set.headers last, so the log must agree with the wire.
+    expect(contextOf(events[0])).toMatchObject({ responseBytes: 99 })
+  })
+
+  test('the request id still reaches the response when a Response is returned', async () => {
+    const { transport } = createCaptureTransport()
     const app = new Elysia()
       .use(
         logixlysia({
@@ -223,16 +247,14 @@ describe('enrichers through the plugin', () => {
           }
         })
       )
-      .get('/precedence', ({ set }) => {
-        set.headers['x-request-id'] = 'from-set-headers'
-        return new Response('body', {
-          headers: { 'x-request-id': 'from-response' }
-        })
+      .get('/with-response', () => new Response('body'))
+
+    const response = await app.handle(
+      new Request('http://localhost/with-response', {
+        headers: { 'X-Request-Id': 'req-from-gateway' }
       })
+    )
 
-    await app.handle(new Request('http://localhost/precedence'))
-
-    // The request ID from set.headers should be preserved
-    expect(contextOf(events[0])?.requestId).toBe('from-set-headers')
+    expect(response.headers.get('X-Request-Id')).toBe('req-from-gateway')
   })
 })

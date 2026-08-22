@@ -49,6 +49,23 @@ export interface HttpErrorInit {
  * response body is the plain message. Only an error that carries at least one
  * client-facing field responds as JSON.
  */
+/**
+ * Statuses the Fetch spec forbids a body on — `Response.json` throws for
+ * these, as it does for anything outside 200-599.
+ */
+const NULL_BODY_STATUSES = new Set([101, 103, 204, 205, 304])
+const MIN_RESPONSE_STATUS = 200
+const MAX_RESPONSE_STATUS = 599
+const FALLBACK_RESPONSE_STATUS = 500
+
+/** Falls back to 500 for a status `Response.json` would reject. */
+const responseStatus = (status: number): number =>
+  status >= MIN_RESPONSE_STATUS &&
+  status <= MAX_RESPONSE_STATUS &&
+  !NULL_BODY_STATUSES.has(status)
+    ? status
+    : FALLBACK_RESPONSE_STATUS
+
 export class HttpError extends Error {
   readonly code?: string
   readonly fix?: string
@@ -56,6 +73,12 @@ export class HttpError extends Error {
   declare readonly internal?: unknown
   readonly link?: string
   readonly status: number
+  /**
+   * Present only when the error carries a client-facing field, so a plain
+   * `new HttpError(404, 'Not found')` still renders as the bare message.
+   * Elysia calls it to build the response.
+   */
+  declare readonly toResponse?: () => Response
   readonly why?: string
 
   constructor(status: number, message: string, init: HttpErrorInit = {}) {
@@ -100,18 +123,10 @@ export class HttpError extends Error {
       Object.defineProperty(this, 'toResponse', {
         configurable: true,
         enumerable: false,
-        value: (): Response => {
-          // Use the original status only when it's within 200-599 and permits a body.
-          // Fall back to 500 for invalid statuses (0, 600, etc.) or body-disallowed codes (204, 304, etc.)
-          const safeStatus =
-            this.status >= 200 &&
-            this.status < 600 &&
-            this.status !== 204 &&
-            this.status !== 304
-              ? this.status
-              : 500
-          return Response.json(this.toJSON(), { status: safeStatus })
-        },
+        value: (): Response =>
+          Response.json(this.toJSON(), {
+            status: responseStatus(this.status)
+          }),
         writable: true
       })
     }
