@@ -1,0 +1,34 @@
+---
+// 02 · Filtering: the shared cells on a row the replay animation reveals and
+// dims (data-log / data-kept). Noise rows rest dimmed, matching the replay's
+// end state.
+import LogCells from './log-cells.astro'
+
+interface Props {
+  barCls: string
+  barPct: number
+  duration: string
+  durationCls: string
+  errorRow?: boolean
+  kept: boolean
+  method: string
+  methodCls: string
+  path: string
+  status: string
+  statusCls: string
+}
+
+const { errorRow, kept, ...cells } = Astro.props
+---
+
+<tr
+  data-kept={kept ? '' : undefined}
+  data-log
+  class:list={[
+    'transition-opacity duration-300 [&>td:first-child]:rounded-l-md [&>td:first-child]:pl-2 [&>td:last-child]:rounded-r-md [&>td:last-child]:pr-2',
+    !kept && 'opacity-35',
+    errorRow && '[&>td]:bg-[#C9303C]/6 dark:[&>td]:bg-[#ff8080]/10'
+  ]}
+>
+  <LogCells {...cells} />
+</tr>

@@ -1,0 +1,35 @@
+---
+// 03 · Sampling: the shared cells plus a right-aligned sampling tag. Rows
+// marked data-sampled dim and return during the head/tail replay animation.
+import LogCells from './log-cells.astro'
+
+interface Props {
+  barCls: string
+  barPct: number
+  duration: string
+  durationCls: string
+  errorRow?: boolean
+  method: string
+  methodCls: string
+  path: string
+  sampled?: boolean
+  status: string
+  statusCls: string
+  tag: string
+  tagCls: string
+}
+
+const { errorRow, sampled, tag, tagCls, ...cells } = Astro.props
+---
+
+<tr
+  data-sampled={sampled ? '' : undefined}
+  class:list={[
+    '[&>td:first-child]:rounded-l-md [&>td:first-child]:pl-2 [&>td:last-child]:rounded-r-md [&>td:last-child]:pr-2',
+    sampled && 'transition-opacity duration-500',
+    errorRow && '[&>td]:bg-[#C9303C]/6 dark:[&>td]:bg-[#ff8080]/10'
+  ]}
+>
+  <LogCells {...cells} />
+  <td class:list={['whitespace-nowrap py-2 text-right', tagCls]}>{tag}</td>
+</tr>

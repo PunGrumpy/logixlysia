@@ -1,0 +1,39 @@
+---
+// 01 · Request context: the full access log record — time, the four shared
+// cells, and the client IP. `data-log` lets the tail animation reveal rows
+// one by one, the same hook the filtering demo uses.
+import LogCells from './log-cells.astro'
+
+interface Props {
+  barCls: string
+  barPct: number
+  duration: string
+  durationCls: string
+  errorRow?: boolean
+  ip: string
+  method: string
+  methodCls: string
+  path: string
+  status: string
+  statusCls: string
+  time: string
+}
+
+const { errorRow, ip, time, ...cells } = Astro.props
+---
+
+<tr
+  data-log
+  class:list={[
+    'transition-opacity duration-300 [&>td:first-child]:rounded-l-md [&>td:first-child]:pl-2 [&>td:last-child]:rounded-r-md [&>td:last-child]:pr-2',
+    errorRow && '[&>td]:bg-[#C9303C]/6 dark:[&>td]:bg-[#ff8080]/10'
+  ]}
+>
+  <td class="whitespace-nowrap py-2 pr-6 text-black/45 dark:text-white/40">
+    {time}
+  </td>
+  <LogCells {...cells} />
+  <td class="whitespace-nowrap py-2 text-[#0550AE] dark:text-[#a5d6ff]">
+    {ip}
+  </td>
+</tr>
