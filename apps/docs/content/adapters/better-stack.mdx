@@ -1,0 +1,83 @@
+---
+title: Better Stack
+description: Ship logs to Better Stack Telemetry
+---
+
+Send logs to [Better Stack](https://betterstack.com) (formerly Logtail). Logs arrive with a `dt` timestamp, `level`, `message`, and the full meta object — queryable in Live tail and with SQL.
+
+## Setup
+
+1. In Better Stack, create a **source** (platform: JavaScript / HTTP) and copy its **source token**. Newer sources also show a dedicated **ingesting host**.
+2. Set the environment variables:
+
+```bash
+BETTER_STACK_SOURCE_TOKEN=your-source-token
+BETTER_STACK_INGESTING_HOST=https://s123456.eu-nbg-2.betterstackdata.com # if your source shows one
+```
+
+3. Wire the transport:
+
+```ts
+import { Elysia } from 'elysia'
+import logixlysia from 'logixlysia'
+import { createBetterStackTransport } from 'logixlysia/better-stack'
+
+const app = new Elysia()
+  .use(
+    logixlysia({
+      config: {
+        transports: [createBetterStackTransport()]
+      }
+    })
+  )
+  .get('/', () => 'ok')
+  .listen(3000)
+```
+
+4. Trigger a request and watch Live tail.
+
+## Environment Variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `BETTER_STACK_SOURCE_TOKEN` | Yes | Source token, sent as a Bearer token |
+| `BETTER_STACK_INGESTING_HOST` | No | Dedicated ingesting URL (default `https://in.logs.betterstack.com`) |
+
+## Options
+
+```ts
+const betterStack = createBetterStackTransport({
+  endpoint: 'https://s123456.eu-nbg-2.betterstackdata.com'
+})
+```
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `sourceToken` | `string` | `BETTER_STACK_SOURCE_TOKEN` | Source token |
+| `endpoint` | `string` | `https://in.logs.betterstack.com` | Ingesting URL |
+
+Plus the shared batching options: `maxBatchSize`, `flushIntervalMs`, `timeout`, `retries` — see the [overview](/docs/adapters/overview#shared-behavior).
+
+## Payload
+
+Each log posts as one JSON object in a batched array:
+
+```json
+{
+  "dt": "2026-08-22T12:00:00.000Z",
+  "level": "INFO",
+  "message": "GET /users",
+  "request": { "method": "GET", "url": "http://localhost:3000/users" },
+  "status": 200,
+  "durationMs": 12.4,
+  "context": { "requestId": "0d5e…" }
+}
+```
+
+Nested fields are queryable directly, e.g. `context.requestId` or `request.method` in SQL and Live tail filters.
+
+## Troubleshooting
+
+- **`401`** — the source token is wrong, or the source was deleted; copy a fresh token from the source settings.
+- **Logs land in the wrong source** — each source has its own token; double-check which one is in the environment.
+- **Newer source, nothing arrives** — sources with a dedicated ingesting host reject the legacy default endpoint; set `BETTER_STACK_INGESTING_HOST`.

@@ -56,6 +56,21 @@
         ]
       },
       {
+        "group": "Adapters",
+        "pages": [
+          "adapters/overview",
+          "adapters/axiom",
+          "adapters/better-stack",
+          "adapters/clickhouse",
+          "adapters/datadog",
+          "adapters/hyperdx",
+          "adapters/loki",
+          "adapters/otlp",
+          "adapters/posthog",
+          "adapters/sentry"
+        ]
+      },
+      {
         "group": "Integrations",
         "pages": ["integrations/pino", "integrations/otel", "integrations/ai"]
       }

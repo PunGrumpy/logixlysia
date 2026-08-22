@@ -1,0 +1,112 @@
+---
+title: ClickHouse
+description: Insert logs into a ClickHouse table over HTTP
+---
+
+Send logs straight into a [ClickHouse](https://clickhouse.com) table via the HTTP interface with `JSONEachRow` — your own log warehouse with SQL, no agent or pipeline in between.
+
+## Setup
+
+1. Create the target table:
+
+```sql
+CREATE TABLE default.logs (
+  timestamp DateTime64(3),
+  level LowCardinality(String),
+  message String,
+  attributes Map(String, String)
+)
+ENGINE = MergeTree
+ORDER BY timestamp
+```
+
+2. Set the environment variables (all optional for a default local instance):
+
+```bash
+CLICKHOUSE_URL=http://localhost:8123
+CLICKHOUSE_DATABASE=default
+CLICKHOUSE_TABLE=logs
+CLICKHOUSE_USERNAME=default
+CLICKHOUSE_PASSWORD=secret
+```
+
+3. Wire the transport:
+
+```ts
+import { Elysia } from 'elysia'
+import logixlysia from 'logixlysia'
+import { createClickHouseTransport } from 'logixlysia/clickhouse'
+
+const app = new Elysia()
+  .use(
+    logixlysia({
+      config: {
+        transports: [createClickHouseTransport()]
+      }
+    })
+  )
+  .get('/', () => 'ok')
+  .listen(3000)
+```
+
+4. Query: `SELECT * FROM logs WHERE level = 'ERROR' ORDER BY timestamp DESC`.
+
+## Environment Variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `CLICKHOUSE_URL` | No | HTTP interface base URL (default `http://localhost:8123`) |
+| `CLICKHOUSE_DATABASE` | No | Target database (default `default`) |
+| `CLICKHOUSE_TABLE` | No | Target table (default `logs`) |
+| `CLICKHOUSE_USERNAME` | No | Sent as `X-ClickHouse-User` |
+| `CLICKHOUSE_PASSWORD` | No | Sent as `X-ClickHouse-Key` |
+
+## Options
+
+```ts
+const clickhouse = createClickHouseTransport({
+  database: 'observability',
+  table: 'app_logs'
+})
+```
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `url` | `string` | `http://localhost:8123` | HTTP interface base URL |
+| `database` | `string` | `default` | Target database |
+| `table` | `string` | `logs` | Target table |
+| `username` | `string` | `CLICKHOUSE_USERNAME` | Username |
+| `password` | `string` | `CLICKHOUSE_PASSWORD` | Password |
+
+Plus the shared batching options: `maxBatchSize`, `flushIntervalMs`, `timeout`, `retries` — see the [overview](/docs/adapters/overview#shared-behavior).
+
+Database and table names must be plain identifiers (letters, digits, underscores) — anything else throws at startup.
+
+## Payload
+
+Each log becomes one `JSONEachRow` row. Meta flattens into the `attributes` map with values rendered as strings:
+
+```json
+{
+  "timestamp": "2026-08-22T12:00:00.000Z",
+  "level": "INFO",
+  "message": "GET /users",
+  "attributes": {
+    "request.method": "GET",
+    "request.url": "http://localhost:3000/users",
+    "status": "200",
+    "durationMs": "12.4",
+    "context.requestId": "0d5e…"
+  }
+}
+```
+
+Query attributes with map access, e.g. `WHERE attributes['status'] = '500'`. The insert URL includes `date_time_input_format=best_effort` so ISO 8601 timestamps parse into `DateTime64` directly.
+
+ClickHouse loves large batches — for high-volume services, raise `maxBatchSize` (e.g. 500) and `flushIntervalMs` (e.g. 5000) to cut down on tiny inserts.
+
+## Troubleshooting
+
+- **`404` / `UNKNOWN_TABLE`** — create the table first (DDL above), or check `CLICKHOUSE_DATABASE` / `CLICKHOUSE_TABLE`.
+- **`516`** — authentication failed; ClickHouse returns this for bad credentials.
+- **`Cannot parse` errors** — the table schema doesn't match the row shape; align it with the DDL above or adjust column types.

@@ -34,6 +34,51 @@
       "import": "./dist/ai.js",
       "default": "./dist/ai.js"
     },
+    "./axiom": {
+      "types": "./dist/axiom.d.ts",
+      "import": "./dist/axiom.js",
+      "default": "./dist/axiom.js"
+    },
+    "./hyperdx": {
+      "types": "./dist/hyperdx.d.ts",
+      "import": "./dist/hyperdx.js",
+      "default": "./dist/hyperdx.js"
+    },
+    "./sentry": {
+      "types": "./dist/sentry.d.ts",
+      "import": "./dist/sentry.js",
+      "default": "./dist/sentry.js"
+    },
+    "./posthog": {
+      "types": "./dist/posthog.d.ts",
+      "import": "./dist/posthog.js",
+      "default": "./dist/posthog.js"
+    },
+    "./otlp": {
+      "types": "./dist/otlp.d.ts",
+      "import": "./dist/otlp.js",
+      "default": "./dist/otlp.js"
+    },
+    "./datadog": {
+      "types": "./dist/datadog.d.ts",
+      "import": "./dist/datadog.js",
+      "default": "./dist/datadog.js"
+    },
+    "./better-stack": {
+      "types": "./dist/better-stack.d.ts",
+      "import": "./dist/better-stack.js",
+      "default": "./dist/better-stack.js"
+    },
+    "./loki": {
+      "types": "./dist/loki.d.ts",
+      "import": "./dist/loki.js",
+      "default": "./dist/loki.js"
+    },
+    "./clickhouse": {
+      "types": "./dist/clickhouse.d.ts",
+      "import": "./dist/clickhouse.js",
+      "default": "./dist/clickhouse.js"
+    },
     "./package.json": "./package.json"
   },
   "main": "dist/index.js",

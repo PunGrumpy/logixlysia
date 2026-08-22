@@ -1,0 +1,97 @@
+---
+title: Grafana Loki
+description: Push logs to Grafana Loki or Grafana Cloud
+---
+
+Send logs to [Grafana Loki](https://grafana.com/oss/loki/) — self-hosted or Grafana Cloud. Streams are labeled with `service_name` and `level`; the log line itself is JSON, ready for LogQL's `| json` parser.
+
+## Setup
+
+1. Have a Loki instance (e.g. `http://localhost:3100`) or a Grafana Cloud stack (find the push URL and credentials under **Connections → Loki**).
+2. Set the environment variables:
+
+```bash
+LOKI_URL=http://localhost:3100
+# Grafana Cloud:
+# LOKI_URL=https://logs-prod-012.grafana.net
+# LOKI_USERNAME=123456        # instance ID
+# LOKI_PASSWORD=glc_...       # access token
+```
+
+3. Wire the transport:
+
+```ts
+import { Elysia } from 'elysia'
+import logixlysia from 'logixlysia'
+import { createLokiTransport } from 'logixlysia/loki'
+
+const app = new Elysia()
+  .use(
+    logixlysia({
+      config: {
+        transports: [createLokiTransport({ serviceName: 'my-api' })]
+      }
+    })
+  )
+  .get('/', () => 'ok')
+  .listen(3000)
+```
+
+4. Query in Grafana: `{service_name="my-api"} | json`.
+
+## Environment Variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `LOKI_URL` | Yes | Loki base URL — `/loki/api/v1/push` is appended |
+| `LOKI_USERNAME` | For Grafana Cloud | Basic-auth username (instance ID) |
+| `LOKI_PASSWORD` | For Grafana Cloud | Basic-auth password / access token |
+| `LOKI_TENANT_ID` | For multi-tenant Loki | Sent as `X-Scope-OrgID` |
+| `LOKI_SERVICE_NAME` | No | `service_name` label (falls back to `OTEL_SERVICE_NAME`) |
+
+## Options
+
+```ts
+const loki = createLokiTransport({
+  labels: { env: 'production' },
+  serviceName: 'my-api'
+})
+```
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `url` | `string` | `LOKI_URL` | Loki base URL |
+| `serviceName` | `string` | `logixlysia` | `service_name` stream label |
+| `labels` | `Record<string, string>` | — | Extra **static** stream labels |
+| `username` | `string` | `LOKI_USERNAME` | Basic-auth username |
+| `password` | `string` | `LOKI_PASSWORD` | Basic-auth password |
+| `tenantId` | `string` | `LOKI_TENANT_ID` | `X-Scope-OrgID` header |
+
+Plus the shared batching options: `maxBatchSize`, `flushIntervalMs`, `timeout`, `retries` — see the [overview](/docs/adapters/overview#shared-behavior).
+
+Keep `labels` low-cardinality (environment, region) — per-request values like request IDs belong in the log line, where LogQL can still filter them, not in labels, where they explode Loki's index.
+
+## Payload
+
+Each batch groups entries by level into streams:
+
+```json
+{
+  "streams": [
+    {
+      "stream": { "service_name": "my-api", "level": "INFO", "env": "production" },
+      "values": [
+        ["1787788800000000000", "{\"message\":\"GET /users\",\"status\":200,\"durationMs\":12.4}"]
+      ]
+    }
+  ]
+}
+```
+
+Query with LogQL, e.g. `{service_name="my-api", level="ERROR"} | json | durationMs > 1000`.
+
+## Troubleshooting
+
+- **`401`** — Grafana Cloud needs both `LOKI_USERNAME` (instance ID) and `LOKI_PASSWORD` (token with `logs:write`).
+- **`400` "entry too far behind"** — Loki rejects out-of-order or too-old timestamps; check the server clock.
+- **`429`** — per-tenant ingestion limits hit; raise `flushIntervalMs`/`maxBatchSize` to send fewer, larger batches, or raise the tenant limits.

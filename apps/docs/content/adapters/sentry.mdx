@@ -1,0 +1,80 @@
+---
+title: Sentry
+description: Ship structured logs to Sentry next to your errors and traces
+---
+
+Send logs to [Sentry](https://sentry.io)'s structured logs (**Explore → Logs**). Every meta field becomes a typed, searchable attribute, and logs link to traces through `trace_id` — no Sentry SDK required.
+
+## Setup
+
+1. Create (or open) a project in Sentry and copy its DSN from **Settings → Projects → Client Keys (DSN)**.
+2. Set the environment variable:
+
+```bash
+SENTRY_DSN=https://your-public-key@o0.ingest.sentry.io/your-project-id
+```
+
+3. Wire the transport:
+
+```ts
+import { Elysia } from 'elysia'
+import logixlysia from 'logixlysia'
+import { createSentryTransport } from 'logixlysia/sentry'
+
+const app = new Elysia()
+  .use(
+    logixlysia({
+      config: {
+        transports: [createSentryTransport()]
+      }
+    })
+  )
+  .get('/', () => 'ok')
+  .listen(3000)
+```
+
+4. Trigger a request and open **Explore → Logs** in Sentry.
+
+## Environment Variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `SENTRY_DSN` | Yes | Project DSN (`https://<public-key>@<host>/<project-id>`) |
+| `SENTRY_ENVIRONMENT` | No | Sets the `sentry.environment` attribute |
+| `SENTRY_RELEASE` | No | Sets the `sentry.release` attribute |
+
+## Options
+
+```ts
+const sentry = createSentryTransport({
+  environment: 'production',
+  release: '1.4.2',
+  tags: { team: 'backend' }
+})
+```
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `dsn` | `string` | `SENTRY_DSN` | Project DSN |
+| `environment` | `string` | `SENTRY_ENVIRONMENT` | `sentry.environment` attribute |
+| `release` | `string` | `SENTRY_RELEASE` | `sentry.release` attribute |
+| `tags` | `Record<string, string>` | — | Extra attributes added to every log |
+
+Plus the shared batching options: `maxBatchSize`, `flushIntervalMs`, `timeout`, `retries` — see the [overview](/docs/adapters/overview#shared-behavior).
+
+## Payload
+
+Logs post to the project's envelope endpoint as Sentry log items:
+
+- **Body** — the log message, or `GET /path` for access logs.
+- **Level** — `DEBUG` → `debug`, `INFO` → `info`, `WARNING` → `warn`, `ERROR` → `error`.
+- **Attributes** — meta fields flattened to typed attributes (`string`, `integer`, `double`, `boolean`): `request.method`, `status`, `durationMs`, `context.requestId`, and anything you merge into the request context.
+- **Trace ID** — reused from `context.trace_id` when [`logixlysia/otel`](/docs/integrations/otel) injected one (linking logs to the trace), otherwise generated.
+
+Filter in Sentry by any attribute, e.g. `status:500` or `context.requestId:0d5e…`.
+
+## Troubleshooting
+
+- **`401` / `403`** — the DSN was revoked or belongs to another project; copy a fresh one from Client Keys.
+- **`invalid DSN` at startup** — the expected shape is `https://<public-key>@<host>/<project-id>`.
+- **Logs don't link to traces** — make sure `trace_id` reaches the request context via [`logixlysia/otel`](/docs/integrations/otel).
