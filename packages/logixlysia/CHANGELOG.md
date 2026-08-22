@@ -1,5 +1,19 @@
 # Changelog
 
+## 6.8.0
+
+### Minor Changes
+
+- 7d22709: Add the `logixlysia/axiom` adapter. `createAxiomTransport()` ships logs to an Axiom dataset via the ingest API with batching, retries, and env-based credentials (`AXIOM_API_KEY`, `AXIOM_DATASET`, `AXIOM_ORG_ID`, `AXIOM_URL`). Events keep their nested structure so every field is queryable with APL.
+- 7d22709: Add the `logixlysia/better-stack` adapter. `createBetterStackTransport()` ships logs to Better Stack Telemetry using `BETTER_STACK_SOURCE_TOKEN`, supporting both the legacy shared endpoint and the dedicated per-source ingesting hosts (`BETTER_STACK_INGESTING_HOST`). Logs post with a `dt` timestamp, `level`, `message`, and the full meta object.
+- 7d22709: Add the `logixlysia/clickhouse` adapter. `createClickHouseTransport()` inserts logs into a ClickHouse table over the HTTP interface using `JSONEachRow` — rows carry `timestamp`, `level`, `message`, and an `attributes` map of the flattened meta. Database and table names are validated as plain identifiers, and ISO timestamps parse via `date_time_input_format=best_effort`.
+- 7d22709: Add the `logixlysia/datadog` adapter. `createDatadogTransport()` ships logs to Datadog's v2 logs intake (`DD_API_KEY`, `DD_SITE` for regions). The log level lands in the `status` attribute for Datadog's default remapper, the HTTP response status follows the standard `http.status_code` attribute, and the full meta object rides along as searchable attributes.
+- 7d22709: Add the `logixlysia/hyperdx` adapter. `createHyperDXTransport()` ships logs to HyperDX (cloud or self-hosted collectors) as OTLP JSON over HTTP, authenticated with `HYPERDX_API_KEY`. Meta fields become dot-notation log attributes searchable in the HyperDX UI.
+- 7d22709: Add the `logixlysia/loki` adapter. `createLokiTransport()` pushes logs to Grafana Loki (self-hosted or Grafana Cloud with basic auth, multi-tenant via `X-Scope-OrgID`). Streams are labeled with low-cardinality `service_name` and `level`; the log line is the message and full meta as JSON, ready for LogQL's `| json`.
+- 7d22709: Add the `logixlysia/otlp` adapter. `createOtlpTransport()` ships logs to any OTLP/HTTP logs endpoint as `ExportLogsServiceRequest` JSON — OpenTelemetry Collectors, Grafana Cloud, New Relic, Honeycomb, SigNoz, and other OTLP-compatible backends. Honors the standard `OTEL_EXPORTER_OTLP_ENDPOINT`, `OTEL_EXPORTER_OTLP_HEADERS`, and `OTEL_SERVICE_NAME` variables.
+- 7d22709: Add the `logixlysia/posthog` adapter. `createPostHogTransport()` captures logs as PostHog events via the batch API (`POSTHOG_API_KEY`, `POSTHOG_HOST` for EU/self-hosted). Meta fields become dot-notation event properties, and logs carrying a `userId` in the request context are linked to PostHog persons via `distinct_id`.
+- 7d22709: Add the `logixlysia/sentry` adapter. `createSentryTransport()` ships structured logs to Sentry (Explore > Logs) via the envelope endpoint using `SENTRY_DSN` — no Sentry SDK required. Every meta field becomes a typed, searchable attribute, and `trace_id` from the request context links logs to traces.
+
 ## 6.7.0
 
 ### Minor Changes
