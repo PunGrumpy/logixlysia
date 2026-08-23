@@ -1,0 +1,28 @@
+/*
+ * Blume's last-cascade-layer overrides. Blume appends this file to the end of
+ * the generated stylesheet ("config first, then the user's theme.css"), so
+ * anything here wins without specificity tricks — which is exactly what a
+ * page-scoped sheet like styles/home.css cannot do, since Astro inlines that
+ * one *before* the linked Tailwind stylesheet and only on the homepage.
+ */
+
+/* Tailwind v4 drops v3's border-color default, so a bare `border`/`divide-*`
+   utility falls back to currentColor — black text borders in light mode. Give
+   the whole site the token default back. Inside @layer base so Tailwind's own
+   utilities layer (border-accent, border-white/10, the explicit colors the
+   landing panels set) still wins. */
+@layer base {
+  *,
+  ::before,
+  ::after {
+    border-color: var(--color-border);
+  }
+}
+
+/* Keeps a stray few pixels of content from turning into a horizontal
+   scrollbar (measured 3px on the landing page at a 360px viewport). `clip`
+   rather than `hidden`: it creates no scroll container, so the sticky header
+   and docs sidebar keep working. */
+html {
+  overflow-x: clip;
+}
