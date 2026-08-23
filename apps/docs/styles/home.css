@@ -17,13 +17,14 @@
   }
 }
 
-/* Crisper, thinner text on macOS; other platforms ignore these. The
-   horizontal clip keeps the footer's full-bleed `w-screen` breakout from
-   adding a horizontal scrollbar when the vertical scrollbar is visible. */
+/* Font smoothing is not repeated here: Blume already sets `antialiased` on
+   <body> in every layout, so declaring it again on <html> changed nothing.
+   The clip stays — without it the page picks up a few pixels of horizontal
+   scroll at narrow widths (measured 3px at a 360px viewport). `clip` rather
+   than `hidden` so no scroll container is created and sticky chrome still
+   works. */
 html {
   overflow-x: clip;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
 }
 
 /* Dual-theme homepage code block (github-light / vesper). Same swap Blume
