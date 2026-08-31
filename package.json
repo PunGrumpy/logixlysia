@@ -1,5 +1,6 @@
 {
   "name": "logixlysia-monorepo",
+  "private": true,
   "description": "🦊 Logixlysia is a logger for Elysia",
   "workspaces": [
     "apps/*",
@@ -10,7 +11,7 @@
     "build": "turbo run build",
     "bump-deps": "bunx npm-check-updates --deep -u && bun install",
     "changeset": "changeset",
-    "changeset:publish": "bun build && changeset publish",
+    "changeset:publish": "bun run build && changeset publish",
     "changeset:version": "changeset version",
     "clean": "git clean -xdf .turbo node_modules",
     "dev": "turbo run dev",
@@ -23,6 +24,7 @@
   "devDependencies": {
     "@biomejs/biome": "2.5.7",
     "@changesets/cli": "^2.31.0",
+    "exact-mirror": "^1.2.2",
     "turbo": "^2.10.8",
     "typescript": "7.0.2",
     "ultracite": "7.10.0"

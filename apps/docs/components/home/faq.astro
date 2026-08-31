@@ -19,8 +19,18 @@ const faqs = [
   },
   {
     answer:
+      'No. Head sampling keeps a percentage of high-volume levels, and tail sampling replays the dropped lines when a request errors or runs slow — the bill stays flat while interesting requests stay complete.',
+    question: 'Will it flood my log bill?'
+  },
+  {
+    answer:
       'Yes. File logging ships with size- and time-based rotation built in, so old logs rotate and compress without extra tooling.',
     question: 'Can it write to files?'
+  },
+  {
+    answer:
+      'Yes — nine built-in adapters cover Axiom, Datadog, Sentry, PostHog, Better Stack, HyperDX, Grafana Loki, ClickHouse, and any OpenTelemetry backend over OTLP. Each one batches, retries, and never blocks a response.',
+    question: 'Can it send logs to my observability platform?'
   },
   {
     answer:

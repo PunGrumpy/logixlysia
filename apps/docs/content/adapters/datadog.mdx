@@ -1,0 +1,81 @@
+---
+title: Datadog
+description: Ship logs to Datadog via the v2 logs intake API
+---
+
+Send logs to [Datadog](https://www.datadoghq.com) Log Management. Logs arrive with `service` and `source` facets, the level mapped to Datadog's `status`, and the full meta object as searchable attributes.
+
+## Setup
+
+1. Create an API key in **Organization Settings → API Keys**.
+2. Set the environment variables:
+
+```bash
+DD_API_KEY=your-api-key
+DD_SITE=datadoghq.com # or datadoghq.eu, us3.datadoghq.com, us5.datadoghq.com, ap1.datadoghq.com
+DD_SERVICE=my-api
+```
+
+3. Wire the transport:
+
+```ts
+import { Elysia } from 'elysia'
+import logixlysia from 'logixlysia'
+import { createDatadogTransport } from 'logixlysia/datadog'
+
+const app = new Elysia()
+  .use(
+    logixlysia({
+      config: {
+        transports: [createDatadogTransport()]
+      }
+    })
+  )
+  .get('/', () => 'ok')
+  .listen(3000)
+```
+
+4. Trigger a request and open **Logs → Explorer** in Datadog.
+
+## Environment Variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `DD_API_KEY` | Yes | API key, sent as the `DD-API-KEY` header |
+| `DD_SITE` | No | Datadog site (default `datadoghq.com`) |
+| `DD_SERVICE` | No | `service` facet (default `logixlysia`) |
+| `DD_HOSTNAME` | No | `hostname` on each log; omitted when unset |
+
+## Options
+
+```ts
+const datadog = createDatadogTransport({
+  service: 'my-api',
+  tags: { env: 'production', team: 'backend' }
+})
+```
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `apiKey` | `string` | `DD_API_KEY` | Datadog API key |
+| `site` | `string` | `datadoghq.com` | Datadog site / region |
+| `service` | `string` | `logixlysia` | `service` facet |
+| `source` | `string` | `logixlysia` | `ddsource` facet |
+| `hostname` | `string` | `DD_HOSTNAME` | Reported hostname |
+| `tags` | `Record<string, string>` | — | Rendered into `ddtags` as `key:value` pairs |
+
+Plus the shared batching options: `maxBatchSize`, `flushIntervalMs`, `timeout`, `retries` — see the [overview](/docs/adapters/overview#shared-behavior).
+
+## Payload
+
+Logs post to `https://http-intake.logs.{site}/api/v2/logs`:
+
+- **`status`** — the log level lowercased (`info`, `warning`, `error`), which Datadog's default status remapper picks up for severity coloring.
+- **`http.status_code`** — the HTTP response status from access logs, following Datadog's standard attribute so response-code facets work out of the box.
+- **Attributes** — the full meta object rides along nested (`request.method`, `context.requestId`, `durationMs`, …), searchable with `@request.method:GET` style queries.
+
+## Troubleshooting
+
+- **`403`** — the API key is invalid, or it belongs to a different site than `DD_SITE`; keys are region-scoped.
+- **Wrong region** — EU organizations must set `DD_SITE=datadoghq.eu`; a wrong site surfaces as a non-2xx response through the `onError` hook or stderr.
+- **Levels look wrong** — if you customized the status remapper in a log pipeline, map it to the `status` attribute.

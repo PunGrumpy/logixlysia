@@ -13,6 +13,7 @@ export default defineMeta({
     'configuration',
     'api-reference',
     'features',
+    'adapters',
     'integrations'
   ],
   title: 'Documentation'

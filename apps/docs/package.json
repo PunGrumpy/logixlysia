@@ -3,10 +3,13 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
+    "audit": "blume audit",
     "build": "blume build",
     "clean": "git clean -xdf .blume .astro .cache .turbo dist node_modules",
     "dev": "blume dev --port 3000",
-    "typecheck": "tsc --noEmit"
+    "doctor": "blume doctor",
+    "typecheck": "tsc --noEmit",
+    "validate": "blume validate"
   },
   "dependencies": {
     "blume": "latest"
@@ -14,6 +17,7 @@
   "devDependencies": {
     "@repo/typescript-config": "workspace:*",
     "@types/node": "^26.1.2",
+    "simple-icons": "^13.0.0",
     "typescript": "^7.0.2"
   }
 }

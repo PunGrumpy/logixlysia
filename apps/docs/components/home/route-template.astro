@@ -1,0 +1,29 @@
+---
+// Hidden <template> holding one route's fully styled log line(s). The demo
+// script clones it on click and fills the [data-hook] spans with the current
+// timestamp and a randomized duration.
+import TermLine from './term-line.astro'
+
+interface Props {
+  id: string
+  lines: [cls: string, text: string, hook?: string][][]
+  max: number
+  method: string
+  min: number
+  path: string
+  status: string
+}
+
+const { id, lines, max, method, min, path, status } = Astro.props
+---
+
+<template
+  data-max={max}
+  data-method={method}
+  data-min={min}
+  data-path={path}
+  data-route-template={id}
+  data-status={status}
+>
+  {lines.map(parts => <TermLine parts={parts} />)}
+</template>

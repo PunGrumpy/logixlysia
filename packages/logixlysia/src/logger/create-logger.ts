@@ -1,13 +1,8 @@
 import { STATUS_CODES } from 'node:http'
 import chalk from 'chalk'
 import { getStatusCode } from '../helpers/status'
-import type {
-  LogLevel,
-  Options,
-  Pino,
-  RequestInfo,
-  StoreData
-} from '../interfaces'
+import type { LogLevel, Options, RequestInfo, StoreData } from '../interfaces'
+import { elapsedMs } from '../utils/duration'
 import { isStructuredError, parseError } from '../utils/error'
 import { sanitizeLogText } from '../utils/sanitize'
 
@@ -98,10 +93,10 @@ const getSlowThresholds = (
 const colorDurationText = (
   ms: number,
   useColors: boolean,
-  options: Options
+  slow: number,
+  verySlow: number
 ): { text: string; isVerySlow: boolean } => {
   const raw = formatDuration(ms)
-  const { slow, verySlow } = getSlowThresholds(options)
   const isVerySlow = ms >= verySlow
 
   if (!useColors) {
@@ -261,6 +256,43 @@ const getServiceToken = (options: Options, useColors: boolean): string => {
   return `${chalk.dim(bracketed)} `
 }
 
+export interface FormatContext {
+  format: string
+  serviceToken: string
+  slowThreshold: number
+  /** Format tokens actually present in `format` (see {@link LOG_FORMAT_REGEX}). */
+  tokens: Set<string>
+  useColors: boolean
+  verySlowThreshold: number
+}
+
+/**
+ * Resolves colors/format/thresholds/service once per logger instance instead of per log line.
+ * Safe to hoist: TTY-ness and config don't change across a process's lifetime, so freezing the
+ * colors decision at construction time matches real process lifecycles.
+ *
+ * NOTE: adding a new format token requires adding it both to {@link LOG_FORMAT_REGEX} and to the
+ * token-gating checks in {@link formatLogOutput} below.
+ */
+export const createFormatContext = (options: Options): FormatContext => {
+  const { config } = options
+  const useColors = shouldUseColors(options)
+  const format = config?.customLogFormat ?? DEFAULT_LOG_FORMAT
+  const tokens = new Set(format.match(LOG_FORMAT_REGEX) ?? [])
+  const { slow: slowThreshold, verySlow: verySlowThreshold } =
+    getSlowThresholds(options)
+  const serviceToken = getServiceToken(options, useColors)
+
+  return {
+    format,
+    serviceToken,
+    slowThreshold,
+    tokens,
+    useColors,
+    verySlowThreshold
+  }
+}
+
 const stringifyTreeValue = (value: unknown): string => {
   if (value === null) {
     return 'null'
@@ -335,20 +367,6 @@ const formatEntriesToTreeLines = (
   return lines
 }
 
-export const renderContextTreeLines = (
-  ctx: Record<string, unknown>,
-  options: Options,
-  useColors: boolean
-): string[] => {
-  const depth = options.config?.contextDepth ?? 1
-  if (depth < 1) {
-    return []
-  }
-
-  const entries = collectContextEntries(ctx, '', depth)
-  return formatEntriesToTreeLines(entries, useColors)
-}
-
 const collectStructuredErrorEntries = (error: unknown): [string, string][] => {
   const entries: [string, string][] = []
   const msg = parseError(error)
@@ -356,6 +374,9 @@ const collectStructuredErrorEntries = (error: unknown): [string, string][] => {
     entries.push(['error', msg])
   }
   if (isStructuredError(error)) {
+    if (error.code !== undefined) {
+      entries.push(['error.code', String(error.code)])
+    }
     if (error.why !== undefined) {
       entries.push(['error.why', String(error.why)])
     }
@@ -375,13 +396,13 @@ const collectStructuredErrorEntries = (error: unknown): [string, string][] => {
 export const buildContextTreeLines = (
   level: LogLevel,
   data: Record<string, unknown>,
-  options: Options
+  options: Options,
+  useColors: boolean = shouldUseColors(options)
 ): string[] => {
   if (options.config?.showContextTree === false) {
     return []
   }
 
-  const useColors = shouldUseColors(options)
   const depth = options.config?.contextDepth ?? 1
 
   const entries: [string, string][] = []
@@ -399,7 +420,9 @@ export const buildContextTreeLines = (
     )
   }
 
-  if (level === 'ERROR' && 'error' in data && data.error !== undefined) {
+  // WARNING as well as ERROR: a 4xx is logged at WARNING, and its
+  // `why`/`fix`/`link` are exactly as worth showing as a 5xx's.
+  if ((level === 'ERROR' || level === 'WARNING') && data.error !== undefined) {
     entries.push(...collectStructuredErrorEntries(data.error))
   }
 
@@ -414,78 +437,237 @@ const getContextString = (value: unknown): string => {
   return ''
 }
 
+/** Raw duration/URL parts computed once per log emission by the caller (see `logger/index.ts`). */
+export interface PrecomputedLogParts {
+  durationMs: number
+  pathname: string
+  search: string
+}
+
+/** `{now}`/`{epoch}` share a single `Date` sample; each is only formatted when requested. */
+const getTimestampTokens = (
+  tokens: Set<string>,
+  translateTime: string | undefined,
+  useColors: boolean
+): { timestamp: string; epoch: string } => {
+  if (!(tokens.has('{now}') || tokens.has('{epoch}'))) {
+    return { epoch: '', timestamp: '' }
+  }
+  const now = new Date()
+  const epoch = tokens.has('{epoch}') ? String(now.getTime()) : ''
+  if (!tokens.has('{now}')) {
+    return { epoch, timestamp: '' }
+  }
+  const rawTimestamp = formatTimestamp(now, translateTime)
+  return { epoch, timestamp: getColoredTimestamp(rawTimestamp, useColors) }
+}
+
+const getMessageToken = (
+  tokens: Set<string>,
+  data: Record<string, unknown>
+): string => {
+  if (!tokens.has('{message}')) {
+    return ''
+  }
+  return typeof data.message === 'string' ? data.message : ''
+}
+
+/** `{pathname}`/`{path}`/`{query}` share a single URL parse (or the precomputed one). */
+const getPathnameTokens = (
+  tokens: Set<string>,
+  request: RequestInfo,
+  config: Options['config'],
+  useColors: boolean,
+  precomputed?: PrecomputedLogParts
+): { coloredPathname: string; query: string } => {
+  const needsPathname = tokens.has('{pathname}') || tokens.has('{path}')
+  const needsQuery = tokens.has('{query}')
+  if (!(needsPathname || needsQuery)) {
+    return { coloredPathname: '', query: '' }
+  }
+
+  let rawPathname: string
+  let search: string
+  if (precomputed) {
+    ;({ pathname: rawPathname, search } = precomputed)
+  } else {
+    try {
+      ;({ pathname: rawPathname, search } = new URL(request.url))
+    } catch {
+      rawPathname = request.url || '/'
+      search = ''
+    }
+  }
+
+  const query = needsQuery ? search : ''
+  if (!needsPathname) {
+    return { coloredPathname: '', query }
+  }
+  const pathname = config?.logQueryParams
+    ? `${rawPathname}${search}`
+    : rawPathname
+  return { coloredPathname: getColoredPathname(pathname, useColors), query }
+}
+
+/** `{status}`/`{statusText}` share a single status-code resolution. */
+const getStatusTokens = (
+  tokens: Set<string>,
+  data: Record<string, unknown>,
+  useColors: boolean
+): { coloredStatus: string; statusText: string } => {
+  const needsStatus = tokens.has('{status}')
+  const needsStatusText = tokens.has('{statusText}')
+  if (!(needsStatus || needsStatusText)) {
+    return { coloredStatus: '', statusText: '' }
+  }
+  const statusValue = data.status
+  const statusCode =
+    statusValue === null || statusValue === undefined
+      ? 200
+      : getStatusCode(statusValue)
+  return {
+    coloredStatus: needsStatus
+      ? getColoredStatus(String(statusCode), useColors)
+      : '',
+    statusText: needsStatusText ? getStatusText(statusCode) : ''
+  }
+}
+
+const getIpToken = (
+  tokens: Set<string>,
+  request: RequestInfo,
+  config: Options['config']
+): string => (config?.ip === true && tokens.has('{ip}') ? getIp(request) : '')
+
+const hasNonEmptyContext = (
+  context: unknown
+): context is Record<string, unknown> =>
+  context !== null &&
+  context !== undefined &&
+  typeof context === 'object' &&
+  !Array.isArray(context) &&
+  Object.keys(context as object).length > 0
+
+const getContextToken = (
+  tokens: Set<string>,
+  data: Record<string, unknown>,
+  config: Options['config']
+): string => {
+  if (!tokens.has('{context}')) {
+    return ''
+  }
+  const showTree = config?.showContextTree !== false
+  if (showTree && hasNonEmptyContext(data.context)) {
+    return ''
+  }
+  return getContextString(data.context)
+}
+
+/** `{duration}`/`{speed}` share a single duration sample and slow-threshold check. */
+const getDurationTokens = (
+  tokens: Set<string>,
+  store: StoreData,
+  useColors: boolean,
+  slowThreshold: number,
+  verySlowThreshold: number,
+  precomputed?: PrecomputedLogParts
+): { coloredDuration: string; speedToken: string } => {
+  const needsDuration = tokens.has('{duration}')
+  const needsSpeed = tokens.has('{speed}')
+  if (!(needsDuration || needsSpeed)) {
+    return { coloredDuration: '', speedToken: '' }
+  }
+  const durationMs = precomputed?.durationMs ?? elapsedMs(store.beforeTime)
+  const { text, isVerySlow } = colorDurationText(
+    durationMs,
+    useColors,
+    slowThreshold,
+    verySlowThreshold
+  )
+  return {
+    coloredDuration: needsDuration ? text : '',
+    speedToken: needsSpeed ? getSpeedToken(isVerySlow, useColors) : ''
+  }
+}
+
+const getRequestIdToken = (
+  tokens: Set<string>,
+  data: Record<string, unknown>
+): string => {
+  if (!tokens.has('{requestId}')) {
+    return ''
+  }
+  const ctx = data.context
+  if (typeof ctx !== 'object' || ctx === null || !('requestId' in ctx)) {
+    return ''
+  }
+  return String((ctx as Record<string, unknown>).requestId)
+}
+
 export const formatLogOutput = ({
   level,
   request,
   data,
   store,
-  options
+  options,
+  formatContext,
+  precomputed
 }: {
   level: LogLevel
   request: RequestInfo
   data: Record<string, unknown>
   store: StoreData
   options: Options
+  /** Hoisted per-logger constants; computed on the fly when a direct caller omits it. */
+  formatContext?: FormatContext
+  /** Duration/URL parts already computed by the caller; parsed on the fly when omitted. */
+  precomputed?: PrecomputedLogParts
 }): FormattedLogOutput => {
   const { config } = options
-  const useColors = shouldUseColors(options)
-  const format = config?.customLogFormat ?? DEFAULT_LOG_FORMAT
-
-  const now = new Date()
-  const epoch = String(now.getTime())
-  const rawTimestamp = formatTimestamp(now, config?.timestamp?.translateTime)
-  const timestamp = getColoredTimestamp(rawTimestamp, useColors)
-
-  const message = typeof data.message === 'string' ? data.message : ''
-  const durationMs =
-    store.beforeTime === BigInt(0)
-      ? 0
-      : Number(process.hrtime.bigint() - store.beforeTime) / 1_000_000
-
-  let rawPathname: string
-  let search: string
-  try {
-    ;({ pathname: rawPathname, search } = new URL(request.url))
-  } catch {
-    rawPathname = request.url || '/'
-    search = ''
-  }
-  const query = search
-  const pathname = config?.logQueryParams
-    ? `${rawPathname}${query}`
-    : rawPathname
-  const statusValue = data.status
-  const statusCode =
-    statusValue === null || statusValue === undefined
-      ? 200
-      : getStatusCode(statusValue)
-  const status = String(statusCode)
-  const ip = config?.ip === true ? getIp(request) : ''
-
-  const showTree = config?.showContextTree !== false
-  const ctxString =
-    showTree &&
-    data.context &&
-    typeof data.context === 'object' &&
-    !Array.isArray(data.context) &&
-    Object.keys(data.context as object).length > 0
-      ? ''
-      : getContextString(data.context)
-
-  const coloredLevel = getColoredLevel(level, useColors)
-  const methodPadded = request.method.toUpperCase().padEnd(METHOD_PAD)
-  const coloredMethod = getColoredMethod(methodPadded, useColors)
-  const coloredPathname = getColoredPathname(pathname, useColors)
-  const coloredStatus = getColoredStatus(status, useColors)
-  const { text: coloredDuration, isVerySlow } = colorDurationText(
-    durationMs,
+  const {
+    format,
+    serviceToken,
+    slowThreshold,
+    tokens,
     useColors,
-    options
+    verySlowThreshold
+  } = formatContext ?? createFormatContext(options)
+
+  const { timestamp, epoch } = getTimestampTokens(
+    tokens,
+    config?.timestamp?.translateTime,
+    useColors
   )
-  const speedToken = getSpeedToken(isVerySlow, useColors)
-  const icon = getLevelIcon(level, useColors)
-  const statusText = getStatusText(statusCode)
-  const serviceToken = getServiceToken(options, useColors)
+  const message = getMessageToken(tokens, data)
+  const { coloredPathname, query } = getPathnameTokens(
+    tokens,
+    request,
+    config,
+    useColors,
+    precomputed
+  )
+  const { coloredStatus, statusText } = getStatusTokens(tokens, data, useColors)
+  const ip = getIpToken(tokens, request, config)
+  const ctxString = getContextToken(tokens, data, config)
+  const coloredLevel = tokens.has('{level}')
+    ? getColoredLevel(level, useColors)
+    : ''
+  const coloredMethod = tokens.has('{method}')
+    ? getColoredMethod(
+        request.method.toUpperCase().padEnd(METHOD_PAD),
+        useColors
+      )
+    : ''
+  const { coloredDuration, speedToken } = getDurationTokens(
+    tokens,
+    store,
+    useColors,
+    slowThreshold,
+    verySlowThreshold,
+    precomputed
+  )
+  const icon = tokens.has('{icon}') ? getLevelIcon(level, useColors) : ''
+  const requestId = getRequestIdToken(tokens, data)
 
   const tokenMap: Record<string, string> = {
     '{context}': ctxString,
@@ -500,12 +682,7 @@ export const formatLogOutput = ({
     '{path}': coloredPathname,
     '{pathname}': coloredPathname,
     '{query}': query,
-    '{requestId}':
-      typeof data.context === 'object' &&
-      data.context !== null &&
-      'requestId' in data.context
-        ? String((data.context as Record<string, unknown>).requestId)
-        : '',
+    '{requestId}': requestId,
     '{service}': serviceToken,
     '{speed}': speedToken,
     '{status}': coloredStatus,
@@ -517,46 +694,7 @@ export const formatLogOutput = ({
     match => tokenMap[match] ?? match
   )
 
-  const contextLines = buildContextTreeLines(level, data, options)
+  const contextLines = buildContextTreeLines(level, data, options, useColors)
 
   return { contextLines, main }
-}
-
-/** @deprecated Prefer {@link formatLogOutput} for multi-line context trees. Returns the main line only. */
-export const formatLine = (input: {
-  level: LogLevel
-  request: RequestInfo
-  data: Record<string, unknown>
-  store: StoreData
-  options: Options
-}): string =>
-  formatLogOutput({
-    ...input,
-    options: {
-      ...input.options,
-      config: {
-        ...input.options.config,
-        showContextTree: false
-      }
-    }
-  }).main
-
-export const logWithPino = (
-  logger: Pino,
-  level: LogLevel,
-  data: Record<string, unknown>
-): void => {
-  if (level === 'ERROR') {
-    logger.error(data)
-    return
-  }
-  if (level === 'WARNING') {
-    logger.warn(data)
-    return
-  }
-  if (level === 'DEBUG') {
-    logger.debug(data)
-    return
-  }
-  logger.info(data)
 }

@@ -1,0 +1,32 @@
+---
+import BrandIcon from './brand-icon.astro'
+
+interface Props {
+  blurb: string
+  href: string
+  /** Brand SVG path, rendered monochrome in currentColor. */
+  icon: string
+  iconFillRule?: 'evenodd'
+  iconViewBox?: string
+  name: string
+}
+
+const { blurb, href, icon, iconFillRule, iconViewBox, name } = Astro.props
+---
+
+<li class="grid">
+  <a
+    class="grid content-start gap-1 rounded-2xl bg-white p-4 shadow-[0_0_0_1px_rgb(0_0_0/0.06),0_1px_2px_-1px_rgb(0_0_0/0.06),0_2px_4px_0_rgb(0_0_0/0.04)] transition-[background-color] hover:bg-black/2 dark:bg-[#131313] dark:shadow-[0_0_0_1px_rgb(255_255_255/0.08)] dark:hover:bg-[#181818]"
+    href={href}
+  >
+    <span
+      class="flex items-center gap-2 font-medium text-[15px] text-foreground"
+    >
+      <BrandIcon fillRule={iconFillRule} path={icon} viewBox={iconViewBox} />
+      {name}
+    </span>
+    <span class="text-[13px] text-muted-foreground leading-[145%]">
+      {blurb}
+    </span>
+  </a>
+</li>

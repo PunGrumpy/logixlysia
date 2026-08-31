@@ -8,6 +8,8 @@ import {
 import { redactRequest } from '../../src/utils/redact'
 import { createMockRequest } from '../_helpers/request'
 
+const DIGITS_ONLY_REGEX = /^\d+$/
+
 describe('formatDuration', () => {
   test('formats sub-second requests as ms', () => {
     expect(formatDuration(0)).toBe('0ms')
@@ -199,6 +201,26 @@ describe('formatLogOutput', () => {
     expect(out.main).not.toContain('test@example.com')
     expect(out.main).toContain('[REDACTED]')
     expect(out.main).not.toContain('192.168.1.1')
+  })
+
+  test('renders tokens skipped by the default format when explicitly requested', () => {
+    const request = createMockRequest('http://localhost/api/hello', {
+      headers: { 'x-forwarded-for': '10.0.0.1' }
+    })
+    const store = { beforeTime: BigInt(0) }
+    const out = formatLogOutput({
+      data: { status: 200 },
+      level: 'INFO',
+      options: baseOptions({
+        config: { customLogFormat: '{epoch} {ip}', ip: true, useColors: false }
+      }),
+      request,
+      store
+    })
+
+    const [epochToken, ipToken] = out.main.split(' ')
+    expect(epochToken).toMatch(DIGITS_ONLY_REGEX)
+    expect(ipToken).toBe('10.0.0.1')
   })
 
   test('speed token appears when duration exceeds verySlowThreshold', () => {

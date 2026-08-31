@@ -29,9 +29,61 @@ const legacyDocsPaths = [
   'integrations/pino'
 ]
 
+// Mintlify's assistant widget, embedded on the Blume site. Blume stays the
+// documentation itself; Mintlify only supplies the AI chat, trained on the
+// same `content/` tree it deploys from (see content/docs.json). Unset the
+// env var and nothing is injected — the widget is additive, never required.
+//
+// The ID is a public token from the deployment's Widget settings page, but it
+// is interpolated into a script body below, so it is checked against the
+// character set Mintlify issues rather than trusted. Anything else is a
+// misconfigured environment, and failing the build beats shipping the
+// interpolation.
+const mintlifyWidgetId = process.env.MINTLIFY_WIDGET_ID?.trim()
+
+if (mintlifyWidgetId && !/^[\w-]+$/.test(mintlifyWidgetId)) {
+  throw new Error(
+    'MINTLIFY_WIDGET_ID must be the plain widget ID from the Mintlify dashboard (letters, digits, "_" and "-" only).'
+  )
+}
+
+// Two module scripts, in the order Mintlify requires: the loader registers
+// `window.MintlifyAssistant`, then the initializer mounts it. Blume emits
+// every `src` script before every `content` script, so this order holds
+// regardless of how the array below is written.
+const mintlifyWidgetScripts = mintlifyWidgetId
+  ? [
+      {
+        attributes: { type: 'module' },
+        src: 'https://widget.mintlify.com/v1/embed.js'
+      },
+      {
+        attributes: { type: 'module' },
+        content: `await window.MintlifyAssistant.init(${JSON.stringify({
+          appearance: {
+            accent: 'oklch(0.68 0.15 45.2)',
+            theme: 'system',
+            variant: 'panel'
+          },
+          id: mintlifyWidgetId,
+          labels: {
+            title: 'Ask Logixlysia',
+            trigger: 'Ask AI'
+          },
+          starterQuestions: [
+            'How do I add Logixlysia to an Elysia app?',
+            'How do I write logs to a file and rotate them?',
+            'How do I filter which requests get logged?'
+          ]
+        })});`
+      }
+    ]
+  : []
+
 export default defineConfig({
   analytics: {
     scripts: [
+      ...mintlifyWidgetScripts,
       {
         attributes: {
           'data-client-id': 'da244eb8-365e-4cc4-a869-8fdc146ea465',
@@ -67,6 +119,11 @@ export default defineConfig({
   description:
     'The logger for Elysia.js — simple and easy to use, beautiful and powerful',
   github: {
+    // `dir` is the path from the repo root to this project, which the "Edit
+    // this page" links prepend to each page's project-relative source path.
+    // Without it every link 404s, since the content lives in the monorepo at
+    // apps/docs/content, not at the repo root.
+    dir: 'apps/docs',
     owner: 'PunGrumpy',
     repo: 'logixlysia'
   },

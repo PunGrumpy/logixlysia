@@ -1,48 +1,7 @@
-/* Homepage-only presentational CSS (imported by pages/index.astro). Plain CSS
-   only — no @theme/@apply here; token utilities live in ../theme.css. */
-
-/* Tailwind v4 makes the bare `border`/`divide-*` utilities fall back to
-   currentColor (black in light mode). Restore a token default — inside
-   @layer base so Tailwind's own utilities layer (border-accent on the active
-   tab, border-white/10, …) still wins. The `:root` prefix outweighs
-   preflight's zero-specificity `border: 0 solid` reset, which is required:
-   Astro inlines this sheet into the page BEFORE the linked Tailwind
-   stylesheet, so with equal specificity preflight would win on source order.
-   Scoped to the homepage (this file only loads there). */
-@layer base {
-  :root *,
-  :root ::before,
-  :root ::after {
-    border-color: var(--color-border);
-  }
-}
-
-/* Crisper, thinner text on macOS; other platforms ignore these. The
-   horizontal clip keeps the footer's full-bleed `w-screen` breakout from
-   adding a horizontal scrollbar when the vertical scrollbar is visible. */
-html {
-  overflow-x: clip;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-/* Dual-theme homepage code block (github-light / vesper). Same swap Blume
-   applies inside .prose, scoped to the standalone <Code> on the homepage:
-   shiki inlines the light color and exposes the dark one via --shiki-dark. */
-.hp-code-dual pre.astro-code {
-  color: var(--shiki-light, var(--blume-foreground)) !important;
-  background: transparent !important;
-}
-:root[data-theme="dark"] .hp-code-dual pre.astro-code {
-  color: var(--shiki-dark, var(--blume-foreground)) !important;
-}
-.hp-code-dual pre.astro-code span {
-  color: var(--shiki-light, inherit);
-  background: transparent !important;
-}
-:root[data-theme="dark"] .hp-code-dual pre.astro-code span {
-  color: var(--shiki-dark, inherit);
-}
+/* Homepage-only presentational CSS (imported by pages/index.astro): the
+   animations and disclosure styling nothing else on the site uses. Plain CSS
+   only — no @theme/@apply here. Site-wide overrides belong in ../theme.css,
+   which Blume appends after everything else. */
 
 /* Terminal block cursor, referenced from the Tailwind
    animate-[term-blink_...] utilities in demo.astro. steps(1) makes it

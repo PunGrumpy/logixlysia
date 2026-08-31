@@ -13,7 +13,7 @@ Logixlysia is a monorepo managed with bun workspaces and Turbo:
 - `packages/logixlysia` - The main Logixlysia package
   - `src/` - Core logger implementation for Elysia
   - `__tests__/` - Unit and integration tests
-- `apps/docs` - Documentation website built with [Fumadocs](https://fumadocs.dev/) and Next.js
+- `apps/docs` - Documentation website built with Blume
 - `apps/elysia` - Playground demo (Bun + TypeScript + Swagger)
 
 ## Getting Started
@@ -49,7 +49,7 @@ bun install
 bun dev
 ```
 
-This will start the Fumadocs app on [http://localhost:3000](http://localhost:3000). Documentation content is in `apps/docs/content/`.
+This will start the Blume app on [http://localhost:3000](http://localhost:3000). Documentation content is in `apps/docs/content/`.
 
 ## Changesets
 
@@ -116,7 +116,7 @@ From the root directory:
 - `bun dev` - Start all development servers
 - `bun typecheck` - Run TypeScript type checking
 
-From a specific package (e.g., `packages/cli`):
+From a specific package (e.g., `packages/logixlysia`):
 - `bun test` - Run tests for that package only
 - `bun run build` - Build that package only
 - `bun dev` - Start development server for that package

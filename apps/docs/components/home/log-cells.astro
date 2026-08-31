@@ -1,0 +1,51 @@
+---
+// The four cells every demo table shares: method, path, status, and duration
+// with its meter bar. Color classes arrive as props from features.astro.
+interface Props {
+  barCls: string
+  barPct: number
+  duration: string
+  durationCls: string
+  method: string
+  methodCls: string
+  path: string
+  status: string
+  statusCls: string
+}
+
+const {
+  barCls,
+  barPct,
+  duration,
+  durationCls,
+  method,
+  methodCls,
+  path,
+  status,
+  statusCls
+} = Astro.props
+
+const cell = 'whitespace-nowrap py-2 pr-6 transition-opacity duration-300'
+---
+
+<td data-col="method" class:list={[cell, 'font-semibold', methodCls]}>
+  {method}
+</td>
+<td data-col="path" class:list={[cell, 'text-[#2D2D2D] dark:text-[#DADADA]']}>
+  {path}
+</td>
+<td data-col="status" class:list={[cell, statusCls]}>{status}</td>
+<td data-col="duration" class:list={[cell, durationCls]}>
+  <span class="inline-flex items-center gap-2">
+    {duration}
+    <span
+      aria-hidden="true"
+      class="inline-block h-1 w-16 overflow-hidden rounded-full bg-black/6 dark:bg-white/10"
+    >
+      <span
+        style={`width: ${barPct}%`}
+        class:list={['block h-full rounded-full', barCls]}
+      ></span>
+    </span>
+  </span>
+</td>

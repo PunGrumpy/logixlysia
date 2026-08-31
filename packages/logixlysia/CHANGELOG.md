@@ -1,5 +1,58 @@
 # Changelog
 
+## 6.8.0
+
+### Minor Changes
+
+- 7d22709: Add the `logixlysia/axiom` adapter. `createAxiomTransport()` ships logs to an Axiom dataset via the ingest API with batching, retries, and env-based credentials (`AXIOM_API_KEY`, `AXIOM_DATASET`, `AXIOM_ORG_ID`, `AXIOM_URL`). Events keep their nested structure so every field is queryable with APL.
+- 7d22709: Add the `logixlysia/better-stack` adapter. `createBetterStackTransport()` ships logs to Better Stack Telemetry using `BETTER_STACK_SOURCE_TOKEN`, supporting both the legacy shared endpoint and the dedicated per-source ingesting hosts (`BETTER_STACK_INGESTING_HOST`). Logs post with a `dt` timestamp, `level`, `message`, and the full meta object.
+- 7d22709: Add the `logixlysia/clickhouse` adapter. `createClickHouseTransport()` inserts logs into a ClickHouse table over the HTTP interface using `JSONEachRow` — rows carry `timestamp`, `level`, `message`, and an `attributes` map of the flattened meta. Database and table names are validated as plain identifiers, and ISO timestamps parse via `date_time_input_format=best_effort`.
+- 7d22709: Add the `logixlysia/datadog` adapter. `createDatadogTransport()` ships logs to Datadog's v2 logs intake (`DD_API_KEY`, `DD_SITE` for regions). The log level lands in the `status` attribute for Datadog's default remapper, the HTTP response status follows the standard `http.status_code` attribute, and the full meta object rides along as searchable attributes.
+- f8f6960: Add `config.enrichers` and the `logixlysia/enrichers` subpath. An enricher contributes fields to the request context once and they reach every sink at once — console tree, file logs, and all transports. Four are built in: `traceparentEnricher()` parses the W3C `traceparent` header directly, with no OpenTelemetry SDK required, so logs link to traces in Sentry, HyperDX, or any OTLP backend; `userAgentEnricher()` adds browser, OS, device, and bot fields; `geoEnricher()` reads the geo headers Vercel, Cloudflare, and Netlify already attach; `sizeEnricher()` records `requestBytes` and `responseBytes`. Custom enrichers are a bare function (request phase) or an object with `request` and `response` phases. A hook that throws is reported via `onError` with the new `sink: 'enricher'` and skipped, never failing the request.
+- 7d22709: Add the `logixlysia/hyperdx` adapter. `createHyperDXTransport()` ships logs to HyperDX (cloud or self-hosted collectors) as OTLP JSON over HTTP, authenticated with `HYPERDX_API_KEY`. Meta fields become dot-notation log attributes searchable in the HyperDX UI.
+- 7d22709: Add the `logixlysia/loki` adapter. `createLokiTransport()` pushes logs to Grafana Loki (self-hosted or Grafana Cloud with basic auth, multi-tenant via `X-Scope-OrgID`). Streams are labeled with low-cardinality `service_name` and `level`; the log line is the message and full meta as JSON, ready for LogQL's `| json`.
+- 7d22709: Add the `logixlysia/otlp` adapter. `createOtlpTransport()` ships logs to any OTLP/HTTP logs endpoint as `ExportLogsServiceRequest` JSON — OpenTelemetry Collectors, Grafana Cloud, New Relic, Honeycomb, SigNoz, and other OTLP-compatible backends. Honors the standard `OTEL_EXPORTER_OTLP_ENDPOINT`, `OTEL_EXPORTER_OTLP_HEADERS`, and `OTEL_SERVICE_NAME` variables.
+- 7d22709: Add the `logixlysia/posthog` adapter. `createPostHogTransport()` captures logs as PostHog events via the batch API (`POSTHOG_API_KEY`, `POSTHOG_HOST` for EU/self-hosted). Meta fields become dot-notation event properties, and logs carrying a `userId` in the request context are linked to PostHog persons via `distinct_id`.
+- f8f6960: Add head + tail sampling via `config.sampling`. Head sampling keeps a percentage of records per level (`{ INFO: 10 }`; levels left out keep everything), so log spend stops scaling one-for-one with traffic. Tail sampling buffers what head dropped and replays it when the finished request matches `status`, `durationMs`, or a path glob — failures and slow paths keep their full log trail instead of losing nine lines in ten. Dropped records skip context merging, redaction, formatting, and every sink; replayed ones keep the duration they had when captured.
+- 7d22709: Add the `logixlysia/sentry` adapter. `createSentryTransport()` ships structured logs to Sentry (Explore > Logs) via the envelope endpoint using `SENTRY_DSN` — no Sentry SDK required. Every meta field becomes a typed, searchable attribute, and `trace_id` from the request context links logs to traces.
+- f8f6960: `HttpError` now carries the context that makes a failure actionable: `code` (a stable identifier the client can branch on, unlike the message), `why`, `fix`, `link`, and `internal`. The first four appear in both the log and the response body; `internal` is log-only — it is non-enumerable and excluded from `toJSON()`, so no serializer can put it in a response. Error details also render in the console context tree for 4xx responses now, not just 5xx. Fully backward compatible: `new HttpError(404, 'Not found')` still responds with the bare message, and only an error carrying at least one client-facing field responds as JSON.
+- f8f6960: The request-scoped logger is now generic over your field type: `logixlysia<CheckoutFields>()` types `log.mergeContext()` and the per-call `context` argument as `Partial<CheckoutFields>`, so TypeScript rejects a misspelled `user_id` before it splits your dashboard query in two. `useLogger<CheckoutFields>()` takes the same parameter for code outside the handler. Type-only with no runtime cost, and the default keeps every key allowed, so existing untyped code is unaffected.
+
+## 6.7.0
+
+### Minor Changes
+
+- 64333ca: `logRotation.interval` now actually rotates. The live file's age (from
+  filesystem creation time, falling back to open time where the filesystem
+  reports none) is checked after every write, and the file rotates on the
+  first write after the interval elapses — no timers, so an idle process
+  rotates on its next write rather than on a wall-clock schedule. When both
+  `maxSize` and `interval` are set, whichever trigger is crossed first
+  rotates. Previously `interval` was accepted and format-validated but
+  never triggered rotation; configs that already set it will begin rotating
+  on upgrade.
+- 964e60c: `autoRedact` now redacts by sensitive key/header names (authorization, cookie, x-api-key, password, secret, token, session, …) in addition to value patterns; new `config.redactKeys` extends the list, and pino gets matching `redact.paths` defaults.
+- 1e949a1: Harden log output: file-sink lines, client IPs, and context-tree values are sanitized (control characters escaped/stripped, lengths bounded); malformed inbound request IDs are replaced with generated ones; log files/dirs are created with `0600`/`0700` modes, configurable via `logFileMode`/`logDirMode` (existing files keep their mode).
+- 3267e1f: Internal log/error pipelines are unified: error-path logs now honor the same sink gates and console-method-by-level as success-path logs (a 4xx warning now prints via `console.warn` instead of `console.error`). New `config.onError` hook surfaces transport/file/rotation sink failures to your code.
+- 11a0cd2: Validation errors no longer log the submitted request body (`found`/`errors`) by default — messages are normalized to the failed paths only. Set `config.logErrorPayload: true` to restore payload logging. Raw Error objects are no longer passed into transport meta.
+
+### Patch Changes
+
+- efab720: File sink now holds an open file handle, batches same-tick lines into single writes, creates the log directory once, and tracks file size in memory — removing the per-line mkdir/open/stat syscalls. Rotation behavior is unchanged.
+- 69b83aa: Per-request logging is faster: format tokens are computed only when present in the log format, colors/thresholds/service are resolved once per logger, URL parsing and duration sampling happen once per emission, internal context reads no longer clone, WebSocket synthetic requests are memoized per path, and `autoRedact` returns the original object untouched when nothing needs redacting.
+- ad0a2e6: pino is now constructed lazily on first access to `store.pino`/`logger.pino` (or eagerly when `config.pino` is set), instead of on every plugin instantiation. Dead internal helpers `formatLine`, `logWithPino`, and `renderContextTreeLines` were removed (they were never exported from the package).
+- 6c26cc2: Remove the unused `ai` peer dependency, mark `typescript` as an optional peer and widen it to the proven TS 5.x floor, and align the package tsconfig with the shared monorepo base.
+- 30869f4: Internal type reorganization: the config object is now composed of named sub-interfaces (`FormattingConfig`, `OutputConfig`, `RedactionConfig`, …) behind the same `Options` shape; `HttpError` moved to a dedicated module. All public import paths and names are unchanged.
+
+### Correction (2026-08-10)
+
+The 5.3.0 entries "log-rotation: implement complete rotation with
+interval support" (673b800, 9016a51) added the `interval` config field
+and its format validation, but did not wire it to actually trigger
+rotation — `interval` was a no-op from 5.3.0 until the lazy-on-write
+implementation landed on 2026-08-10. See
+`plans/spikes/021-interval-rotation-decision.md` for the investigation.
+
 ## 6.6.1
 
 ### Patch Changes

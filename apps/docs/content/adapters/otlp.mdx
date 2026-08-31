@@ -1,0 +1,104 @@
+---
+title: OTLP
+description: Ship logs to any OpenTelemetry-compatible backend
+---
+
+Send logs to any OTLP/HTTP logs endpoint as standard `ExportLogsServiceRequest` JSON — an OpenTelemetry Collector, Grafana Cloud, New Relic, Honeycomb, SigNoz, or any other OTLP-compatible backend. If your platform speaks OTLP and doesn't have a dedicated adapter, this is the one to use.
+
+## Setup
+
+1. Find your backend's OTLP/HTTP endpoint and auth headers (for a local collector this is `http://localhost:4318` and usually no auth).
+2. Set the standard OpenTelemetry environment variables:
+
+```bash
+OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318
+OTEL_EXPORTER_OTLP_HEADERS=x-api-key=your-key # optional, k=v,k2=v2
+OTEL_SERVICE_NAME=my-api                      # optional
+```
+
+3. Wire the transport:
+
+```ts
+import { Elysia } from 'elysia'
+import logixlysia from 'logixlysia'
+import { createOtlpTransport } from 'logixlysia/otlp'
+
+const app = new Elysia()
+  .use(
+    logixlysia({
+      config: {
+        transports: [createOtlpTransport()]
+      }
+    })
+  )
+  .get('/', () => 'ok')
+  .listen(3000)
+```
+
+## Environment Variables
+
+The adapter honors the standard OpenTelemetry exporter variables:
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | Yes* | OTLP HTTP base URL — `/v1/logs` is appended |
+| `OTEL_EXPORTER_OTLP_LOGS_ENDPOINT` | Yes* | Signal-specific logs URL, used **as-is**; takes precedence over the generic endpoint |
+| `OTEL_EXPORTER_OTLP_HEADERS` | No | Extra headers in `k=v,k2=v2` format (vendor auth); values may be percent-encoded |
+| `OTEL_EXPORTER_OTLP_LOGS_HEADERS` | No | Signal-specific headers; take precedence over the generic headers |
+| `OTEL_SERVICE_NAME` | No | Value of the `service.name` resource attribute |
+
+\* One of the two endpoint variables (or the `endpoint` option) is required.
+
+## Options
+
+```ts
+const otlp = createOtlpTransport({
+  endpoint: 'https://otlp.example.com',
+  headers: { 'x-api-key': process.env.MY_KEY ?? '' },
+  resourceAttributes: { 'deployment.environment': 'production' },
+  serviceName: 'my-api'
+})
+```
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `endpoint` | `string` | `OTEL_EXPORTER_OTLP_ENDPOINT` | OTLP HTTP base URL |
+| `headers` | `Record<string, string>` | parsed from env | Extra request headers; overrides env headers per key |
+| `serviceName` | `string` | `logixlysia` | `service.name` resource attribute |
+| `resourceAttributes` | `Record<string, string>` | — | Extra OTLP resource attributes |
+
+Plus the shared batching options: `maxBatchSize`, `flushIntervalMs`, `timeout`, `retries` — see the [overview](/docs/adapters/overview#shared-behavior).
+
+## Payload
+
+Logs post to `{endpoint}/v1/logs`. Levels map to OpenTelemetry severity numbers (`DEBUG` → 5, `INFO` → 9, `WARNING` → 13, `ERROR` → 17), and meta fields flatten into dot-notation attributes (`request.method`, `status`, `durationMs`, `context.requestId`, …).
+
+Pair this with [`logixlysia/otel`](/docs/integrations/otel) to include `context.trace_id` / `context.span_id` and correlate logs with traces in your backend.
+
+## Vendor Examples
+
+**Grafana Cloud** (OTLP gateway):
+
+```bash
+OTEL_EXPORTER_OTLP_ENDPOINT=https://otlp-gateway-prod-eu-west-2.grafana.net/otlp
+OTEL_EXPORTER_OTLP_HEADERS='Authorization=Basic BASE64_OF_INSTANCE_ID_AND_TOKEN'
+```
+
+**New Relic**:
+
+```bash
+OTEL_EXPORTER_OTLP_ENDPOINT=https://otlp.nr-data.net
+OTEL_EXPORTER_OTLP_HEADERS=api-key=<license-key>
+```
+
+**Local collector** — point at port 4318 and let the collector fan out:
+
+```ts
+createOtlpTransport({ endpoint: 'http://localhost:4318' })
+```
+
+## Troubleshooting
+
+- **`404`** — the endpoint should be the **base URL only**; the adapter appends `/v1/logs` itself.
+- **`401` / `403`** — check the header format in `OTEL_EXPORTER_OTLP_HEADERS`; values must not be URL-encoded.
+- **Nothing arrives** — logs flush in batches (2 s by default); call `flush()` before short-lived processes exit.

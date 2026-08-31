@@ -5,7 +5,16 @@ export interface RequestContextStore {
   clearContext: (key: ContextKey) => void
   getContext: (key: ContextKey) => Readonly<Record<string, unknown>>
   mergeContext: (key: ContextKey, partial: Record<string, unknown>) => void
+  /**
+   * Non-cloning read of the live context bag. Returns the SAME object stored internally (or a
+   * shared frozen empty object) — never hand this to user-facing code, which may retain or
+   * mutate it. Only internal, read-only call sites (that immediately spread the result into a
+   * new object) may use this; everything else must use {@link RequestContextStore.getContext}.
+   */
+  peekContext: (key: ContextKey) => Readonly<Record<string, unknown>>
 }
+
+const EMPTY_CONTEXT: Readonly<Record<string, unknown>> = Object.freeze({})
 
 export const createRequestContextStore = (): RequestContextStore => {
   const bags = new WeakMap<ContextKey, Record<string, unknown>>()
@@ -33,6 +42,9 @@ export const createRequestContextStore = (): RequestContextStore => {
       }
       const bag = getOrCreate(key)
       Object.assign(bag, partial)
+    },
+    peekContext(key) {
+      return bags.get(key) ?? EMPTY_CONTEXT
     }
   }
 }

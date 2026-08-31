@@ -1,10 +1,12 @@
 ---
 interface Props {
   cls?: string
+  /** Marks the span so the interactive demo script can fill it at runtime. */
+  hook?: string
   text: string
 }
 
-const { cls, text } = Astro.props
+const { cls, hook, text } = Astro.props
 ---
 
-<span class={cls || undefined}>{text}</span>
+<span class={cls || undefined} data-hook={hook}>{text}</span>

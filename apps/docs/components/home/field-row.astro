@@ -1,0 +1,24 @@
+---
+// One key/value row in the enrichers fields table.
+interface Props {
+  cls?: string
+  name: string
+  value: string
+}
+
+const { cls, name, value } = Astro.props
+---
+
+<tr class="[&>td:first-child]:pl-2 [&>td:last-child]:pr-2">
+  <td class="whitespace-nowrap py-2 pr-6 text-black/45 dark:text-white/40">
+    {name}
+  </td>
+  <td
+    class:list={[
+      'whitespace-nowrap py-2',
+      cls ?? 'text-[#2D2D2D] dark:text-[#DADADA]'
+    ]}
+  >
+    {value}
+  </td>
+</tr>

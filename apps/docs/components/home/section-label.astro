@@ -1,0 +1,18 @@
+---
+// Vercel-style section eyebrow: a small icon (passed as the slot), the
+// feature name, and an optional badge chip.
+import SectionBadge from './section-badge.astro'
+
+interface Props {
+  badge?: string
+  name: string
+}
+
+const { badge, name } = Astro.props
+---
+
+<p class="flex items-center gap-2 text-muted-foreground text-sm">
+  <slot />
+  <span class="font-medium">{name}</span>
+  {badge ? <SectionBadge label={badge} /> : null}
+</p>

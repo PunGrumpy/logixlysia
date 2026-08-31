@@ -3,7 +3,7 @@ title: Log Rotation
 description: Manage log file sizes and retention
 ---
 
-Automatically manage log file sizes, rotation intervals, compression, and retention policies.
+Automatically manage log file sizes, compression, and retention policies.
 
 ## Basic Configuration
 
@@ -36,11 +36,18 @@ Supported formats: `'1k'`, `'1m'`, `'1g'` or bytes (number)
 
 ```ts
 logRotation: {
-  interval: '1d'    // Rotate daily
+  interval: '1d'    // Rotate when the live file is a day old
 }
 ```
 
-Supported intervals: `'1h'`, `'1d'`, `'1w'` (or any number)
+Supported formats: a number plus a unit — `'1h'` (hours), `'1d'` (days), `'1w'` (weeks). Minutes and bare numbers are not accepted.
+
+> [!NOTE]
+> Interval rotation is evaluated when a log line is written, not on a
+> wall-clock timer. If the process writes nothing for longer than
+> `interval`, the file rotates on the next write — an idle process's
+> file can exceed `interval` in age until traffic resumes. The file's
+> age is read from filesystem creation time, so it survives restarts.
 
 ### Retention Policy
 
@@ -68,21 +75,25 @@ logRotation: {
 
 ## How Rotation Works
 
-When a log file is rotated, it's renamed with a timestamp:
+Rotation happens on write, when either configured trigger is crossed: the in-memory byte count exceeds `maxSize`, or the live file's age (from filesystem creation time) has reached `interval`. Both are checked after every write batch — never on a timer. Empty files are not rotated.
+
+When a log file is rotated, it's renamed with a timestamp and a high-resolution counter to guarantee uniqueness:
 
 ```
-app.log → app.log.2025-10-10-14-30-45
+app.log → app.log.2026-07-27-14-30-05-123-45678901234567
 ```
 
-If compression is enabled:
+The suffix is `<YYYY-MM-DD-HH-MM-SS-SSS>-<hrtime>`. If compression is enabled, a `.gz` extension is appended after rotation:
 
 ```
-app.log.2025-10-10-14-30-45 → app.log.2025-10-10-14-30-45.gz
+app.log.2026-07-27-14-30-05-123-45678901234567 → app.log.2026-07-27-14-30-05-123-45678901234567.gz
 ```
 
-Rotation occurs automatically when:
-- File size reaches `maxSize`
-- Time interval `interval` has elapsed
+### Retention
+
+`maxFiles` controls how many rotated files are kept:
+- A **number** (e.g. `10`) keeps that many most-recent rotated files, deleting older ones.
+- A **string** (e.g. `'7d'`) keeps rotated files younger than that age, deleting older ones.
 
 ## Example Configurations
 
@@ -91,9 +102,9 @@ Rotation occurs automatically when:
 ```ts
 logRotation: {
   maxSize: '100m',
-  interval: '1d',
   maxFiles: '30d',
-  compress: true
+  compress: true,
+  interval: '1d'
 }
 ```
 
@@ -112,9 +123,9 @@ logRotation: {
 ```ts
 logRotation: {
   maxSize: '1g',
-  interval: '1h',
   maxFiles: '7d',
-  compress: true
+  compress: true,
+  interval: '1h'
 }
 ```
 
@@ -124,3 +135,4 @@ logRotation: {
 - Rotation failures don't crash the application
 - Compression runs asynchronously
 - Old files are automatically cleaned up based on `maxFiles`
+- Interval rotation is checked on write only; an idle process rotates on its next write

@@ -3,42 +3,98 @@ title: Elysia 2 support
 description: How Logixlysia maps onto the Elysia 2 open beta, and what changes when you upgrade
 ---
 
-[Elysia 2 "DayDream"](https://elysiajs.com/blog/elysia-20) is a full rewrite of the framework. It renames every
-lifecycle hook, changes the `Elysia` type parameters, and moves WebSocket support behind an opt-in plugin.
-Logixlysia cannot support both major versions from one build, so the two lines are published separately.
+[Elysia 2 "DayDream"](https://elysiajs.com/blog/elysia-20) is a full rewrite of the framework. It renames
+every lifecycle hook, moves route hooks before the handler, replaces the error-code API, changes the
+`Elysia` type parameters, and moves WebSocket support behind an opt-in plugin. Logixlysia cannot support
+both major versions from one build, so the two lines are published separately.
 
 ## Compatibility
 
-| Elysia      | Logixlysia    | npm tag  | Install                                |
-| ----------- | ------------- | -------- | -------------------------------------- |
-| `1.4.x`     | `6.x`         | `latest` | `bun add logixlysia`                   |
-| `>= 2.0.0-beta.2` | `7.x-next` | `next`   | `bun add logixlysia@next elysia@next`  |
+| Elysia              | Logixlysia | npm tag  | Install                               |
+| ------------------- | ---------- | -------- | ------------------------------------- |
+| `1.4.x`             | `6.x`      | `latest` | `bun add logixlysia`                  |
+| `>= 2.0.0-beta.11`  | `7.x-next` | `next`   | `bun add logixlysia@next elysia@next` |
 
-The `next` line follows the Elysia 2 beta and may take further breaking changes until Elysia 2 is stable.
+The `next` line follows the Elysia 2 beta and may take further breaking changes until Elysia 2 is stable
+(the beta itself still changes between releases — `beta.2` and `beta.11` are not compatible with each other).
+Elysia ships a codemod that automates most of an app migration: `bunx @elysia/codemod@latest`.
 
 ## What changed in your app
 
-Elysia 2 dropped the `on` prefix from lifecycle methods, and there are no aliases left behind. If you register
-hooks around Logixlysia, rename them:
+### Lifecycle hooks lost their `on` prefix
 
-| Elysia 1.4         | Elysia 2       |
-| ------------------ | -------------- |
-| `.onStart()`       | `.setup()`     |
-| `.onStop()`        | `.cleanup()`   |
-| `.onRequest()`     | `.request()`   |
-| `.onTransform()`   | `.transform()` |
-| `.onBeforeHandle()`| `.beforeHandle()` |
-| `.onAfterHandle()` | `.afterHandle()`  |
+There are no aliases left behind. If you register hooks around Logixlysia, rename them:
+
+| Elysia 1.4           | Elysia 2           |
+| -------------------- | ------------------ |
+| `.onStart()`         | `.setup()`         |
+| `.onStop()`          | `.cleanup()`       |
+| `.onRequest()`       | `.request()`       |
+| `.onParse()`         | `.parse()`         |
+| `.onTransform()`     | `.transform()`     |
+| `.onBeforeHandle()`  | `.beforeHandle()`  |
+| `.onAfterHandle()`   | `.afterHandle()`   |
 | `.onAfterResponse()` | `.afterResponse()` |
-| `.onMapResponse()` | `.mapResponse()`  |
-| `.onError()`       | `.error()`     |
-| `.as('scoped')`    | `.as('plugin')` |
+| `.onMapResponse()`   | `.mapResponse()`   |
+| `.onError()`         | `.error()`         |
+| `.as('scoped')`      | `.as('plugin')`    |
 
-`resolve` was removed and `derive` now runs during `beforeHandle`. Logixlysia derives `ctx.log` there, so it is
-available in `beforeHandle`, the route handler and `afterHandle` — but no longer in `parse` or `transform`. Use
-`store.logger` (which is set up in the `request` hook) if you need to log that early.
+The `{ as: 'scoped' }` object form on individual hooks is gone too — scope is now the first string
+argument, e.g. `.beforeHandle('plugin', fn)`.
 
-WebSocket routes need the opt-in provider before `plugin.wrapWs` has anything to wrap:
+In `afterHandle` and `mapResponse`, the handler's return value is now on `context.responseValue`
+(the deprecated `context.response` alias was removed).
+
+### Hooks come before the handler
+
+Elysia 2 swapped the route parameters so schema and hooks read before the code they guard:
+
+```ts
+// Elysia 1.4
+app.get('/', () => 'ok', { detail: { summary: 'Root' } })
+
+// Elysia 2
+app.get('/', { detail: { summary: 'Root' } }, () => 'ok')
+```
+
+Two-argument routes (`.get('/', handler)`) are unchanged.
+
+### `resolve` is gone, `derive` moved
+
+`derive` now runs during `beforeHandle` (the old `resolve` timing), and `resolve` is removed. Logixlysia
+derives `ctx.log` there, so it is available in `beforeHandle`, the route handler and `afterHandle` — but
+no longer in `parse` or `transform`. Use `store.logger` (which is set up in the `request` hook) if you
+need to log that early.
+
+### Error handling has no `code`
+
+`.error()` takes an `Error` class for per-class handling, or a bare function as the general handler —
+the `code` string switch from 1.4 is gone:
+
+```ts
+import { NotFound } from 'elysia'
+
+app
+  .error(NotFound, ({ error }) => {
+    /* handle 404s */
+  })
+  .error(({ error, store }) => {
+    // general handler — narrow with instanceof instead of `code`
+    if (error instanceof MyError) {
+      /* ... */
+    }
+  })
+```
+
+Elysia 2 also reports errors as [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457) problem documents
+(`application/problem+json`) by default, `NotFoundError` is renamed `NotFound`, and thrown *and* returned
+errors both reach `.error()` now.
+
+### WebSocket is opt-in, and `ws.data` is gone
+
+`.ws()` throws at build time until the `elysia/websocket` capability is registered somewhere in the app,
+and the route context is merged into the socket object itself — `ws.data.store` from 1.4 reads as
+`ws.store`:
 
 ```ts
 import { Elysia } from 'elysia'
@@ -54,26 +110,41 @@ const app = new Elysia()
     ...logging.wrapWs('/ws', {
       message(ws, message) {
         ws.send(message)
+      },
+      open(ws) {
+        ws.store.logger.mergeContext(ws, { room: 'lobby' })
       }
     })
   })
 ```
 
-`trace` and automatic `HEAD` routes moved the same way, to `elysia/trace` and `elysia/auto-head`.
+`trace` and automatic `HEAD` routes moved the same way, to `elysia/trace` and `elysia/auto-head`. On
+Node, the adapter moved from `@elysiajs/node` to `@elysia/node` (named `node()` export), with WebSocket
+support imported separately from `@elysia/node/websocket`.
+
+### Other renames worth knowing
+
+- `.guard()` and `.group()` schemas now **override** inherited ones by default; the old additive
+  behavior is opt-in via `schema: 'merge'`.
+- `aot: false` (dynamic mode) is removed — ahead-of-time compilation replaced it.
+- The OpenAPI plugin for Elysia 2 lives at `@elysia/openapi` (the `@elysia` npm scope carries official
+  Elysia 2 plugins; `@elysiajs` stays on the 1.x line).
 
 ## What did not change
 
-The Logixlysia API itself is unchanged: `logixlysia(options)`, the `preset`/`config` shape, `store.logger`,
-`ctx.log`, `useLogger()`, `createLogger()`, `plugin.wrapWs`, and the `logixlysia/otel` and `logixlysia/ai`
-subpaths all behave exactly as they do on the 6.x line.
+The Logixlysia API itself is unchanged: `logixlysia(options)`, the `preset`/`config` shape,
+`store.logger`, `ctx.log`, `useLogger()`, `createLogger()`, `plugin.wrapWs`, sampling, enrichers, the
+observability adapters, and the `logixlysia/otel` and `logixlysia/ai` subpaths all behave exactly as
+they do on the 6.x line.
 
 ## Error logging under Elysia 2
 
-Two framework behaviour changes show up in your logs:
+Two framework behaviour changes show up in your logs' surroundings:
 
-- Errors are reported as [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457) problem documents by default.
-- When `NODE_ENV=production`, an unhandled error's `message` is no longer sent to the client, and a returned
-  `Error` is serialized without its `cause`.
+- Errors are sent to clients as RFC 9457 problem documents with an `application/problem+json`
+  content type.
+- When `NODE_ENV=production`, an unhandled error's `message` is no longer sent to the client, and a
+  returned `Error` is serialized without its `cause`.
 
 Neither affects what Logixlysia writes — the full error is still logged server-side, subject to your
 `logErrorPayload` and `autoRedact` settings.

@@ -2,11 +2,9 @@ import pino from 'pino'
 import pretty from 'pino-pretty'
 import {
   createRequestContextStore,
-  mergeLogDataContext,
   type RequestContextStore
 } from '../context/request-context'
 import type {
-  LogFilter,
   Logger,
   LogLevel,
   Options,
@@ -14,11 +12,14 @@ import type {
   RequestInfo,
   StoreData
 } from '../interfaces'
-import { logToTransports } from '../output'
-import { logToFile } from '../output/file'
-import { buildPinoRedactPaths, redact, redactRequest } from '../utils/redact'
-import { formatLogOutput } from './create-logger'
+import { resolveSampling } from '../sampling'
+import { elapsedMs } from '../utils/duration'
+import { buildPinoRedactPaths } from '../utils/redact'
+import { createFormatContext } from './create-logger'
+import { emit, parseRequestUrlOnce, resolveSinks, shouldLog } from './emit'
 import { handleHttpError } from './handle-http-error'
+
+const ZERO_STORE: StoreData = { beforeTime: BigInt(0) }
 
 export const createLogger = (
   options: Options = {},
@@ -27,6 +28,9 @@ export const createLogger = (
 ): Logger => {
   const contextStore = externalContextStore ?? createRequestContextStore()
   const { config } = options
+  // Hoisted once per logger instance: colors/format/thresholds/service don't change across
+  // requests within a process lifetime (see createFormatContext's doc comment).
+  const formatContext = createFormatContext(options)
 
   const pinoConfig = config?.pino
   const { prettyPrint, ...pinoOptions } = pinoConfig ?? {}
@@ -63,10 +67,13 @@ export const createLogger = (
       : {})
   }
 
-  let pinoLogger: Pino
-
-  if (shouldPrettyPrint) {
-    const prettyStream = pretty({
+  // Pino (and, when configured, its pino-pretty transform stream) is expensive to construct
+  // and is only ever needed when a caller explicitly reads store.pino/logger.pino or configures
+  // config.pino — the plugin's own log path writes via console.* and never touches it. Building
+  // it lazily behind a stable Proxy keeps `store.pino === logger.pino` identity while deferring
+  // the cost until first access.
+  const prettyStream = (): ReturnType<typeof pretty> =>
+    pretty({
       colorize: process.stdout?.isTTY === true,
       translateTime: config?.timestamp?.translateTime,
       ...prettyPrintOptions,
@@ -74,34 +81,42 @@ export const createLogger = (
       messageKey
     } as Record<string, unknown>)
 
-    pinoLogger = pinoFactory(basePinoOptions, prettyStream)
-  } else {
-    pinoLogger = pinoFactory({
-      ...basePinoOptions,
-      transport: pinoOptions.transport
-    })
-  }
+  let realPino: Pino | undefined
 
-  const shouldLog = (level: LogLevel, logFilter?: LogFilter): boolean => {
-    if (!logFilter?.level || logFilter.level.length === 0) {
-      return true
+  const getPino = (): Pino => {
+    if (!realPino) {
+      realPino = shouldPrettyPrint
+        ? pinoFactory(basePinoOptions, prettyStream())
+        : pinoFactory({
+            ...basePinoOptions,
+            transport: pinoOptions.transport
+          })
     }
-    return logFilter.level.includes(level)
+    return realPino
   }
 
-  const useTransportsOnly = config?.useTransportsOnly === true
-  const disableInternalLogger = config?.disableInternalLogger === true
-  const disableFileLogging = config?.disableFileLogging === true
+  const lazyPino = new Proxy({} as Pino, {
+    get(_target, prop) {
+      const target = getPino()
+      const value = (target as unknown as Record<string | symbol, unknown>)[
+        prop
+      ]
+      return typeof value === 'function'
+        ? (value as (...args: unknown[]) => unknown).bind(target)
+        : value
+    },
+    has: (_target, prop) => prop in (getPino() as object)
+  })
 
-  const hasTransports = (config?.transports?.length ?? 0) > 0
-  const hasFileLogging =
-    !(useTransportsOnly || disableFileLogging) && !!config?.logFilePath
-  const hasInternalLogger = !(useTransportsOnly || disableInternalLogger)
-  const isEffectivelyDisabled = !(
-    hasTransports ||
-    hasFileLogging ||
-    hasInternalLogger
-  )
+  // Explicit config.pino means the user opted in to pino directly: construct eagerly so
+  // invalid options fail fast at plugin setup time, matching pre-lazy behavior.
+  if (config?.pino !== undefined) {
+    getPino()
+  }
+
+  // Resolved once per logger instance: none of these depend on per-request state.
+  const sinks = resolveSinks(config)
+  const sampling = resolveSampling(config?.sampling)
 
   const log = (
     level: LogLevel,
@@ -109,84 +124,51 @@ export const createLogger = (
     data: Record<string, unknown>,
     store: StoreData
   ): void => {
-    if (isEffectivelyDisabled || !shouldLog(level, config?.logFilter)) {
-      return
-    }
-
-    const dataWithContext = mergeLogDataContext(
+    emit({
+      contextStore,
       data,
-      contextStore.getContext(request)
-    )
-    const logData =
-      config?.autoRedact === true
-        ? redact(dataWithContext, config?.redactKeys)
-        : dataWithContext
-    const logRequest =
-      config?.autoRedact === true
-        ? redactRequest(request, config?.redactKeys)
-        : request
-
-    if (hasTransports) {
-      logToTransports({
-        data: logData,
-        level,
-        options,
-        request: logRequest,
-        store
-      })
-    }
-
-    if (hasFileLogging) {
-      const filePath = config?.logFilePath
-      if (filePath) {
-        logToFile({
-          data: logData,
-          filePath,
-          level,
-          options,
-          request: logRequest,
-          store
-        }).catch(() => {
-          /* Ignore errors */
-        })
-      }
-    }
-
-    if (!hasInternalLogger) {
-      return
-    }
-
-    const { main, contextLines } = formatLogOutput({
-      data: logData,
+      formatContext,
       level,
       options,
-      request: logRequest,
+      request,
+      sampling,
+      sinks,
       store
     })
-    const message =
-      contextLines.length > 0 ? `${main}\n${contextLines.join('\n')}` : main
+  }
 
-    switch (level) {
-      case 'DEBUG': {
-        console.debug(message)
-        break
-      }
-      case 'INFO': {
-        console.info(message)
-        break
-      }
-      case 'WARNING': {
-        console.warn(message)
-        break
-      }
-      case 'ERROR': {
-        console.error(message)
-        break
-      }
-      default: {
-        console.log(message)
-        break
-      }
+  /** Resolves the tail verdict and re-emits whatever it rescued. */
+  const finalizeRequest = (
+    request: RequestInfo,
+    store: StoreData,
+    status: number
+  ): void => {
+    if (!sampling) {
+      return
+    }
+
+    const outcome = {
+      durationMs: elapsedMs(store.beforeTime),
+      pathname: parseRequestUrlOnce(request).pathname,
+      status
+    }
+
+    for (const record of sampling.finalize(request, outcome)) {
+      emit({
+        bypassSampling: true,
+        contextStore,
+        data: record.data,
+        durationOverride: record.durationMs,
+        formatContext,
+        level: record.level,
+        options,
+        request,
+        sampling,
+        sinks,
+        // Unread on this path: `durationOverride` supplies the duration each
+        // record had when it was captured.
+        store: ZERO_STORE
+      })
     }
   }
 
@@ -196,7 +178,7 @@ export const createLogger = (
     message: string,
     context?: Record<string, unknown>
   ): void => {
-    if (isEffectivelyDisabled || !shouldLog(level, config?.logFilter)) {
+    if (sinks.isEffectivelyDisabled || !shouldLog(level, config?.logFilter)) {
       return
     }
     const store: StoreData = { beforeTime: process.hrtime.bigint() }
@@ -204,15 +186,28 @@ export const createLogger = (
   }
 
   return {
+    beginRequest: request => {
+      sampling?.begin(request)
+    },
     debug: (request, message, context) => {
       logWithContext('DEBUG', request, message, context)
     },
     error: (request, message, context) => {
       logWithContext('ERROR', request, message, context)
     },
+    finalizeRequest,
     getContext: request => contextStore.getContext(request),
     handleHttpError: (request, error, store) => {
-      handleHttpError(request, error, store, options, contextStore)
+      handleHttpError(
+        request,
+        error,
+        store,
+        options,
+        contextStore,
+        sinks,
+        formatContext,
+        sampling
+      )
     },
     info: (request, message, context) => {
       logWithContext('INFO', request, message, context)
@@ -221,7 +216,7 @@ export const createLogger = (
     mergeContext: (request, partial) => {
       contextStore.mergeContext(request, partial)
     },
-    pino: pinoLogger,
+    pino: lazyPino,
     warn: (request, message, context) => {
       logWithContext('WARNING', request, message, context)
     }

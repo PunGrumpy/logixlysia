@@ -270,6 +270,68 @@ describe('createLogger', () => {
     })
   })
 
+  test('does not call pinoFactory across console-path logging when config.pino is absent', () => {
+    const fakePinoFactory = mock(() => ({}) as Pino)
+
+    const logger = createLogger({}, fakePinoFactory as unknown as typeof pino)
+    const request = createMockRequest('http://localhost/test')
+
+    const { restore } = spyConsole()
+    logger.info(request, 'hello')
+    logger.warn(request, 'careful')
+    logger.error(request, 'oops')
+    logger.debug(request, 'trace')
+    restore()
+
+    expect(fakePinoFactory).not.toHaveBeenCalled()
+  })
+
+  test('constructs pino exactly once on first logger.pino access, not again on subsequent access', () => {
+    const fakePinoInstance = { info: mock(() => undefined) } as unknown as Pino
+    const fakePinoFactory = mock(() => fakePinoInstance)
+
+    const logger = createLogger({}, fakePinoFactory as unknown as typeof pino)
+
+    expect(fakePinoFactory).not.toHaveBeenCalled()
+
+    logger.pino.info({})
+    expect(fakePinoFactory).toHaveBeenCalledTimes(1)
+
+    logger.pino.info({})
+    expect(fakePinoFactory).toHaveBeenCalledTimes(1)
+  })
+
+  test('logger.pino.child returns a working child logger through the lazy proxy', () => {
+    const childInfo = mock(() => undefined)
+    const fakeChildLogger = { info: childInfo }
+    const fakePinoInstance = {
+      child: mock((bindings: Record<string, unknown>) => {
+        expect(bindings).toEqual({ a: 1 })
+        return fakeChildLogger
+      })
+    } as unknown as Pino
+    const fakePinoFactory = mock(() => fakePinoInstance)
+
+    const logger = createLogger({}, fakePinoFactory as unknown as typeof pino)
+
+    const child = logger.pino.child({ a: 1 })
+    child.info({ ok: true })
+
+    expect(fakePinoFactory).toHaveBeenCalledTimes(1)
+    expect(childInfo).toHaveBeenCalledTimes(1)
+  })
+
+  test('config.pino present constructs pino eagerly during createLogger', () => {
+    const fakePinoFactory = mock(() => ({}) as Pino)
+
+    createLogger(
+      { config: { pino: {} } },
+      fakePinoFactory as unknown as typeof pino
+    )
+
+    expect(fakePinoFactory).toHaveBeenCalledTimes(1)
+  })
+
   test('prettyPrint merges with default translateTime from config', () => {
     prettyOptionsCaptured = null
     const captured: { options?: any; stream?: any } = {}

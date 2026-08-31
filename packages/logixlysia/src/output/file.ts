@@ -1,85 +1,66 @@
-import { appendFile } from 'node:fs/promises'
-import { dirname } from 'node:path'
-import type { LogLevel, Options, RequestInfo, StoreData } from '../interfaces'
+import type {
+  LogLevel,
+  Options,
+  RequestInfo,
+  SinkErrorContext,
+  StoreData
+} from '../interfaces'
+import { elapsedMs } from '../utils/duration'
 import { sanitizeLogText } from '../utils/sanitize'
-import { ensureDir } from './fs'
-import { performRotation, shouldRotate } from './rotation-manager'
-
-// Per-file mutex to prevent race conditions during rotation
-const fileLocks = new Map<string, Promise<void>>()
-
-const acquireLock = async (filePath: string): Promise<() => void> => {
-  const prior = fileLocks.get(filePath) ?? Promise.resolve()
-
-  let resolveLock: () => void
-  const newLock = new Promise<void>(resolve => {
-    resolveLock = resolve
-  })
-
-  // Register before awaiting: same-tick callers must chain onto THIS lock.
-  fileLocks.set(filePath, newLock)
-
-  await prior
-
-  return () => {
-    resolveLock?.()
-    if (fileLocks.get(filePath) === newLock) {
-      fileLocks.delete(filePath)
-    }
-  }
-}
+import { getFileSink } from './file-sink'
 
 interface LogToFileInput {
   data: Record<string, unknown>
   filePath: string
   level: LogLevel
   options: Options
+  /** Duration/URL parts already computed by the caller; parsed on the fly when omitted. */
+  precomputed?: { durationMs: number; pathname: string; search: string }
   request: RequestInfo
   store: StoreData
 }
 
-export const logToFile = async (
-  ...args:
-    | [LogToFileInput]
-    | [
-        string,
-        LogLevel,
-        RequestInfo,
-        Record<string, unknown>,
-        StoreData,
-        Options
-      ]
-): Promise<void> => {
-  const input: LogToFileInput =
-    typeof args[0] === 'string'
-      ? (() => {
-          const [
-            filePathArg,
-            levelArg,
-            requestArg,
-            dataArg,
-            storeArg,
-            optionsArg
-          ] = args as [
-            string,
-            LogLevel,
-            RequestInfo,
-            Record<string, unknown>,
-            StoreData,
-            Options
-          ]
-          return {
-            data: dataArg,
-            filePath: filePathArg,
-            level: levelArg,
-            options: optionsArg,
-            request: requestArg,
-            store: storeArg
-          }
-        })()
-      : args[0]
+/** Resolves the logged pathname (with query string when configured) from precomputed parts or a fresh parse. */
+const resolvePathname = (
+  request: RequestInfo,
+  logQueryParams: boolean | undefined,
+  precomputed?: { pathname: string; search: string }
+): string => {
+  if (precomputed) {
+    const { pathname, search } = precomputed
+    return logQueryParams ? `${pathname}${search}` : pathname
+  }
+  try {
+    // Safely parse URL to avoid crashes on malformed URLs
+    const { pathname, search } = new URL(request.url)
+    return logQueryParams ? `${pathname}${search}` : pathname
+  } catch {
+    // Fallback to raw URL if parsing fails
+    return request.url
+  }
+}
 
-  const { filePath, level, request, data, store, options } = input
+/** Reports a sink failure via `config.onError` when set (swallowing hook errors), else stderr. */
+const reportSinkError = (
+  config: Options['config'],
+  sink: SinkErrorContext['sink'],
+  fallbackMessage: string,
+  error: unknown
+): void => {
+  const onError = config?.onError
+  if (!onError) {
+    console.error(fallbackMessage, error)
+    return
+  }
+  try {
+    onError({ error, sink })
+  } catch {
+    // Swallow errors thrown by the hook itself.
+  }
+}
+
+export const logToFile = async (input: LogToFileInput): Promise<void> => {
+  const { filePath, level, request, data, store, options, precomputed } = input
   const { config } = options
   const useTransportsOnly = config?.useTransportsOnly === true
   const disableFileLogging = config?.disableFileLogging === true
@@ -88,61 +69,29 @@ export const logToFile = async (
   }
 
   const message = typeof data.message === 'string' ? data.message : ''
-  const durationMs =
-    store.beforeTime === BigInt(0)
-      ? 0
-      : Number(process.hrtime.bigint() - store.beforeTime) / 1_000_000
+  const durationMs = precomputed?.durationMs ?? elapsedMs(store.beforeTime)
 
-  // Safely parse URL to avoid crashes on malformed URLs
-  let pathname = '/'
-  try {
-    const { pathname: rawPathname, search } = new URL(request.url)
-    pathname = config?.logQueryParams ? `${rawPathname}${search}` : rawPathname
-  } catch {
-    // Fallback to raw URL if parsing fails
-    pathname = request.url
-  }
-
+  const pathname = resolvePathname(request, config?.logQueryParams, precomputed)
   const line = `${level} ${durationMs.toFixed(2)}ms ${request.method} ${sanitizeLogText(pathname, 1024)} ${sanitizeLogText(message)}\n`
 
-  // Acquire lock before any file operations to prevent race conditions
-  const releaseLock = await acquireLock(filePath)
+  const onRotationError = config?.onError
+    ? (error: unknown) => reportSinkError(config, 'rotation', '', error)
+    : undefined
 
   try {
-    try {
-      await ensureDir(dirname(filePath), config?.logDirMode)
-      await appendFile(filePath, line, {
-        encoding: 'utf-8',
-        mode: config?.logFileMode ?? 0o600
-      })
-    } catch (error) {
-      // Log file write errors to stderr so they're not completely silent
-      console.error(
-        `[logixlysia] Failed to write to log file ${filePath}:`,
-        error
-      )
-      throw error
-    }
-
-    const rotation = config?.logRotation
-    if (!rotation) {
-      return
-    }
-
-    const should = await shouldRotate(filePath, rotation)
-    if (should) {
-      try {
-        await performRotation(filePath, rotation)
-      } catch (error) {
-        // Log rotation errors but don't crash - log entry was already written
-        console.error(
-          `[logixlysia] Failed to rotate log file ${filePath}:`,
-          error
-        )
-      }
-    }
-  } finally {
-    // Release lock
-    releaseLock()
+    await getFileSink(filePath).write(line, {
+      logDirMode: config?.logDirMode,
+      logFileMode: config?.logFileMode,
+      logRotation: config?.logRotation,
+      onRotationError
+    })
+  } catch (error) {
+    reportSinkError(
+      config,
+      'file',
+      `[logixlysia] Failed to write to log file ${filePath}:`,
+      error
+    )
+    throw error
   }
 }

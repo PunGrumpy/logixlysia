@@ -37,7 +37,7 @@ evlog:
 log.emit({ status: 200 })
 ```
 
-Logixlysia emits the access log automatically in `onAfterHandle`. Use a custom log only when you need to skip the default line:
+Logixlysia emits the access log automatically in `afterHandle`. Use a custom log only when you need to skip the default line:
 
 ```ts
 store.logger.info(request, 'handled manually')

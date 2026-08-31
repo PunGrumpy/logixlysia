@@ -15,7 +15,7 @@
     }
   },
   "files": {
-    "includes": ["**/*", "!__tests__", "!**/.blume", "!**/.astro", "!**/dist"]
+    "includes": ["**/*", "!**/.blume", "!**/.astro", "!**/dist"]
   },
   "overrides": [
     {

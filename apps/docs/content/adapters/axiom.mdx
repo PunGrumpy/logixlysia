@@ -1,0 +1,91 @@
+---
+title: Axiom
+description: Ship logs to an Axiom dataset via the ingest API
+---
+
+Send logs to [Axiom](https://axiom.co). Axiom indexes every field of an event without a schema, so the nested structure Logixlysia sends — `request.method`, `context.requestId`, your custom context — is queryable as-is with APL.
+
+## Setup
+
+1. Create a dataset in the [Axiom console](https://app.axiom.co).
+2. Generate an API token with **ingest** permission for that dataset.
+3. Set the environment variables:
+
+```bash
+AXIOM_API_KEY=xaat-your-token
+AXIOM_DATASET=your-dataset
+```
+
+4. Wire the transport:
+
+```ts
+import { Elysia } from 'elysia'
+import logixlysia from 'logixlysia'
+import { createAxiomTransport } from 'logixlysia/axiom'
+
+const app = new Elysia()
+  .use(
+    logixlysia({
+      config: {
+        transports: [createAxiomTransport()]
+      }
+    })
+  )
+  .get('/', () => 'ok')
+  .listen(3000)
+```
+
+5. Trigger a request and query the dataset in Axiom.
+
+## Environment Variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `AXIOM_API_KEY` | Yes | API token with ingest permission (`xaat-…`) |
+| `AXIOM_DATASET` | Yes | Target dataset name |
+| `AXIOM_ORG_ID` | For personal access tokens | Organization ID |
+| `AXIOM_URL` | No | API base URL (default `https://api.axiom.co`) |
+
+## Options
+
+Options passed to `createAxiomTransport()` override environment variables:
+
+```ts
+const axiom = createAxiomTransport({
+  dataset: 'production-logs',
+  timeout: 10_000
+})
+```
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `apiKey` | `string` | `AXIOM_API_KEY` | API token with ingest permission |
+| `dataset` | `string` | `AXIOM_DATASET` | Target dataset name |
+| `orgId` | `string` | `AXIOM_ORG_ID` | Required when using a personal access token |
+| `baseUrl` | `string` | `https://api.axiom.co` | API base URL |
+
+Plus the shared batching options: `maxBatchSize`, `flushIntervalMs`, `timeout`, `retries` — see the [overview](/docs/adapters/overview#shared-behavior).
+
+## Payload
+
+Each log becomes one event in `POST /v1/datasets/{dataset}/ingest`:
+
+```json
+{
+  "_time": "2026-08-22T12:00:00.000Z",
+  "level": "INFO",
+  "message": "",
+  "request": { "method": "GET", "url": "http://localhost:3000/users" },
+  "status": 200,
+  "durationMs": 12.4,
+  "context": { "requestId": "0d5e…" }
+}
+```
+
+Query it in Axiom with APL, e.g. `['your-dataset'] | where level == "ERROR" and durationMs > 1000`.
+
+## Troubleshooting
+
+- **`401`** — the token is invalid or expired; generate a new one in Axiom settings.
+- **`403` with a personal access token** — set `AXIOM_ORG_ID` (personal tokens are not scoped to an organization).
+- **Nothing arrives** — logs flush in batches (2 s by default); check that the process lived long enough, or call `flush()` before exit.

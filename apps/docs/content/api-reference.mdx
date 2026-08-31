@@ -201,24 +201,68 @@ type LogixlysiaContext = {
 
 ### `HttpError`
 
-Custom HTTP error class.
+An HTTP error carrying the context that makes a failure actionable.
 
 ```ts
 class HttpError extends Error {
+  readonly code?: string
+  readonly fix?: string
+  readonly internal?: unknown
+  readonly link?: string
   readonly status: number
-  constructor(status: number, message: string)
+  readonly why?: string
+
+  constructor(status: number, message: string, init?: HttpErrorInit)
+
+  toJSON(): HttpErrorPayload
+}
+
+interface HttpErrorInit {
+  code?: string
+  fix?: string
+  internal?: unknown
+  link?: string
+  why?: string
 }
 ```
 
 **Properties:**
 
-- `status`: HTTP status code
+- `status` — HTTP status code
+- `code` — stable machine-readable identifier the client can branch on, e.g. `PAYMENT_DECLINED`. Unlike `message`, it is safe to depend on: rewording the message does not break a caller
+- `why` — why the request failed, in plain language
+- `fix` — what the caller should do about it
+- `link` — documentation URL for this failure
+- `internal` — **log-only** diagnostics. Non-enumerable and excluded from `toJSON()`, so no serializer can put it in a response body
 
 **Example:**
 
 ```ts
-throw new HttpError(404, 'User not found')
+throw new HttpError(402, 'Card declined', {
+  code: 'PAYMENT_DECLINED',
+  why: 'The issuing bank rejected the charge.',
+  fix: 'Try a different card, or contact your bank.',
+  link: 'https://docs.example.com/errors/payment-declined',
+  internal: { gatewayCode: 'do_not_honor', chargeId }
+})
 ```
+
+Response body:
+
+```json
+{
+  "code": "PAYMENT_DECLINED",
+  "fix": "Try a different card, or contact your bank.",
+  "link": "https://docs.example.com/errors/payment-declined",
+  "message": "Card declined",
+  "status": 402,
+  "why": "The issuing bank rejected the charge."
+}
+```
+
+The log line carries the same fields **plus** `internal`, rendered in the context tree as `error.code`, `error.why`, `error.fix`, `error.link`, and `error.internal`.
+
+An error with no client-facing fields keeps its previous behaviour exactly — `throw new HttpError(404, 'User not found')` still responds with the bare message, not JSON. Only an error carrying at least one of `code`, `why`, `fix`, or `link` responds as JSON.
 
 ## Usage Examples
 

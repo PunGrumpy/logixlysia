@@ -4,6 +4,7 @@ import { Elysia, t } from 'elysia'
 import logixlysia from '../../src'
 import { HttpError, type Options } from '../../src/interfaces'
 import { normalizeLoggedError } from '../../src/utils/error'
+import { spyConsole } from '../_helpers/console'
 
 interface CapturedEvent {
   level: unknown
@@ -26,12 +27,16 @@ const createCaptureTransport = () => {
 const SECRET_PASSWORD = 'hunter2-secret-value'
 
 const buildLoginApp = (options: Options) =>
-  new Elysia().use(logixlysia(options)).post('/login', () => 'ok', {
-    body: t.Object({
-      email: t.String(),
-      password: t.String({ minLength: 60 })
-    })
-  })
+  new Elysia().use(logixlysia(options)).post(
+    '/login',
+    {
+      body: t.Object({
+        email: t.String(),
+        password: t.String({ minLength: 60 })
+      })
+    },
+    () => 'ok'
+  )
 
 describe('handleHttpError', () => {
   test('does not leak the request body when a validation error occurs', async () => {
@@ -160,5 +165,72 @@ describe('handleHttpError', () => {
     expect(metaError.name).toBe('ValidationError')
     expect(JSON.stringify(metaError)).not.toContain('leak-me')
     expect(message).not.toContain('leak-me')
+  })
+
+  // Pins decided drift #2 from plans/017: the error path now honors the same
+  // sink gates as the success path, so `useTransportsOnly` with zero
+  // transports configured is "effectively disabled" end to end — no
+  // transport call (none configured) and no console output either.
+  test('useTransportsOnly with no transports configured emits nothing at all', async () => {
+    const { spies, restore } = spyConsole()
+    try {
+      const app = new Elysia()
+        .use(logixlysia({ config: { useTransportsOnly: true } }))
+        .get('/down', () => {
+          throw new HttpError(503, 'downstream')
+        })
+
+      const res = await app.handle(new Request('http://localhost/down'))
+
+      expect(res.status).toBe(503)
+      expect(spies.debug).not.toHaveBeenCalled()
+      expect(spies.info).not.toHaveBeenCalled()
+      expect(spies.warn).not.toHaveBeenCalled()
+      expect(spies.error).not.toHaveBeenCalled()
+      expect(spies.log).not.toHaveBeenCalled()
+    } finally {
+      restore()
+    }
+  })
+
+  // Pins decided drift #3 from plans/017: console output is chosen by level
+  // on both paths now, so a 4xx (WARNING) error prints via console.warn
+  // instead of the previously hardcoded console.error.
+  test('a 4xx error prints via console.warn, not console.error', async () => {
+    const { spies, restore } = spyConsole()
+    try {
+      const app = new Elysia()
+        .use(logixlysia({ config: { disableFileLogging: true } }))
+        .get('/missing', () => {
+          throw new HttpError(404, 'not found')
+        })
+
+      const res = await app.handle(new Request('http://localhost/missing'))
+
+      expect(res.status).toBe(404)
+      expect(spies.warn).toHaveBeenCalledTimes(1)
+      expect(spies.error).not.toHaveBeenCalled()
+    } finally {
+      restore()
+    }
+  })
+
+  test('a 5xx error still prints via console.error', async () => {
+    const { spies, restore } = spyConsole()
+    try {
+      const app = new Elysia()
+        .use(logixlysia({ config: { disableFileLogging: true } }))
+        .get('/down', () => {
+          throw new HttpError(503, 'downstream')
+        })
+
+      const res = await app.handle(new Request('http://localhost/down'))
+
+      expect(res.status).toBe(503)
+      expect(spies.error).toHaveBeenCalledTimes(1)
+      expect(spies.warn).not.toHaveBeenCalled()
+    } finally {
+      restore()
+    }
   })
 })

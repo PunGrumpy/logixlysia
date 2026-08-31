@@ -1,22 +1,36 @@
 import type { RequestContextStore } from '../context/request-context'
 import type { Logger, Options, StoreData } from '../interfaces'
 
+/**
+ * Elysia 2 merges the route context into the socket object itself (the old
+ * `ws.data` bag is gone), so `store` sits directly on the handler's `ws`.
+ */
 export interface WebSocketLike {
-  readonly data?: { store?: { logger?: Logger } }
   readonly id?: string
+  readonly store?: { logger?: Logger }
 }
 
 export interface WsHandlerHooks<
   TMessage = unknown,
   TWs extends WebSocketLike = WebSocketLike
 > {
-  close?: (ws: TWs) => void
+  close?: (ws: TWs, code?: number, reason?: string) => void
   message?: (ws: TWs, message: TMessage) => void
   open?: (ws: TWs) => void
 }
 
-const wsSyntheticRequest = (path: string): Request =>
-  new Request(`http://logixlysia.local${path}`, { method: 'WS' })
+// Synthetic requests are only read (method/url) by the log pipeline, never mutated, so caching
+// one per path avoids allocating a fresh Request on every WS open/message/close log event.
+const wsRequestCache = new Map<string, Request>()
+
+const wsSyntheticRequest = (path: string): Request => {
+  let request = wsRequestCache.get(path)
+  if (!request) {
+    request = new Request(`http://logixlysia.local${path}`, { method: 'WS' })
+    wsRequestCache.set(path, request)
+  }
+  return request
+}
 
 export const createWsHandlerWrapper = (
   options: Options,
@@ -35,7 +49,8 @@ export const createWsHandlerWrapper = (
     const key = ws as object
     const beforeTime = wsTimings.get(key) ?? process.hrtime.bigint()
     const store: StoreData = { beforeTime }
-    const accumulated = contextStore.getContext(key)
+    // Read-only: immediately spread below into a new object, never retained or mutated.
+    const accumulated = contextStore.peekContext(key)
     const context =
       Object.keys(accumulated).length > 0 || extra
         ? { ...accumulated, ...extra, wsId: ws.id }
@@ -59,8 +74,8 @@ export const createWsHandlerWrapper = (
   ): THooks =>
     ({
       ...hooks,
-      close(ws) {
-        hooks.close?.(ws)
+      close(ws, code, reason) {
+        hooks.close?.(ws, code, reason)
         if (options.config?.disableWebSocketLogging !== true) {
           logWs('INFO', ws, path, 'WebSocket closed')
         }

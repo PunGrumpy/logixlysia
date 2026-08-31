@@ -1,0 +1,97 @@
+---
+title: PostHog
+description: Capture logs as PostHog events linked to persons
+---
+
+Send logs to [PostHog](https://posthog.com) as captured events. Each log becomes an event with dot-notation properties you can use in filters, insights, and cohorts — and logs carrying a user ID link to PostHog persons automatically.
+
+## Setup
+
+1. Copy your project API key (`phc_…`) from **Settings → Project → Project API Key**.
+2. Set the environment variables:
+
+```bash
+POSTHOG_API_KEY=phc_your-project-key
+POSTHOG_HOST=https://us.i.posthog.com # or https://eu.i.posthog.com
+```
+
+3. Wire the transport:
+
+```ts
+import { Elysia } from 'elysia'
+import logixlysia from 'logixlysia'
+import { createPostHogTransport } from 'logixlysia/posthog'
+
+const app = new Elysia()
+  .use(
+    logixlysia({
+      config: {
+        transports: [createPostHogTransport()]
+      }
+    })
+  )
+  .get('/', () => 'ok')
+  .listen(3000)
+```
+
+4. Trigger a request and find `logixlysia_log` events in the activity explorer.
+
+## Environment Variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `POSTHOG_API_KEY` | Yes | Project API key (`phc_…`) |
+| `POSTHOG_HOST` | No | Instance URL — US cloud (default), EU cloud, or self-hosted |
+
+## Options
+
+```ts
+const posthog = createPostHogTransport({
+  distinctIdField: 'context.accountId',
+  eventName: 'api_log'
+})
+```
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `apiKey` | `string` | `POSTHOG_API_KEY` | Project API key |
+| `host` | `string` | `https://us.i.posthog.com` | PostHog instance URL |
+| `eventName` | `string` | `logixlysia_log` | Name of the captured event |
+| `distinctIdField` | `string` | `context.userId` | Meta path resolved per log to `distinct_id` |
+| `distinctId` | `string` | `logixlysia-server` | Static fallback when the field resolves to nothing |
+
+Plus the shared batching options: `maxBatchSize`, `flushIntervalMs`, `timeout`, `retries` — see the [overview](/docs/adapters/overview#shared-behavior).
+
+## Payload
+
+Logs post to `{host}/batch/`. Each event carries flat, chart-friendly properties:
+
+| Property | Example |
+|----------|---------|
+| `level` | `INFO` |
+| `message` | `GET /users` |
+| `request.method` | `GET` |
+| `status` | `200` |
+| `durationMs` | `12.4` |
+| `context.requestId` | `0d5e…` |
+
+PostHog processes events asynchronously — expect them to appear within about a minute.
+
+## Linking Logs to Persons
+
+Merge a user ID into the request context and the log's `distinct_id` resolves to it:
+
+```ts
+app.get('/profile', ({ log, userId }) => {
+  log.mergeContext({ userId })
+  return getProfile(userId)
+})
+```
+
+Point `distinctIdField` at any other meta path (dot notation) if your identifier lives elsewhere. Without an identifier, events fall back to the static `distinctId` — handy for a backend acting as a single identity.
+
+## Troubleshooting
+
+- **`401`** — the key is not a project API key; it must start with `phc_`.
+- **Events missing** — check the region: EU projects must use `https://eu.i.posthog.com`.
+- **High event volume** — log levels you don't need can be excluded with [`logFilter`](/docs/features/filtering) before they reach the transport.

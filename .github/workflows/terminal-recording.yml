@@ -1,0 +1,194 @@
+name: 🎬 Terminal Recording
+
+on:
+  pull_request:
+    branches:
+      - main
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'apps/elysia/**'
+      - 'packages/logixlysia/**'
+      - '.github/workflows/terminal-recording.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  record:
+    name: 🎥 Record playground logs
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    outputs:
+      artifact-url: ${{ steps.upload.outputs.artifact-url }}
+    steps:
+      - name: 🛫 Checkout Code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: 🍞 Setup Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: package.json
+      - name: 🌵 Cache Bun
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.bun/install/cache
+            **/node_modules
+            .turbo
+          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}-
+            ${{ runner.os }}-bun-
+      - name: 🔽 Install Dependencies
+        run: bun install
+      - name: 🦊 Build Logixlysia
+        run: bun run build --filter logixlysia
+      - name: 📁 Prepare artifacts
+        run: mkdir -p artifacts
+      - name: 🎞️ Render tape
+        # Every `Wait` in the tape is an assertion: vhs exits non-zero if the
+        # playground never logs the expected line, so this step is a smoke test
+        # that happens to produce a video.
+        uses: charmbracelet/vhs-action@f6d7db07a432fcd3b06772628d36a57f96d95dcf # v2.1.1
+        with:
+          path: apps/elysia/demo.tape
+          install-fonts: true
+      - name: 📤 Upload recording
+        id: upload
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: logixlysia-demo-${{ github.event.pull_request.number || github.run_id }}
+          path: |
+            artifacts/logixlysia-demo.gif
+            artifacts/logixlysia-demo.mp4
+            artifacts/logixlysia-demo.png
+          if-no-files-found: error
+          retention-days: 7
+      - name: 📝 Write job summary
+        env:
+          ARTIFACT_URL: ${{ steps.upload.outputs.artifact-url }}
+        run: |
+          {
+            echo "## Playground terminal recording"
+            echo
+            echo "VHS drove \`apps/elysia\` in a real PTY and asserted every line below appeared:"
+            echo
+            echo "- start banner on \`localhost:3001\`"
+            echo "- request context tree on \`/checkout\`"
+            echo "- \`[REDACTED]\` on \`/auto-redact\`"
+            echo "- \`WARNING\` on \`/status/404\`"
+            echo "- red \`ERROR\` on \`/boom\`"
+            echo "- AI token metrics on \`POST /chat\`"
+            echo
+            echo "[Download the GIF, MP4 and PNG](${ARTIFACT_URL})"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  publish:
+    name: 📦 Publish recording to pre-release
+    needs: record
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      # actions:read lets `gh run download` fetch this run's artifact without
+      # a third-party download action; contents:write manages the release.
+      actions: read
+      contents: write
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # No checkout in this job: point gh at the repo explicitly so it does
+      # not fall back to reading a git remote.
+      GH_REPO: ${{ github.repository }}
+      ARTIFACT_NAME: logixlysia-demo-${{ github.event.pull_request.number }}
+      PR_NUMBER: ${{ github.event.pull_request.number }}
+      HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+    outputs:
+      gif-url: ${{ steps.release.outputs.gif-url }}
+      mp4-url: ${{ steps.release.outputs.mp4-url }}
+      png-url: ${{ steps.release.outputs.png-url }}
+    steps:
+      - name: ⬇️ Download recording artifact
+        run: gh run download "${GITHUB_RUN_ID}" --name "${ARTIFACT_NAME}" --dir dist
+      - name: 📦 Upload assets to recording pre-release
+        id: release
+        run: |
+          set -euo pipefail
+          tag="recording-pr-${PR_NUMBER}"
+          base_url="https://github.com/${GITHUB_REPOSITORY}/releases/download/${tag}"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release upload "$tag" \
+              dist/logixlysia-demo.gif dist/logixlysia-demo.mp4 dist/logixlysia-demo.png --clobber
+          else
+            gh release create "$tag" \
+              dist/logixlysia-demo.gif dist/logixlysia-demo.mp4 dist/logixlysia-demo.png \
+              --prerelease \
+              --title "🎬 Terminal recording — PR #${PR_NUMBER}" \
+              --notes "Recording assets for \`${HEAD_SHA:0:7}\`." \
+              || gh release upload "$tag" \
+                dist/logixlysia-demo.gif dist/logixlysia-demo.mp4 dist/logixlysia-demo.png --clobber
+          fi
+          {
+            echo "gif-url=${base_url}/logixlysia-demo.gif"
+            echo "mp4-url=${base_url}/logixlysia-demo.mp4"
+            echo "png-url=${base_url}/logixlysia-demo.png"
+          } >> "$GITHUB_OUTPUT"
+
+  comment:
+    name: 💬 Post recording to PR
+    needs: [record, publish]
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: 🗒️ Upsert recording comment
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          RECORDING_URL: ${{ needs.publish.outputs.gif-url }}
+          MP4_URL: ${{ needs.publish.outputs.mp4-url }}
+          PNG_URL: ${{ needs.publish.outputs.png-url }}
+          COMMIT_SHA: ${{ github.event.pull_request.head.sha }}
+        with:
+          script: |
+            const marker = '<!-- logixlysia:terminal-recording -->'
+            const body = [
+              marker,
+              '## 🎬 Playground terminal recording',
+              '',
+              `![terminal recording](${process.env.RECORDING_URL})`,
+              '',
+              `[MP4](${process.env.MP4_URL}) · [PNG](${process.env.PNG_URL})`,
+              '',
+              `VHS drove \`apps/elysia\` at \`${process.env.COMMIT_SHA.slice(0, 7)}\` in a real PTY and asserted that logixlysia still prints:`,
+              '',
+              '- the start banner, then a plain `200` request line',
+              '- the per-request context tree on `/checkout`',
+              '- `[REDACTED]` for the card, e-mail, IP and JWT on `/auto-redact`',
+              '- `WARNING` on `/status/404` and a red `ERROR` on `/boom`',
+              '- AI token metrics on `POST /chat`',
+            ].join('\n')
+            const { owner, repo } = context.repo
+            const issue_number = context.payload.pull_request.number
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner,
+              repo,
+              issue_number,
+            })
+            const existing = comments.find(comment => comment.body?.includes(marker))
+            try {
+              if (existing) {
+                await github.rest.issues.updateComment({ owner, repo, comment_id: existing.id, body })
+              } else {
+                await github.rest.issues.createComment({ owner, repo, issue_number, body })
+              }
+            } catch (error) {
+              core.warning(`Could not upsert the terminal recording comment: ${error.message}`)
+            }

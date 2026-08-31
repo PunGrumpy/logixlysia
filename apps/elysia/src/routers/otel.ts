@@ -8,10 +8,6 @@ export const otelRouter = <App extends Logixlysia>(app: App) =>
     })
     .get(
       '/trace',
-      () => ({
-        note: 'When @opentelemetry/api is installed and a span is active, trace_id / span_id appear in logs',
-        ok: true
-      }),
       {
         detail: {
           description:
@@ -19,5 +15,9 @@ export const otelRouter = <App extends Logixlysia>(app: App) =>
           summary: 'OpenTelemetry trace correlation',
           tags: ['logging', 'otel']
         }
-      }
+      },
+      () => ({
+        note: 'When @opentelemetry/api is installed and a span is active, trace_id / span_id appear in logs',
+        ok: true
+      })
     )

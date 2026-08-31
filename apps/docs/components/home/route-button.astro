@@ -1,0 +1,22 @@
+---
+// One request chip under the hero terminal. Clicking it appends the matching
+// log line to the terminal (wired up in demo.astro's script).
+interface Props {
+  method: string
+  methodCls: string
+  path: string
+  route: string
+}
+
+const { method, methodCls, path, route } = Astro.props
+---
+
+<button
+  aria-label={`Send ${method} ${path} request`}
+  class="inline-flex cursor-pointer items-center gap-1.5 rounded-full bg-white px-3 py-1.5 font-mono text-[12px] shadow-[0_0_0_1px_rgb(0_0_0/0.08)] transition-[background-color,scale] duration-150 ease-out hover:bg-black/2 active:scale-[0.96] dark:bg-[#131313] dark:shadow-[0_0_0_1px_rgb(255_255_255/0.1)] dark:hover:bg-[#181818]"
+  data-route={route}
+  type="button"
+>
+  <span class:list={['font-semibold', methodCls]}>{method}</span>
+  <span class="text-[#2D2D2D] dark:text-[#DADADA]">{path}</span>
+</button>

@@ -1,13 +1,9 @@
-import {
-  mergeLogDataContext,
-  type RequestContextStore
-} from '../context/request-context'
+import type { RequestContextStore } from '../context/request-context'
 import type { LogLevel, Options, RequestInfo, StoreData } from '../interfaces'
-import { logToTransports } from '../output'
-import { logToFile } from '../output/file'
+import type { SamplingRuntime } from '../sampling'
 import { normalizeLoggedError } from '../utils/error'
-import { redact, redactRequest } from '../utils/redact'
-import { formatLogOutput } from './create-logger'
+import type { FormatContext } from './create-logger'
+import { emit, type Sinks, shouldLog } from './emit'
 
 const isErrorWithStatus = (
   value: unknown
@@ -17,33 +13,32 @@ const isErrorWithStatus = (
   'status' in value &&
   typeof (value as { status?: unknown }).status === 'number'
 
+/** The status a thrown value maps to; anything without one is a 500. */
+export const errorStatus = (error: unknown): number =>
+  isErrorWithStatus(error) ? error.status : 500
+
 export const handleHttpError = (
   request: RequestInfo,
   error: unknown,
   store: StoreData,
   options: Options,
-  contextStore?: RequestContextStore
+  contextStore: RequestContextStore,
+  sinks: Sinks,
+  formatContext: FormatContext,
+  sampling?: SamplingRuntime
 ): void => {
   const { config } = options
 
-  const status = isErrorWithStatus(error) ? error.status : 500
-  let level: LogLevel = 'ERROR'
-  if (status < 500 && status >= 400) {
-    level = 'WARNING'
-  }
+  const status = errorStatus(error)
+  const level: LogLevel = status >= 400 && status < 500 ? 'WARNING' : 'ERROR'
 
-  const logFilter = config?.logFilter
-  if (
-    logFilter?.level &&
-    logFilter.level.length > 0 &&
-    !logFilter.level.includes(level)
-  ) {
+  // Mirrors emit()'s own gate check, but performed *before* normalizing the
+  // error so a filtered-out/disabled logger never pays for that work.
+  // emit() re-checks the same gate, which is cheap and keeps this function a
+  // thin, provably-correct wrapper around the shared pipeline.
+  if (sinks.isEffectivelyDisabled || !shouldLog(level, config?.logFilter)) {
     return
   }
-
-  const useTransportsOnly = config?.useTransportsOnly === true
-  const disableInternalLogger = config?.disableInternalLogger === true
-  const disableFileLogging = config?.disableFileLogging === true
 
   const { error: safeError, message } = normalizeLoggedError(
     error,
@@ -51,49 +46,16 @@ export const handleHttpError = (
   )
 
   const data: Record<string, unknown> = { error: safeError, message, status }
-  const dataWithContext = contextStore
-    ? mergeLogDataContext(data, contextStore.getContext(request))
-    : data
-  const logData =
-    config?.autoRedact === true
-      ? redact(dataWithContext, config?.redactKeys)
-      : dataWithContext
-  const logRequest =
-    config?.autoRedact === true
-      ? redactRequest(request, config?.redactKeys)
-      : request
 
-  logToTransports({ data: logData, level, options, request: logRequest, store })
-
-  if (!(useTransportsOnly || disableFileLogging)) {
-    const filePath = config?.logFilePath
-    if (filePath) {
-      logToFile({
-        data: logData,
-        filePath,
-        level,
-        options,
-        request: logRequest,
-        store
-      }).catch(() => {
-        // Ignore errors
-      })
-    }
-  }
-
-  if (useTransportsOnly || disableInternalLogger) {
-    return
-  }
-
-  const { main, contextLines } = formatLogOutput({
-    data: logData,
+  emit({
+    contextStore,
+    data,
+    formatContext,
     level,
     options,
-    request: logRequest,
+    request,
+    sampling,
+    sinks,
     store
   })
-
-  const formattedMessage =
-    contextLines.length > 0 ? `${main}\n${contextLines.join('\n')}` : main
-  console.error(formattedMessage)
 }

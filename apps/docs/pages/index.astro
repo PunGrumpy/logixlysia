@@ -3,6 +3,7 @@ import data from 'blume:data'
 import PageLayout from 'blume/components/layout/PageLayout.astro'
 import '../styles/home.css'
 
+import Adapters from '../components/home/adapters.astro'
 import Demo from '../components/home/demo.astro'
 import Faq from '../components/home/faq.astro'
 import Features from '../components/home/features.astro'
@@ -15,7 +16,7 @@ const version = getLatestVersion()
 const releaseUrl = getReleaseUrl(version)
 const title = 'The logger for Elysia.js | Logixlysia'
 const description =
-  'Structured, colorful request logging for Elysia.js on Bun — filtering, file rotation, request context, and custom formats in one plugin.'
+  'Structured, colorful request logging for Elysia.js on Bun — filtering, sampling, enrichers, file rotation, and adapters for nine observability platforms in one plugin.'
 ---
 
 <PageLayout
@@ -28,6 +29,8 @@ const description =
   navigation={data.navigation}
   ogEnabled={config.og.enabled}
   ogImage="/opengraph-image.png"
+  ogImageAlt="Logixlysia — the logger for Elysia.js"
+  ogImageSize={{ height: 720, width: 1200 }}
   page={{
     description,
     title
@@ -49,13 +52,14 @@ const description =
       class="-my-8 sm:-my-12 md:-my-16 h-px w-full bg-linear-to-r from-transparent via-border to-transparent"
     ></div>
     <Features />
+    <Adapters />
     <div
       aria-hidden="true"
       class="-my-8 sm:-my-12 md:-my-16 h-px w-full bg-linear-to-r from-transparent via-border to-transparent"
     ></div>
     <Faq />
-    <Footer />
   </div>
+  <Footer slot="footer" />
 </PageLayout>
 
 <script>
