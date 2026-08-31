@@ -1,5 +1,5 @@
 import { describe, expect, mock, test } from 'bun:test'
-import nodeAdapter from '@elysiajs/node'
+import { node } from '@elysia/node'
 import { Elysia } from 'elysia'
 
 import logixlysia from '../../src'
@@ -78,9 +78,9 @@ describe('demo routes (Bun)', () => {
 })
 
 describe('Node adapter', () => {
-  test('logixlysia resolves and handles GET / on @elysiajs/node', async () => {
+  test('logixlysia resolves and handles GET / on @elysia/node', async () => {
     const transport = mockTransport()
-    const app = new Elysia({ adapter: nodeAdapter() })
+    const app = new Elysia({ adapter: node() })
       .use(logixlysia(silentTestOptions(transport)))
       .get('/', () => ({ ok: true }))
 

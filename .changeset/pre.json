@@ -1,0 +1,12 @@
+{
+  "mode": "pre",
+  "tag": "next",
+  "initialVersions": {
+    "docs": "0.0.0",
+    "elysia-example": "0.0.0",
+    "@repo/bench": "0.0.0",
+    "logixlysia": "6.8.0",
+    "@repo/typescript-config": "0.0.0"
+  },
+  "changesets": []
+}

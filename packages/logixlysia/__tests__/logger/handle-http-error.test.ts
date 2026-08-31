@@ -27,12 +27,16 @@ const createCaptureTransport = () => {
 const SECRET_PASSWORD = 'hunter2-secret-value'
 
 const buildLoginApp = (options: Options) =>
-  new Elysia().use(logixlysia(options)).post('/login', () => 'ok', {
-    body: t.Object({
-      email: t.String(),
-      password: t.String({ minLength: 60 })
-    })
-  })
+  new Elysia().use(logixlysia(options)).post(
+    '/login',
+    {
+      body: t.Object({
+        email: t.String(),
+        password: t.String({ minLength: 60 })
+      })
+    },
+    () => 'ok'
+  )
 
 describe('handleHttpError', () => {
   test('does not leak the request body when a validation error occurs', async () => {

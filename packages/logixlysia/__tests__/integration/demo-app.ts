@@ -28,7 +28,7 @@ export const createDemoApp = (options: Options) => {
       })
       return { ok: true }
     })
-    .onRequest(({ request, store }) => {
+    .request(({ request, store }) => {
       injectTraceContext(store.logger, request)
     })
     .get('/trace', () => ({ ok: true }))

@@ -4,6 +4,14 @@ import { mergeAIMetrics } from 'logixlysia/ai'
 export const aiMetricsRouter = <App extends Logixlysia>(app: App) =>
   app.post(
     '/chat',
+    {
+      detail: {
+        description:
+          'Uses `mergeAIMetrics` from `logixlysia/ai` so LLM usage appears in the request context tree.',
+        summary: 'AI metrics on access log',
+        tags: ['logging', 'ai']
+      }
+    },
     ({ request, store }) => {
       mergeAIMetrics(store.logger, request, {
         inputTokens: 1200,
@@ -16,14 +24,6 @@ export const aiMetricsRouter = <App extends Logixlysia>(app: App) =>
       return {
         ok: true,
         reply: 'Demo response — check access log for `context.ai`'
-      }
-    },
-    {
-      detail: {
-        description:
-          'Uses `mergeAIMetrics` from `logixlysia/ai` so LLM usage appears in the request context tree.',
-        summary: 'AI metrics on access log',
-        tags: ['logging', 'ai']
       }
     }
   )
