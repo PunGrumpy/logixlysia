@@ -26,7 +26,7 @@
     "@changesets/cli": "^2.31.0",
     "turbo": "^2.10.8",
     "typescript": "7.0.2",
-    "ultracite": "7.10.0"
+    "ultracite": "7.10.7"
   },
   "packageManager": "bun@1.3.14",
   "engines": {
