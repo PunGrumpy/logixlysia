@@ -3,7 +3,7 @@ title: Comparison
 description: How Logixlysia compares to evlog and other Elysia loggers
 ---
 
-## Feature matrix
+## Feature Matrix
 
 | Capability | Logixlysia | [evlog](https://evlog.dev) | [@bogeychan/elysia-logger](https://github.com/bogeychan/elysia-logger) |
 | ---------- | ---------- | -------------------------- | ----------------------------------------------------------------------- |
@@ -18,13 +18,13 @@ description: How Logixlysia compares to evlog and other Elysia loggers
 | AI usage on access log | `logixlysia/ai` | `evlog/ai` | Manual |
 | Presets (`dev` / `prod`) | Yes | N/A | N/A |
 
-## When to choose Logixlysia
+## When to Choose Logixlysia
 
 - You want **Pino** performance with Elysia-native `store.logger` ergonomics.
 - You need **file logging and rotation** without wiring a separate drain.
 - You prefer **incremental context** (`mergeContext`) plus automatic access logs instead of migrating to a wide-event-only API.
 
-## When to consider evlog
+## When to Consider evlog
 
 - You want a **unified wide-event pipeline** across many frameworks with managed drains (Axiom, etc.).
 - You rely heavily on **`evlog/ai`** and **`evlog` auth** integrations out of the box.
@@ -37,4 +37,4 @@ Run the monorepo benchmark package:
 bun run bench
 ```
 
-The benchmark package has three request-path suites: an **overhead floor** (all sinks disabled — measures plugin dispatch cost only), a **structured sink** run (no-op transport/drain — measures log assembly and dispatch), and a **file sink** run. Compare like with like: the floor numbers contain no logging work by design. Results vary by machine — use them for regression tracking, not absolute rankings.
+The benchmark package has three request-path suites: an **overhead floor** (all sinks disabled, measuring plugin dispatch cost only), a **structured sink** run (no-op transport/drain, measuring log assembly and dispatch), and a **file sink** run. Compare like with like: the floor numbers contain no logging work by design. Results vary by machine, so use them for regression tracking, not absolute rankings.

@@ -46,7 +46,7 @@ import type { LogixlysiaSingleton } from 'logixlysia'
 type Logixlysia = Elysia<'', LogixlysiaSingleton>
 ```
 
-The plugin uses an explicit `LogixlysiaSingleton`: a closed `store` plus empty `decorator` / `derive` / `resolve` slots that avoid both `SingletonBase`’s wide `Record<string, unknown>` and `Record<string, never>` (the latter would intersect Elysia’s `Context` keys with `never`). That keeps `Context` and WebSocket `ws.data` precise after `.use(logixlysia())`.
+The plugin uses an explicit `LogixlysiaSingleton`: a closed `store` plus empty `decorator` / `derive` / `resolve` slots. Those slots avoid both `SingletonBase`’s wide `Record<string, unknown>` and `Record<string, never>` (the latter would intersect Elysia’s `Context` keys with `never`). That keeps `Context` and WebSocket `ws.data` precise after `.use(logixlysia())`.
 
 ### `Options`
 
@@ -262,7 +262,7 @@ Response body:
 
 The log line carries the same fields **plus** `internal`, rendered in the context tree as `error.code`, `error.why`, `error.fix`, `error.link`, and `error.internal`.
 
-An error with no client-facing fields keeps its previous behaviour exactly — `throw new HttpError(404, 'User not found')` still responds with the bare message, not JSON. Only an error carrying at least one of `code`, `why`, `fix`, or `link` responds as JSON.
+An error with no client-facing fields keeps its previous behaviour exactly. `throw new HttpError(404, 'User not found')` still responds with the bare message, not JSON. Only an error carrying at least one of `code`, `why`, `fix`, or `link` responds as JSON.
 
 ## Usage Examples
 

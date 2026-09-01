@@ -45,7 +45,7 @@ Supported formats: a number plus a unit — `'1h'` (hours), `'1d'` (days), `'1w'
 > [!NOTE]
 > Interval rotation is evaluated when a log line is written, not on a
 > wall-clock timer. If the process writes nothing for longer than
-> `interval`, the file rotates on the next write — an idle process's
+> `interval`, the file rotates on the next write. An idle process's
 > file can exceed `interval` in age until traffic resumes. The file's
 > age is read from filesystem creation time, so it survives restarts.
 
@@ -75,7 +75,7 @@ logRotation: {
 
 ## How Rotation Works
 
-Rotation happens on write, when either configured trigger is crossed: the in-memory byte count exceeds `maxSize`, or the live file's age (from filesystem creation time) has reached `interval`. Both are checked after every write batch — never on a timer. Empty files are not rotated.
+Rotation happens on write, when either configured trigger is crossed: the in-memory byte count exceeds `maxSize`, or the live file's age (from filesystem creation time) has reached `interval`. Both are checked after every write batch, never on a timer. Empty files are not rotated.
 
 When a log file is rotated, it's renamed with a timestamp and a high-resolution counter to guarantee uniqueness:
 

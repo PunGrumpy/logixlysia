@@ -3,7 +3,7 @@ title: PostHog
 description: Capture logs as PostHog events linked to persons
 ---
 
-Send logs to [PostHog](https://posthog.com) as captured events. Each log becomes an event with dot-notation properties you can use in filters, insights, and cohorts — and logs carrying a user ID link to PostHog persons automatically.
+Send logs to [PostHog](https://posthog.com) as captured events. Each log becomes an event with dot-notation properties you can use in filters, insights, and cohorts. Logs carrying a user ID link to PostHog persons automatically.
 
 ## Setup
 
@@ -75,7 +75,7 @@ Logs post to `{host}/batch/`. Each event carries flat, chart-friendly properties
 | `durationMs` | `12.4` |
 | `context.requestId` | `0d5e…` |
 
-PostHog processes events asynchronously — expect them to appear within about a minute.
+PostHog processes events asynchronously. Expect them to appear within about a minute.
 
 ## Linking Logs to Persons
 
@@ -94,4 +94,4 @@ Point `distinctIdField` at any other meta path (dot notation) if your identifier
 
 - **`401`** — the key is not a project API key; it must start with `phc_`.
 - **Events missing** — check the region: EU projects must use `https://eu.i.posthog.com`.
-- **High event volume** — log levels you don't need can be excluded with [`logFilter`](/docs/features/filtering) before they reach the transport.
+- **High event volume** — exclude log levels you don't need with [`logFilter`](/docs/features/filtering) before they reach the transport.

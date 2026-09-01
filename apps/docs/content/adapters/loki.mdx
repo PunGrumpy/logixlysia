@@ -69,7 +69,7 @@ const loki = createLokiTransport({
 
 Plus the shared batching options: `maxBatchSize`, `flushIntervalMs`, `timeout`, `retries` — see the [overview](/docs/adapters/overview#shared-behavior).
 
-Keep `labels` low-cardinality (environment, region) — per-request values like request IDs belong in the log line, where LogQL can still filter them, not in labels, where they explode Loki's index.
+Keep `labels` low-cardinality (environment, region). Per-request values like request IDs belong in the log line, where LogQL can still filter them, not in labels, where they explode Loki's index.
 
 ## Payload
 

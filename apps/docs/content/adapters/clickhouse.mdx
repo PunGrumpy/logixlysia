@@ -80,7 +80,7 @@ const clickhouse = createClickHouseTransport({
 
 Plus the shared batching options: `maxBatchSize`, `flushIntervalMs`, `timeout`, `retries` — see the [overview](/docs/adapters/overview#shared-behavior).
 
-Database and table names must be plain identifiers (letters, digits, underscores) — anything else throws at startup.
+Database and table names must be plain identifiers (letters, digits, underscores). Anything else throws at startup.
 
 ## Payload
 

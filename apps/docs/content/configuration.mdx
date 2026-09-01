@@ -57,7 +57,7 @@ Enable colored output in console logs.
 useColors: true
 ```
 
-Colors require an interactive terminal: when `stdout` is not a TTY (Docker, CI, or output piped to a file), logs are printed uncolored even with `useColors: true`.
+Colors require an interactive terminal: when `stdout` is not a TTY (Docker, CI, or output piped to a file), Logixlysia prints logs uncolored even with `useColors: true`.
 
 ### `ip`
 
@@ -74,16 +74,16 @@ ip: true
 1. `x-forwarded-for` — uses the first (leftmost) IP in the comma-separated list (the original client when behind proxies)
 2. `x-real-ip` — fallback when `x-forwarded-for` is not present
 
-These headers are typically set by reverse proxies (nginx, Caddy, Cloudflare, etc.) and load balancers. When testing locally (localhost or LAN) without a proxy, these headers are usually absent, so the `{ip}` placeholder will be empty. To test IP logging locally, you can pass a header manually, e.g. `curl -H 'x-real-ip: 1.2.3.4' http://localhost:3000/`.
+Reverse proxies (nginx, Caddy, Cloudflare, etc.) and load balancers typically set these headers. When testing locally (localhost or LAN) without a proxy, these headers are usually absent, so the `{ip}` placeholder will be empty. To test IP logging locally, you can pass a header manually, e.g. `curl -H 'x-real-ip: 1.2.3.4' http://localhost:3000/`.
 
 ### `autoRedact`
 
-Automatically redacts sensitive data from log messages, context objects, errors, and request headers before they are outputted. Redaction runs in two ways:
+Automatically redacts sensitive data from log messages, context objects, errors, and request headers before Logixlysia outputs them. Redaction runs in two ways:
 
 1. **By key/header name** — a built-in, case-insensitive denylist (`authorization`, `cookie`, `x-api-key`, `password`, `secret`, `token`, `session`, and more) wholly redacts the value of any matching object key or request header, regardless of what the value looks like. `-`, `_`, and camelCase variants (`x-api-key`, `x_api_key`, `xApiKey`) all match.
 2. **By value pattern** — emails, IP addresses, Luhn-valid payment card numbers, and JWTs are redacted wherever they appear in strings, even in fields not covered by the key denylist.
 
-Value-pattern redaction is best-effort — it only catches values matching those specific shapes. Always prefer key-based redaction (`redactKeys`) for known sensitive fields instead of relying on their value happening to match a pattern.
+Value-pattern redaction is best-effort. It only catches values matching those specific shapes. Always prefer key-based redaction (`redactKeys`) for known sensitive fields instead of relying on their value happening to match a pattern.
 
 - **Type:** `boolean`
 - **Default:** `false`
@@ -106,7 +106,7 @@ redactKeys: ['x-internal-token', 'customerSsn']
 
 ### `logErrorPayload`
 
-Log the offending payload (`found`/`errors`) from validation errors. Off by default — a failed schema validation embeds the entire request body (passwords, tokens, card fields) in the error message, so leaving this off keeps those values out of your logs and transports.
+Log the offending payload (`found`/`errors`) from validation errors. Off by default. A failed schema validation embeds the entire request body (passwords, tokens, card fields) in the error message, so leaving this off keeps those values out of your logs and transports.
 
 - **Type:** `boolean`
 - **Default:** `false`
@@ -280,7 +280,7 @@ disableFileLogging: true
 
 ### `onError`
 
-Called when a sink (transport, file, or rotation) or an [enricher](/docs/features/enrichers) fails. Errors thrown by the hook itself are swallowed. When absent, failures go to stderr (rate-limited for transports and enrichers).
+Called when a sink (transport, file, or rotation) or an [enricher](/docs/features/enrichers) fails. Logixlysia swallows errors thrown by the hook itself. When absent, failures go to stderr (rate-limited for transports and enrichers).
 
 - **Type:** `(context: { sink: 'transport' | 'file' | 'rotation' | 'enricher'; error: unknown }) => void`
 - **Default:** `undefined`
@@ -329,7 +329,7 @@ sampling: {
 }
 ```
 
-Sampling is off unless at least one head rate is below `100` — `tail` alone rescues nothing, because only head-dropped records are buffered. Invalid values throw at plugin construction.
+Sampling is off unless at least one head rate is below `100`. `tail` alone rescues nothing, because only head-dropped records are buffered. Invalid values throw at plugin construction.
 
 ## File Logging Options
 
@@ -372,7 +372,7 @@ maxSize: '10m'
 
 #### `logRotation.interval`
 
-Rotate when the live log file's age reaches the given interval. Evaluated on write — an idle process does not rotate until it logs again. See [Log Rotation](/docs/features/log-rotation) for details.
+Rotate when the live log file's age reaches the given interval. Evaluated on write. An idle process does not rotate until it logs again. See [Log Rotation](/docs/features/log-rotation) for details.
 
 - **Type:** `string`
 - **Format:** `'1h'`, `'1d'`, `'1w'`

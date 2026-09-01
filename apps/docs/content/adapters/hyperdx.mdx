@@ -78,7 +78,7 @@ Pair this with [`logixlysia/otel`](/docs/integrations/otel) to include `context.
 
 ## Self-Hosted Collectors
 
-Pass the OTLP HTTP **base URL only** (port 4318 by default) — the adapter appends `/v1/logs`:
+Pass the OTLP HTTP **base URL only** (port 4318 by default). The adapter appends `/v1/logs`:
 
 ```ts
 createHyperDXTransport({

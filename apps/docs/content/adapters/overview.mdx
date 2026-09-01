@@ -70,7 +70,7 @@ Every adapter accepts these options on top of its platform-specific ones:
 
 ## Multiple Destinations
 
-Adapters compose — fan the same logs out to several platforms:
+Adapters compose. Fan the same logs out to several platforms:
 
 ```ts
 import { createAxiomTransport } from 'logixlysia/axiom'
@@ -125,6 +125,6 @@ process.on('SIGINT', shutdown)
 
 ## What Gets Sent
 
-Each log carries its level, message, and the full meta object: the request method and URL, the response status, `durationMs`, and everything merged into the [request context](/docs/features/request-context) — request IDs, trace IDs, user IDs, and your own fields. Platforms that prefer flat attributes (HyperDX, Sentry, PostHog) receive dot-notation keys like `request.method` and `context.requestId`; Axiom receives the nested structure as-is.
+Each log carries its level, message, and the full meta object: the request method and URL, the response status, `durationMs`, and everything merged into the [request context](/docs/features/request-context). That includes request IDs, trace IDs, user IDs, and your own fields. Platforms that prefer flat attributes (HyperDX, Sentry, PostHog) receive dot-notation keys like `request.method` and `context.requestId`; Axiom receives the nested structure as-is.
 
 [Redaction](/docs/configuration) runs before transports, so `autoRedact` and `redactKeys` apply to everything an adapter ships off-box.

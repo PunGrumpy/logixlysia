@@ -21,7 +21,7 @@ logixlysia({
 })
 ```
 
-Levels you leave out keep everything, so `ERROR` and `WARNING` above are untouched. Set a level explicitly if you really do want to thin it — `{ ERROR: 50 }` is honored.
+Levels you leave out keep everything, so `ERROR` and `WARNING` above are untouched. Set a level explicitly if you really do want to thin it. `{ ERROR: 50 }` is honored.
 
 Sampling is off unless at least one level is below `100`. A `tail` block on its own does nothing, because only head-dropped records are ever buffered.
 
@@ -44,9 +44,9 @@ logixlysia({
 })
 ```
 
-Rules are OR-ed — a single match replays the whole request, including the access log line that would otherwise have been sampled away.
+Rules are OR-ed. A single match replays the whole request, including the access log line that would otherwise have been sampled away.
 
-### Path globs
+### Path Globs
 
 | Pattern | Matches                                          |
 | ------- | ------------------------------------------------ |
@@ -56,7 +56,7 @@ Rules are OR-ed — a single match replays the whole request, including the acce
 
 Everything else is literal, and patterns are anchored, so `/v1/users` matches only `/v1/users`.
 
-### Buffer cap
+### Buffer Cap
 
 Records are buffered per request, capped so a pathological handler cannot grow memory without bound. Anything past the cap is dropped and cannot be rescued.
 
@@ -70,11 +70,11 @@ sampling: {
 
 ## What It Costs
 
-A head-dropped record skips context merging, redaction, formatting, and every sink — only its raw `data` and the duration at capture are retained. A request that is never rescued therefore pays close to nothing; a rescued one pays the full pipeline at replay time, with each record keeping the duration it had when it was captured rather than the duration at replay.
+A head-dropped record skips context merging, redaction, formatting, and every sink. Only its raw `data` and the duration at capture are retained. A request that is never rescued therefore pays close to nothing. A rescued one pays the full pipeline at replay time, with each record keeping the duration it had when it was captured rather than the duration at replay.
 
 ## Scope
 
-Tail buffering applies to HTTP requests the plugin opens and closes. WebSocket lifecycle logs are head-sampled but never buffered — a long-lived socket has no request end to rescue against — and the same is true for a `createLogger` instance used outside the plugin.
+Tail buffering applies to HTTP requests the plugin opens and closes. WebSocket lifecycle logs are head-sampled but never buffered, because a long-lived socket has no request end to rescue against. The same is true for a `createLogger` instance used outside the plugin.
 
 ## Recipes
 

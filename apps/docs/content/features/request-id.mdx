@@ -84,4 +84,4 @@ If Request ID is disabled or not present, the token will render as an empty stri
 
 ## Error Responses
 
-If a request fails (e.g. throws an exception), the request ID is still propagated in the response headers (like `X-Request-Id`) and is correctly logged in the HTTP error telemetry context, allowing trace correlation for failed requests.
+If a request fails (e.g. throws an exception), Logixlysia still propagates the request ID in the response headers (like `X-Request-Id`) and correctly logs it in the HTTP error telemetry context. This allows trace correlation for failed requests.

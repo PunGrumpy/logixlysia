@@ -104,11 +104,11 @@ Return `undefined` to add nothing.
 | `request`  | At request start                | The `Request`                              |
 | `response` | Once the outcome is known       | `{ request, status, durationMs, headers }` |
 
-The response phase runs before the request's final log line on both the success and the error path, so its fields are on the access log and on the error log alike. Request-phase fields, being merged at the start, also reach any `log.info()` you make inside the handler.
+The response phase runs before the request's final log line on both the success and the error path. Its fields are therefore on the access log and on the error log alike. Request-phase fields, being merged at the start, also reach any `log.info()` you make inside the handler.
 
 ## Failure Handling
 
-Enrichment is decoration and must never take a request down. A hook that throws is caught, reported, and skipped — the remaining enrichers still run and the request completes normally.
+Enrichment is decoration and must never take a request down. A hook that throws is caught, reported, and skipped. The remaining enrichers still run and the request completes normally.
 
 Failures go to [`onError`](/docs/configuration#onerror) with `sink: 'enricher'`, or to stderr (rate-limited) when no hook is configured.
 

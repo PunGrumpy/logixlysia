@@ -25,4 +25,4 @@ const app = new Elysia()
   .get('/', () => 'ok')
 ```
 
-When an active span exists, `trace_id` and `span_id` are merged into the request context bag and appear on the access log. Logixlysia does not start an OpenTelemetry SDK—you bring your own tracer provider and instrumentation.
+When an active span exists, `injectTraceContext` merges `trace_id` and `span_id` into the request context bag, and they appear on the access log. Logixlysia does not start an OpenTelemetry SDK. You bring your own tracer provider and instrumentation.
