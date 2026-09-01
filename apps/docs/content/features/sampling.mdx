@@ -5,7 +5,7 @@ description: Keep a percentage of high-volume logs, and rescue the ones that tur
 
 Sampling keeps your log bill flat as traffic grows. Head sampling thins noisy levels by percentage. Tail sampling puts the dropped records back when the request turns out to be interesting — an error, a slow response, a route you are watching.
 
-Unlike [log filtering](/docs/features/filtering), which is all-or-nothing per level, sampling is per-record and reversible.
+Unlike [log filtering](/features/filtering), which is all-or-nothing per level, sampling is per-record and reversible.
 
 ## Head Sampling
 
@@ -107,7 +107,7 @@ sampling: {
 
 ## Sampling and Adapters
 
-Sampling runs before every sink, so a dropped record never reaches [transports](/docs/features/transports), file logging, or the console. That is the point: it is the cheapest place to cut what Datadog, Better Stack, or PostHog will charge you for.
+Sampling runs before every sink, so a dropped record never reaches [transports](/features/transports), file logging, or the console. That is the point: it is the cheapest place to cut what Datadog, Better Stack, or PostHog will charge you for.
 
 ## Validation
 

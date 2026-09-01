@@ -22,7 +22,7 @@ new Elysia().use(
 
 ### `traceparentEnricher()`
 
-Parses the W3C `traceparent` header directly, with **no OpenTelemetry SDK required**. That is the difference from [`logixlysia/otel`](/docs/integrations/otel), which reads the ids of the currently active span and therefore needs the SDK installed and instrumenting your app.
+Parses the W3C `traceparent` header directly, with **no OpenTelemetry SDK required**. That is the difference from [`logixlysia/otel`](/integrations/otel), which reads the ids of the currently active span and therefore needs the SDK installed and instrumenting your app.
 
 ```ts
 traceparentEnricher()
@@ -110,7 +110,7 @@ The response phase runs before the request's final log line on both the success 
 
 Enrichment is decoration and must never take a request down. A hook that throws is caught, reported, and skipped — the remaining enrichers still run and the request completes normally.
 
-Failures go to [`onError`](/docs/configuration#onerror) with `sink: 'enricher'`, or to stderr (rate-limited) when no hook is configured.
+Failures go to [`onError`](/configuration#onerror) with `sink: 'enricher'`, or to stderr (rate-limited) when no hook is configured.
 
 ```ts
 logixlysia({
@@ -127,4 +127,4 @@ logixlysia({
 
 ## Enrichers and Sampling
 
-Enricher fields live in the request context, which is merged at emit time. A record rescued by [tail sampling](/docs/features/sampling) is replayed after the response phase has run, so replayed records carry the response-phase fields too.
+Enricher fields live in the request context, which is merged at emit time. A record rescued by [tail sampling](/features/sampling) is replayed after the response phase has run, so replayed records carry the response-phase fields too.

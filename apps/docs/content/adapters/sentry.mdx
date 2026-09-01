@@ -60,7 +60,7 @@ const sentry = createSentryTransport({
 | `release` | `string` | `SENTRY_RELEASE` | `sentry.release` attribute |
 | `tags` | `Record<string, string>` | — | Extra attributes added to every log |
 
-Plus the shared batching options: `maxBatchSize`, `flushIntervalMs`, `timeout`, `retries` — see the [overview](/docs/adapters/overview#shared-behavior).
+Plus the shared batching options: `maxBatchSize`, `flushIntervalMs`, `timeout`, `retries` — see the [overview](/adapters/overview#shared-behavior).
 
 ## Payload
 
@@ -69,7 +69,7 @@ Logs post to the project's envelope endpoint as Sentry log items:
 - **Body** — the log message, or `GET /path` for access logs.
 - **Level** — `DEBUG` → `debug`, `INFO` → `info`, `WARNING` → `warn`, `ERROR` → `error`.
 - **Attributes** — meta fields flattened to typed attributes (`string`, `integer`, `double`, `boolean`): `request.method`, `status`, `durationMs`, `context.requestId`, and anything you merge into the request context.
-- **Trace ID** — reused from `context.trace_id` when [`logixlysia/otel`](/docs/integrations/otel) injected one (linking logs to the trace), otherwise generated.
+- **Trace ID** — reused from `context.trace_id` when [`logixlysia/otel`](/integrations/otel) injected one (linking logs to the trace), otherwise generated.
 
 Filter in Sentry by any attribute, e.g. `status:500` or `context.requestId:0d5e…`.
 
@@ -77,4 +77,4 @@ Filter in Sentry by any attribute, e.g. `status:500` or `context.requestId:0d5e�
 
 - **`401` / `403`** — the DSN was revoked or belongs to another project; copy a fresh one from Client Keys.
 - **`invalid DSN` at startup** — the expected shape is `https://<public-key>@<host>/<project-id>`.
-- **Logs don't link to traces** — make sure `trace_id` reaches the request context via [`logixlysia/otel`](/docs/integrations/otel).
+- **Logs don't link to traces** — make sure `trace_id` reaches the request context via [`logixlysia/otel`](/integrations/otel).

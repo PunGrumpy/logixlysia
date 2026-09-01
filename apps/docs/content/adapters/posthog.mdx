@@ -60,7 +60,7 @@ const posthog = createPostHogTransport({
 | `distinctIdField` | `string` | `context.userId` | Meta path resolved per log to `distinct_id` |
 | `distinctId` | `string` | `logixlysia-server` | Static fallback when the field resolves to nothing |
 
-Plus the shared batching options: `maxBatchSize`, `flushIntervalMs`, `timeout`, `retries` — see the [overview](/docs/adapters/overview#shared-behavior).
+Plus the shared batching options: `maxBatchSize`, `flushIntervalMs`, `timeout`, `retries` — see the [overview](/adapters/overview#shared-behavior).
 
 ## Payload
 
@@ -94,4 +94,4 @@ Point `distinctIdField` at any other meta path (dot notation) if your identifier
 
 - **`401`** — the key is not a project API key; it must start with `phc_`.
 - **Events missing** — check the region: EU projects must use `https://eu.i.posthog.com`.
-- **High event volume** — log levels you don't need can be excluded with [`logFilter`](/docs/features/filtering) before they reach the transport.
+- **High event volume** — log levels you don't need can be excluded with [`logFilter`](/features/filtering) before they reach the transport.
