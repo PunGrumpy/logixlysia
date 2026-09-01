@@ -18,7 +18,7 @@ logixlysia({
 })
 ```
 
-See [Presets](/docs/features/presets) for defaults per environment.
+See [Presets](/features/presets) for defaults per environment.
 
 ## Startup Options
 
@@ -280,7 +280,7 @@ disableFileLogging: true
 
 ### `onError`
 
-Called when a sink (transport, file, or rotation) or an [enricher](/docs/features/enrichers) fails. Errors thrown by the hook itself are swallowed. When absent, failures go to stderr (rate-limited for transports and enrichers).
+Called when a sink (transport, file, or rotation) or an [enricher](/features/enrichers) fails. Errors thrown by the hook itself are swallowed. When absent, failures go to stderr (rate-limited for transports and enrichers).
 
 - **Type:** `(context: { sink: 'transport' | 'file' | 'rotation' | 'enricher'; error: unknown }) => void`
 - **Default:** `undefined`
@@ -293,7 +293,7 @@ onError: ({ sink, error }) => {
 
 ### `enrichers`
 
-Context contributors run on every request. Whatever they return is merged into the request context, so the fields reach the console tree, file logs, and every transport at once. See [Enrichers](/docs/features/enrichers).
+Context contributors run on every request. Whatever they return is merged into the request context, so the fields reach the console tree, file logs, and every transport at once. See [Enrichers](/features/enrichers).
 
 - **Type:** `EnricherLike[]`
 - **Default:** `undefined`
@@ -312,7 +312,7 @@ enrichers: [
 
 ### `sampling`
 
-Head + tail sampling. Head sampling keeps a percentage of records per level; tail sampling replays what head dropped once the finished request matches a rule. See [Sampling](/docs/features/sampling) for the full guide.
+Head + tail sampling. Head sampling keeps a percentage of records per level; tail sampling replays what head dropped once the finished request matches a rule. See [Sampling](/features/sampling) for the full guide.
 
 - **Type:** `{ head?: Partial<Record<LogLevel, number>>; tail?: { status?: number; durationMs?: number; paths?: string[] }; maxBufferedPerRequest?: number }`
 - **Default:** `undefined` (no sampling)
@@ -372,7 +372,7 @@ maxSize: '10m'
 
 #### `logRotation.interval`
 
-Rotate when the live log file's age reaches the given interval. Evaluated on write — an idle process does not rotate until it logs again. See [Log Rotation](/docs/features/log-rotation) for details.
+Rotate when the live log file's age reaches the given interval. Evaluated on write — an idle process does not rotate until it logs again. See [Log Rotation](/features/log-rotation) for details.
 
 - **Type:** `string`
 - **Format:** `'1h'`, `'1d'`, `'1w'`

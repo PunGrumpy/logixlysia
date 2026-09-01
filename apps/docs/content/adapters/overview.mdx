@@ -3,7 +3,7 @@ title: Adapters Overview
 description: Ship logs to observability platforms with built-in adapters
 ---
 
-Send your logs to external observability platforms with built-in adapters. Each adapter is a regular [transport](/docs/features/transports) — batched, retried, and non-blocking — so you can mix them with console and file logging or run them exclusively.
+Send your logs to external observability platforms with built-in adapters. Each adapter is a regular [transport](/features/transports) — batched, retried, and non-blocking — so you can mix them with console and file logging or run them exclusively.
 
 ## Available Adapters
 
@@ -11,20 +11,20 @@ Send your logs to external observability platforms with built-in adapters. Each 
 
 | Platform | Import | Best for |
 |----------|--------|----------|
-| [Axiom](/docs/adapters/axiom) | `logixlysia/axiom` | Schema-free log analytics — every field is queryable |
-| [Better Stack](/docs/adapters/better-stack) | `logixlysia/better-stack` | Logs, uptime, and alerting in one place |
-| [Datadog](/docs/adapters/datadog) | `logixlysia/datadog` | Enterprise observability with facets and pipelines |
-| [Sentry](/docs/adapters/sentry) | `logixlysia/sentry` | Structured logs next to your errors and traces |
-| [PostHog](/docs/adapters/posthog) | `logixlysia/posthog` | Product analytics — link logs to persons and funnels |
+| [Axiom](/adapters/axiom) | `logixlysia/axiom` | Schema-free log analytics — every field is queryable |
+| [Better Stack](/adapters/better-stack) | `logixlysia/better-stack` | Logs, uptime, and alerting in one place |
+| [Datadog](/adapters/datadog) | `logixlysia/datadog` | Enterprise observability with facets and pipelines |
+| [Sentry](/adapters/sentry) | `logixlysia/sentry` | Structured logs next to your errors and traces |
+| [PostHog](/adapters/posthog) | `logixlysia/posthog` | Product analytics — link logs to persons and funnels |
 
 ### Self-Hosted & Open Standards
 
 | Platform | Import | Best for |
 |----------|--------|----------|
-| [OTLP](/docs/adapters/otlp) | `logixlysia/otlp` | Any OpenTelemetry backend — collectors, Grafana Cloud, New Relic, Honeycomb, SigNoz |
-| [HyperDX](/docs/adapters/hyperdx) | `logixlysia/hyperdx` | Open-source observability via OTLP |
-| [Grafana Loki](/docs/adapters/loki) | `logixlysia/loki` | Label-indexed logs for the Grafana stack |
-| [ClickHouse](/docs/adapters/clickhouse) | `logixlysia/clickhouse` | Your own SQL log warehouse, no pipeline in between |
+| [OTLP](/adapters/otlp) | `logixlysia/otlp` | Any OpenTelemetry backend — collectors, Grafana Cloud, New Relic, Honeycomb, SigNoz |
+| [HyperDX](/adapters/hyperdx) | `logixlysia/hyperdx` | Open-source observability via OTLP |
+| [Grafana Loki](/adapters/loki) | `logixlysia/loki` | Label-indexed logs for the Grafana stack |
+| [ClickHouse](/adapters/clickhouse) | `logixlysia/clickhouse` | Your own SQL log warehouse, no pipeline in between |
 
 ## Quick Start
 
@@ -56,7 +56,7 @@ All adapters share the same core:
 - **Batching** — entries buffer and flush either when `maxBatchSize` is reached (default 20) or after `flushIntervalMs` (default 2000 ms), whichever comes first.
 - **Retries** — network errors, `429`, and `5xx` responses retry with linear backoff (default 2 retries). Other `4xx` responses fail immediately.
 - **Timeout** — each request aborts after `timeout` ms (default 5000).
-- **Non-blocking** — sends run in the background and never delay your HTTP responses. Failures are reported through [`onError`](/docs/features/transports) (sink `'transport'`) or rate-limited to stderr.
+- **Non-blocking** — sends run in the background and never delay your HTTP responses. Failures are reported through [`onError`](/features/transports) (sink `'transport'`) or rate-limited to stderr.
 - **Credentials** — read from environment variables by default; options passed to the factory always win. Missing credentials throw at startup with an actionable message, not silently at runtime.
 
 Every adapter accepts these options on top of its platform-specific ones:
@@ -125,6 +125,6 @@ process.on('SIGINT', shutdown)
 
 ## What Gets Sent
 
-Each log carries its level, message, and the full meta object: the request method and URL, the response status, `durationMs`, and everything merged into the [request context](/docs/features/request-context) — request IDs, trace IDs, user IDs, and your own fields. Platforms that prefer flat attributes (HyperDX, Sentry, PostHog) receive dot-notation keys like `request.method` and `context.requestId`; Axiom receives the nested structure as-is.
+Each log carries its level, message, and the full meta object: the request method and URL, the response status, `durationMs`, and everything merged into the [request context](/features/request-context) — request IDs, trace IDs, user IDs, and your own fields. Platforms that prefer flat attributes (HyperDX, Sentry, PostHog) receive dot-notation keys like `request.method` and `context.requestId`; Axiom receives the nested structure as-is.
 
-[Redaction](/docs/configuration) runs before transports, so `autoRedact` and `redactKeys` apply to everything an adapter ships off-box.
+[Redaction](/configuration) runs before transports, so `autoRedact` and `redactKeys` apply to everything an adapter ships off-box.

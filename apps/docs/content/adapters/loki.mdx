@@ -67,7 +67,7 @@ const loki = createLokiTransport({
 | `password` | `string` | `LOKI_PASSWORD` | Basic-auth password |
 | `tenantId` | `string` | `LOKI_TENANT_ID` | `X-Scope-OrgID` header |
 
-Plus the shared batching options: `maxBatchSize`, `flushIntervalMs`, `timeout`, `retries` — see the [overview](/docs/adapters/overview#shared-behavior).
+Plus the shared batching options: `maxBatchSize`, `flushIntervalMs`, `timeout`, `retries` — see the [overview](/adapters/overview#shared-behavior).
 
 Keep `labels` low-cardinality (environment, region) — per-request values like request IDs belong in the log line, where LogQL can still filter them, not in labels, where they explode Loki's index.
 

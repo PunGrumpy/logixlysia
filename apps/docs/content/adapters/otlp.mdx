@@ -67,13 +67,13 @@ const otlp = createOtlpTransport({
 | `serviceName` | `string` | `logixlysia` | `service.name` resource attribute |
 | `resourceAttributes` | `Record<string, string>` | — | Extra OTLP resource attributes |
 
-Plus the shared batching options: `maxBatchSize`, `flushIntervalMs`, `timeout`, `retries` — see the [overview](/docs/adapters/overview#shared-behavior).
+Plus the shared batching options: `maxBatchSize`, `flushIntervalMs`, `timeout`, `retries` — see the [overview](/adapters/overview#shared-behavior).
 
 ## Payload
 
 Logs post to `{endpoint}/v1/logs`. Levels map to OpenTelemetry severity numbers (`DEBUG` → 5, `INFO` → 9, `WARNING` → 13, `ERROR` → 17), and meta fields flatten into dot-notation attributes (`request.method`, `status`, `durationMs`, `context.requestId`, …).
 
-Pair this with [`logixlysia/otel`](/docs/integrations/otel) to include `context.trace_id` / `context.span_id` and correlate logs with traces in your backend.
+Pair this with [`logixlysia/otel`](/integrations/otel) to include `context.trace_id` / `context.span_id` and correlate logs with traces in your backend.
 
 ## Vendor Examples
 
