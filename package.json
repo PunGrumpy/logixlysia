@@ -24,6 +24,7 @@
   "devDependencies": {
     "@biomejs/biome": "2.5.7",
     "@changesets/cli": "^2.31.0",
+    "exact-mirror": "^1.2.2",
     "turbo": "^2.10.8",
     "typescript": "7.0.2",
     "ultracite": "7.10.0"

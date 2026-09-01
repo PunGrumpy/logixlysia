@@ -34,22 +34,28 @@ export interface EmptyElysiaSlot {
 }
 
 /**
- * Explicit singleton without Elysia's `SingletonBase` `Record<string, unknown>` on decorator/derive/resolve so
- * merged `Context` and WebSocket `ws.data` keep precise keys after `.use(logixlysia())`.
+ * Explicit singleton without Elysia's `SingletonBase` `Record<string, unknown>` on decorator/derive so
+ * merged `Context` and WebSocket handler contexts keep precise keys after `.use(logixlysia())`.
+ *
+ * Elysia 2 dropped the `resolve` slot from `SingletonBase` along with the `resolve` lifecycle
+ * (`derive` now runs during `beforeHandle`, which is what `resolve` used to do).
  */
 export interface LogixlysiaSingleton<TFields extends object = LogFields> {
   decorator: EmptyElysiaSlot
   derive: {
     log: RequestScopedLogger<TFields>
   }
-  resolve: EmptyElysiaSlot
   store: LogixlysiaStore
 }
 
+// Elysia 2 inserts `Scope` as the second type parameter, between `BasePath` and `Singleton`. The
+// instance is built without `config.as`, so its scope stays the default `'local'`; `.as('plugin')`
+// promotes the hooks to the consumer without changing that parameter.
 // Elysia's `SingletonBase` slots are `Record<string, unknown>`; ours are intentionally closed (see #220).
 export type Logixlysia<TFields extends object = LogFields> = Elysia<
   '',
-  // @ts-expect-error — closed slots are correct at runtime and for merged `ws.data` inference.
+  'local',
+  // @ts-expect-error — closed slots are correct at runtime and for merged WS context inference.
   LogixlysiaSingleton<TFields>
 >
 
@@ -129,7 +135,7 @@ const logixlysia = <TFields extends object = LogFields>(
    * it last. Only built when an enricher will actually read it.
    */
   const readableResponseHeaders = (
-    setHeaders: Record<string, string | number>,
+    setHeaders: Record<string, string | number | string[]>,
     responseHeaders?: Headers
   ): Record<string, unknown> => {
     const merged: Record<string, unknown> = {}
@@ -150,7 +156,7 @@ const logixlysia = <TFields extends object = LogFields>(
    */
   const closeRequest = (
     request: Request,
-    setHeaders: Record<string, string | number>,
+    setHeaders: Record<string, string | number | string[]>,
     status: number,
     responseHeaders?: Headers
   ): StoreData => {
@@ -200,7 +206,7 @@ const logixlysia = <TFields extends object = LogFields>(
     .state('pino', logger.pino)
     .state('beforeTime', BigInt(0))
     .derive(({ request }) => ({ log: createRequestScopedLogger(request) }))
-    .onStart(({ server }): void => {
+    .setup(({ server }): void => {
       if (server) {
         startServer(server, options)
       } else {
@@ -209,7 +215,7 @@ const logixlysia = <TFields extends object = LogFields>(
         startServer({ hostname, port, protocol: 'http' }, options)
       }
     })
-    .onRequest(({ request }) => {
+    .request(({ request }) => {
       requestStartTimes.set(request, process.hrtime.bigint())
       logger.beginRequest(request)
       if (requestIdConfig) {
@@ -225,7 +231,7 @@ const logixlysia = <TFields extends object = LogFields>(
         loggerStorage.enterWith(createRequestScopedLogger(request))
       }
     })
-    .onAfterHandle(({ request, set, response }) => {
+    .afterHandle(({ request, set, responseValue }) => {
       try {
         const status =
           set.status === undefined || set.status === null
@@ -238,7 +244,7 @@ const logixlysia = <TFields extends object = LogFields>(
           request,
           set.headers,
           status,
-          response instanceof Response ? response.headers : undefined
+          responseValue instanceof Response ? responseValue.headers : undefined
         )
 
         if (didCustomLog.has(request)) {
@@ -264,7 +270,7 @@ const logixlysia = <TFields extends object = LogFields>(
         contextStore.clearContext(request)
       }
     })
-    .onError(({ request, error, set }) => {
+    .error(({ request, error, set }) => {
       try {
         const store = closeRequest(request, set.headers, errorStatus(error))
         logger.handleHttpError(request, error, store)
@@ -273,7 +279,7 @@ const logixlysia = <TFields extends object = LogFields>(
         contextStore.clearContext(request)
       }
     })
-    .as('scoped') as Logixlysia<TFields>
+    .as('plugin') as Logixlysia<TFields>
 
   return Object.assign(plugin, { wrapWs }) as LogixlysiaPlugin<TFields>
 }

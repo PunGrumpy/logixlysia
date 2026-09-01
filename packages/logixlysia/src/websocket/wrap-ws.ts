@@ -1,16 +1,20 @@
 import type { RequestContextStore } from '../context/request-context'
 import type { Logger, Options, StoreData } from '../interfaces'
 
+/**
+ * Elysia 2 merges the route context into the socket object itself (the old
+ * `ws.data` bag is gone), so `store` sits directly on the handler's `ws`.
+ */
 export interface WebSocketLike {
-  readonly data?: { store?: { logger?: Logger } }
   readonly id?: string
+  readonly store?: { logger?: Logger }
 }
 
 export interface WsHandlerHooks<
   TMessage = unknown,
   TWs extends WebSocketLike = WebSocketLike
 > {
-  close?: (ws: TWs) => void
+  close?: (ws: TWs, code?: number, reason?: string) => void
   message?: (ws: TWs, message: TMessage) => void
   open?: (ws: TWs) => void
 }
@@ -70,8 +74,8 @@ export const createWsHandlerWrapper = (
   ): THooks =>
     ({
       ...hooks,
-      close(ws) {
-        hooks.close?.(ws)
+      close(ws, code, reason) {
+        hooks.close?.(ws, code, reason)
         if (options.config?.disableWebSocketLogging !== true) {
           logWs('INFO', ws, path, 'WebSocket closed')
         }

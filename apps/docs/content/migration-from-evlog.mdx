@@ -37,7 +37,7 @@ evlog:
 log.emit({ status: 200 })
 ```
 
-Logixlysia emits the access log automatically in `onAfterHandle`. Use a custom log only when you need to skip the default line:
+Logixlysia emits the access log automatically in `afterHandle`. Use a custom log only when you need to skip the default line:
 
 ```ts
 store.logger.info(request, 'handled manually')
@@ -62,7 +62,7 @@ mergeAIMetrics(store.logger, request, {
 
 ## Tracing
 
-Use `injectTraceContext` from `logixlysia/otel` in `onRequest` (see [OpenTelemetry](/docs/integrations/otel)).
+Use `injectTraceContext` from `logixlysia/otel` in the `request` hook (see [OpenTelemetry](/docs/integrations/otel)).
 
 ## Drains vs transports
 

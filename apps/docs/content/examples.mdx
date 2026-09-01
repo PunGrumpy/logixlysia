@@ -203,19 +203,20 @@ app.get('/api/risky', ({ store }) => {
 
 ### Custom Error Handler
 
+Elysia 2 removed the `code` string from the error context — narrow with `instanceof`, or register a
+per-class handler with `.error(MyError, fn)`:
+
 ```ts
-app.onError(({ code, error, store }) => {
+app.error(({ error, store }) => {
   const { pino } = store
-  
+
   pino.error({
     err: error,
-    status: code,
     timestamp: Date.now()
   }, 'Request failed')
-  
+
   return {
-    error: error.message,
-    status: code
+    error: error instanceof Error ? error.message : String(error)
   }
 })
 ```
