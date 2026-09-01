@@ -46,7 +46,7 @@ logixlysia({
 
 Rules are OR-ed — a single match replays the whole request, including the access log line that would otherwise have been sampled away.
 
-### Path globs
+### Path Globs
 
 | Pattern | Matches                                          |
 | ------- | ------------------------------------------------ |
@@ -56,7 +56,7 @@ Rules are OR-ed — a single match replays the whole request, including the acce
 
 Everything else is literal, and patterns are anchored, so `/v1/users` matches only `/v1/users`.
 
-### Buffer cap
+### Buffer Cap
 
 Records are buffered per request, capped so a pathological handler cannot grow memory without bound. Anything past the cap is dropped and cannot be rescued.
 

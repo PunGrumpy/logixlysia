@@ -3,7 +3,7 @@ title: Migrating from evlog
 description: Map evlog wide events to Logixlysia request context and access logs
 ---
 
-## Plugin setup
+## Plugin Setup
 
 **evlog**
 
@@ -21,7 +21,7 @@ import logixlysia from 'logixlysia'
 new Elysia().use(logixlysia({ preset: 'prod' }))
 ```
 
-## Context accumulation
+## Context Accumulation
 
 | evlog | Logixlysia |
 | ----- | ---------- |
@@ -29,7 +29,7 @@ new Elysia().use(logixlysia({ preset: 'prod' }))
 | `log.set({ cart: { total: 99 } })` | `store.logger.mergeContext(request, { cart: { total: 99 } })` |
 | `useLogger()` | `store.logger` in handlers |
 
-## Emitting the request log
+## Emitting the Request Log
 
 evlog:
 
@@ -43,7 +43,7 @@ Logixlysia emits the access log automatically in `onAfterHandle`. Use a custom l
 store.logger.info(request, 'handled manually')
 ```
 
-## AI metrics
+## AI Metrics
 
 **evlog** — automatic via `evlog/ai`.
 
@@ -64,7 +64,7 @@ mergeAIMetrics(store.logger, request, {
 
 Use `injectTraceContext` from `logixlysia/otel` in `onRequest` (see [OpenTelemetry](/docs/integrations/otel)).
 
-## Drains vs transports
+## Drains vs Transports
 
 evlog **drains** map to Logixlysia **transports**:
 

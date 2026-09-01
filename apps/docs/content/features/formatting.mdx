@@ -50,7 +50,7 @@ Output:
 GET /api/users 200
 ```
 
-### Branded line with `{icon}` and `{service}`
+### Branded Line with `{icon}` and `{service}`
 
 Use `{icon}` for the Logixlysia fox (level styling applies when colors and a TTY are available). Pair with `service` in config:
 
@@ -71,7 +71,7 @@ With `useColors: false` or non-TTY output, a line can look like:
 
 On a color terminal, the fox appears inside a colored chip by level, and slow requests append `⚡ slow` via `{speed}` when duration ≥ `verySlowThreshold` (default `1000`).
 
-### Status text
+### Status Text
 
 ```ts
 customLogFormat: '{method} {pathname} {status} {statusText}'
@@ -94,7 +94,7 @@ logixlysia({
 })
 ```
 
-## Context tree
+## Context Tree
 
 When `showContextTree` is `true` (default), object `context` passed to `logger.info` / `warn` / `error` / `debug` is printed **under** the main line as tree branches, instead of being inlined into `{context}` on that line.
 
