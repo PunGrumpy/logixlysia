@@ -30,7 +30,7 @@
       "version": "0.0.0",
       "dependencies": {
         "@elysiajs/swagger": "^1.3.1",
-        "elysia": "^1.4.28",
+        "elysia": "^1.4.30",
         "logixlysia": "workspace:*",
       },
       "devDependencies": {
@@ -45,7 +45,7 @@
       "dependencies": {
         "@bogeychan/elysia-logger": "^0.1.10",
         "consola": "^3.4.2",
-        "elysia": "^1.4.28",
+        "elysia": "^1.4.30",
         "evlog": "^2.24.0",
         "logixlysia": "workspace:*",
         "pino": "^10.3.1",
@@ -58,7 +58,7 @@
     },
     "packages/logixlysia": {
       "name": "logixlysia",
-      "version": "6.7.0",
+      "version": "6.8.0",
       "dependencies": {
         "chalk": "^6.0.0",
         "pino": "^10.3.1",
@@ -69,11 +69,11 @@
         "@repo/typescript-config": "workspace:*",
         "@types/bun": "^1.3.14",
         "bunup": "^0.16.32",
-        "elysia": "^1.4.28",
+        "elysia": "^1.4.30",
       },
       "peerDependencies": {
         "@opentelemetry/api": "^1.9.0",
-        "elysia": "^1.4.28",
+        "elysia": "^1.4.30",
         "typescript": ">=5.0",
       },
       "optionalPeers": [
@@ -1371,7 +1371,7 @@
 
     "electron-to-chromium": ["electron-to-chromium@1.5.394", "", {}, "sha512-Wmt2Gm0o8JWBuGgmc4XZ0u9s1RaCRqhxP47phplmfg04+qypTUurpeJGP45A7Fhv7jdrrVH44PLlR9qXo37cVQ=="],
 
-    "elysia": ["elysia@1.4.29", "", { "dependencies": { "cookie": "^1.1.1", "exact-mirror": "^0.2.7", "fast-decode-uri-component": "^1.0.1", "memoirist": "^0.4.0" }, "peerDependencies": { "@sinclair/typebox": ">= 0.34.0 < 1", "@types/bun": ">= 1.2.0", "file-type": ">= 20.0.0", "openapi-types": ">= 12.0.0", "typescript": ">= 5.0.0" }, "optionalPeers": ["@types/bun", "typescript"] }, "sha512-GwMRGGwSdjfPt+w3LA0fqTuYJtS8uVRJicvoar98/HrO5qdFKDc9CwjIb6Kja+v39lkY+58hr2JvdR9jQzlUuA=="],
+    "elysia": ["elysia@1.4.30", "", { "dependencies": { "cookie": "^1.1.1", "exact-mirror": "^0.2.7", "fast-decode-uri-component": "^1.0.1", "memoirist": "^0.4.0" }, "peerDependencies": { "@sinclair/typebox": ">= 0.34.0 < 1", "@types/bun": ">= 1.2.0", "file-type": ">= 20.0.0", "openapi-types": ">= 12.0.0", "typescript": ">= 5.0.0" }, "optionalPeers": ["@types/bun", "typescript"] }, "sha512-S2qqV0CbM4faB1hQQ5IYoeYnAUinjHlzRduxaBc4OoNqh0GjOc8k6tt3hv5ozWcG6Svr6hugw6JL4zNke4jwfA=="],
 
     "elysia-example": ["elysia-example@workspace:apps/elysia"],
 
