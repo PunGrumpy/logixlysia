@@ -40,13 +40,13 @@ const faqs = [
 ]
 ---
 
-<section class="t-stagger mx-auto w-full max-w-2xl" data-reveal>
+<section class="mx-auto w-full max-w-2xl">
   <h2
-    class="t-stagger-line text-balance text-center font-medium text-[21px] text-foreground leading-[145%] lg:text-[25px]"
+    class="text-balance text-center font-medium text-[21px] text-foreground leading-[145%] lg:text-[25px]"
   >
     Frequently asked questions
   </h2>
-  <div class="t-stagger-line t-stagger-line--2 mt-6 grid">
+  <div class="mt-6 grid">
     {faqs.map(faq => <FaqItem answer={faq.answer} question={faq.question} />)}
   </div>
 </section>

@@ -61,22 +61,3 @@ const description =
   </div>
   <Footer slot="footer" />
 </PageLayout>
-
-<script>
-  // Below-the-fold sections marked `.t-stagger[data-reveal]` play their
-  // staggered entrance when scrolled into view (hero triggers its own on load).
-  const observer = new IntersectionObserver(
-    entries => {
-      for (const entry of entries) {
-        if (entry.isIntersecting) {
-          entry.target.classList.add('is-shown')
-          observer.unobserve(entry.target)
-        }
-      }
-    },
-    { threshold: 0.2 }
-  )
-  for (const section of document.querySelectorAll('.t-stagger[data-reveal]')) {
-    observer.observe(section)
-  }
-</script>
