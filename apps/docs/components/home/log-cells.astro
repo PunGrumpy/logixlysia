@@ -34,9 +34,11 @@ const cell = 'whitespace-nowrap py-2 pr-6 transition-opacity duration-300'
 <td data-col="path" class:list={[cell, 'text-[#2D2D2D] dark:text-[#DADADA]']}>
   {path}
 </td>
-<td data-col="status" class:list={[cell, statusCls]}>{status}</td>
+<td data-col="status" class:list={[cell, 'tabular-nums', statusCls]}>
+  {status}
+</td>
 <td data-col="duration" class:list={[cell, durationCls]}>
-  <span class="inline-flex items-center gap-2">
+  <span class="inline-flex items-center gap-2 tabular-nums">
     {duration}
     <span
       aria-hidden="true"
