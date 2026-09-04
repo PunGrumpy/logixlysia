@@ -299,7 +299,7 @@ const interactiveRoutes = [
       </span>
       <button
         aria-label="Pause animation"
-        class="group absolute right-2.5 grid size-9 cursor-pointer place-items-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+        class="group absolute right-2.5 grid size-9 cursor-pointer place-items-center rounded-full text-muted-foreground transition-[background-color,color,scale] duration-150 ease-out after:absolute after:-inset-1 hover:bg-muted hover:text-foreground active:scale-[0.96]"
         data-term-pause
         hidden
         type="button"
@@ -307,7 +307,7 @@ const interactiveRoutes = [
         <span class="relative size-4">
           <svg
             aria-hidden="true"
-            class="size-4 transition-[opacity,scale,filter] duration-300 ease-[cubic-bezier(0.2,0,0,1)] group-data-paused:scale-25 group-data-paused:opacity-0 group-data-paused:blur-xs"
+            class="size-4 transition-[opacity,scale,filter] duration-300 ease-[cubic-bezier(0.2,0,0,1)] group-data-paused:scale-[0.25] group-data-paused:opacity-0 group-data-paused:blur-[4px]"
             fill="none"
             stroke="currentColor"
             stroke-linecap="round"
@@ -319,7 +319,7 @@ const interactiveRoutes = [
           </svg>
           <svg
             aria-hidden="true"
-            class="absolute inset-0 size-4 translate-x-px scale-25 opacity-0 blur-xs transition-[opacity,scale,filter] duration-300 ease-[cubic-bezier(0.2,0,0,1)] group-data-paused:scale-100 group-data-paused:opacity-100 group-data-paused:blur-none"
+            class="absolute inset-0 size-4 translate-x-[2px] scale-[0.25] opacity-0 blur-[4px] transition-[opacity,scale,filter] duration-300 ease-[cubic-bezier(0.2,0,0,1)] group-data-paused:scale-100 group-data-paused:opacity-100 group-data-paused:blur-0"
             fill="currentColor"
             viewBox="0 0 24 24"
           >

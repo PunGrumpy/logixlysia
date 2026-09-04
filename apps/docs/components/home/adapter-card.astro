@@ -16,7 +16,7 @@ const { blurb, href, icon, iconFillRule, iconViewBox, name } = Astro.props
 
 <li class="grid">
   <a
-    class="grid content-start gap-1 rounded-2xl bg-white p-4 shadow-[0_0_0_1px_rgb(0_0_0/0.06),0_1px_2px_-1px_rgb(0_0_0/0.06),0_2px_4px_0_rgb(0_0_0/0.04)] transition-[background-color] hover:bg-black/2 dark:bg-[#131313] dark:shadow-[0_0_0_1px_rgb(255_255_255/0.08)] dark:hover:bg-[#181818]"
+    class="grid content-start gap-1 rounded-2xl bg-white p-4 shadow-[0_0_0_1px_rgb(0_0_0/0.06),0_1px_2px_-1px_rgb(0_0_0/0.06),0_2px_4px_0_rgb(0_0_0/0.04)] transition-[background-color,box-shadow,scale] duration-150 ease-out hover:bg-black/2 hover:shadow-[0_0_0_1px_rgb(0_0_0/0.08),0_1px_2px_-1px_rgb(0_0_0/0.08),0_2px_4px_0_rgb(0_0_0/0.06)] active:scale-[0.96] dark:bg-[#131313] dark:shadow-[0_0_0_1px_rgb(255_255_255/0.08)] dark:hover:bg-[#181818] dark:hover:shadow-[0_0_0_1px_rgb(255_255_255/0.13)]"
     href={href}
   >
     <span
@@ -25,7 +25,7 @@ const { blurb, href, icon, iconFillRule, iconViewBox, name } = Astro.props
       <BrandIcon fillRule={iconFillRule} path={icon} viewBox={iconViewBox} />
       {name}
     </span>
-    <span class="text-[13px] text-muted-foreground leading-[145%]">
+    <span class="text-[13px] text-muted-foreground leading-[145%] text-pretty">
       {blurb}
     </span>
   </a>
