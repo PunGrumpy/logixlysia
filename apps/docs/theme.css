@@ -6,6 +6,46 @@
  * one *before* the linked Tailwind stylesheet and only on the homepage.
  */
 
+/* macOS font smoothing for crisper root text */
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Typography wrapping defaults */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  text-wrap: balance;
+}
+
+p,
+li,
+figcaption,
+blockquote {
+  text-wrap: pretty;
+}
+
+/* Subtle image outlines for consistent surface depth */
+img {
+  outline: 1px solid rgba(0, 0, 0, 0.1);
+  outline-offset: -1px;
+}
+
+.dark img,
+[data-theme="dark"] img {
+  outline-color: rgba(255, 255, 255, 0.1);
+}
+
+@media (prefers-color-scheme: dark) {
+  img {
+    outline-color: rgba(255, 255, 255, 0.1);
+  }
+}
+
 @theme {
   /*
    * shadcn-flavored tokens the ported landing islands and registry components
