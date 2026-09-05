@@ -14,8 +14,8 @@ const { version, releaseUrl } = Astro.props
     aria-hidden="true"
     class="-top-32 -translate-x-1/2 -z-10 pointer-events-none absolute left-1/2 h-72 w-xl max-w-full rounded-full bg-[radial-gradient(closest-side,oklch(70%_0.14_50/0.14),transparent)] blur-3xl dark:hidden"
   ></div>
-  <div class="t-stagger grid justify-items-center gap-4 text-center">
-    <div class="t-stagger-line">
+  <div class="grid justify-items-center gap-4 text-center">
+    <div>
       <a
         class="group -my-2.5 flex w-fit items-center gap-2 py-2.5 text-muted-foreground text-sm transition-colors hover:text-foreground"
         href={releaseUrl}
@@ -32,12 +32,12 @@ const { version, releaseUrl } = Astro.props
 
     <div class="flex flex-col items-center gap-1.5">
       <h1
-        class="t-stagger-line text-[27px] lg:text-[34px] leading-[145%] text-balance text-center w-full lg:w-fit font-medium flex justify-center flex-wrap"
+        class="text-[27px] lg:text-[34px] leading-[145%] text-balance text-center w-full lg:w-fit font-medium flex justify-center flex-wrap"
       >
         Understand every request your app serves
       </h1>
       <p
-        class="t-stagger-line t-stagger-line--2 text-[17px] leading-[145%] text-pretty text-center w-full lg:w-193.25 max-w-193.25 font-medium [font-variation-settings:'opsz'_26] flex justify-center flex-wrap text-muted-foreground"
+        class="text-[17px] leading-[145%] text-pretty text-center w-full lg:w-193.25 max-w-193.25 font-medium [font-variation-settings:'opsz'_26] flex justify-center flex-wrap text-muted-foreground"
       >
         Logixlysia turns Elysia traffic into structured, colorful log lines —
         then filters the noise, samples the volume, and ships the rest to the
@@ -46,7 +46,7 @@ const { version, releaseUrl } = Astro.props
     </div>
 
     <div
-      class="t-stagger-line t-stagger-line--3 flex flex-col lg:flex-row mt-8 items-center gap-3 lg:gap-4.5 w-full lg:w-auto"
+      class="flex flex-col lg:flex-row mt-8 items-center gap-3 lg:gap-4.5 w-full lg:w-auto"
     >
       <InstallCommand command="bun add logixlysia" />
       <a
@@ -57,14 +57,3 @@ const { version, releaseUrl } = Astro.props
     </div>
   </div>
 </section>
-
-<script>
-  for (const container of document.querySelectorAll('.t-stagger')) {
-    // Double rAF so the initial (hidden) styles paint before the transition.
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        container.classList.add('is-shown')
-      })
-    })
-  }
-</script>

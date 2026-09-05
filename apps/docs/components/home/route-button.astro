@@ -13,7 +13,7 @@ const { method, methodCls, path, route } = Astro.props
 
 <button
   aria-label={`Send ${method} ${path} request`}
-  class="inline-flex cursor-pointer items-center gap-1.5 rounded-full bg-white px-3 py-1.5 font-mono text-[12px] shadow-[0_0_0_1px_rgb(0_0_0/0.08)] transition-[background-color,scale] duration-150 ease-out hover:bg-black/2 active:scale-[0.96] dark:bg-[#131313] dark:shadow-[0_0_0_1px_rgb(255_255_255/0.1)] dark:hover:bg-[#181818]"
+  class="relative inline-flex cursor-pointer items-center gap-1.5 rounded-full bg-white px-3 py-1.5 font-mono text-[12px] shadow-[0_0_0_1px_rgb(0_0_0/0.08)] transition-[background-color,scale] duration-150 ease-out after:absolute after:-inset-y-1.5 after:inset-x-0 hover:bg-black/2 active:scale-[0.96] dark:bg-[#131313] dark:shadow-[0_0_0_1px_rgb(255_255_255/0.1)] dark:hover:bg-[#181818]"
   data-route={route}
   type="button"
 >

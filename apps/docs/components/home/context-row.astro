@@ -29,11 +29,15 @@ const { errorRow, ip, time, ...cells } = Astro.props
     errorRow && '[&>td]:bg-[#C9303C]/6 dark:[&>td]:bg-[#ff8080]/10'
   ]}
 >
-  <td class="whitespace-nowrap py-2 pr-6 text-black/45 dark:text-white/40">
+  <td
+    class="whitespace-nowrap py-2 pr-6 text-black/45 tabular-nums dark:text-white/40"
+  >
     {time}
   </td>
   <LogCells {...cells} />
-  <td class="whitespace-nowrap py-2 text-[#0550AE] dark:text-[#a5d6ff]">
+  <td
+    class="whitespace-nowrap py-2 text-[#0550AE] tabular-nums dark:text-[#a5d6ff]"
+  >
     {ip}
   </td>
 </tr>

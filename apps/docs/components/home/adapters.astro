@@ -97,8 +97,8 @@ const adapters: Adapter[] = [
 ]
 ---
 
-<section class="t-stagger mx-auto grid w-full max-w-5xl gap-8" data-reveal>
-  <div class="t-stagger-line grid justify-items-start gap-4">
+<section class="mx-auto grid w-full max-w-5xl gap-8">
+  <div class="grid justify-items-start gap-4">
     <SectionLabel badge="9 platforms" name="Adapters">
       <svg
         aria-hidden="true"
@@ -144,9 +144,7 @@ const adapters: Adapter[] = [
       </div>
     </div>
   </div>
-  <ul
-    class="t-stagger-line t-stagger-line--2 grid list-none grid-cols-2 gap-3 sm:grid-cols-3"
-  >
+  <ul class="grid list-none grid-cols-2 gap-3 sm:grid-cols-3">
     {adapters.map(adapter => (
       <AdapterCard
         blurb={adapter.blurb}
