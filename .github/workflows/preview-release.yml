@@ -1,0 +1,62 @@
+name: 📦 Preview Release
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+concurrency:
+  # Keyed by PR number rather than head_ref: two fork PRs can share a branch
+  # name, and a name-keyed group would let one push cancel an unrelated run.
+  group: preview-release-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    name: 📦 Publish Preview
+    runs-on: ubuntu-latest
+    if: github.repository_owner == 'PunGrumpy'
+    steps:
+      - name: 🛫 Checkout Code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: 🍞 Setup Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: package.json
+      - name: 🌵 Cache Bun
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.bun/install/cache
+            **/node_modules
+            .turbo
+          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}-
+            ${{ runner.os }}-bun-
+      - name: 🔽 Install Dependencies
+        run: bun install
+      - name: 🦊 Build Logixlysia
+        run: bun run build --filter logixlysia
+      - name: 🚀 Publish Preview to pkg.pr.new
+        run: |
+          max_attempts=4
+          for attempt in $(seq 1 "$max_attempts"); do
+            if bun x pkg-pr-new publish ./packages/logixlysia; then
+              exit 0
+            fi
+
+            if [ "$attempt" -eq "$max_attempts" ]; then
+              exit 1
+            fi
+
+            delay=$((2 ** attempt))
+            echo "pkg-pr-new publish failed (attempt ${attempt}/${max_attempts}); retrying in ${delay}s..."
+            sleep "$delay"
+          done
