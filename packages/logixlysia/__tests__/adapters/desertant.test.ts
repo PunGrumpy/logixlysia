@@ -109,24 +109,47 @@ describe('logixlysia/desertant', () => {
     expect(meta.user).toBe('Anna Müller')
   })
 
-  test('redacts an Error, its own fields included, without touching the original', async () => {
+  test('redacts an Error, its cause and own fields without touching the original', async () => {
     const sink = createSink()
-    const original = Object.assign(new Error('Anna Müller not found'), {
-      requestedBy: 'Anna Müller'
-    })
+    const originalCause = new Error('Anna Müller caused it')
+    const original = Object.assign(
+      new Error('Anna Müller not found', { cause: originalCause }),
+      { requestedBy: 'Anna Müller' }
+    )
     const transport = withRedaction(sink, createStubRedactor())
 
     transport.log('ERROR', 'failed', { error: original })
     await transport.flush()
 
     const { error } = metaOf(sink.records) as {
-      error: Error & { requestedBy: string }
+      error: Error & { cause: Error; requestedBy: string }
     }
     expect(error).toBeInstanceOf(Error)
     expect(error.message).toBe('[GIVEN_NAME_1] not found')
+    expect(error.cause.message).toBe('[GIVEN_NAME_1] caused it')
     expect(error.requestedBy).toBe('[GIVEN_NAME_1]')
     expect(original.message).toBe('Anna Müller not found')
+    expect(originalCause.message).toBe('Anna Müller caused it')
     expect(original.requestedBy).toBe('Anna Müller')
+  })
+
+  test('redacts the non-enumerable errors owned by an AggregateError', async () => {
+    const sink = createSink()
+    const original = new AggregateError(
+      [new Error('Anna Müller failed'), 'Anna Müller input'],
+      'Anna Müller aggregate'
+    )
+    const transport = withRedaction(sink, createStubRedactor())
+
+    transport.log('ERROR', 'failed', { error: original })
+    await transport.flush()
+
+    const { error } = metaOf(sink.records) as { error: AggregateError }
+    expect(error).toBeInstanceOf(AggregateError)
+    expect(error.message).toBe('[GIVEN_NAME_1] aggregate')
+    expect((error.errors[0] as Error).message).toBe('[GIVEN_NAME_1] failed')
+    expect(error.errors[1]).toBe('[GIVEN_NAME_1] input')
+    expect((original.errors[0] as Error).message).toBe('Anna Müller failed')
   })
 
   test('passes non-plain objects such as Date through by reference', async () => {
@@ -163,6 +186,22 @@ describe('logixlysia/desertant', () => {
     const redacted = sink.records[0]?.meta as { self: unknown; user: string }
     expect(redacted.user).toBe('[GIVEN_NAME_1]')
     expect(redacted.self).toBe('[Circular]')
+  })
+
+  test('redacts repeated references in separate sibling branches', async () => {
+    const sink = createSink()
+    const shared = { user: 'Anna Müller' }
+    const transport = withRedaction(sink, createStubRedactor())
+
+    transport.log('INFO', 'ok', { left: shared, right: shared })
+    await transport.flush()
+
+    const redacted = metaOf(sink.records) as {
+      left: { user: string }
+      right: { user: string }
+    }
+    expect(redacted.left.user).toBe('[GIVEN_NAME_1]')
+    expect(redacted.right.user).toBe('[GIVEN_NAME_1]')
   })
 
   test('delivers records in the order they were logged', async () => {
@@ -217,6 +256,29 @@ describe('logixlysia/desertant', () => {
     await transport.flush()
 
     expect(sink.records[0]?.message).toBe('Anna Müller')
+  })
+
+  test('reports delivery failures without retrying unredacted data', async () => {
+    const attempts: Recorded[] = []
+    const errors: unknown[] = []
+    const recoveringTransport: Transport = {
+      log: (level, message, meta) => {
+        attempts.push({ level, message, meta })
+        if (attempts.length === 1) {
+          return Promise.reject(new Error('transport unavailable'))
+        }
+      }
+    }
+    const transport = withRedaction(recoveringTransport, createStubRedactor(), {
+      onError: error => errors.push(error),
+      onFailure: 'forward'
+    })
+
+    transport.log('INFO', 'Anna Müller')
+    await transport.flush()
+
+    expect(attempts.map(attempt => attempt.message)).toEqual(['[GIVEN_NAME_1]'])
+    expect((errors[0] as Error).message).toBe('transport unavailable')
   })
 
   test('drops rather than queues without bound past maxQueue', async () => {

@@ -14,6 +14,7 @@ speed and only records leaving the process pay for inference.
 
 ```ts
 import { Redact } from '@desert-ant-labs/redact/native'
+import { Elysia } from 'elysia'
 import logixlysia from 'logixlysia'
 import { createAxiomTransport } from 'logixlysia/axiom'
 import { withRedaction } from 'logixlysia/desertant'
@@ -63,7 +64,7 @@ builds), its runtime model download, or its
 The model itself is installed by you:
 
 ```bash
-bun add @desert-ant-labs/redact          # server-side inference in Node/Bun
+bun add @desert-ant-labs/redact          # server-side inference in Node.js
 ```
 
 Its native build covers linux-x64, linux-arm64 and darwin-arm64; elsewhere

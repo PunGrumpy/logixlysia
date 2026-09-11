@@ -120,7 +120,7 @@ interface WalkContext {
   callOptions: NeuralCallOptions
   maxDepth: number
   redactor: NeuralRedactor
-  seen: WeakSet<object>
+  seen: ReadonlySet<object>
 }
 
 const resolveRedactor = (
@@ -189,7 +189,7 @@ const redactError = async (
   }
 
   const record = error as unknown as Record<string, unknown>
-  const ownKeys = Object.keys(record).filter(
+  const ownKeys = Object.getOwnPropertyNames(error).filter(
     key => key !== 'message' && key !== 'name' && key !== 'stack'
   )
   const values = await Promise.all(
@@ -224,30 +224,29 @@ const redactObject = async (
     return CIRCULAR_REF
   }
 
-  context.seen.add(value)
-  try {
-    if (Array.isArray(value)) {
-      return await Promise.all(
-        value.map(item => redactValue(item, context, depth + 1))
-      )
-    }
-    if (value instanceof Error) {
-      return await redactError(value, context, depth)
-    }
-    if (isPlainObject(value)) {
-      return await redactEntries(
-        value as Record<string, unknown>,
-        context,
-        depth
-      )
-    }
-    // Dates, Maps, class instances and the like: no safe generic way to rebuild
-    // them, so they pass through. Flatten anything that can carry free-text PII
-    // into plain fields before it reaches the transport.
-    return value
-  } finally {
-    context.seen.delete(value)
+  const childContext: WalkContext = {
+    ...context,
+    seen: new Set(context.seen).add(value)
   }
+  if (Array.isArray(value)) {
+    return await Promise.all(
+      value.map(item => redactValue(item, childContext, depth + 1))
+    )
+  }
+  if (value instanceof Error) {
+    return await redactError(value, childContext, depth)
+  }
+  if (isPlainObject(value)) {
+    return await redactEntries(
+      value as Record<string, unknown>,
+      childContext,
+      depth
+    )
+  }
+  // Dates, Maps, class instances and the like: no safe generic way to rebuild
+  // them, so they pass through. Flatten anything that can carry free-text PII
+  // into plain fields before it reaches the transport.
+  return value
 }
 
 const redactValue = (
@@ -360,12 +359,7 @@ export const withRedaction = (
       callOptions: { group, labels, minimumConfidence },
       maxDepth,
       redactor,
-      seen: new WeakSet()
-    }
-    if (meta !== undefined) {
-      // The root bag is walked by redactEntries directly, so mark it in
-      // progress here or a `meta.self = meta` cycle copies one level first.
-      context.seen.add(meta)
+      seen: new Set(meta === undefined ? [] : [meta])
     }
     return {
       message: await redactText(message, context),
@@ -382,12 +376,12 @@ export const withRedaction = (
     meta?: Record<string, unknown>
   ): void => {
     const accepted = queue.push(async () => {
+      let redacted: { message: string; meta?: Record<string, unknown> }
       try {
         const redactor = await getRedactor()
-        const redacted = await withCallGroup(redactor, group =>
+        redacted = await withCallGroup(redactor, group =>
           redactRecord(redactor, message, meta, group)
         )
-        await deliver(level, redacted.message, redacted.meta)
       } catch (error) {
         report(error)
         if (onFailure === 'forward') {
@@ -397,6 +391,13 @@ export const withRedaction = (
             report(deliveryError)
           }
         }
+        return
+      }
+
+      try {
+        await deliver(level, redacted.message, redacted.meta)
+      } catch (error) {
+        report(error)
       }
     })
 
