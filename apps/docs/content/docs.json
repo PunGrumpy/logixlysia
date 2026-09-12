@@ -74,7 +74,12 @@
       },
       {
         "group": "Integrations",
-        "pages": ["integrations/pino", "integrations/otel", "integrations/ai"]
+        "pages": [
+          "integrations/pino",
+          "integrations/otel",
+          "integrations/ai",
+          "integrations/desertant"
+        ]
       }
     ]
   },

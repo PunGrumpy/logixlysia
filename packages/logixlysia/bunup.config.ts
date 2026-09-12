@@ -15,7 +15,8 @@ const config = defineConfig({
     'src/datadog.ts',
     'src/better-stack.ts',
     'src/loki.ts',
-    'src/clickhouse.ts'
+    'src/clickhouse.ts',
+    'src/desertant.ts'
   ],
   external: ['elysia', 'chalk', 'pino', 'pino-pretty'],
   format: ['esm'],

@@ -84,6 +84,11 @@
       "import": "./dist/clickhouse.js",
       "default": "./dist/clickhouse.js"
     },
+    "./desertant": {
+      "types": "./dist/desertant.d.ts",
+      "import": "./dist/desertant.js",
+      "default": "./dist/desertant.js"
+    },
     "./package.json": "./package.json"
   },
   "main": "dist/index.js",
