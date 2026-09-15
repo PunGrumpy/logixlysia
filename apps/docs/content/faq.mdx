@@ -42,6 +42,17 @@ npm install logixlysia
 - Node.js 18+ or Bun
 - Elysia.js
 
+### How do I install a preview build for an unreleased fix?
+
+Every commit on `main` and every open pull request publishes an installable preview build to [pkg.pr.new](https://pkg.pr.new). Install by commit SHA or PR number:
+
+```bash
+bun add https://pkg.pr.new/logixlysia@<sha>
+bun add https://pkg.pr.new/logixlysia@<pr-number>
+```
+
+Reach for a preview build when you want to reproduce a bug against the latest `main`, or verify that a fix in an open PR resolves your issue. These builds bypass the npm registry and are for testing only — do not use them in production. See [Preview Releases](/contributing#preview-releases) for details.
+
 ## Configuration
 
 ### How do I disable console logging?

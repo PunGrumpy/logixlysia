@@ -91,6 +91,32 @@ We use [Changesets](https://github.com/changesets/changesets) to manage versions
 
 Docs-only or internal changes (no effect on the published package) don't need a changeset.
 
+## Preview Releases
+
+Every push to `main` and every pull request publishes an installable preview build of `logixlysia` to [pkg.pr.new](https://pkg.pr.new). This lets you install a fix straight from a commit or PR before it ships to npm, without consuming a version number on the registry.
+
+Use a preview build when you want to:
+
+- Reproduce or verify a bug against the latest `main`.
+- Confirm that a proposed fix in an open PR resolves an issue in your own app.
+- Share a reliable snapshot with maintainers when reporting a bug.
+
+Install a preview by commit SHA:
+
+```bash
+bun add https://pkg.pr.new/logixlysia@<sha>
+```
+
+Install a preview by pull request number:
+
+```bash
+bun add https://pkg.pr.new/logixlysia@<pr-number>
+```
+
+The publish step runs from the [Preview Release workflow](https://github.com/PunGrumpy/logixlysia/actions/workflows/preview-release.yml). Once it finishes on a PR, pkg.pr.new posts a comment on that PR with the exact install command.
+
+Preview builds bypass the npm registry and are meant for testing only. Do not depend on them in production — pin a released version from npm instead.
+
 ## Pull Request Process
 
 1. Create a new branch for your feature/fix
