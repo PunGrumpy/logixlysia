@@ -230,6 +230,17 @@ const getColoredMethod = (method: string, useColors: boolean): string => {
   return chalk.white.bold(upper)
 }
 
+/**
+ * Colors the method, then pads afterward, so the padding never sits inside the
+ * ANSI-wrapped text (padding the already-colored/padded string first would make
+ * `getColoredMethod`'s comparisons against literals like `'GET'` always miss).
+ */
+const getColoredMethodToken = (method: string, useColors: boolean): string => {
+  const upper = method.toUpperCase()
+  const padding = ' '.repeat(Math.max(0, METHOD_PAD - upper.length))
+  return getColoredMethod(upper, useColors) + padding
+}
+
 const getColoredStatus = (status: string, useColors: boolean): string => {
   if (!useColors) {
     return status
@@ -688,10 +699,7 @@ export const formatLogOutput = ({
     ? getColoredLevel(level, useColors)
     : ''
   const coloredMethod = tokens.has('{method}')
-    ? getColoredMethod(
-        request.method.toUpperCase().padEnd(METHOD_PAD),
-        useColors
-      )
+    ? getColoredMethodToken(request.method, useColors)
     : ''
   const { coloredDuration, speedToken } = getDurationTokens(
     tokens,
