@@ -96,6 +96,7 @@ const logixlysia = <TFields extends object = LogFields>(
 ): LogixlysiaPlugin<TFields> => {
   const options = resolveOptions(rawOptions)
   const didCustomLog = new WeakSet<Request>()
+  const closed = new WeakSet<Request>()
   const requestStartTimes = new WeakMap<Request, bigint>()
   const contextStore = createRequestContextStore()
   const baseLogger = createPluginLogger(options, contextStore)
@@ -227,6 +228,27 @@ const logixlysia = <TFields extends object = LogFields>(
     return store
   }
 
+  /**
+   * The timing store for the error line. When a hook after the handler throws,
+   * onError runs for a request onAfterHandle already closed: its success line
+   * is on the wire and cannot be retracted, but the error line still has to
+   * carry the request's real duration, and closing twice would resolve tail
+   * sampling twice for the same request.
+   */
+  const errorStore = (
+    request: Request,
+    setHeaders: Record<string, string | number>,
+    error: unknown
+  ): StoreData => {
+    if (closed.has(request)) {
+      return { beforeTime: requestStartTimes.get(request) ?? BigInt(0) }
+    }
+
+    const store = closeRequest(request, setHeaders, errorStatus(error))
+    closed.add(request)
+    return store
+  }
+
   const app = new Elysia({
     detail: {
       description:
@@ -268,45 +290,51 @@ const logixlysia = <TFields extends object = LogFields>(
       }
     })
     .onAfterHandle(({ request, set, response }) => {
-      try {
-        const status = resolveHandledStatus(set.status, response)
-
-        // Runs before the early return: a request that only emitted custom
-        // logs still needs its buffered records replayed.
-        const store = closeRequest(
-          request,
-          set.headers,
-          status,
-          response instanceof Response ? response.headers : undefined
-        )
-
-        if (didCustomLog.has(request)) {
-          return
-        }
-
-        let level: 'INFO' | 'WARNING' | 'ERROR' = 'INFO'
-        if (status >= 500) {
-          level = 'ERROR'
-        } else if (status >= 400) {
-          level = 'WARNING'
-        }
-
-        const accumulated = contextStore.getContext(request)
-        const data: Record<string, unknown> = { status }
-        if (Object.keys(accumulated).length > 0) {
-          data.context = { ...accumulated }
-        }
-
-        logger.log(level, request, data, store)
-      } finally {
-        requestStartTimes.delete(request)
-        contextStore.clearContext(request)
+      if (closed.has(request)) {
+        return
       }
+
+      const status = resolveHandledStatus(set.status, response)
+
+      // Runs before the early return: a request that only emitted custom
+      // logs still needs its buffered records replayed.
+      const store = closeRequest(
+        request,
+        set.headers,
+        status,
+        response instanceof Response ? response.headers : undefined
+      )
+      closed.add(request)
+
+      if (didCustomLog.has(request)) {
+        return
+      }
+
+      let level: 'INFO' | 'WARNING' | 'ERROR' = 'INFO'
+      if (status >= 500) {
+        level = 'ERROR'
+      } else if (status >= 400) {
+        level = 'WARNING'
+      }
+
+      const accumulated = contextStore.getContext(request)
+      const data: Record<string, unknown> = { status }
+      if (Object.keys(accumulated).length > 0) {
+        data.context = { ...accumulated }
+      }
+
+      logger.log(level, request, data, store)
+      // Nothing is cleaned up here: the timings and the context bag live in
+      // WeakMaps keyed by the request, and a hook running after this one may
+      // still throw, in which case onError needs both to stay truthful.
     })
     .onError(({ request, error, set }) => {
       try {
-        const store = closeRequest(request, set.headers, errorStatus(error))
-        logger.handleHttpError(request, error, store)
+        logger.handleHttpError(
+          request,
+          error,
+          errorStore(request, set.headers, error)
+        )
       } finally {
         requestStartTimes.delete(request)
         contextStore.clearContext(request)
