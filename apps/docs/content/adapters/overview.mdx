@@ -67,6 +67,10 @@ Every adapter accepts these options on top of its platform-specific ones:
 | `flushIntervalMs` | `number` | `2000` | Max time an entry waits before the buffer is sent |
 | `timeout` | `number` | `5000` | Per-request timeout in milliseconds |
 | `retries` | `number` | `2` | Retry attempts on network errors, 429, and 5xx |
+| `maxPendingBatches` | `number` | `32` | Batches allowed to be waiting on the backend at once |
+| `onError` | `(error: unknown) => void` | — | Called when a batch fails after retries or is dropped |
+
+Batches are sent one at a time, so they arrive in the order they were logged and a slow backend applies backpressure instead of piling up requests. Once `maxPendingBatches` batches are waiting, new batches are dropped rather than buffered forever. Pass the same function you give [`config.onError`](/docs/features/transports) as the adapter's `onError` to see every batch failure — including the ones from the interval timer, which no caller is awaiting — in one place.
 
 ## Multiple Destinations
 

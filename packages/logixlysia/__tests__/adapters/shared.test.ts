@@ -1,5 +1,4 @@
-import { describe, expect, test } from 'bun:test'
-
+import { describe, expect, mock, test } from 'bun:test'
 import {
   createBatchQueue,
   defaultBody,
@@ -7,9 +6,31 @@ import {
   getPath,
   type LogEntry,
   postWithRetry,
+  resolveRetryDelay,
   stripTrailingSlashes
 } from '../../src/adapters/shared'
+import { spyConsole } from '../_helpers/console'
 import { stubFetch } from './helpers'
+
+interface Deferred {
+  promise: Promise<void>
+  resolve: () => void
+}
+
+/** A promise a test resolves by hand, to stand in for a slow send. */
+const deferred = (): Deferred => {
+  let resolve: () => void = () => undefined
+  const promise = new Promise<void>(res => {
+    resolve = () => res()
+  })
+  return { promise, resolve }
+}
+
+/** Lets pending promise callbacks and the 5 ms flush timer run. */
+const settle = (): Promise<void> =>
+  new Promise(resolve => {
+    setTimeout(resolve, 10)
+  })
 
 const entry = (overrides: Partial<LogEntry> = {}): LogEntry => ({
   level: 'INFO',
@@ -127,6 +148,67 @@ describe('postWithRetry', () => {
     }
   })
 
+  test('honors Retry-After on 429', async () => {
+    const stub = stubFetch([
+      { headers: { 'retry-after': '1' }, status: 429 },
+      { status: 200 }
+    ])
+    const startedAt = performance.now()
+    try {
+      await postWithRetry({
+        body: '{}',
+        headers: {},
+        name: 'Test',
+        retries: 2,
+        timeout: 1000,
+        url: 'https://example.com/ingest'
+      })
+      expect(performance.now() - startedAt).toBeGreaterThanOrEqual(900)
+      expect(stub.calls).toHaveLength(2)
+    } finally {
+      stub.restore()
+    }
+  })
+
+  test('wraps a non-Error rejection with cause', async () => {
+    const stub = stubFetch([{ reject: 'boom' }])
+    try {
+      await expect(
+        postWithRetry({
+          body: '{}',
+          headers: {},
+          name: 'Test',
+          retries: 0,
+          timeout: 1000,
+          url: 'https://example.com/ingest'
+        })
+      ).rejects.toMatchObject({ cause: 'boom' })
+      expect(stub.calls).toHaveLength(1)
+    } finally {
+      stub.restore()
+    }
+  })
+
+  test('retries after an aborted request', async () => {
+    const stub = stubFetch([
+      { reject: new DOMException('aborted', 'AbortError') },
+      { status: 200 }
+    ])
+    try {
+      await postWithRetry({
+        body: '{}',
+        headers: {},
+        name: 'Test',
+        retries: 2,
+        timeout: 1000,
+        url: 'https://example.com/ingest'
+      })
+      expect(stub.calls).toHaveLength(2)
+    } finally {
+      stub.restore()
+    }
+  })
+
   test('throws the last error once retries are exhausted', async () => {
     const stub = stubFetch([{ status: 503 }])
     try {
@@ -144,6 +226,38 @@ describe('postWithRetry', () => {
     } finally {
       stub.restore()
     }
+  })
+})
+
+describe('resolveRetryDelay', () => {
+  const response = (retryAfter: string): Response =>
+    new Response(null, {
+      headers: { 'retry-after': retryAfter },
+      status: 429
+    })
+
+  test('caps a long Retry-After at 30 seconds', () => {
+    expect(resolveRetryDelay(response('3600'), 0)).toBe(30_000)
+  })
+
+  test('accepts an HTTP-date Retry-After', () => {
+    // An HTTP-date only carries whole seconds, so the delay lands just under.
+    const fiveSecondsAhead = new Date(Date.now() + 5000).toUTCString()
+    const delay = resolveRetryDelay(response(fiveSecondsAhead), 0)
+    expect(delay).toBeGreaterThan(3900)
+    expect(delay).toBeLessThanOrEqual(5000)
+  })
+
+  test('falls back to jittered linear backoff for an unparsable value', () => {
+    const delay = resolveRetryDelay(response('abc'), 0)
+    expect(delay).toBeGreaterThanOrEqual(125)
+    expect(delay).toBeLessThanOrEqual(375)
+  })
+
+  test('falls back to jittered linear backoff without a response', () => {
+    const delay = resolveRetryDelay(undefined, 1)
+    expect(delay).toBeGreaterThanOrEqual(250)
+    expect(delay).toBeLessThanOrEqual(750)
   })
 })
 
@@ -187,20 +301,161 @@ describe('createBatchQueue', () => {
 
   test('flushes on the interval timer', async () => {
     const batches: LogEntry[][] = []
+    const sent = deferred()
     const queue = createBatchQueue({
-      flushIntervalMs: 10,
+      flushIntervalMs: 5,
       maxBatchSize: 10,
       name: 'Test',
       send: entries => {
         batches.push(entries)
+        sent.resolve()
         return Promise.resolve()
       }
     })
 
     queue.push(entry())
-    await new Promise(resolve => {
-      setTimeout(resolve, 50)
-    })
+    await sent.promise
     expect(batches).toHaveLength(1)
+  })
+
+  test('delivers batches in order when a send is slow', async () => {
+    const batches: LogEntry[][] = []
+    const slow = deferred()
+    const queue = createBatchQueue({
+      flushIntervalMs: 60_000,
+      maxBatchSize: 2,
+      name: 'Test',
+      send: entries => {
+        batches.push(entries)
+        return batches.length === 1 ? slow.promise : Promise.resolve()
+      }
+    })
+
+    queue.push(entry({ message: 'a' }))
+    queue.push(entry({ message: 'b' }))
+    queue.push(entry({ message: 'c' }))
+    queue.push(entry({ message: 'd' }))
+
+    await Promise.resolve()
+    expect(batches).toHaveLength(1)
+
+    slow.resolve()
+    await queue.flush()
+
+    expect(batches.map(batch => batch.map(item => item.message))).toEqual([
+      ['a', 'b'],
+      ['c', 'd']
+    ])
+  })
+
+  test('flush() waits for a send that was already in flight', async () => {
+    const slow = deferred()
+    const queue = createBatchQueue({
+      flushIntervalMs: 60_000,
+      maxBatchSize: 1,
+      name: 'Test',
+      send: () => slow.promise
+    })
+
+    queue.push(entry())
+    let flushed = false
+    const flushing = queue.flush().then(() => {
+      flushed = true
+    })
+
+    await Promise.resolve()
+    expect(flushed).toBe(false)
+
+    slow.resolve()
+    await flushing
+    expect(flushed).toBe(true)
+  })
+
+  test('drops batches beyond maxPendingBatches and reports them', async () => {
+    const stuck = deferred()
+    const onError = mock((_error: unknown) => undefined)
+    const queue = createBatchQueue({
+      flushIntervalMs: 60_000,
+      maxBatchSize: 1,
+      maxPendingBatches: 1,
+      name: 'Test',
+      onError,
+      send: () => stuck.promise
+    })
+
+    queue.push(entry({ message: 'a' }))
+    queue.push(entry({ message: 'dropped-1' }))
+    queue.push(entry({ message: 'dropped-2' }))
+
+    expect(onError).toHaveBeenCalledTimes(2)
+    const [reported] = onError.mock.calls[0] ?? []
+    expect(String(reported)).toContain('dropped')
+
+    stuck.resolve()
+    await queue.flush()
+  })
+
+  test('timer flush failure calls onError', async () => {
+    const onError = mock((_error: unknown) => undefined)
+    const console = spyConsole(['error'])
+    const queue = createBatchQueue({
+      flushIntervalMs: 5,
+      maxBatchSize: 10,
+      name: 'Test',
+      onError,
+      send: () => Promise.reject(new Error('boom'))
+    })
+
+    try {
+      queue.push(entry())
+      await settle()
+
+      expect(onError).toHaveBeenCalledTimes(1)
+      expect(console.spies.error).not.toHaveBeenCalled()
+    } finally {
+      console.restore()
+    }
+  })
+
+  test('timer flush failure without onError logs to stderr once', async () => {
+    const console = spyConsole(['error'])
+    const queue = createBatchQueue({
+      flushIntervalMs: 5,
+      maxBatchSize: 10,
+      name: 'Test',
+      send: () => Promise.reject(new Error('boom'))
+    })
+
+    try {
+      queue.push(entry())
+      await settle()
+      queue.push(entry())
+      await settle()
+
+      expect(console.spies.error).toHaveBeenCalledTimes(1)
+    } finally {
+      console.restore()
+    }
+  })
+
+  test('a failed send does not block later sends', async () => {
+    const batches: LogEntry[][] = []
+    const queue = createBatchQueue({
+      flushIntervalMs: 60_000,
+      maxBatchSize: 1,
+      name: 'Test',
+      send: entries => {
+        batches.push(entries)
+        return batches.length === 1
+          ? Promise.reject(new Error('boom'))
+          : Promise.resolve()
+      }
+    })
+
+    await expect(queue.push(entry({ message: 'a' }))).rejects.toThrow('boom')
+    await queue.push(entry({ message: 'b' }))
+    await queue.flush()
+
+    expect(batches.map(batch => batch[0]?.message)).toEqual(['a', 'b'])
   })
 })

@@ -12,12 +12,17 @@ export interface FetchStub {
   restore: () => void
 }
 
+export type StubResponse =
+  | { body?: string; headers?: Record<string, string>; status: number }
+  | { reject: unknown }
+
 /**
  * Replaces `globalThis.fetch` with a stub that records calls and answers with
- * the queued responses (the last one repeats). Call `restore()` in `finally`.
+ * the queued responses (the last one repeats). A `{ reject }` entry makes the
+ * call fail with that value. Call `restore()` in `finally`.
  */
 export const stubFetch = (
-  responses: Array<{ body?: string; status: number }> = [{ status: 200 }]
+  responses: StubResponse[] = [{ status: 200 }]
 ): FetchStub => {
   const original = globalThis.fetch
   const calls: FetchCall[] = []
@@ -36,8 +41,14 @@ export const stubFetch = (
     })
     const response = responses[Math.min(index, responses.length - 1)]
     index += 1
+    if (response && 'reject' in response) {
+      return Promise.reject(response.reject)
+    }
     return Promise.resolve(
-      new Response(response?.body ?? '{}', { status: response?.status ?? 200 })
+      new Response(response?.body ?? '{}', {
+        headers: response?.headers,
+        status: response?.status ?? 200
+      })
     )
   })
 

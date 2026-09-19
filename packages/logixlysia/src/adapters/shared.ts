@@ -10,9 +10,14 @@ export const OTEL_SEVERITY: Record<LogLevel, number> = {
 
 const DEFAULT_FLUSH_INTERVAL_MS = 2000
 const DEFAULT_MAX_BATCH_SIZE = 20
+const DEFAULT_MAX_PENDING_BATCHES = 32
 const DEFAULT_RETRIES = 2
+const REPORT_INTERVAL_MS = 5000
 const DEFAULT_TIMEOUT_MS = 5000
 const RETRY_BASE_DELAY_MS = 250
+const RETRY_JITTER_MIN = 0.5
+const MAX_RETRY_AFTER_MS = 30_000
+const MILLIS_PER_SECOND = 1000
 const HTTP_TOO_MANY_REQUESTS = 429
 const HTTP_SERVER_ERROR_MIN = 500
 const ERROR_BODY_PREVIEW_LENGTH = 200
@@ -29,6 +34,20 @@ export interface BatchTransportOptions {
    * @default 20
    */
   maxBatchSize?: number
+  /**
+   * Batches allowed to be waiting on the backend at once. Once the limit is
+   * reached, new batches are dropped and reported instead of buffered, so an
+   * unreachable backend cannot grow memory without bound.
+   * @default 32
+   */
+  maxPendingBatches?: number
+  /**
+   * Called when a batch fails after retries, or is dropped because too
+   * many batches are pending. When omitted, failures go to stderr, rate
+   * limited to once every 5 seconds. Pass the same function you give
+   * `config.onError` to see transport failures in one place.
+   */
+  onError?: (error: unknown) => void
   /**
    * Retry attempts on network errors, 429, and 5xx responses.
    * @default 2
@@ -94,15 +113,46 @@ export interface PostWithRetryInput {
   url: string
 }
 
+const parseRetryAfterMs = (value: string): number | undefined => {
+  const seconds = Number.parseInt(value, 10)
+  if (Number.isFinite(seconds) && seconds >= 0) {
+    return seconds * MILLIS_PER_SECOND
+  }
+  const at = Date.parse(value)
+  return Number.isNaN(at) ? undefined : at - Date.now()
+}
+
+/**
+ * How long to wait before the next attempt: the server's `Retry-After`
+ * (delta-seconds or HTTP-date, capped at 30 s) when it sent a usable one,
+ * otherwise jittered linear backoff.
+ */
+export const resolveRetryDelay = (
+  response: Response | undefined,
+  attempt: number
+): number => {
+  const header = response?.headers.get('retry-after')
+  const retryAfterMs = header ? parseRetryAfterMs(header) : undefined
+  if (retryAfterMs !== undefined) {
+    return Math.min(Math.max(retryAfterMs, 0), MAX_RETRY_AFTER_MS)
+  }
+  return (
+    RETRY_BASE_DELAY_MS * (attempt + 1) * (RETRY_JITTER_MIN + Math.random())
+  )
+}
+
 const attemptPost = async (
   input: PostWithRetryInput,
   attempt: number
 ): Promise<void> => {
-  const retryOrRethrow = async (error: Error): Promise<void> => {
+  const retryOrRethrow = async (
+    error: Error,
+    delayMs: number
+  ): Promise<void> => {
     if (attempt >= input.retries) {
       throw error
     }
-    await sleep(RETRY_BASE_DELAY_MS * (attempt + 1))
+    await sleep(delayMs)
     return attemptPost(input, attempt + 1)
   }
 
@@ -120,10 +170,16 @@ const attemptPost = async (
         ? fetchError
         : new Error(`[logixlysia] ${input.name} transport: request failed`, {
             cause: fetchError
-          })
+          }),
+      resolveRetryDelay(undefined, attempt)
     )
   }
   if (response.ok) {
+    try {
+      await response.body?.cancel()
+    } catch {
+      // Nothing to release when the body is already consumed or closed.
+    }
     return
   }
   const detail = (await response.text().catch(() => '')).slice(
@@ -141,12 +197,13 @@ const attemptPost = async (
   if (!retryable) {
     throw httpError
   }
-  return retryOrRethrow(httpError)
+  return retryOrRethrow(httpError, resolveRetryDelay(response, attempt))
 }
 
 /**
  * POSTs a payload, retrying on network errors, 429, and 5xx responses with
- * linear backoff. Non-retryable HTTP errors (4xx except 429) throw immediately.
+ * jittered linear backoff, or the server's `Retry-After` when it sends one.
+ * Non-retryable HTTP errors (4xx except 429) throw immediately.
  */
 export const postWithRetry = (input: PostWithRetryInput): Promise<void> =>
   attemptPost(input, 0)
@@ -157,37 +214,98 @@ export interface BatchQueue {
 }
 
 /**
+ * Routes a batch failure to the adapter's `onError` hook, or — when no hook is
+ * configured — to stderr at most once per interval, so a backend that fails on
+ * every batch cannot flood the console.
+ */
+const createQueueReporter = (
+  name: string,
+  onError?: (error: unknown) => void
+): ((error: unknown) => void) => {
+  let lastReportedAt = 0
+
+  return error => {
+    if (onError) {
+      try {
+        onError(error)
+      } catch {
+        // Swallow errors thrown by the hook itself.
+      }
+      return
+    }
+
+    const now = Date.now()
+    if (now - lastReportedAt < REPORT_INTERVAL_MS) {
+      return
+    }
+    lastReportedAt = now
+    console.error(`[logixlysia] ${name} transport failed:`, error)
+  }
+}
+
+/**
  * Buffers entries and sends them in batches: immediately once `maxBatchSize`
  * is reached (the returned promise propagates send errors to the caller), or
- * after `flushIntervalMs` via an unref'ed timer (errors go to stderr since no
- * caller is awaiting).
+ * after `flushIntervalMs` via an unref'ed timer (errors go to `onError` since
+ * no caller is awaiting).
+ *
+ * Only one send runs at a time, so batches reach the backend in the order they
+ * were buffered, and `flush()` resolves once every batch queued before it has
+ * settled. Batches queued beyond `maxPendingBatches` are dropped and reported.
  */
 export const createBatchQueue = (input: {
   flushIntervalMs: number
   maxBatchSize: number
+  maxPendingBatches?: number
   name: string
+  onError?: (error: unknown) => void
   send: (entries: LogEntry[]) => Promise<void>
 }): BatchQueue => {
   let buffer: LogEntry[] = []
   let timer: ReturnType<typeof setTimeout> | undefined
+  let tail: Promise<void> = Promise.resolve()
+  let pending = 0
 
-  const flush = async (): Promise<void> => {
+  const report = createQueueReporter(input.name, input.onError)
+  const maxPendingBatches =
+    input.maxPendingBatches ?? DEFAULT_MAX_PENDING_BATCHES
+
+  const enqueueSend = (entries: LogEntry[]): Promise<void> => {
+    if (pending >= maxPendingBatches) {
+      report(
+        new Error(
+          `[logixlysia] ${input.name} transport: ${pending} batches pending; batch of ${entries.length} dropped`
+        )
+      )
+      return tail
+    }
+    pending += 1
+    const send = tail.then(() => input.send(entries))
+    // Swallow the failure on the chain itself so one bad batch cannot poison
+    // the batches after it; the caller of enqueueSend still sees the rejection.
+    tail = send
+      .catch(() => undefined)
+      .then(() => {
+        pending -= 1
+      })
+    return send
+  }
+
+  const flush = (): Promise<void> => {
     if (timer) {
       clearTimeout(timer)
       timer = undefined
     }
     if (buffer.length === 0) {
-      return
+      return tail
     }
     const entries = buffer
     buffer = []
-    await input.send(entries)
+    return enqueueSend(entries).then(() => tail)
   }
 
   const flushFromTimer = (): void => {
-    flush().catch(error => {
-      console.error(`[logixlysia] ${input.name} transport failed:`, error)
-    })
+    flush().catch(report)
   }
 
   const push = (entry: LogEntry): Promise<void> | undefined => {
@@ -227,7 +345,9 @@ export const createHttpTransport = (
   const queue = createBatchQueue({
     flushIntervalMs: input.options.flushIntervalMs ?? DEFAULT_FLUSH_INTERVAL_MS,
     maxBatchSize: input.options.maxBatchSize ?? DEFAULT_MAX_BATCH_SIZE,
+    maxPendingBatches: input.options.maxPendingBatches,
     name: input.name,
+    onError: input.options.onError,
     send: entries =>
       postWithRetry({
         body: input.body(entries),
