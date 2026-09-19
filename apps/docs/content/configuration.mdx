@@ -280,15 +280,26 @@ disableFileLogging: true
 
 ### `onError`
 
-Called when a sink (transport, file, or rotation) or an [enricher](/docs/features/enrichers) fails. Errors thrown by the hook itself are swallowed. When absent, failures go to stderr (rate-limited for transports and enrichers).
+Called when a sink (transport, file, or rotation) or an [enricher](/docs/features/enrichers) fails, and when a shutdown flush runs out of time (`sink: 'shutdown'`). Errors thrown by the hook itself are swallowed. When absent, failures go to stderr (rate-limited for transports and enrichers).
 
-- **Type:** `(context: { sink: 'transport' | 'file' | 'rotation' | 'enricher'; error: unknown }) => void`
+- **Type:** `(context: { sink: 'transport' | 'file' | 'rotation' | 'shutdown' | 'enricher'; error: unknown }) => void`
 - **Default:** `undefined`
 
 ```ts
 onError: ({ sink, error }) => {
   metrics.increment(`logixlysia.sink_error.${sink}`)
 }
+```
+
+### `flushTimeoutMs`
+
+How long the plugin waits for transports and the file sink to flush when the app stops. `0` starts the flush but does not wait. A flush that exceeds the budget is reported through `onError` with `sink: 'shutdown'`.
+
+- **Type:** `number`
+- **Default:** `5000`
+
+```ts
+flushTimeoutMs: 2000
 ```
 
 ### `enrichers`
