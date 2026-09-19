@@ -43,6 +43,13 @@ jobs:
             ${{ runner.os }}-bun-
       - name: 🔽 Install Dependencies
         run: bun install
+      - name: 🔍 Lint, typecheck and test
+        env:
+          CI: true
+        run: |
+          bun run lint
+          bun run typecheck
+          bun run test
       - name: 🦊 Build Logixlysia
         run: bun run build --filter logixlysia
       - name: 🎟️ Create Release PR or Publish to NPM
