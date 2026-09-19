@@ -163,6 +163,7 @@ export interface RedactionConfig {
   /**
    * Automatically redact sensitive information (PII) from logs.
    * Masks emails, IP addresses, Luhn-valid payment card numbers, and JWTs in strings and deeply nested objects.
+   * @default false
    */
   autoRedact?: boolean
 
@@ -177,7 +178,8 @@ export interface RedactionConfig {
    * Additional key/header names (case-insensitive; `-`/`_`/camelCase variants
    * are normalized) whose values are redacted when `autoRedact` is enabled.
    * Extends the built-in list (authorization, cookie, x-api-key, password,
-   * secret, token, session, …).
+   * secret, token, session, …). The same key-name matching also applies to
+   * query-string parameter names in the logged request URL.
    */
   redactKeys?: string[]
 }
