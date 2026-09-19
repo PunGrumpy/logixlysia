@@ -1,81 +1,28 @@
 ---
 title: Log Filtering
-description: Filter logs based on various criteria
+description: Filter logs by level
 ---
 
-Filter logs based on level, status, or HTTP method using Logixlysia's flexible filtering system.
+`logFilter` restricts which log levels get processed. It has one field: `level`.
 
-## Basic Usage
+## Basic usage
 
 ```ts
 logixlysia({
   config: {
     logFilter: {
-      level: ['ERROR', 'WARNING'],
-      status: [500, 404],
-      method: 'GET'
+      level: ['ERROR', 'WARNING']
     }
   }
 })
 ```
 
-## Filter Types
+Available levels: `ERROR`, `WARNING`, `INFO`, `DEBUG`.
 
-### By Log Level
+Omit `logFilter`, or omit `level`, and every level is processed.
 
-```ts
-logFilter: {
-  level: ['ERROR', 'WARNING'] // Only log ERROR and WARNING messages
-}
-```
+## Reducing volume
 
-Available levels: `ERROR`, `WARNING`, `INFO`, `DEBUG`
+`logFilter` only drops whole levels. To keep a percentage of records instead, or to rescue slow and failed requests that would otherwise be dropped, use [sampling](/docs/features/sampling), which supports head sampling per level and tail sampling by status, duration, or path.
 
-### By HTTP Status
-
-```ts
-logFilter: {
-  status: [500, 404] // Only log 500 and 404 responses
-}
-```
-
-### By HTTP Method
-
-```ts
-logFilter: {
-  method: 'GET' // Only log GET requests
-}
-```
-
-Or multiple methods:
-
-```ts
-logFilter: {
-  method: ['POST', 'PUT']
-}
-```
-
-### Combined Filters
-
-```ts
-logFilter: {
-  level: ['ERROR'],
-  status: [500],
-  method: ['POST', 'PUT']
-}
-```
-
-## Environment-Specific Filters
-
-```ts
-logFilter: process.env.NODE_ENV === 'production' 
-  ? { level: ['ERROR'] }
-  : null // Log everything in development
-```
-
-## Best Practices
-
-- **Production**: Filter to essential logs only (errors and warnings)
-- **Development**: Log everything for debugging
-- **Security**: Filter sensitive routes and avoid logging sensitive data
-- **Performance**: Use simple filters in production
+Path-based include/exclude filtering is not currently available.

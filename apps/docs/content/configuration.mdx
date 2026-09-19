@@ -308,6 +308,21 @@ enrichers: [
 ]
 ```
 
+## Filtering Options
+
+### `logFilter`
+
+Restricts which log levels get processed. See [Filtering](/docs/features/filtering).
+
+- **Type:** `{ level?: LogLevel[] }`
+- **Default:** all levels
+
+```ts
+logFilter: {
+  level: ['ERROR', 'WARNING']
+}
+```
+
 ## Sampling Options
 
 ### `sampling`
