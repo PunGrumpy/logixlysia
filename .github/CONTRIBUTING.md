@@ -85,7 +85,7 @@ When making changes to the logger:
 2. Run the test suite: `bun test`
 3. Test with different log levels and configurations
 4. Consider backward compatibility - will this break existing users' workflows?
-5. Run `bun lint` and `bun format` to ensure code quality
+5. Run `bun run lint` and `bun run format` to ensure code quality
 6. Run integration tests: `cd packages/logixlysia && bun test __tests__/integration`
 7. Manual QA: `cd apps/elysia && bun run dev` (Swagger at `/swagger`)
 
@@ -111,10 +111,10 @@ When making changes to the logger:
 From the root directory:
 - `bun test` - Run all tests across all packages
 - `bun run build` - Build all packages
-- `bun lint` - Run linter on the codebase
-- `bun format` - Auto-fix linting and formatting issues
+- `bun run lint` - Run linter on the codebase
+- `bun run format` - Auto-fix linting and formatting issues
 - `bun dev` - Start all development servers
-- `bun typecheck` - Run TypeScript type checking
+- `bun run typecheck` - Run TypeScript type checking
 
 From a specific package (e.g., `packages/logixlysia`):
 - `bun test` - Run tests for that package only
@@ -129,7 +129,7 @@ From a specific package (e.g., `packages/logixlysia`):
 
 ## Code Style
 
-- Run `bun format` before committing to auto-format your code
+- Run `bun run format` before committing to auto-format your code
 - Write clear, self-documenting code
 - Add comments only when necessary to explain complex logic
 - Use meaningful variable and function names
