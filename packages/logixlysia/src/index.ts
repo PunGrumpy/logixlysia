@@ -63,7 +63,7 @@ export type LogixlysiaPlugin<TFields extends object = LogFields> =
  * interface to have TypeScript reject misspelled context keys; the default
  * allows any key, so untyped usage is unchanged.
  */
-const logixlysia = <TFields extends object = LogFields>(
+const createLogixlysiaPlugin = <TFields extends object = LogFields>(
   rawOptions: Options = {}
 ): LogixlysiaPlugin<TFields> => {
   const options = resolveOptions(rawOptions)
@@ -281,6 +281,8 @@ const logixlysia = <TFields extends object = LogFields>(
 // biome-ignore lint/performance/noBarrelFile: public package entry re-exports
 export { resolveOptions } from './config/resolve-options'
 export { useLogger } from './context/storage'
+export type { HttpErrorInit, HttpErrorPayload } from './errors'
+export { HttpError } from './errors'
 export type {
   Enricher,
   EnricherFields,
@@ -317,4 +319,5 @@ export { resolveSampling } from './sampling'
 export type { WsHandlerHooks } from './websocket/wrap-ws'
 export { createWsHandlerWrapper } from './websocket/wrap-ws'
 
-export default logixlysia
+export default createLogixlysiaPlugin
+export const logixlysia: typeof createLogixlysiaPlugin = createLogixlysiaPlugin
