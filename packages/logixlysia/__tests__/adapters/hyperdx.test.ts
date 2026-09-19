@@ -80,6 +80,17 @@ describe('logixlysia/hyperdx', () => {
     }
   })
 
+  test('throws for an invalid endpoint', () => {
+    const restoreEnv = stubEnv(CLEAR_ENV)
+    try {
+      expect(() =>
+        createHyperDXTransport({ apiKey: 'hdx-key', endpoint: 'not a url' })
+      ).toThrow('HyperDX')
+    } finally {
+      restoreEnv()
+    }
+  })
+
   test('appends /v1/logs to a self-hosted endpoint', async () => {
     const restoreEnv = stubEnv(CLEAR_ENV)
     const stub = stubFetch()

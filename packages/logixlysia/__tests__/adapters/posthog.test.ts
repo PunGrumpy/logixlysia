@@ -63,6 +63,17 @@ describe('logixlysia/posthog', () => {
     }
   })
 
+  test('throws for an invalid host', () => {
+    const restoreEnv = stubEnv(CLEAR_ENV)
+    try {
+      expect(() =>
+        createPostHogTransport({ apiKey: 'phc_test', host: 'not a url' })
+      ).toThrow('PostHog')
+    } finally {
+      restoreEnv()
+    }
+  })
+
   test('resolves distinct_id from the request context', async () => {
     const restoreEnv = stubEnv(CLEAR_ENV)
     const stub = stubFetch()

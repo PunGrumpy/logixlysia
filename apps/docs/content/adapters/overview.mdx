@@ -58,6 +58,7 @@ All adapters share the same core:
 - **Timeout** — each request aborts after `timeout` ms (default 5000).
 - **Non-blocking** — sends run in the background and never delay your HTTP responses. Failures are reported through [`onError`](/docs/features/transports) (sink `'transport'`) or rate-limited to stderr.
 - **Credentials** — read from environment variables by default; options passed to the factory always win. Missing credentials throw at startup with an actionable message, not silently at runtime.
+- **Endpoint safety** — endpoint URLs are validated when the transport is created and must use `http:` or `https:`, and requests never follow redirects, so a credential header can't be forwarded to another origin.
 
 Every adapter accepts these options on top of its platform-specific ones:
 

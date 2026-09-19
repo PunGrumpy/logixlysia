@@ -64,6 +64,17 @@ describe('logixlysia/clickhouse', () => {
     }
   })
 
+  test('throws for an invalid URL', () => {
+    const restoreEnv = stubEnv(CLEAR_ENV)
+    try {
+      expect(() => createClickHouseTransport({ url: 'not a url' })).toThrow(
+        'ClickHouse'
+      )
+    } finally {
+      restoreEnv()
+    }
+  })
+
   test('reads connection settings from the environment', async () => {
     const restoreEnv = stubEnv({
       ...CLEAR_ENV,

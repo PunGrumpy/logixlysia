@@ -70,6 +70,15 @@ describe('logixlysia/loki', () => {
     }
   })
 
+  test('throws for an invalid URL', () => {
+    const restoreEnv = stubEnv(CLEAR_ENV)
+    try {
+      expect(() => createLokiTransport({ url: 'not a url' })).toThrow('Loki')
+    } finally {
+      restoreEnv()
+    }
+  })
+
   test('sends basic auth and tenant headers', async () => {
     const restoreEnv = stubEnv(CLEAR_ENV)
     const stub = stubFetch()

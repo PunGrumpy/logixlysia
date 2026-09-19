@@ -6,6 +6,7 @@ import {
   getPath,
   type LogEntry,
   postWithRetry,
+  resolveEndpoint,
   resolveRetryDelay,
   stripTrailingSlashes
 } from '../../src/adapters/shared'
@@ -107,6 +108,26 @@ describe('stripTrailingSlashes', () => {
     )
     expect(stripTrailingSlashes('https://api.example.com')).toBe(
       'https://api.example.com'
+    )
+  })
+})
+
+describe('resolveEndpoint', () => {
+  test('returns a well-formed URL unchanged', () => {
+    expect(resolveEndpoint('Test', 'https://a.example/v1/x')).toBe(
+      'https://a.example/v1/x'
+    )
+  })
+
+  test('throws with the adapter name for an unparsable URL', () => {
+    expect(() => resolveEndpoint('Test', 'not a url')).toThrow(
+      "[logixlysia] Test transport: invalid endpoint URL 'not a url'"
+    )
+  })
+
+  test('throws for a non-http(s) protocol', () => {
+    expect(() => resolveEndpoint('Test', 'ftp://a.example/x')).toThrow(
+      'http or https'
     )
   })
 })
