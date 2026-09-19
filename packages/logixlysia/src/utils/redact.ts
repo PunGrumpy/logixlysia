@@ -1,7 +1,16 @@
 // Local part ≤64, domain ≤253, TLD 2–63 (RFC 5321 / 1035-ish limits; bounded to avoid ReDoS)
 const EMAIL_REGEX =
   /[a-zA-Z0-9._%+-]{1,64}@[a-zA-Z0-9.-]{1,253}\.[a-zA-Z]{2,63}/g
-const IPV4_REGEX = /\b(?:\d{1,3}\.){3}\d{1,3}\b/g
+const IPV4_REGEX =
+  /(?<![\w/.])(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(?![\w.])/g
+/**
+ * Bounded IPv6: either all 8 groups, or a single `::` compression. Requiring
+ * one of those shapes (rather than "2+ colon-separated hex groups") keeps
+ * clock times (`12:30:45`) and MAC addresses (`aa:bb:cc:dd:ee:ff`) from
+ * matching.
+ */
+const IPV6_REGEX =
+  /(?<![\w:])(?:(?:[0-9a-f]{1,4}:){7}[0-9a-f]{1,4}|(?:[0-9a-f]{1,4}:){1,7}:(?:[0-9a-f]{1,4}(?::[0-9a-f]{1,4}){0,6})?|::(?:[0-9a-f]{1,4}(?::[0-9a-f]{1,4}){0,6}))(?![\w:])/gi
 /** Digit runs that may be formatted PANs (spaces/dashes); validated with Luhn before redacting. */
 const CREDIT_CARD_CANDIDATE_REGEX = /\b(?:\d[ -]*?){13,19}\b/g
 const JWT_REGEX = /eyJ[a-zA-Z0-9_-]+\.eyJ[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+/g
@@ -169,6 +178,7 @@ export const redactString = (text: string): string => {
 
   result = result.replace(EMAIL_REGEX, REDACTED_TEXT)
   result = result.replace(IPV4_REGEX, REDACTED_TEXT)
+  result = result.replace(IPV6_REGEX, REDACTED_TEXT)
   result = redactCreditCardCandidates(result)
   result = result.replace(JWT_REGEX, REDACTED_TEXT)
 

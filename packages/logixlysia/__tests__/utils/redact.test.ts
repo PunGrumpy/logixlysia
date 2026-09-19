@@ -342,3 +342,50 @@ describe('error.cause redaction', () => {
     expect(result.internal).toEqual({ note: '[REDACTED]' })
   })
 })
+
+describe('IPv4/IPv6 redaction precision', () => {
+  test('does not mistake a dotted version string for an IPv4 address', () => {
+    expect(redactString('Chrome/120.0.0.0 Safari/537.36')).toBe(
+      'Chrome/120.0.0.0 Safari/537.36'
+    )
+    expect(redactString('v1.2.3.4')).toBe('v1.2.3.4')
+  })
+
+  test('still redacts real IPv4 addresses', () => {
+    expect(redactString('IP is 192.168.1.1')).toBe('IP is [REDACTED]')
+    expect(redactString('0.0.0.0')).toBe('[REDACTED]')
+  })
+
+  test('does not redact an out-of-range octet run', () => {
+    expect(redactString('999.999.999.999')).toBe('999.999.999.999')
+  })
+
+  test('redacts IPv6 addresses', () => {
+    expect(redactString('2001:db8::1')).toBe('[REDACTED]')
+    expect(redactString('fe80:0:0:0:202:b3ff:fe1e:8329')).toBe('[REDACTED]')
+    expect(redactString('::1')).toBe('[REDACTED]')
+  })
+
+  test('does not mistake a plain hex word for IPv6', () => {
+    expect(redactString('deadbeef')).toBe('deadbeef')
+  })
+
+  test('does not mistake a clock time for IPv6', () => {
+    expect(redactString('job ran at 12:30:45 today')).toBe(
+      'job ran at 12:30:45 today'
+    )
+    expect(redactString('took 00:01:23.456')).toBe('took 00:01:23.456')
+    expect(redactString('ratio 3:2:1')).toBe('ratio 3:2:1')
+  })
+
+  test('does not mistake a MAC address for IPv6', () => {
+    expect(redactString('aa:bb:cc:dd:ee:ff')).toBe('aa:bb:cc:dd:ee:ff')
+  })
+
+  test('IPv6 redaction does not hang on adversarial input', () => {
+    const input = `${'f:'.repeat(50_000)}1`
+    const start = performance.now()
+    redactString(input)
+    expect(performance.now() - start).toBeLessThan(500)
+  })
+})
