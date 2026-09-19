@@ -217,11 +217,11 @@ const sampleJwt =
 
 describe('redactRequest', () => {
   test('redacts JWT in URL and returns new Request when changed', () => {
-    const url = `http://localhost/api?token=${sampleJwt}`
+    const url = `http://localhost/api?jwt=${sampleJwt}`
     const req = new Request(url)
     const out = redactRequest(req)
     expect(out).not.toBe(req)
-    expect(out.url).toContain('[REDACTED]')
+    expect(out.url).toContain('%5BREDACTED%5D')
     expect(out.url).not.toContain(sampleJwt)
   })
 
@@ -277,5 +277,27 @@ describe('redactRequest', () => {
     // used" on Bun <=1.2.x. Asserting a null body guards the fix on every Bun
     // version, not just the ones where the reuse happens to throw.
     expect(out.body).toBeNull()
+  })
+
+  test('masks sensitive query parameters by key name while keeping others intact', () => {
+    const req = new Request('http://h/p?token=abc123&email=a@b.co&keep=1')
+    const out = redactRequest(req)
+    expect(out.url).not.toContain('abc123')
+    expect(out.url).toContain('email=%5BREDACTED%5D')
+    expect(out.url).toContain('keep=1')
+  })
+
+  test('masks camelCase query parameter names', () => {
+    const req = new Request('http://h/p?apiKey=x')
+    const out = redactRequest(req)
+    expect(out.url).not.toContain('apiKey=x')
+    expect(out.url).toContain('apiKey=redacted')
+  })
+
+  test('masks a query parameter matching a custom redactKeys entry', () => {
+    const req = new Request('http://h/p?promo=SECRET')
+    const out = redactRequest(req, ['promo'])
+    expect(out.url).not.toContain('SECRET')
+    expect(out.url).toContain('promo=redacted')
   })
 })

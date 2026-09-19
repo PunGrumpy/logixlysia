@@ -85,7 +85,10 @@ const redactUrlAuthoritySegment = (value: string): string =>
   redactString(value).replaceAll(REDACTED_TEXT, URL_SAFE_REDACT)
 
 /** Apply PII redaction to a request URL while keeping the result parseable by the URL/Request constructors. */
-const redactRequestUrl = (urlString: string): string => {
+const redactRequestUrl = (
+  urlString: string,
+  extraKeys?: readonly string[]
+): string => {
   try {
     const u = new URL(urlString)
     if (u.username !== '') {
@@ -96,7 +99,22 @@ const redactRequestUrl = (urlString: string): string => {
     }
     u.hostname = redactUrlAuthoritySegment(u.hostname)
     u.pathname = redactString(u.pathname)
-    u.search = redactString(u.search)
+    // `searchParams.set` re-serializes the whole query string, so redact
+    // decoded values directly rather than re-running pattern redaction on
+    // `u.search` afterward (which would see already percent-encoded text).
+    for (const key of [...u.searchParams.keys()]) {
+      if (isSensitiveKey(key, extraKeys)) {
+        u.searchParams.set(key, URL_SAFE_REDACT)
+        continue
+      }
+      const value = u.searchParams.get(key)
+      if (value !== null) {
+        const redactedValue = redactString(value)
+        if (redactedValue !== value) {
+          u.searchParams.set(key, redactedValue)
+        }
+      }
+    }
     u.hash = redactString(u.hash)
     return u.toString()
   } catch {
@@ -316,7 +334,7 @@ export const redactRequest = (
   request: Request,
   extraKeys?: readonly string[]
 ): Request => {
-  const redactedUrl = redactRequestUrl(request.url)
+  const redactedUrl = redactRequestUrl(request.url, extraKeys)
   const nextHeaders = new Headers()
   let headersChanged = false
 

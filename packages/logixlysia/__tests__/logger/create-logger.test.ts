@@ -86,9 +86,7 @@ describe('createLogger', () => {
     }
 
     const logger = createLogger(options)
-    const request = createMockRequest(
-      `http://localhost/test?token=${sampleJwt}`
-    )
+    const request = createMockRequest(`http://localhost/test?jwt=${sampleJwt}`)
 
     logger.info(request, 'hello')
 
@@ -97,7 +95,7 @@ describe('createLogger', () => {
       | Record<string, unknown>
       | undefined
     const reqMeta = meta?.request as { url?: string } | undefined
-    expect(reqMeta?.url).toContain('[REDACTED]')
+    expect(reqMeta?.url).toContain('%5BREDACTED%5D')
     expect(reqMeta?.url).not.toContain(sampleJwt)
 
     await new Promise(resolve => setTimeout(resolve, 0))
