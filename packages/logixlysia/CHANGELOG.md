@@ -1,5 +1,11 @@
 # Changelog
 
+## 6.9.2
+
+### Patch Changes
+
+- 1eccc41: Console method colours work again: the method was padded before the colour lookup, so every method except `OPTIONS` and `CONNECT` rendered in the fallback white.
+
 ## 6.9.1
 
 ### Patch Changes
