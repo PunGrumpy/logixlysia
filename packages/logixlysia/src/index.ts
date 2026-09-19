@@ -22,6 +22,13 @@ import {
   getOrCreateRequestId,
   resolveRequestIdConfig
 } from './middleware/request-id'
+import { closeTransports } from './output'
+import { closeAllFileSinks } from './output/file-sink'
+import {
+  flushAll,
+  raceWithTimeout,
+  reportShutdownTimeout
+} from './output/shutdown'
 import { elapsedMs } from './utils/duration'
 import { createWsHandlerWrapper } from './websocket/wrap-ws'
 
@@ -57,6 +64,8 @@ export type LogixlysiaPlugin<TFields extends object = LogFields> =
   Logixlysia<TFields> & {
     wrapWs: ReturnType<typeof createWsHandlerWrapper>
   }
+
+const DEFAULT_FLUSH_TIMEOUT_MS = 5000
 
 /**
  * @typeParam TFields - Field bag for the request-scoped `log`. Supply your own
@@ -209,6 +218,16 @@ const logixlysia = <TFields extends object = LogFields>(
         startServer({ hostname, port, protocol: 'http' }, options)
       }
     })
+    .onStop(async () => {
+      const timeoutMs =
+        options.config?.flushTimeoutMs ?? DEFAULT_FLUSH_TIMEOUT_MS
+      const timedOut = await raceWithTimeout(flushAll(options), timeoutMs)
+      // A zero timeout means the caller opted out of waiting, so the flush
+      // "timing out" is expected and not worth reporting.
+      if (timedOut && timeoutMs > 0) {
+        reportShutdownTimeout(options.config?.onError, timeoutMs)
+      }
+    })
     .onRequest(({ request }) => {
       requestStartTimes.set(request, process.hrtime.bigint())
       logger.beginRequest(request)
@@ -276,6 +295,21 @@ const logixlysia = <TFields extends object = LogFields>(
     .as('scoped') as Logixlysia<TFields>
 
   return Object.assign(plugin, { wrapWs }) as LogixlysiaPlugin<TFields>
+}
+
+/**
+ * Drains every transport and file sink; with `close: true` also releases
+ * them. For processes that stop without Elysia's `onStop` (workers,
+ * scripts, custom signal handlers). Safe to call more than once.
+ */
+export const flushLogixlysia = async (
+  options: Options,
+  { close = false }: { close?: boolean } = {}
+): Promise<void> => {
+  await flushAll(options)
+  if (close) {
+    await Promise.allSettled([closeTransports(options), closeAllFileSinks()])
+  }
 }
 
 // biome-ignore lint/performance/noBarrelFile: public package entry re-exports

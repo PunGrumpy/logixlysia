@@ -7,6 +7,27 @@ const reportTransportError = createErrorReporter(
   'transport failed'
 )
 
+const MAX_TRACKED_PENDING = 1024
+const pendingTransportWork = new Set<Promise<unknown>>()
+
+/**
+ * Remembers in-flight `log()` promises so shutdown can wait for them. The set
+ * is bounded: under sustained load the oldest entry is dropped rather than
+ * letting a slow transport grow it without limit.
+ */
+const track = (promise: Promise<unknown>): void => {
+  if (pendingTransportWork.size >= MAX_TRACKED_PENDING) {
+    const oldest = pendingTransportWork.values().next().value
+    if (oldest) {
+      pendingTransportWork.delete(oldest)
+    }
+  }
+  pendingTransportWork.add(promise)
+  promise
+    .finally(() => pendingTransportWork.delete(promise))
+    .catch(() => undefined)
+}
+
 interface LogToTransportsInput {
   data: Record<string, unknown>
   level: LogLevel
@@ -42,12 +63,41 @@ export const logToTransports = (input: LogToTransportsInput): void => {
         result &&
         typeof (result as { catch?: unknown }).catch === 'function'
       ) {
-        ;(result as Promise<void>).catch(error =>
-          reportTransportError(error, onError)
-        )
+        const pending = result as Promise<void>
+        track(pending)
+        pending.catch(error => reportTransportError(error, onError))
       }
     } catch (error) {
       reportTransportError(error, onError)
     }
   }
+}
+
+/**
+ * Runs one optional lifecycle method on every configured transport. Failures
+ * are reported like `log()` failures and never stop the other transports.
+ */
+const runTransportLifecycle = (
+  options: Options,
+  method: 'close' | 'flush'
+): Promise<unknown>[] => {
+  const onError = options.config?.onError
+  return (options.config?.transports ?? []).map(transport =>
+    Promise.resolve()
+      .then(() => transport[method]?.())
+      .catch(error => reportTransportError(error, onError))
+  )
+}
+
+/** Waits for in-flight `log()` work and every transport's own `flush()`. */
+export const flushTransports = async (options: Options): Promise<void> => {
+  await Promise.allSettled([
+    ...pendingTransportWork,
+    ...runTransportLifecycle(options, 'flush')
+  ])
+}
+
+/** Releases each transport's resources; only reached via `flushLogixlysia`. */
+export const closeTransports = async (options: Options): Promise<void> => {
+  await Promise.allSettled(runTransportLifecycle(options, 'close'))
 }
