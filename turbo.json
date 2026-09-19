@@ -14,7 +14,7 @@
       "persistent": true
     },
     "test": {
-      "dependsOn": ["^test"]
+      "dependsOn": ["^test", "build"]
     },
     "bench": {
       "dependsOn": ["^build"]
