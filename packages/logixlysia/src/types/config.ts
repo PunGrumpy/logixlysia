@@ -35,7 +35,8 @@ export interface LogRotationConfig {
    */
   interval?: string
   /**
-   * Keep at most N files or keep files for a duration like '7d'.
+   * Keep at most N files or keep files for a duration like '7d'. A numeric
+   * value must be a positive integer; `0` or a negative number is rejected.
    */
   maxFiles?: number | string
   /**
@@ -144,7 +145,10 @@ export interface FormattingConfig {
   /** Render `data.context` as tree lines under the main log line; default true. */
   showContextTree?: boolean
   showStartupMessage?: boolean
-  /** Duration (ms) below this uses green; default 500. */
+  /**
+   * Duration (ms) below this uses green; default 500. Must be a finite
+   * non-negative number, and must not exceed `verySlowThreshold`.
+   */
   slowThreshold?: number
   startupMessageFormat?: 'simple' | 'banner'
   timestamp?: {
@@ -158,7 +162,10 @@ export interface FormattingConfig {
     translateTime?: string
   }
   useColors?: boolean
-  /** Duration (ms) at or above this uses red + `{speed}` badge; default 1000. */
+  /**
+   * Duration (ms) at or above this uses red + `{speed}` badge; default 1000.
+   * Must be a finite non-negative number, and must be at least `slowThreshold`.
+   */
   verySlowThreshold?: number
 }
 

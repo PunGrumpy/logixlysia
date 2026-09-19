@@ -66,6 +66,9 @@ export const parseRetention = (
   value: number | string
 ): { type: 'count' | 'time'; value: number } => {
   if (typeof value === 'number') {
+    if (!(Number.isInteger(value) && value > 0)) {
+      throw new Error(`maxFiles must be a positive integer, got ${value}`)
+    }
     return { type: 'count', value }
   }
   return { type: 'time', value: parseInterval(value) }

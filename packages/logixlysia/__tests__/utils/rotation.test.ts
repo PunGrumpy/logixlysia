@@ -90,6 +90,24 @@ describe('parseRetention', () => {
   test('treats a string as a time interval', () => {
     expect(parseRetention('7d')).toEqual({ type: 'time', value: 7 * DAY_MS })
   })
+
+  test('throws on a non-integer count', () => {
+    expect(() => parseRetention(2.5)).toThrow(
+      'maxFiles must be a positive integer, got 2.5'
+    )
+  })
+
+  test('throws on zero', () => {
+    expect(() => parseRetention(0)).toThrow(
+      'maxFiles must be a positive integer, got 0'
+    )
+  })
+
+  test('throws on a negative count', () => {
+    expect(() => parseRetention(-1)).toThrow(
+      'maxFiles must be a positive integer, got -1'
+    )
+  })
 })
 
 describe('getRotatedFiles', () => {
