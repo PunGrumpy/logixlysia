@@ -15,6 +15,9 @@ const DEFAULT_RETRIES = 2
 const REPORT_INTERVAL_MS = 5000
 const DEFAULT_TIMEOUT_MS = 5000
 const RETRY_BASE_DELAY_MS = 250
+const RETRY_JITTER_MIN = 0.5
+const MAX_RETRY_AFTER_MS = 30_000
+const MILLIS_PER_SECOND = 1000
 const HTTP_TOO_MANY_REQUESTS = 429
 const HTTP_SERVER_ERROR_MIN = 500
 const ERROR_BODY_PREVIEW_LENGTH = 200
@@ -110,15 +113,46 @@ export interface PostWithRetryInput {
   url: string
 }
 
+const parseRetryAfterMs = (value: string): number | undefined => {
+  const seconds = Number.parseInt(value, 10)
+  if (Number.isFinite(seconds) && seconds >= 0) {
+    return seconds * MILLIS_PER_SECOND
+  }
+  const at = Date.parse(value)
+  return Number.isNaN(at) ? undefined : at - Date.now()
+}
+
+/**
+ * How long to wait before the next attempt: the server's `Retry-After`
+ * (delta-seconds or HTTP-date, capped at 30 s) when it sent a usable one,
+ * otherwise jittered linear backoff.
+ */
+export const resolveRetryDelay = (
+  response: Response | undefined,
+  attempt: number
+): number => {
+  const header = response?.headers.get('retry-after')
+  const retryAfterMs = header ? parseRetryAfterMs(header) : undefined
+  if (retryAfterMs !== undefined) {
+    return Math.min(Math.max(retryAfterMs, 0), MAX_RETRY_AFTER_MS)
+  }
+  return (
+    RETRY_BASE_DELAY_MS * (attempt + 1) * (RETRY_JITTER_MIN + Math.random())
+  )
+}
+
 const attemptPost = async (
   input: PostWithRetryInput,
   attempt: number
 ): Promise<void> => {
-  const retryOrRethrow = async (error: Error): Promise<void> => {
+  const retryOrRethrow = async (
+    error: Error,
+    delayMs: number
+  ): Promise<void> => {
     if (attempt >= input.retries) {
       throw error
     }
-    await sleep(RETRY_BASE_DELAY_MS * (attempt + 1))
+    await sleep(delayMs)
     return attemptPost(input, attempt + 1)
   }
 
@@ -136,10 +170,16 @@ const attemptPost = async (
         ? fetchError
         : new Error(`[logixlysia] ${input.name} transport: request failed`, {
             cause: fetchError
-          })
+          }),
+      resolveRetryDelay(undefined, attempt)
     )
   }
   if (response.ok) {
+    try {
+      await response.body?.cancel()
+    } catch {
+      // Nothing to release when the body is already consumed or closed.
+    }
     return
   }
   const detail = (await response.text().catch(() => '')).slice(
@@ -157,12 +197,13 @@ const attemptPost = async (
   if (!retryable) {
     throw httpError
   }
-  return retryOrRethrow(httpError)
+  return retryOrRethrow(httpError, resolveRetryDelay(response, attempt))
 }
 
 /**
  * POSTs a payload, retrying on network errors, 429, and 5xx responses with
- * linear backoff. Non-retryable HTTP errors (4xx except 429) throw immediately.
+ * jittered linear backoff, or the server's `Retry-After` when it sends one.
+ * Non-retryable HTTP errors (4xx except 429) throw immediately.
  */
 export const postWithRetry = (input: PostWithRetryInput): Promise<void> =>
   attemptPost(input, 0)

@@ -6,6 +6,7 @@ import {
   getPath,
   type LogEntry,
   postWithRetry,
+  resolveRetryDelay,
   stripTrailingSlashes
 } from '../../src/adapters/shared'
 import { spyConsole } from '../_helpers/console'
@@ -147,6 +148,67 @@ describe('postWithRetry', () => {
     }
   })
 
+  test('honors Retry-After on 429', async () => {
+    const stub = stubFetch([
+      { headers: { 'retry-after': '1' }, status: 429 },
+      { status: 200 }
+    ])
+    const startedAt = performance.now()
+    try {
+      await postWithRetry({
+        body: '{}',
+        headers: {},
+        name: 'Test',
+        retries: 2,
+        timeout: 1000,
+        url: 'https://example.com/ingest'
+      })
+      expect(performance.now() - startedAt).toBeGreaterThanOrEqual(900)
+      expect(stub.calls).toHaveLength(2)
+    } finally {
+      stub.restore()
+    }
+  })
+
+  test('wraps a non-Error rejection with cause', async () => {
+    const stub = stubFetch([{ reject: 'boom' }])
+    try {
+      await expect(
+        postWithRetry({
+          body: '{}',
+          headers: {},
+          name: 'Test',
+          retries: 0,
+          timeout: 1000,
+          url: 'https://example.com/ingest'
+        })
+      ).rejects.toMatchObject({ cause: 'boom' })
+      expect(stub.calls).toHaveLength(1)
+    } finally {
+      stub.restore()
+    }
+  })
+
+  test('retries after an aborted request', async () => {
+    const stub = stubFetch([
+      { reject: new DOMException('aborted', 'AbortError') },
+      { status: 200 }
+    ])
+    try {
+      await postWithRetry({
+        body: '{}',
+        headers: {},
+        name: 'Test',
+        retries: 2,
+        timeout: 1000,
+        url: 'https://example.com/ingest'
+      })
+      expect(stub.calls).toHaveLength(2)
+    } finally {
+      stub.restore()
+    }
+  })
+
   test('throws the last error once retries are exhausted', async () => {
     const stub = stubFetch([{ status: 503 }])
     try {
@@ -164,6 +226,38 @@ describe('postWithRetry', () => {
     } finally {
       stub.restore()
     }
+  })
+})
+
+describe('resolveRetryDelay', () => {
+  const response = (retryAfter: string): Response =>
+    new Response(null, {
+      headers: { 'retry-after': retryAfter },
+      status: 429
+    })
+
+  test('caps a long Retry-After at 30 seconds', () => {
+    expect(resolveRetryDelay(response('3600'), 0)).toBe(30_000)
+  })
+
+  test('accepts an HTTP-date Retry-After', () => {
+    // An HTTP-date only carries whole seconds, so the delay lands just under.
+    const fiveSecondsAhead = new Date(Date.now() + 5000).toUTCString()
+    const delay = resolveRetryDelay(response(fiveSecondsAhead), 0)
+    expect(delay).toBeGreaterThan(3900)
+    expect(delay).toBeLessThanOrEqual(5000)
+  })
+
+  test('falls back to jittered linear backoff for an unparsable value', () => {
+    const delay = resolveRetryDelay(response('abc'), 0)
+    expect(delay).toBeGreaterThanOrEqual(125)
+    expect(delay).toBeLessThanOrEqual(375)
+  })
+
+  test('falls back to jittered linear backoff without a response', () => {
+    const delay = resolveRetryDelay(undefined, 1)
+    expect(delay).toBeGreaterThanOrEqual(250)
+    expect(delay).toBeLessThanOrEqual(750)
   })
 })
 
