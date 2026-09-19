@@ -59,6 +59,22 @@ jobs:
         with:
           path: apps/elysia/demo.tape
           install-fonts: true
+      - name: 📥 Collect recording
+        # VHS resolves `Output` relative to the tape file, so the files land
+        # under apps/elysia/ rather than the artifacts/ directory prepared
+        # above. Gather them wherever they were written and fail loudly if a
+        # render produced nothing.
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts
+          for name in logixlysia-demo.gif logixlysia-demo.mp4 logixlysia-demo.png; do
+            found="$(find . -name "$name" -not -path '*/node_modules/*' -not -path './artifacts/*' | head -n 1)"
+            if [ -n "$found" ]; then
+              mv "$found" "artifacts/$name"
+            fi
+          done
+          ls -la artifacts
+          test -s artifacts/logixlysia-demo.gif
       - name: 📤 Upload recording
         id: upload
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
