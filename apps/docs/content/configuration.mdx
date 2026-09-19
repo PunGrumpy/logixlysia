@@ -130,16 +130,36 @@ logQueryParams: true
 
 ### `timestamp`
 
-Timestamp configuration.
+Timestamp configuration for the `{now}` console token.
 
 - **Type:** `{ translateTime?: string }`
 - **Default:** `undefined`
 
-```ts
-timestamp: {
-  translateTime: 'yyyy-mm-dd HH:MM:ss'
-}
-```
+`translateTime` accepts three forms:
+
+- A bare token pattern (`yyyy`, `mm`, `dd`, `HH`, `MM`, `ss`, `SSS`), rendered with local time:
+
+  ```ts
+  timestamp: {
+    translateTime: 'yyyy-mm-dd HH:MM:ss'
+  }
+  ```
+
+- pino-pretty's `SYS:` prefix, also local time — `SYS:standard` expands to `yyyy-mm-dd HH:MM:ss.SSS`, or supply your own pattern after the prefix:
+
+  ```ts
+  timestamp: {
+    translateTime: 'SYS:standard'
+  }
+  ```
+
+- pino-pretty's `UTC:` prefix, rendered with UTC getters instead of local time:
+
+  ```ts
+  timestamp: {
+    translateTime: 'UTC:yyyy-mm-dd HH:MM:ss'
+  }
+  ```
 
 ## Formatting Options
 

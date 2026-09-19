@@ -96,6 +96,38 @@ const validateSampling = (config: Options['config']): void => {
   }
 }
 
+const validateFormatting = (config: Options['config']): void => {
+  const slowThreshold = config?.slowThreshold
+  const verySlowThreshold = config?.verySlowThreshold
+
+  const invalid = (detail: string): never => {
+    throw new Error(`logixlysia: invalid formatting config — ${detail}`)
+  }
+
+  if (slowThreshold !== undefined && !isNonNegativeNumber(slowThreshold)) {
+    invalid(
+      `slowThreshold must be a finite non-negative number, got ${slowThreshold}`
+    )
+  }
+  if (
+    verySlowThreshold !== undefined &&
+    !isNonNegativeNumber(verySlowThreshold)
+  ) {
+    invalid(
+      `verySlowThreshold must be a finite non-negative number, got ${verySlowThreshold}`
+    )
+  }
+  if (
+    slowThreshold !== undefined &&
+    verySlowThreshold !== undefined &&
+    slowThreshold > verySlowThreshold
+  ) {
+    invalid(
+      `slowThreshold (${slowThreshold}) must not exceed verySlowThreshold (${verySlowThreshold})`
+    )
+  }
+}
+
 const PRESET_DEFAULTS: Record<LogPreset, NonNullable<Options['config']>> = {
   dev: {
     pino: {
@@ -196,5 +228,6 @@ export const resolveOptions = (options: Options = {}): Options => {
 
   validateLogRotation(resolved.config)
   validateSampling(resolved.config)
+  validateFormatting(resolved.config)
   return resolved
 }

@@ -137,4 +137,55 @@ describe('resolveOptions', () => {
       '/checkout/**'
     ])
   })
+
+  test('throws on maxFiles: 0', () => {
+    expect(() =>
+      resolveOptions({ config: { logRotation: { maxFiles: 0 } } })
+    ).toThrow('logixlysia: invalid logRotation config')
+  })
+
+  test('throws on a negative maxFiles', () => {
+    expect(() =>
+      resolveOptions({ config: { logRotation: { maxFiles: -1 } } })
+    ).toThrow('logixlysia: invalid logRotation config')
+  })
+
+  test('accepts a positive integer maxFiles', () => {
+    const resolved = resolveOptions({
+      config: { logRotation: { maxFiles: 3 } }
+    })
+
+    expect(resolved.config?.logRotation?.maxFiles).toBe(3)
+  })
+
+  test("accepts a duration string maxFiles like '7d'", () => {
+    const resolved = resolveOptions({
+      config: { logRotation: { maxFiles: '7d' } }
+    })
+
+    expect(resolved.config?.logRotation?.maxFiles).toBe('7d')
+  })
+
+  test('throws when slowThreshold exceeds verySlowThreshold', () => {
+    expect(() =>
+      resolveOptions({
+        config: { slowThreshold: 1000, verySlowThreshold: 500 }
+      })
+    ).toThrow('logixlysia: invalid formatting config')
+  })
+
+  test('accepts slowThreshold at or below verySlowThreshold', () => {
+    const resolved = resolveOptions({
+      config: { slowThreshold: 500, verySlowThreshold: 1000 }
+    })
+
+    expect(resolved.config?.slowThreshold).toBe(500)
+    expect(resolved.config?.verySlowThreshold).toBe(1000)
+  })
+
+  test('throws on a negative slowThreshold', () => {
+    expect(() => resolveOptions({ config: { slowThreshold: -1 } })).toThrow(
+      'logixlysia: invalid formatting config'
+    )
+  })
 })

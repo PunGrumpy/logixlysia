@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'bun:test'
+import { afterEach, describe, expect, setSystemTime, test } from 'bun:test'
 import type { Options } from '../../src/interfaces'
 import {
   buildContextTreeLines,
@@ -243,6 +243,58 @@ describe('formatLogOutput', () => {
     })
 
     expect(out.main).toContain('⚡ slow')
+  })
+})
+
+const STANDARD_TIMESTAMP_REGEX = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3}$/
+
+describe('formatLogOutput timestamp prefixes', () => {
+  afterEach(() => {
+    setSystemTime()
+  })
+
+  const renderTimestamp = (translateTime: string): string => {
+    const request = createMockRequest('http://localhost/x')
+    const store = { beforeTime: BigInt(0) }
+    const out = formatLogOutput({
+      data: { status: 200 },
+      level: 'INFO',
+      options: {
+        config: {
+          customLogFormat: '{now}',
+          timestamp: { translateTime },
+          useColors: false
+        }
+      },
+      request,
+      store
+    })
+    return out.main
+  }
+
+  test("'SYS:standard' renders the standard local pattern", () => {
+    setSystemTime(new Date(2026, 0, 2, 3, 4, 5, 123))
+    expect(renderTimestamp('SYS:standard')).toMatch(STANDARD_TIMESTAMP_REGEX)
+  })
+
+  test("'UTC:HH:MM' renders the UTC hour and minute", () => {
+    const fixed = new Date(Date.UTC(2026, 0, 2, 13, 45, 0))
+    setSystemTime(fixed)
+    expect(renderTimestamp('UTC:HH:MM')).toBe(
+      `${String(fixed.getUTCHours()).padStart(2, '0')}:${String(
+        fixed.getUTCMinutes()
+      ).padStart(2, '0')}`
+    )
+  })
+
+  test('a bare pattern keeps local-time behaviour', () => {
+    const fixed = new Date(2026, 0, 2, 13, 45, 0)
+    setSystemTime(fixed)
+    expect(renderTimestamp('HH:MM')).toBe(
+      `${String(fixed.getHours()).padStart(2, '0')}:${String(
+        fixed.getMinutes()
+      ).padStart(2, '0')}`
+    )
   })
 })
 
