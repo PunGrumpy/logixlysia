@@ -17,6 +17,11 @@ description: How Logixlysia compares to evlog and other Elysia loggers
 | OTel trace correlation | `logixlysia/otel` | Built-in integrations | Manual |
 | AI usage on access log | `logixlysia/ai` | `evlog/ai` | Manual |
 | Presets (`dev` / `prod`) | Yes | N/A | N/A |
+| Built-in destinations | 9 adapters: Axiom, Better Stack, ClickHouse, Datadog, HyperDX, Loki, OTLP, PostHog, Sentry (`logixlysia/<name>`) | Managed drains | Manual |
+| Head + tail sampling | Yes | Yes | No |
+| Enrichers | Built-in (`logixlysia/enrichers`) + custom | Yes | Manual |
+| Structured errors (`why` / `fix`) | `HttpError` | `createError` | No |
+| Neural PII redaction | `logixlysia/desertant` | Not built in | Not built in |
 
 ## When to choose Logixlysia
 
@@ -26,7 +31,9 @@ description: How Logixlysia compares to evlog and other Elysia loggers
 
 ## When to consider evlog
 
-- You want a **unified wide-event pipeline** across many frameworks with managed drains (Axiom, etc.).
+- You need a logger that spans more than Elysia: evlog also covers Nuxt, Nitro, Next.js, and Hono.
+- You want evlog's CLI and observability scoring built in.
+- You want evlog's error catalog and client/browser logging.
 - You rely heavily on **`evlog/ai`** and **`evlog` auth** integrations out of the box.
 
 ## Benchmarks
