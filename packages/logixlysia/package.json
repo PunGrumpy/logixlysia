@@ -94,7 +94,9 @@
   "main": "dist/index.js",
   "files": [
     "dist",
-    "README.md"
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
   ],
   "scripts": {
     "build": "bunup",
