@@ -23,11 +23,20 @@ new Elysia().use(logixlysia({ preset: 'prod' }))
 
 ## Context accumulation
 
+With `useAsyncLocalStorage: true`, prefer the derived `log` on the handler context:
+
+| evlog | Logixlysia |
+| ----- | ---------- |
+| `log.set({ userId: 'x' })` | `({ log }) => log.mergeContext({ userId: 'x' })` |
+| `log.set({ cart: { total: 99 } })` | `({ log }) => log.mergeContext({ cart: { total: 99 } })` |
+| `useLogger()` | `useLogger()` from `logixlysia` |
+
+Without `useAsyncLocalStorage`, use `store.logger` and pass `request` explicitly:
+
 | evlog | Logixlysia |
 | ----- | ---------- |
 | `log.set({ userId: 'x' })` | `store.logger.mergeContext(request, { userId: 'x' })` |
 | `log.set({ cart: { total: 99 } })` | `store.logger.mergeContext(request, { cart: { total: 99 } })` |
-| `useLogger()` | `store.logger` in handlers |
 
 ## Emitting the request log
 
@@ -66,7 +75,32 @@ Use `injectTraceContext` from `logixlysia/otel` in `onRequest` (see [OpenTelemet
 
 ## Drains vs transports
 
-evlog **drains** map to Logixlysia **transports**:
+evlog **drains** map to Logixlysia **adapters**, which are transports:
+
+| evlog drain | Logixlysia adapter |
+| ----------- | ------------------- |
+| `evlog/axiom` | `createAxiomTransport()` from `logixlysia/axiom` |
+| `evlog/better-stack` | `createBetterStackTransport()` from `logixlysia/better-stack` |
+| `evlog/clickhouse` | `createClickHouseTransport()` from `logixlysia/clickhouse` |
+| `evlog/datadog` | `createDatadogTransport()` from `logixlysia/datadog` |
+| `evlog/hyperdx` | `createHyperDXTransport()` from `logixlysia/hyperdx` |
+| `evlog/loki` | `createLokiTransport()` from `logixlysia/loki` |
+| `evlog/otlp` | `createOtlpTransport()` from `logixlysia/otlp` |
+| `evlog/posthog` | `createPostHogTransport()` from `logixlysia/posthog` |
+| `evlog/sentry` | `createSentryTransport()` from `logixlysia/sentry` |
+
+```ts
+import { createAxiomTransport } from 'logixlysia/axiom'
+
+logixlysia({
+  config: {
+    transports: [createAxiomTransport()],
+    useTransportsOnly: true
+  }
+})
+```
+
+Anything without a matching adapter falls back to a custom transport:
 
 ```ts
 logixlysia({
@@ -82,3 +116,54 @@ logixlysia({
   }
 })
 ```
+
+## Sampling
+
+evlog's `sampling.rates` maps to `config.sampling.head`. evlog's tail `keep` maps to `config.sampling.tail` rules by status, duration, or path. Logixlysia has no predicate form: you write the rule directly.
+
+```ts
+logixlysia({
+  config: {
+    sampling: {
+      head: { DEBUG: 1, INFO: 10 },
+      tail: { status: 400, durationMs: 1000, paths: ['/checkout/**'] }
+    }
+  }
+})
+```
+
+See [Sampling](/docs/features/sampling).
+
+## Enrichers
+
+`config.enrichers` runs contributors on every request and merges their output into the request context. `logixlysia/enrichers` ships `traceparentEnricher`, `userAgentEnricher`, `geoEnricher`, and `sizeEnricher`.
+
+```ts
+import { geoEnricher, traceparentEnricher } from 'logixlysia/enrichers'
+
+logixlysia({
+  config: {
+    enrichers: [traceparentEnricher(), geoEnricher()]
+  }
+})
+```
+
+See [Enrichers](/docs/features/enrichers).
+
+## Structured errors
+
+evlog's `createError({ why, fix })` maps to Logixlysia's `HttpError`:
+
+```ts
+import { HttpError } from 'logixlysia'
+
+throw new HttpError(402, 'Card declined', {
+  code: 'PAYMENT_DECLINED',
+  why: 'The issuing bank rejected the charge.',
+  fix: 'Try a different card, or contact your bank.',
+  link: 'https://docs.example.com/errors/payment-declined',
+  internal: { gatewayCode: 'do_not_honor' }
+})
+```
+
+`code`, `why`, `fix`, and `link` appear in both the log and the response. `internal` appears only in the log.
