@@ -371,7 +371,7 @@ const collectStructuredErrorEntries = (error: unknown): [string, string][] => {
   const entries: [string, string][] = []
   const msg = parseError(error)
   if (msg) {
-    entries.push(['error', msg])
+    entries.push(['error', sanitizeLogText(msg)])
   }
   if (isStructuredError(error)) {
     if (error.code !== undefined) {
@@ -469,7 +469,7 @@ const getMessageToken = (
   if (!tokens.has('{message}')) {
     return ''
   }
-  return typeof data.message === 'string' ? data.message : ''
+  return typeof data.message === 'string' ? sanitizeLogText(data.message) : ''
 }
 
 /** `{pathname}`/`{path}`/`{query}` share a single URL parse (or the precomputed one). */
@@ -494,7 +494,7 @@ const getPathnameTokens = (
     try {
       ;({ pathname: rawPathname, search } = new URL(request.url))
     } catch {
-      rawPathname = request.url || '/'
+      rawPathname = sanitizeLogText(request.url || '/', 1024)
       search = ''
     }
   }
@@ -601,7 +601,10 @@ const getRequestIdToken = (
   if (typeof ctx !== 'object' || ctx === null || !('requestId' in ctx)) {
     return ''
   }
-  return String((ctx as Record<string, unknown>).requestId)
+  return sanitizeLogText(
+    String((ctx as Record<string, unknown>).requestId),
+    128
+  )
 }
 
 export const formatLogOutput = ({

@@ -94,7 +94,7 @@ autoRedact: true
 
 ### `redactKeys`
 
-Additional key/header names to redact when `autoRedact` is enabled, extending the built-in denylist. Matching is case-insensitive and normalizes `-`, `_`, and camelCase variants.
+Additional key/header names to redact when `autoRedact` is enabled, extending the built-in denylist. Matching is case-insensitive and normalizes `-`, `_`, and camelCase variants. The same key-name matching also applies to query-string parameter names, since transports receive the full request URL.
 
 - **Type:** `string[]`
 - **Default:** `undefined`

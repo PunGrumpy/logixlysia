@@ -92,6 +92,23 @@ const tryParseUrl = (value: string): URL | undefined => {
   }
 }
 
+/** Names what's wrong with a DSN without echoing the DSN itself (it carries a secret key). */
+const describeDsnProblem = (
+  url: URL | undefined,
+  projectId: string | undefined
+): string => {
+  if (!url) {
+    return 'could not be parsed as a URL'
+  }
+  if (!url.username) {
+    return 'missing public key'
+  }
+  if (!projectId) {
+    return 'missing project id'
+  }
+  return 'is invalid'
+}
+
 const parseDsn = (dsn: string): ParsedDsn => {
   const url = tryParseUrl(dsn)
   const segments = url?.pathname.split('/').filter(Boolean) ?? []
@@ -99,7 +116,7 @@ const parseDsn = (dsn: string): ParsedDsn => {
   if (!(url?.username && projectId)) {
     throw transportError(
       'Sentry',
-      `invalid DSN. Expected https://<public-key>@<host>/<project-id>, got '${dsn}'`
+      `invalid DSN (expected https://<public-key>@<host>/<project-id>; ${describeDsnProblem(url, projectId)})`
     )
   }
   const pathPrefix = segments.slice(0, -1).join('/')

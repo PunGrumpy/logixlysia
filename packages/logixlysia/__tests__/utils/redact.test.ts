@@ -217,11 +217,11 @@ const sampleJwt =
 
 describe('redactRequest', () => {
   test('redacts JWT in URL and returns new Request when changed', () => {
-    const url = `http://localhost/api?token=${sampleJwt}`
+    const url = `http://localhost/api?jwt=${sampleJwt}`
     const req = new Request(url)
     const out = redactRequest(req)
     expect(out).not.toBe(req)
-    expect(out.url).toContain('[REDACTED]')
+    expect(out.url).toContain('%5BREDACTED%5D')
     expect(out.url).not.toContain(sampleJwt)
   })
 
@@ -277,5 +277,115 @@ describe('redactRequest', () => {
     // used" on Bun <=1.2.x. Asserting a null body guards the fix on every Bun
     // version, not just the ones where the reuse happens to throw.
     expect(out.body).toBeNull()
+  })
+
+  test('masks sensitive query parameters by key name while keeping others intact', () => {
+    const req = new Request('http://h/p?token=abc123&email=a@b.co&keep=1')
+    const out = redactRequest(req)
+    expect(out.url).not.toContain('abc123')
+    expect(out.url).toContain('email=%5BREDACTED%5D')
+    expect(out.url).toContain('keep=1')
+  })
+
+  test('masks camelCase query parameter names', () => {
+    const req = new Request('http://h/p?apiKey=x')
+    const out = redactRequest(req)
+    expect(out.url).not.toContain('apiKey=x')
+    expect(out.url).toContain('apiKey=redacted')
+  })
+
+  test('masks a query parameter matching a custom redactKeys entry', () => {
+    const req = new Request('http://h/p?promo=SECRET')
+    const out = redactRequest(req, ['promo'])
+    expect(out.url).not.toContain('SECRET')
+    expect(out.url).toContain('promo=redacted')
+  })
+})
+
+describe('error.cause redaction', () => {
+  test('preserves and redacts error.cause instead of dropping it', () => {
+    const outer = new Error('outer', { cause: new Error('a@b.co') })
+    const result = redact({ error: outer }) as {
+      error: Error & { cause?: Error }
+    }
+    expect(result.error.cause).toBeDefined()
+    expect((result.error.cause as Error).message).toBe('[REDACTED]')
+  })
+
+  test('redacts a nested cause chain of depth 3', () => {
+    const root = new Error('root: r@x.com')
+    const mid = new Error('mid: m@x.com', { cause: root })
+    const top = new Error('top: t@x.com', { cause: mid })
+    const result = redact(top) as Error & { cause?: Error & { cause?: Error } }
+    expect(result.message).toBe('top: [REDACTED]')
+    expect(result.cause?.message).toBe('mid: [REDACTED]')
+    expect(result.cause?.cause?.message).toBe('root: [REDACTED]')
+  })
+
+  test('does not loop on a self-referential cause', () => {
+    const err = new Error('self') as Error & { cause?: unknown }
+    err.cause = err
+    const result = redact(err) as Error & { cause?: unknown }
+    expect(result.cause).toBe('[Circular]')
+  })
+
+  test('cause stays non-enumerable on the redacted error, matching the original', () => {
+    const outer = new Error('outer', { cause: new Error('inner') })
+    const result = redact(outer) as Error
+    expect(Object.propertyIsEnumerable.call(result, 'cause')).toBe(false)
+  })
+
+  test('preserves HttpError.internal as non-enumerable after redaction', () => {
+    const err = new HttpError(500, 'boom', { internal: { note: 'x@y.com' } })
+    const result = redact(err) as HttpError
+    expect(Object.propertyIsEnumerable.call(result, 'internal')).toBe(false)
+    expect(result.internal).toEqual({ note: '[REDACTED]' })
+  })
+})
+
+describe('IPv4/IPv6 redaction precision', () => {
+  test('does not mistake a dotted version string for an IPv4 address', () => {
+    expect(redactString('Chrome/120.0.0.0 Safari/537.36')).toBe(
+      'Chrome/120.0.0.0 Safari/537.36'
+    )
+    expect(redactString('v1.2.3.4')).toBe('v1.2.3.4')
+  })
+
+  test('still redacts real IPv4 addresses', () => {
+    expect(redactString('IP is 192.168.1.1')).toBe('IP is [REDACTED]')
+    expect(redactString('0.0.0.0')).toBe('[REDACTED]')
+  })
+
+  test('does not redact an out-of-range octet run', () => {
+    expect(redactString('999.999.999.999')).toBe('999.999.999.999')
+  })
+
+  test('redacts IPv6 addresses', () => {
+    expect(redactString('2001:db8::1')).toBe('[REDACTED]')
+    expect(redactString('fe80:0:0:0:202:b3ff:fe1e:8329')).toBe('[REDACTED]')
+    expect(redactString('::1')).toBe('[REDACTED]')
+  })
+
+  test('does not mistake a plain hex word for IPv6', () => {
+    expect(redactString('deadbeef')).toBe('deadbeef')
+  })
+
+  test('does not mistake a clock time for IPv6', () => {
+    expect(redactString('job ran at 12:30:45 today')).toBe(
+      'job ran at 12:30:45 today'
+    )
+    expect(redactString('took 00:01:23.456')).toBe('took 00:01:23.456')
+    expect(redactString('ratio 3:2:1')).toBe('ratio 3:2:1')
+  })
+
+  test('does not mistake a MAC address for IPv6', () => {
+    expect(redactString('aa:bb:cc:dd:ee:ff')).toBe('aa:bb:cc:dd:ee:ff')
+  })
+
+  test('IPv6 redaction does not hang on adversarial input', () => {
+    const input = `${'f:'.repeat(50_000)}1`
+    const start = performance.now()
+    redactString(input)
+    expect(performance.now() - start).toBeLessThan(500)
   })
 })

@@ -1,7 +1,16 @@
 // Local part ≤64, domain ≤253, TLD 2–63 (RFC 5321 / 1035-ish limits; bounded to avoid ReDoS)
 const EMAIL_REGEX =
   /[a-zA-Z0-9._%+-]{1,64}@[a-zA-Z0-9.-]{1,253}\.[a-zA-Z]{2,63}/g
-const IPV4_REGEX = /\b(?:\d{1,3}\.){3}\d{1,3}\b/g
+const IPV4_REGEX =
+  /(?<![\w/.])(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(?![\w.])/g
+/**
+ * Bounded IPv6: either all 8 groups, or a single `::` compression. Requiring
+ * one of those shapes (rather than "2+ colon-separated hex groups") keeps
+ * clock times (`12:30:45`) and MAC addresses (`aa:bb:cc:dd:ee:ff`) from
+ * matching.
+ */
+const IPV6_REGEX =
+  /(?<![\w:])(?:(?:[0-9a-f]{1,4}:){7}[0-9a-f]{1,4}|(?:[0-9a-f]{1,4}:){1,7}:(?:[0-9a-f]{1,4}(?::[0-9a-f]{1,4}){0,6})?|::(?:[0-9a-f]{1,4}(?::[0-9a-f]{1,4}){0,6}))(?![\w:])/gi
 /** Digit runs that may be formatted PANs (spaces/dashes); validated with Luhn before redacting. */
 const CREDIT_CARD_CANDIDATE_REGEX = /\b(?:\d[ -]*?){13,19}\b/g
 const JWT_REGEX = /eyJ[a-zA-Z0-9_-]+\.eyJ[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+/g
@@ -85,7 +94,10 @@ const redactUrlAuthoritySegment = (value: string): string =>
   redactString(value).replaceAll(REDACTED_TEXT, URL_SAFE_REDACT)
 
 /** Apply PII redaction to a request URL while keeping the result parseable by the URL/Request constructors. */
-const redactRequestUrl = (urlString: string): string => {
+const redactRequestUrl = (
+  urlString: string,
+  extraKeys?: readonly string[]
+): string => {
   try {
     const u = new URL(urlString)
     if (u.username !== '') {
@@ -96,7 +108,22 @@ const redactRequestUrl = (urlString: string): string => {
     }
     u.hostname = redactUrlAuthoritySegment(u.hostname)
     u.pathname = redactString(u.pathname)
-    u.search = redactString(u.search)
+    // `searchParams.set` re-serializes the whole query string, so redact
+    // decoded values directly rather than re-running pattern redaction on
+    // `u.search` afterward (which would see already percent-encoded text).
+    for (const key of [...u.searchParams.keys()]) {
+      if (isSensitiveKey(key, extraKeys)) {
+        u.searchParams.set(key, URL_SAFE_REDACT)
+        continue
+      }
+      const value = u.searchParams.get(key)
+      if (value !== null) {
+        const redactedValue = redactString(value)
+        if (redactedValue !== value) {
+          u.searchParams.set(key, redactedValue)
+        }
+      }
+    }
     u.hash = redactString(u.hash)
     return u.toString()
   } catch {
@@ -151,6 +178,7 @@ export const redactString = (text: string): string => {
 
   result = result.replace(EMAIL_REGEX, REDACTED_TEXT)
   result = result.replace(IPV4_REGEX, REDACTED_TEXT)
+  result = result.replace(IPV6_REGEX, REDACTED_TEXT)
   result = redactCreditCardCandidates(result)
   result = result.replace(JWT_REGEX, REDACTED_TEXT)
 
@@ -178,12 +206,29 @@ const redactErrorClone = (
 
   const errorRecord = originalError as unknown as Record<string, unknown>
 
-  for (const key of Object.keys(errorRecord)) {
-    if (key !== 'message' && key !== 'name' && key !== 'stack') {
-      newError[key] = isSensitiveKey(key, extraKeys)
-        ? REDACTED_TEXT
-        : redactInner(errorRecord[key], inProgress, extraKeys)
+  for (const key of Object.getOwnPropertyNames(errorRecord)) {
+    if (key === 'message' || key === 'name' || key === 'stack') {
+      continue
     }
+
+    const descriptor = Object.getOwnPropertyDescriptor(errorRecord, key)
+    if (descriptor === undefined) {
+      continue
+    }
+
+    if (descriptor.get !== undefined || descriptor.set !== undefined) {
+      Object.defineProperty(newError, key, descriptor)
+      continue
+    }
+
+    const redactedValue = isSensitiveKey(key, extraKeys)
+      ? REDACTED_TEXT
+      : redactInner(descriptor.value, inProgress, extraKeys)
+
+    Object.defineProperty(newError, key, {
+      ...descriptor,
+      value: redactedValue
+    })
   }
 
   return newError
@@ -316,7 +361,7 @@ export const redactRequest = (
   request: Request,
   extraKeys?: readonly string[]
 ): Request => {
-  const redactedUrl = redactRequestUrl(request.url)
+  const redactedUrl = redactRequestUrl(request.url, extraKeys)
   const nextHeaders = new Headers()
   let headersChanged = false
 

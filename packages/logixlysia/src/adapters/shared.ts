@@ -1,4 +1,5 @@
 import type { LogLevel, Transport } from '../interfaces'
+import { sanitizeLogText } from '../utils/sanitize'
 
 /** OpenTelemetry severity numbers for each Logixlysia log level. */
 export const OTEL_SEVERITY: Record<LogLevel, number> = {
@@ -182,9 +183,8 @@ const attemptPost = async (
     }
     return
   }
-  const detail = (await response.text().catch(() => '')).slice(
-    0,
-    ERROR_BODY_PREVIEW_LENGTH
+  const detail = sanitizeLogText(
+    (await response.text().catch(() => '')).slice(0, ERROR_BODY_PREVIEW_LENGTH)
   )
   const httpError = new Error(
     `[logixlysia] ${input.name} transport: HTTP ${response.status}${
