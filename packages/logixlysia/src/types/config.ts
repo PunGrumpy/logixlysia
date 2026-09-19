@@ -3,6 +3,21 @@ import type { LogLevel } from './core'
 import type { Enricher, EnricherLike } from './enricher'
 
 export interface Transport {
+  /**
+   * Flush, then release held resources (sockets, timers, buffers). Must be
+   * idempotent. The plugin never calls this automatically; it is reached
+   * through `flushLogixlysia(options, { close: true })`. After it resolves,
+   * further `log()` calls should be dropped rather than throw.
+   */
+  close?: () => void | Promise<void>
+  /**
+   * Drain any queued or batched entries. Called during graceful shutdown
+   * (see `OutputConfig.flushTimeoutMs`) and may be called directly, e.g.
+   * before a serverless function is frozen. Omit when `log()` already
+   * writes durably. Errors are reported like `log()` errors and do not
+   * stop other transports from flushing.
+   */
+  flush?: () => void | Promise<void>
   log: (
     level: LogLevel,
     message: string,
@@ -96,7 +111,7 @@ export type LogPreset = 'dev' | 'prod' | 'json'
 /** Context passed to {@link Options.config.onError} when a sink fails. */
 export interface SinkErrorContext {
   error: unknown
-  sink: 'enricher' | 'file' | 'rotation' | 'transport'
+  sink: 'enricher' | 'file' | 'rotation' | 'shutdown' | 'transport'
 }
 
 export interface RequestIdConfig {
@@ -143,6 +158,12 @@ export interface FormattingConfig {
 export interface OutputConfig {
   disableFileLogging?: boolean
   disableInternalLogger?: boolean
+  /**
+   * How long the plugin waits for transports and the file sink to flush
+   * when the app stops. `0` starts the flush but does not wait.
+   * @default 5000
+   */
+  flushTimeoutMs?: number
   /** Directory mode for created log directories. @default 0o700 */
   logDirMode?: number
   /** File mode for created log files. @default 0o600 */
