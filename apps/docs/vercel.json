@@ -2,6 +2,12 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "bunVersion": "1.x",
   "framework": null,
+  "git": {
+    "deploymentEnabled": {
+      "changeset-release/main": false,
+      "changesets-ghcommit-temp/changeset-release/main": false
+    }
+  },
   "ignoreCommand": "node scripts/skip-ci.mjs",
   "outputDirectory": "dist"
 }
