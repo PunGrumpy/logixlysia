@@ -7,7 +7,7 @@ import {
   useCurrentFrame,
   useVideoConfig
 } from 'remotion'
-import { paper, paperLine } from './theme'
+import { paper, paperLine, ringDark } from './theme'
 
 const easeOut = Easing.out(Easing.cubic)
 const easeInOut = Easing.inOut(Easing.quad)
@@ -189,23 +189,20 @@ export const Glass = ({
   children,
   style,
   radius = 28,
-  tint = 'rgba(255,255,255,0.10)',
-  border = 'rgba(255,255,255,0.28)'
+  tint = 'rgba(255,255,255,0.10)'
 }: {
   children?: ReactNode
   style?: CSSProperties
   radius?: number
   tint?: string
-  border?: string
 }) => (
   <div
     style={{
       backdropFilter: 'blur(28px) saturate(1.2)',
       background: tint,
-      border: `1px solid ${border}`,
       borderRadius: radius,
-      boxShadow:
-        '0 20px 60px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.25)',
+      // A shadow ring reads on any backdrop; a solid border only suits one.
+      boxShadow: `${ringDark}, 0 20px 60px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.18)`,
       WebkitBackdropFilter: 'blur(28px) saturate(1.2)',
       ...style
     }}

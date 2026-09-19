@@ -7,7 +7,7 @@ import {
   useCurrentFrame,
   useVideoConfig
 } from 'remotion'
-import { black, mono, sans, sec } from '../lib/theme'
+import { black, fox, level, mono, sans, sec } from '../lib/theme'
 import {
   Glass,
   Grain,
@@ -35,6 +35,12 @@ const LINE_AT = STAGE_AT + sec(0.8)
 const TREE_AT = LINE_AT + sec(1.0)
 const TREE_GAP = sec(0.22)
 const LINE_TEXT = 'POST /checkout 402 1.20s'
+const METHOD_LEN = 4
+const PATH_LEN = 14
+const STATUS_LEN = 18
+const FOX_BLUR_PX = 4
+const FOX_SCALE_FROM = 0.25
+const EXIT_RISE_PX = 8
 const RING_SCALES = [1.45, 1.95, 2.6]
 const RING_GROWTH = 0.000_35
 const EXIT_FRAMES = sec(0.5)
@@ -153,7 +159,7 @@ const Orb = ({ exitAt }: { exitAt: number }) => {
         <Img
           src={staticFile('icon.png')}
           style={{
-            filter: 'drop-shadow(0 10px 30px rgba(0,0,0,0.35))',
+            filter: `blur(${FOX_BLUR_PX * (1 - foxIn)}px) drop-shadow(0 10px 30px rgba(0,0,0,0.35))`,
             height: 200,
             left: '50%',
             marginLeft: -100,
@@ -161,7 +167,7 @@ const Orb = ({ exitAt }: { exitAt: number }) => {
             opacity: foxIn,
             position: 'absolute',
             top: '50%',
-            transform: `scale(${0.8 + 0.2 * foxIn})`,
+            transform: `scale(${FOX_SCALE_FROM + (1 - FOX_SCALE_FROM) * foxIn})`,
             width: 200
           }}
         />
@@ -225,7 +231,12 @@ const Stage = ({ exitAt }: { exitAt: number }) => {
   const caretOn = Math.round(frame / 8) % 2 === 1
   const captionIn = useFade(TREE_AT + sec(1.6), 14)
   return (
-    <AbsoluteFill style={{ opacity: fadeIn * fadeOut }}>
+    <AbsoluteFill
+      style={{
+        opacity: fadeIn * fadeOut,
+        transform: `translateY(${-EXIT_RISE_PX * (1 - fadeOut)}px)`
+      }}
+    >
       <AbsoluteFill
         style={{
           background: `radial-gradient(60% 60% at ${28 + Math.sin(drift / 9) * 3}% 35%, #d9c34a 0%, transparent 60%),
@@ -269,20 +280,42 @@ const Stage = ({ exitAt }: { exitAt: number }) => {
               color: '#fff',
               fontFamily: mono,
               fontSize: 26,
+              fontVariantNumeric: 'tabular-nums',
               lineHeight: '42px',
               whiteSpace: 'pre'
             }}
           >
             <span style={{ color: 'rgba(255,255,255,0.45)' }}>14:25:34 </span>
-            <span>🦊 </span>
-            <span style={{ color: '#ffd166' }}>{line}</span>
+            <span style={{ color: 'rgba(255,255,255,0.6)' }}>[shop] </span>
+            <span
+              style={{
+                background: level.warning,
+                borderRadius: 6,
+                color: '#111',
+                padding: '2px 6px'
+              }}
+            >
+              🦊
+            </span>
+            <span> </span>
+            <span style={{ color: level.debug, fontWeight: 700 }}>
+              {line.slice(0, METHOD_LEN)}
+            </span>
+            <span>{line.slice(METHOD_LEN, PATH_LEN)}</span>
+            <span style={{ color: level.warning }}>
+              {line.slice(PATH_LEN, STATUS_LEN)}
+            </span>
+            <span style={{ color: level.error, fontWeight: 700 }}>
+              {line.slice(STATUS_LEN)}
+            </span>
             {lineDone ? (
               <span style={{ color: 'rgba(255,255,255,0.75)' }}>
                 {' '}
                 Card declined
+                <span style={{ color: level.warning }}> ⚡ slow</span>
               </span>
             ) : (
-              <span style={{ opacity: caretOn ? 1 : 0 }}>▍</span>
+              <span style={{ color: fox, opacity: caretOn ? 1 : 0 }}>▍</span>
             )}
           </div>
           <div
@@ -290,6 +323,7 @@ const Stage = ({ exitAt }: { exitAt: number }) => {
               color: 'rgba(255,255,255,0.85)',
               fontFamily: mono,
               fontSize: 22,
+              fontVariantNumeric: 'tabular-nums',
               lineHeight: '38px',
               whiteSpace: 'pre'
             }}
@@ -312,6 +346,7 @@ const Stage = ({ exitAt }: { exitAt: number }) => {
           right: 0,
           textAlign: 'center',
           textShadow: '0 4px 30px rgba(0,0,0,0.35)',
+          textWrap: 'balance',
           top: 870
         }}
       >

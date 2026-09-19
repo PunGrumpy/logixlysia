@@ -5,7 +5,7 @@ import {
   useCurrentFrame,
   useVideoConfig
 } from 'remotion'
-import { mono, sans, sec } from '../lib/theme'
+import { mono, ringDark, sans, sec } from '../lib/theme'
 import { BlockWipe, Glass, Grain, Halftone, Pop, progress } from '../lib/ui'
 import { NoiseField } from './act1-scatter'
 
@@ -68,8 +68,7 @@ const Terminal = ({ at }: { at: number }) => {
       style={{
         background: '#0d0f12',
         borderRadius: 18,
-        boxShadow:
-          '0 60px 120px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,255,255,0.08)',
+        boxShadow: `${ringDark}, 0 60px 120px rgba(0,0,0,0.45)`,
         left: 460,
         opacity: enter,
         overflow: 'hidden',
@@ -115,6 +114,7 @@ const Terminal = ({ at }: { at: number }) => {
         style={{
           fontFamily: mono,
           fontSize: 20,
+          fontVariantNumeric: 'tabular-nums',
           lineHeight: '34px',
           padding: '18px 22px 24px'
         }}
@@ -195,7 +195,8 @@ export const Act2Noise = ({ wipeEnd }: { wipeEnd: number }) => {
             fontFamily: sans,
             fontSize: 52,
             fontWeight: 450,
-            letterSpacing: -1
+            letterSpacing: -1,
+            textWrap: 'balance'
           }}
         >
           Good luck finding the one that mattered.

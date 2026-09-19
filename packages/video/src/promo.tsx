@@ -21,7 +21,13 @@ export const T = {
 export const PROMO_DURATION = sec(T.end)
 
 export const Promo = () => (
-  <AbsoluteFill style={{ background: black }}>
+  <AbsoluteFill
+    style={{
+      background: black,
+      MozOsxFontSmoothing: 'grayscale',
+      WebkitFontSmoothing: 'antialiased'
+    }}
+  >
     <Fonts />
     <Sequence
       durationInFrames={sec(T.act2 - T.act1) + 1}

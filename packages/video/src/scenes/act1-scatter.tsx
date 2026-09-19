@@ -1,5 +1,5 @@
 import { AbsoluteFill, useCurrentFrame } from 'remotion'
-import { ink, mono, sans, sec } from '../lib/theme'
+import { ink, mono, ringLight, sans, sec } from '../lib/theme'
 import { BlockWipe, Grain, Halftone, PaperGrid, Pop, progress } from '../lib/ui'
 
 /**
@@ -105,8 +105,7 @@ const ChipEl = ({ c }: { c: Chip }) => {
       <div
         style={{
           background: '#e6e5df',
-          border: '1px solid rgba(0,0,0,0.06)',
-          boxShadow: '0 8px 24px rgba(0,0,0,0.08)',
+          boxShadow: `${ringLight}, 0 8px 24px rgba(0,0,0,0.08)`,
           color: 'rgba(17,17,17,0.72)',
           fontFamily: mono,
           fontSize: 17,
@@ -133,7 +132,7 @@ const ObjEl = ({ o }: { o: Obj }) => {
       <div
         style={{
           background: '#e6e5df',
-          boxShadow: '0 8px 24px rgba(0,0,0,0.08)',
+          boxShadow: `${ringLight}, 0 8px 24px rgba(0,0,0,0.08)`,
           display: 'grid',
           fontSize: 54,
           height: 92,

@@ -6,8 +6,8 @@ import {
   useCurrentFrame,
   useVideoConfig
 } from 'remotion'
-import { black, mono, sans, sec } from '../lib/theme'
-import { Glass, Grain, useFade, useFadeOut } from '../lib/ui'
+import { black, fox, mono, sans, sec } from '../lib/theme'
+import { Glass, Grain, progress, useFade, useFadeOut } from '../lib/ui'
 
 /**
  * Act 4: black outro. Tagline, three glass feature cards with gradient blobs,
@@ -17,7 +17,9 @@ import { Glass, Grain, useFade, useFadeOut } from '../lib/ui'
 const TAGLINE_AT = sec(0.2)
 const CARDS_AT = sec(1.6)
 const LOGO_AT = sec(4.6)
-const CARD_STAGGER = sec(0.16)
+const CARD_STAGGER = sec(0.1)
+const LOGO_STAGGER = sec(0.1)
+const EXIT_RISE_PX = 8
 
 interface Card {
   blob: string
@@ -56,12 +58,11 @@ const CardEl = ({ c, i }: { c: Card; i: number }) => {
   if (frame < at) {
     return null
   }
+  // Enter rises 30px; the exit lifts only 8px so it reads softer than the enter.
+  const y = (1 - s) * 30 - (1 - out) * EXIT_RISE_PX
   return (
-    <div
-      style={{ opacity: s * out, transform: `translateY(${(1 - s) * 30}px)` }}
-    >
+    <div style={{ opacity: s * out, transform: `translateY(${y}px)` }}>
       <Glass
-        border="rgba(255,255,255,0.18)"
         radius={26}
         style={{
           height: 260,
@@ -122,7 +123,22 @@ export const Act4Outro = () => {
     fps,
     frame: frame - LOGO_AT
   })
-  const sub = useFade(LOGO_AT + sec(0.7), 16)
+  // The outro is split into four chunks that land 100 ms apart.
+  const subtitleIn = progress(
+    frame,
+    LOGO_AT + LOGO_STAGGER,
+    LOGO_AT + LOGO_STAGGER + 14
+  )
+  const installIn = progress(
+    frame,
+    LOGO_AT + LOGO_STAGGER * 2,
+    LOGO_AT + LOGO_STAGGER * 2 + 14
+  )
+  const urlIn = progress(
+    frame,
+    LOGO_AT + LOGO_STAGGER * 3,
+    LOGO_AT + LOGO_STAGGER * 3 + 14
+  )
   return (
     <AbsoluteFill style={{ background: black }}>
       <div
@@ -136,7 +152,9 @@ export const Act4Outro = () => {
           position: 'absolute',
           right: 0,
           textAlign: 'center',
-          top: 505
+          textWrap: 'balance',
+          top: 505,
+          transform: `translateY(${-EXIT_RISE_PX * (1 - tagOut)}px)`
         }}
       >
         Stop digging through logs.
@@ -188,7 +206,9 @@ export const Act4Outro = () => {
             color: 'rgba(255,255,255,0.55)',
             fontFamily: sans,
             fontSize: 24,
-            marginTop: 10
+            marginTop: 10,
+            opacity: subtitleIn,
+            transform: `translateY(${(1 - subtitleIn) * 8}px)`
           }}
         >
           Observability-first logging for Elysia
@@ -199,26 +219,33 @@ export const Act4Outro = () => {
             display: 'flex',
             flexDirection: 'column',
             gap: 14,
-            marginTop: 44,
-            opacity: sub
+            marginTop: 44
           }}
         >
-          <Glass
-            border="rgba(255,255,255,0.16)"
-            radius={14}
-            style={{ padding: '14px 26px' }}
-            tint="rgba(255,255,255,0.06)"
+          <div
+            style={{
+              opacity: installIn,
+              transform: `translateY(${(1 - installIn) * 8}px)`
+            }}
           >
-            <span style={{ color: '#fff', fontFamily: mono, fontSize: 26 }}>
-              <span style={{ color: 'rgba(255,255,255,0.45)' }}>$ </span>
-              bun add logixlysia
-            </span>
-          </Glass>
+            <Glass
+              radius={14}
+              style={{ padding: '14px 26px' }}
+              tint="rgba(255,255,255,0.06)"
+            >
+              <span style={{ color: '#fff', fontFamily: mono, fontSize: 26 }}>
+                <span style={{ color: fox }}>$ </span>
+                bun add logixlysia
+              </span>
+            </Glass>
+          </div>
           <span
             style={{
               color: 'rgba(255,255,255,0.45)',
               fontFamily: sans,
-              fontSize: 20
+              fontSize: 20,
+              opacity: urlIn,
+              transform: `translateY(${(1 - urlIn) * 8}px)`
             }}
           >
             logixlysia.vercel.app
