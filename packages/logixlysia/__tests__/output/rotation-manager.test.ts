@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
+import { afterEach, beforeEach, describe, expect, spyOn, test } from 'bun:test'
 import { promises as fs } from 'node:fs'
 import { join } from 'node:path'
 
@@ -130,5 +130,57 @@ describe('performRotation retention', () => {
     expect(entries).toEqual(['app.log'])
     const stat = await fs.stat(filePath)
     expect(stat.size).toBe(0)
+  })
+
+  test('retention cleanup still runs when compression fails', async () => {
+    const filePath = join(dir, 'app.log')
+    await fs.writeFile(filePath, 'live content')
+
+    const now = Date.now()
+    const rotatedPaths = [
+      `${filePath}.2026-01-01-00-00-00-000`,
+      `${filePath}.2026-01-02-00-00-00-000`,
+      `${filePath}.2026-01-03-00-00-00-000`
+    ]
+    await Promise.all(
+      rotatedPaths.map(async (rotatedPath, index) => {
+        await fs.writeFile(rotatedPath, `rotated-${index}`)
+        const mtimeSeconds = now / 1000 - (rotatedPaths.length - index) * 60
+        await fs.utimes(rotatedPath, mtimeSeconds, mtimeSeconds)
+      })
+    )
+
+    // The rotated file's exact name includes an unpredictable
+    // process.hrtime.bigint() suffix, so it can't be pre-created as a
+    // directory before performRotation picks the name itself. Instead,
+    // spy on the shared fs.promises.writeFile (the same object instance
+    // rotation-manager.ts imports) to fail only the `.gz` write, which
+    // reproduces the same EISDIR-class failure compressFile would hit.
+    const originalWriteFile = fs.writeFile.bind(fs)
+    const writeFileSpy = spyOn(fs, 'writeFile').mockImplementation(
+      async (path, ...args) => {
+        if (String(path).endsWith('.gz')) {
+          throw new Error('EISDIR: illegal operation on a directory')
+        }
+        return await originalWriteFile(path, ...args)
+      }
+    )
+
+    let errorCount = 0
+    const onError = () => {
+      errorCount += 1
+    }
+
+    try {
+      await performRotation(filePath, { compress: true, maxFiles: 1 }, onError)
+    } finally {
+      writeFileSpy.mockRestore()
+    }
+
+    expect(errorCount).toBe(1)
+
+    const entries = await fs.readdir(dir)
+    const remainingRotated = entries.filter(name => name.startsWith('app.log.'))
+    expect(remainingRotated).toHaveLength(1)
   })
 })
