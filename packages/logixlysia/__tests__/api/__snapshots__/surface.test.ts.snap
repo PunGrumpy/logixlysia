@@ -8,6 +8,7 @@ exports[`published API surface every exports subpath resolves and its named expo
     "createPluginLogger",
     "createWsHandlerWrapper",
     "default",
+    "flushLogixlysia",
     "getOrCreateRequestId",
     "logixlysia",
     "resolveOptions",

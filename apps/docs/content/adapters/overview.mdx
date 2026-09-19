@@ -106,26 +106,32 @@ app.use(
 
 ## Graceful Shutdown
 
-Batching timers never keep the process alive, so flush pending entries before exit. `beforeExit` alone does not fire on `SIGTERM`/`SIGINT`, so handle those too:
+The plugin flushes every transport and the file sink when the Elysia app stops, so `await app.stop()` is enough in the common case. The wait is bounded by [`flushTimeoutMs`](/docs/configuration) (5000 ms by default; `0` starts the flush without waiting), and a flush that runs out of time is reported through `onError` with `sink: 'shutdown'`.
+
+What that does not cover:
+
+- `SIGKILL`, or a crash — nothing runs.
+- A process that exits without calling `app.stop()`, including a bare `SIGINT` with no handler.
+- A serverless function frozen between invocations.
+
+Signals are yours to handle, because a library that installs its own handlers fights the rest of your process:
 
 ```ts
-const axiom = createAxiomTransport()
-const FLUSH_DEADLINE_MS = 3000
-
-const shutdown = async () => {
+process.on('SIGTERM', async () => {
   await app.stop()
-  await Promise.race([
-    axiom.flush().catch(() => {
-      /* already reported */
-    }),
-    new Promise(resolve => setTimeout(resolve, FLUSH_DEADLINE_MS))
-  ])
   process.exit(0)
-}
-
-process.on('SIGTERM', shutdown)
-process.on('SIGINT', shutdown)
+})
 ```
+
+For workers, scripts, and anything else that logs outside the Elysia lifecycle, drain the sinks directly:
+
+```ts
+import { flushLogixlysia } from 'logixlysia'
+
+await flushLogixlysia(options, { close: true })
+```
+
+`close: true` also releases sockets, timers, and the file handle; omit it to flush and keep logging.
 
 ## What Gets Sent
 

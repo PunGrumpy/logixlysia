@@ -26,6 +26,10 @@ export interface FileSinkOptions {
 }
 
 export interface FileSink {
+  /** Flushes, then releases the file handle. Idempotent. */
+  close: () => Promise<void>
+  /** Resolves once every write issued so far is durably on disk. */
+  flush: () => Promise<void>
   /** Resolves after `line` is durably written to disk. */
   write: (line: string, options: FileSinkOptions) => Promise<void>
 }
@@ -175,7 +179,20 @@ class FileSinkImpl implements FileSink {
     }
   }
 
-  // see plans/020: flush()/close() lifecycle would await `flushChain` here.
+  async flush(): Promise<void> {
+    // write() chains onto flushChain from a microtask, so yield once before
+    // reading the chain or a write issued in the same tick would be missed.
+    await Promise.resolve()
+    await this.flushChain
+  }
+
+  async close(): Promise<void> {
+    await this.flush()
+    const { handle } = this
+    this.handle = null
+    await handle?.close()
+    sinks.delete(this.filePath)
+  }
 }
 
 const sinks = new Map<string, FileSink>()
@@ -187,4 +204,12 @@ export const getFileSink = (filePath: string): FileSink => {
     sinks.set(filePath, sink)
   }
   return sink
+}
+
+export const flushAllFileSinks = async (): Promise<void> => {
+  await Promise.allSettled([...sinks.values()].map(sink => sink.flush()))
+}
+
+export const closeAllFileSinks = async (): Promise<void> => {
+  await Promise.allSettled([...sinks.values()].map(sink => sink.close()))
 }
