@@ -6,17 +6,19 @@ import {
   resolveEnrichers
 } from './context/enrich'
 import { createRequestContextStore } from './context/request-context'
-import { loggerStorage } from './context/storage'
+import { loggerStorage, noopRequestLogger } from './context/storage'
 import { startServer } from './extensions'
 import { getStatusCode } from './helpers/status'
 import type {
   LogFields,
   LogixlysiaStore,
+  LogLevel,
   Options,
   RequestScopedLogger,
   StoreData
 } from './interfaces'
 import { createPluginLogger } from './logger'
+import { resolveSinks, shouldLog } from './logger/emit'
 import { errorStatus } from './logger/handle-http-error'
 import {
   getOrCreateRequestId,
@@ -31,6 +33,32 @@ import { createWsHandlerWrapper } from './websocket/wrap-ws'
  */
 export interface EmptyElysiaSlot {
   readonly __logixlysiaEmpty?: never
+}
+
+const DEFAULT_STATUS = 200
+
+/**
+ * The status the client actually sees. Elysia leaves `set.status` at 200
+ * unless a handler assigned one, and on the wire a returned `Response` beats
+ * that untouched default — so a streaming, redirecting or proxying handler's
+ * own status is the one worth logging.
+ */
+const resolveHandledStatus = (
+  setStatus: unknown,
+  response: unknown
+): number => {
+  if (setStatus !== undefined && setStatus !== null) {
+    const assigned = getStatusCode(setStatus)
+    if (assigned !== DEFAULT_STATUS) {
+      return assigned
+    }
+  }
+
+  if (response instanceof Response) {
+    return response.status
+  }
+
+  return DEFAULT_STATUS
 }
 
 /**
@@ -68,6 +96,7 @@ const logixlysia = <TFields extends object = LogFields>(
 ): LogixlysiaPlugin<TFields> => {
   const options = resolveOptions(rawOptions)
   const didCustomLog = new WeakSet<Request>()
+  const closed = new WeakSet<Request>()
   const requestStartTimes = new WeakMap<Request, bigint>()
   const contextStore = createRequestContextStore()
   const baseLogger = createPluginLogger(options, contextStore)
@@ -75,6 +104,34 @@ const logixlysia = <TFields extends object = LogFields>(
   const requestIdConfig = resolveRequestIdConfig(options.config?.requestId)
   const enrichers = resolveEnrichers(options.config?.enrichers)
   const onSinkError = options.config?.onError
+  const logFilter = options.config?.logFilter
+  const sinks = resolveSinks(options.config)
+
+  /**
+   * A custom log inside a request. It applies the same gate the logger's own
+   * `debug`/`info`/... apply, for two reasons: a record the level filter drops
+   * must not claim the request and suppress its access line, and the record
+   * that does go out has to be timed from the request's start rather than from
+   * the moment the handler called it.
+   */
+  const emitCustomLog = (
+    level: LogLevel,
+    request: Request,
+    message: string,
+    context?: Record<string, unknown>
+  ): void => {
+    if (sinks.isEffectivelyDisabled || !shouldLog(level, logFilter)) {
+      return
+    }
+
+    didCustomLog.add(request)
+    baseLogger.log(
+      level,
+      request,
+      { context, message },
+      { beforeTime: requestStartTimes.get(request) ?? process.hrtime.bigint() }
+    )
+  }
 
   const logger = {
     ...baseLogger,
@@ -83,43 +140,43 @@ const logixlysia = <TFields extends object = LogFields>(
       message: string,
       context?: Record<string, unknown>
     ) => {
-      didCustomLog.add(request)
-      baseLogger.debug(request, message, context)
+      emitCustomLog('DEBUG', request, message, context)
     },
     error: (
       request: Request,
       message: string,
       context?: Record<string, unknown>
     ) => {
-      didCustomLog.add(request)
-      baseLogger.error(request, message, context)
+      emitCustomLog('ERROR', request, message, context)
     },
     info: (
       request: Request,
       message: string,
       context?: Record<string, unknown>
     ) => {
-      didCustomLog.add(request)
-      baseLogger.info(request, message, context)
+      emitCustomLog('INFO', request, message, context)
     },
     warn: (
       request: Request,
       message: string,
       context?: Record<string, unknown>
     ) => {
-      didCustomLog.add(request)
-      baseLogger.warn(request, message, context)
+      emitCustomLog('WARNING', request, message, context)
     }
   }
 
   const createRequestScopedLogger = (
     request: Request
   ): RequestScopedLogger => ({
-    debug: (message, context) => logger.debug(request, message, context),
-    error: (message, context) => logger.error(request, message, context),
-    info: (message, context) => logger.info(request, message, context),
+    debug: (message, context) =>
+      emitCustomLog('DEBUG', request, message, context),
+    error: (message, context) =>
+      emitCustomLog('ERROR', request, message, context),
+    info: (message, context) =>
+      emitCustomLog('INFO', request, message, context),
     mergeContext: partial => contextStore.mergeContext(request, partial),
-    warn: (message, context) => logger.warn(request, message, context)
+    warn: (message, context) =>
+      emitCustomLog('WARNING', request, message, context)
   })
 
   /**
@@ -185,6 +242,40 @@ const logixlysia = <TFields extends object = LogFields>(
     return store
   }
 
+  const useAsyncLocalStorage = options.config?.useAsyncLocalStorage === true
+
+  /**
+   * Restores the no-op logger once a request is over, so a promise that
+   * outlives it and calls `useLogger()` writes nowhere instead of into
+   * whichever request happened to run last.
+   */
+  const exitRequestScope = (): void => {
+    if (useAsyncLocalStorage) {
+      loggerStorage.enterWith(noopRequestLogger)
+    }
+  }
+
+  /**
+   * The timing store for the error line. When a hook after the handler throws,
+   * onError runs for a request onAfterHandle already closed: its success line
+   * is on the wire and cannot be retracted, but the error line still has to
+   * carry the request's real duration, and closing twice would resolve tail
+   * sampling twice for the same request.
+   */
+  const errorStore = (
+    request: Request,
+    setHeaders: Record<string, string | number>,
+    error: unknown
+  ): StoreData => {
+    if (closed.has(request)) {
+      return { beforeTime: requestStartTimes.get(request) ?? BigInt(0) }
+    }
+
+    const store = closeRequest(request, setHeaders, errorStatus(error))
+    closed.add(request)
+    return store
+  }
+
   const app = new Elysia({
     detail: {
       description:
@@ -209,8 +300,13 @@ const logixlysia = <TFields extends object = LogFields>(
         startServer({ hostname, port, protocol: 'http' }, options)
       }
     })
-    .onRequest(({ request }) => {
-      requestStartTimes.set(request, process.hrtime.bigint())
+    .onRequest(({ request, store }) => {
+      const beforeTime = process.hrtime.bigint()
+      requestStartTimes.set(request, beforeTime)
+      // Published for handlers that read `store.beforeTime`. The plugin's own
+      // timing comes from the per-request map above, since Elysia's store is
+      // app-global and concurrent requests share this slot.
+      store.beforeTime = beforeTime
       logger.beginRequest(request)
       if (requestIdConfig) {
         const requestId = getOrCreateRequestId(request, requestIdConfig)
@@ -221,16 +317,17 @@ const logixlysia = <TFields extends object = LogFields>(
         applyRequestEnrichers(enrichers, contextStore, request, onSinkError)
       }
 
-      if (options.config?.useAsyncLocalStorage) {
+      if (useAsyncLocalStorage) {
         loggerStorage.enterWith(createRequestScopedLogger(request))
       }
     })
     .onAfterHandle(({ request, set, response }) => {
       try {
-        const status =
-          set.status === undefined || set.status === null
-            ? 200
-            : getStatusCode(set.status)
+        if (closed.has(request)) {
+          return
+        }
+
+        const status = resolveHandledStatus(set.status, response)
 
         // Runs before the early return: a request that only emitted custom
         // logs still needs its buffered records replayed.
@@ -240,6 +337,7 @@ const logixlysia = <TFields extends object = LogFields>(
           status,
           response instanceof Response ? response.headers : undefined
         )
+        closed.add(request)
 
         if (didCustomLog.has(request)) {
           return
@@ -259,18 +357,25 @@ const logixlysia = <TFields extends object = LogFields>(
         }
 
         logger.log(level, request, data, store)
+        // Nothing else is cleaned up here: the timings and the context bag
+        // live in WeakMaps keyed by the request, and a hook running after this
+        // one may still throw, in which case onError needs both to stay
+        // truthful.
       } finally {
-        requestStartTimes.delete(request)
-        contextStore.clearContext(request)
+        exitRequestScope()
       }
     })
     .onError(({ request, error, set }) => {
       try {
-        const store = closeRequest(request, set.headers, errorStatus(error))
-        logger.handleHttpError(request, error, store)
+        logger.handleHttpError(
+          request,
+          error,
+          errorStore(request, set.headers, error)
+        )
       } finally {
         requestStartTimes.delete(request)
         contextStore.clearContext(request)
+        exitRequestScope()
       }
     })
     .as('scoped') as Logixlysia<TFields>
