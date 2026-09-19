@@ -90,4 +90,37 @@ describe('wrapWs', () => {
     expect(context.code).toBe(1001)
     expect(context.reason).toBe('going away')
   })
+
+  test('a throwing close hook still logs and clears the context', () => {
+    const { contextStore, transport, wrapWs } = setup()
+    const ws = { id: 'ws-1' }
+
+    const hooks = wrapWs('/chat', {
+      close(_ws) {
+        throw new Error('boom')
+      }
+    })
+
+    contextStore.mergeContext(ws, { a: 1 })
+
+    expect(() => hooks.close(ws)).toThrow('boom')
+
+    expect(messagesFrom(transport)).toContain('WebSocket closed')
+    expect(contextStore.getContext(ws)).toEqual({})
+  })
+
+  test('a throwing open hook still logs', () => {
+    const { transport, wrapWs } = setup()
+    const ws = { id: 'ws-1' }
+
+    const hooks = wrapWs('/chat', {
+      open(_ws) {
+        throw new Error('boom')
+      }
+    })
+
+    expect(() => hooks.open(ws)).toThrow('boom')
+
+    expect(messagesFrom(transport)).toContain('WebSocket opened')
+  })
 })

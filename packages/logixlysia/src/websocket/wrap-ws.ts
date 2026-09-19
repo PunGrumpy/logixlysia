@@ -71,39 +71,48 @@ export const createWsHandlerWrapper = (
     ({
       ...hooks,
       close(ws, code, reason) {
-        hooks.close?.(ws, code, reason)
-        if (options.config?.disableWebSocketLogging !== true) {
-          const extra: Record<string, unknown> = {}
-          if (code !== undefined) {
-            extra.code = code
+        try {
+          hooks.close?.(ws, code, reason)
+        } finally {
+          if (options.config?.disableWebSocketLogging !== true) {
+            const extra: Record<string, unknown> = {}
+            if (code !== undefined) {
+              extra.code = code
+            }
+            if (reason !== undefined) {
+              extra.reason = reason
+            }
+            logWs(
+              'INFO',
+              ws,
+              path,
+              'WebSocket closed',
+              Object.keys(extra).length > 0 ? extra : undefined
+            )
           }
-          if (reason !== undefined) {
-            extra.reason = reason
-          }
-          logWs(
-            'INFO',
-            ws,
-            path,
-            'WebSocket closed',
-            Object.keys(extra).length > 0 ? extra : undefined
-          )
+          contextStore.clearContext(ws as object)
+          wsTimings.delete(ws as object)
         }
-        contextStore.clearContext(ws as object)
-        wsTimings.delete(ws as object)
       },
       message(ws, message) {
-        hooks.message?.(ws, message)
-        if (options.config?.disableWebSocketLogging !== true) {
-          logWs('INFO', ws, path, 'WebSocket message', {
-            payloadType: typeof message
-          })
+        try {
+          hooks.message?.(ws, message)
+        } finally {
+          if (options.config?.disableWebSocketLogging !== true) {
+            logWs('INFO', ws, path, 'WebSocket message', {
+              payloadType: typeof message
+            })
+          }
         }
       },
       open(ws) {
         wsTimings.set(ws as object, process.hrtime.bigint())
-        hooks.open?.(ws)
-        if (options.config?.disableWebSocketLogging !== true) {
-          logWs('INFO', ws, path, 'WebSocket opened')
+        try {
+          hooks.open?.(ws)
+        } finally {
+          if (options.config?.disableWebSocketLogging !== true) {
+            logWs('INFO', ws, path, 'WebSocket opened')
+          }
         }
       }
     }) as THooks
