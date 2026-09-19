@@ -69,4 +69,24 @@ describe('logixlysia plugin - request lifecycle', () => {
     expect(transport).toHaveBeenCalledTimes(1)
     expect(recordAt(transport, 0).meta.status).toBe(201)
   })
+
+  test('a filtered-out debug log does not suppress the access log', async () => {
+    const { options, transport } = createCaptureTransport({
+      logFilter: { level: ['INFO'] }
+    })
+
+    const app = new Elysia()
+      .use(logixlysia(options))
+      .get('/test', ({ log }) => {
+        log.debug('invisible')
+        return 'ok'
+      })
+
+    await app.handle(new Request('http://localhost/test'))
+
+    expect(transport).toHaveBeenCalledTimes(1)
+    const { level, meta } = recordAt(transport, 0)
+    expect(level).toBe('INFO')
+    expect(meta.status).toBe(200)
+  })
 })

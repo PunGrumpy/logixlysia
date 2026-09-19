@@ -12,11 +12,13 @@ import { getStatusCode } from './helpers/status'
 import type {
   LogFields,
   LogixlysiaStore,
+  LogLevel,
   Options,
   RequestScopedLogger,
   StoreData
 } from './interfaces'
 import { createPluginLogger } from './logger'
+import { resolveSinks, shouldLog } from './logger/emit'
 import { errorStatus } from './logger/handle-http-error'
 import {
   getOrCreateRequestId,
@@ -101,6 +103,20 @@ const logixlysia = <TFields extends object = LogFields>(
   const requestIdConfig = resolveRequestIdConfig(options.config?.requestId)
   const enrichers = resolveEnrichers(options.config?.enrichers)
   const onSinkError = options.config?.onError
+  const logFilter = options.config?.logFilter
+  const sinks = resolveSinks(options.config)
+
+  /**
+   * A custom log suppresses the access line, so it may only claim the request
+   * when it will actually reach a sink. Marking before the level filter and
+   * the sink check left a request whose only `log.debug(...)` was filtered out
+   * with no log line at all.
+   */
+  const markIfEmitting = (level: LogLevel, request: Request): void => {
+    if (!sinks.isEffectivelyDisabled && shouldLog(level, logFilter)) {
+      didCustomLog.add(request)
+    }
+  }
 
   const logger = {
     ...baseLogger,
@@ -109,7 +125,7 @@ const logixlysia = <TFields extends object = LogFields>(
       message: string,
       context?: Record<string, unknown>
     ) => {
-      didCustomLog.add(request)
+      markIfEmitting('DEBUG', request)
       baseLogger.debug(request, message, context)
     },
     error: (
@@ -117,7 +133,7 @@ const logixlysia = <TFields extends object = LogFields>(
       message: string,
       context?: Record<string, unknown>
     ) => {
-      didCustomLog.add(request)
+      markIfEmitting('ERROR', request)
       baseLogger.error(request, message, context)
     },
     info: (
@@ -125,7 +141,7 @@ const logixlysia = <TFields extends object = LogFields>(
       message: string,
       context?: Record<string, unknown>
     ) => {
-      didCustomLog.add(request)
+      markIfEmitting('INFO', request)
       baseLogger.info(request, message, context)
     },
     warn: (
@@ -133,7 +149,7 @@ const logixlysia = <TFields extends object = LogFields>(
       message: string,
       context?: Record<string, unknown>
     ) => {
-      didCustomLog.add(request)
+      markIfEmitting('WARNING', request)
       baseLogger.warn(request, message, context)
     }
   }
