@@ -163,6 +163,7 @@ const attemptPost = async (
       body: input.body,
       headers: input.headers,
       method: 'POST',
+      redirect: 'error',
       signal: AbortSignal.timeout(input.timeout)
     })
   } catch (fetchError) {

@@ -4,6 +4,7 @@ export interface FetchCall {
   body: string
   headers: Record<string, string>
   method: string
+  redirect: string
   url: string
 }
 
@@ -37,6 +38,7 @@ export const stubFetch = (
       body: typeof init?.body === 'string' ? init.body : '',
       headers,
       method: init?.method ?? 'GET',
+      redirect: init?.redirect ?? 'follow',
       url: String(input)
     })
     const response = responses[Math.min(index, responses.length - 1)]

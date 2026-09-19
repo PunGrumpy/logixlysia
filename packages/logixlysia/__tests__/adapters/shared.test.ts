@@ -112,6 +112,23 @@ describe('stripTrailingSlashes', () => {
 })
 
 describe('postWithRetry', () => {
+  test('sends ingest requests with redirect: error', async () => {
+    const stub = stubFetch([{ status: 200 }])
+    try {
+      await postWithRetry({
+        body: '{}',
+        headers: {},
+        name: 'Test',
+        retries: 2,
+        timeout: 1000,
+        url: 'https://example.com/ingest'
+      })
+      expect(stub.calls[0]?.redirect).toBe('error')
+    } finally {
+      stub.restore()
+    }
+  })
+
   test('retries 5xx responses and succeeds', async () => {
     const stub = stubFetch([{ status: 500 }, { status: 200 }])
     try {
