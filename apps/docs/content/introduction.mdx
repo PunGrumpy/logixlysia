@@ -9,12 +9,17 @@ Logixlysia is a powerful logging plugin for [Elysia.js](https://elysiajs.com/) t
 
 ## Features
 
-- **High Performance** - Fast built-in console logger with minimal overhead
-- **Structured Logging** - JSON-first approach for better log analysis
-- **Flexible Configuration** - Customize format, level, and output destinations
-- **File Logging** - Save logs to files with automatic rotation
-- **Transport Support** - Send logs to external services
-- **Type Safe** - Full TypeScript support
+- **Request context**: accumulate fields with `mergeContext` into a context tree. [Learn more](/docs/features/request-context)
+- **Presets**: `dev`, `prod`, and `json` output. [Learn more](/docs/configuration)
+- **File logging**: writes to disk with rotation by size, age, or count. [Learn more](/docs/features/file-logging)
+- **Adapters**: nine built-in destinations, Axiom, Better Stack, ClickHouse, Datadog, HyperDX, Loki, OTLP, PostHog, and Sentry. [Learn more](/docs/adapters/overview)
+- **Sampling**: head and tail sampling controls log volume. [Learn more](/docs/features/sampling)
+- **Enrichers**: add trace, user agent, geo, and size fields to every request. [Learn more](/docs/features/enrichers)
+- **Redaction**: `autoRedact` masks PII by pattern; `logixlysia/desertant` adds neural redaction. [Config docs](/docs/configuration#autoredact), [neural redaction docs](/docs/integrations/desertant)
+- **Structured errors**: `HttpError` carries `why`, `fix`, and `link`. [Learn more](/docs/api-reference)
+- **Request IDs**: read from the incoming request or generated for every request. [Learn more](/docs/features/request-id)
+- **OpenTelemetry**: trace correlation and AI usage metrics on the access log. [Learn more](/docs/integrations/otel)
+- **WebSocket logging**: lifecycle logs via `wrapWs`. [Learn more](/docs/features/websocket)
 
 ## Quick Start
 
