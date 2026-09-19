@@ -161,6 +161,10 @@ export interface BatchQueue {
  * is reached (the returned promise propagates send errors to the caller), or
  * after `flushIntervalMs` via an unref'ed timer (errors go to stderr since no
  * caller is awaiting).
+ *
+ * Only one send runs at a time, so batches reach the backend in the order they
+ * were buffered, and `flush()` resolves once every batch queued before it has
+ * settled.
  */
 export const createBatchQueue = (input: {
   flushIntervalMs: number
@@ -170,18 +174,27 @@ export const createBatchQueue = (input: {
 }): BatchQueue => {
   let buffer: LogEntry[] = []
   let timer: ReturnType<typeof setTimeout> | undefined
+  let tail: Promise<void> = Promise.resolve()
 
-  const flush = async (): Promise<void> => {
+  const enqueueSend = (entries: LogEntry[]): Promise<void> => {
+    const send = tail.then(() => input.send(entries))
+    // Swallow the failure on the chain itself so one bad batch cannot poison
+    // the batches after it; the caller of enqueueSend still sees the rejection.
+    tail = send.catch(() => undefined)
+    return send
+  }
+
+  const flush = (): Promise<void> => {
     if (timer) {
       clearTimeout(timer)
       timer = undefined
     }
     if (buffer.length === 0) {
-      return
+      return tail
     }
     const entries = buffer
     buffer = []
-    await input.send(entries)
+    return enqueueSend(entries).then(() => tail)
   }
 
   const flushFromTimer = (): void => {

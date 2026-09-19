@@ -11,6 +11,20 @@ import {
 } from '../../src/adapters/shared'
 import { stubFetch } from './helpers'
 
+interface Deferred {
+  promise: Promise<void>
+  resolve: () => void
+}
+
+/** A promise a test resolves by hand, to stand in for a slow send. */
+const deferred = (): Deferred => {
+  let resolve: () => void = () => undefined
+  const promise = new Promise<void>(res => {
+    resolve = () => res()
+  })
+  return { promise, resolve }
+}
+
 const entry = (overrides: Partial<LogEntry> = {}): LogEntry => ({
   level: 'INFO',
   message: 'hello',
@@ -187,20 +201,94 @@ describe('createBatchQueue', () => {
 
   test('flushes on the interval timer', async () => {
     const batches: LogEntry[][] = []
+    const sent = deferred()
     const queue = createBatchQueue({
-      flushIntervalMs: 10,
+      flushIntervalMs: 5,
       maxBatchSize: 10,
       name: 'Test',
       send: entries => {
         batches.push(entries)
+        sent.resolve()
         return Promise.resolve()
       }
     })
 
     queue.push(entry())
-    await new Promise(resolve => {
-      setTimeout(resolve, 50)
-    })
+    await sent.promise
     expect(batches).toHaveLength(1)
+  })
+
+  test('delivers batches in order when a send is slow', async () => {
+    const batches: LogEntry[][] = []
+    const slow = deferred()
+    const queue = createBatchQueue({
+      flushIntervalMs: 60_000,
+      maxBatchSize: 2,
+      name: 'Test',
+      send: entries => {
+        batches.push(entries)
+        return batches.length === 1 ? slow.promise : Promise.resolve()
+      }
+    })
+
+    queue.push(entry({ message: 'a' }))
+    queue.push(entry({ message: 'b' }))
+    queue.push(entry({ message: 'c' }))
+    queue.push(entry({ message: 'd' }))
+
+    await Promise.resolve()
+    expect(batches).toHaveLength(1)
+
+    slow.resolve()
+    await queue.flush()
+
+    expect(batches.map(batch => batch.map(item => item.message))).toEqual([
+      ['a', 'b'],
+      ['c', 'd']
+    ])
+  })
+
+  test('flush() waits for a send that was already in flight', async () => {
+    const slow = deferred()
+    const queue = createBatchQueue({
+      flushIntervalMs: 60_000,
+      maxBatchSize: 1,
+      name: 'Test',
+      send: () => slow.promise
+    })
+
+    queue.push(entry())
+    let flushed = false
+    const flushing = queue.flush().then(() => {
+      flushed = true
+    })
+
+    await Promise.resolve()
+    expect(flushed).toBe(false)
+
+    slow.resolve()
+    await flushing
+    expect(flushed).toBe(true)
+  })
+
+  test('a failed send does not block later sends', async () => {
+    const batches: LogEntry[][] = []
+    const queue = createBatchQueue({
+      flushIntervalMs: 60_000,
+      maxBatchSize: 1,
+      name: 'Test',
+      send: entries => {
+        batches.push(entries)
+        return batches.length === 1
+          ? Promise.reject(new Error('boom'))
+          : Promise.resolve()
+      }
+    })
+
+    await expect(queue.push(entry({ message: 'a' }))).rejects.toThrow('boom')
+    await queue.push(entry({ message: 'b' }))
+    await queue.flush()
+
+    expect(batches.map(batch => batch[0]?.message)).toEqual(['a', 'b'])
   })
 })
