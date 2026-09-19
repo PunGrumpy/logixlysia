@@ -188,13 +188,18 @@ const GEO_HEADERS: readonly [field: string, headers: readonly string[]][] = [
 
 const GEO_NUMERIC_HEADERS: readonly [
   field: string,
-  headers: readonly string[]
+  headers: readonly string[],
+  range: readonly [number, number]
 ][] = [
-  ['latitude', ['x-vercel-ip-latitude', 'cf-iplatitude']],
-  ['longitude', ['x-vercel-ip-longitude', 'cf-iplongitude']]
+  ['latitude', ['x-vercel-ip-latitude', 'cf-iplatitude'], [-90, 90]],
+  ['longitude', ['x-vercel-ip-longitude', 'cf-iplongitude'], [-180, 180]]
 ]
 
 const NETLIFY_GEO_HEADER = 'x-nf-geo'
+const GEO_STRING_MAX = 128
+const GEO_RAW_HEADER_MAX = 2048
+/** ISO-3166-ish country/region codes: short alphanumeric tokens, never free text. */
+const GEO_CODE_REGEX = /^[A-Za-z0-9-]{1,10}$/
 
 const firstHeader = (
   request: Request,
@@ -211,11 +216,14 @@ const firstHeader = (
 /** Vercel percent-encodes city names, so `S%C3%A3o%20Paulo` must be decoded. */
 const decodeHeaderValue = (value: string): string => {
   try {
-    return decodeURIComponent(value)
+    return decodeURIComponent(value).slice(0, GEO_STRING_MAX)
   } catch {
-    return value
+    return value.slice(0, GEO_STRING_MAX)
   }
 }
+
+const isInRange = (value: number, min: number, max: number): boolean =>
+  value >= min && value <= max
 
 interface NetlifyGeo {
   city?: string
@@ -230,7 +238,7 @@ const readNetlifyGeo = (
   request: Request
 ): Record<string, unknown> | undefined => {
   const raw = request.headers.get(NETLIFY_GEO_HEADER)
-  if (!raw) {
+  if (!raw || raw.length > GEO_RAW_HEADER_MAX) {
     return
   }
 
@@ -248,25 +256,60 @@ const readNetlifyGeo = (
   const data = parsed as NetlifyGeo
   const geo: Record<string, unknown> = {}
   if (data.city) {
-    geo.city = data.city
+    geo.city = data.city.slice(0, GEO_STRING_MAX)
   }
-  if (data.country?.code) {
+  if (data.country?.code && GEO_CODE_REGEX.test(data.country.code)) {
     geo.country = data.country.code
   }
-  if (data.subdivision?.code) {
+  if (data.subdivision?.code && GEO_CODE_REGEX.test(data.subdivision.code)) {
     geo.region = data.subdivision.code
   }
   if (data.timezone) {
-    geo.timezone = data.timezone
+    geo.timezone = data.timezone.slice(0, GEO_STRING_MAX)
   }
-  if (typeof data.latitude === 'number') {
+  if (typeof data.latitude === 'number' && isInRange(data.latitude, -90, 90)) {
     geo.latitude = data.latitude
   }
-  if (typeof data.longitude === 'number') {
+  if (
+    typeof data.longitude === 'number' &&
+    isInRange(data.longitude, -180, 180)
+  ) {
     geo.longitude = data.longitude
   }
 
   return Object.keys(geo).length > 0 ? geo : undefined
+}
+
+/** Fields whose value must look like a short country/region code, not free text. */
+const GEO_CODE_FIELDS = new Set(['country', 'region'])
+
+const readGeoStringFields = (
+  request: Request,
+  geo: Record<string, unknown>
+): void => {
+  for (const [field, headers] of GEO_HEADERS) {
+    const value = firstHeader(request, headers)
+    if (!value) {
+      continue
+    }
+    const decoded = decodeHeaderValue(value)
+    if (!GEO_CODE_FIELDS.has(field) || GEO_CODE_REGEX.test(decoded)) {
+      geo[field] = decoded
+    }
+  }
+}
+
+const readGeoNumericFields = (
+  request: Request,
+  geo: Record<string, unknown>
+): void => {
+  for (const [field, headers, [min, max]] of GEO_NUMERIC_HEADERS) {
+    const value = firstHeader(request, headers)
+    const parsed = value === undefined ? Number.NaN : Number(value)
+    if (Number.isFinite(parsed) && isInRange(parsed, min, max)) {
+      geo[field] = parsed
+    }
+  }
 }
 
 /**
@@ -276,25 +319,17 @@ const readNetlifyGeo = (
  *
  * Nothing is derived from the IP address itself, so behind a platform that
  * does not set these headers the enricher simply adds nothing.
+ *
+ * These headers are client-settable unless an edge in front of the app
+ * overwrites them on every request — trust the values only behind such an
+ * edge.
  */
 export const geoEnricher = (): Enricher => ({
   request(request) {
     const geo: Record<string, unknown> = {}
 
-    for (const [field, headers] of GEO_HEADERS) {
-      const value = firstHeader(request, headers)
-      if (value) {
-        geo[field] = decodeHeaderValue(value)
-      }
-    }
-
-    for (const [field, headers] of GEO_NUMERIC_HEADERS) {
-      const value = firstHeader(request, headers)
-      const parsed = value === undefined ? Number.NaN : Number(value)
-      if (Number.isFinite(parsed)) {
-        geo[field] = parsed
-      }
-    }
+    readGeoStringFields(request, geo)
+    readGeoNumericFields(request, geo)
 
     if (Object.keys(geo).length > 0) {
       return { geo }

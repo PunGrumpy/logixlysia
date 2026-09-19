@@ -283,6 +283,43 @@ describe('geoEnricher', () => {
       )?.geo
     ).toEqual({ country: 'TH' })
   })
+
+  test('truncates an oversized city header instead of passing it through whole', () => {
+    const hugeCity = 'x'.repeat(5000)
+    const fields = enricher.request?.(
+      requestWith({ 'x-vercel-ip-city': hugeCity })
+    )
+    expect((fields?.geo as { city: string } | undefined)?.city.length).toBe(128)
+  })
+
+  test('drops a country code that is not a short alphanumeric token', () => {
+    expect(
+      enricher.request?.(requestWith({ 'cf-ipcountry': '<script>' }))
+    ).toBeUndefined()
+  })
+
+  test('drops an out-of-range latitude', () => {
+    expect(
+      enricher.request?.(
+        requestWith({
+          'x-vercel-ip-country': 'TH',
+          'x-vercel-ip-latitude': '1e308'
+        })
+      )?.geo
+    ).toEqual({ country: 'TH' })
+  })
+
+  test('ignores an oversized Netlify geo header', () => {
+    const payload = btoa(
+      JSON.stringify({
+        city: 'Berlin',
+        country: { code: `DE${'x'.repeat(3000)}` }
+      })
+    )
+    expect(
+      enricher.request?.(requestWith({ 'x-nf-geo': payload }))
+    ).toBeUndefined()
+  })
 })
 
 describe('sizeEnricher', () => {
