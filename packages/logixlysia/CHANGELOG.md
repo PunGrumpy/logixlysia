@@ -1,5 +1,23 @@
 # Changelog
 
+## 6.9.0
+
+### Minor Changes
+
+- 01c0a37: Add `logixlysia/desertant`: `withRedaction()` wraps a transport so every record passes through an injected PII redactor before delivery, masking free-text PII — names, addresses, phone numbers, national IDs — that the pattern-based `autoRedact` pass cannot match. `NeuralRedactorSource` accepts a redactor, promise, or loader; whether processing stays local depends on the selected source.
+
+  The redactor is injected rather than imported, so logixlysia gains no dependency. Redaction runs off the request path, preserves log order, and bounds its queue. Records that fail model loading or redaction are dropped and reported by default; the original record is forwarded only when `onFailure: 'forward'` is explicitly configured.
+
+- bd4b5ba: Export `HttpError` (with `HttpErrorInit` and `HttpErrorPayload` types) and a named `logixlysia` export from the package entry, as the docs and README already describe. Ship the LICENSE file in the npm tarball.
+- 8479941: Transports may now implement optional `flush()` and `close()`. The plugin flushes every transport and the file sink when the Elysia app stops, bounded by the new `config.flushTimeoutMs` (default 5000 ms; `0` disables waiting). A timeout is reported through `config.onError` with `sink: 'shutdown'`. `flushLogixlysia(options)` is exported for callers who need to drain (and optionally close) sinks outside the Elysia lifecycle.
+
+### Patch Changes
+
+- 21126ae: Built-in adapters now deliver batches in order (one in-flight send at a time), `flush()` waits for every batch queued before it, and timer-driven flush failures are reported through the transport's `onError` option instead of an unthrottled `console.error`. `postWithRetry` honors `Retry-After` on 429 (capped at 30 s) and releases successful response bodies.
+- 110df6b: README: document the built-in adapters, sampling, enrichers, redaction and structured errors.
+- 6283f93: `autoRedact` now masks query-string values whose parameter name is sensitive (`token`, `password`, `api_key`, and any `redactKeys` entry), preserves `error.cause` and other non-enumerable error fields instead of dropping them, no longer mistakes dotted version numbers like `120.0.0.0` for IP addresses, and masks IPv6 addresses. Console output sanitizes the message, the raw-URL fallback, and error entries the same way the file sink already does. The Sentry adapter no longer echoes the DSN in its configuration error. The geo enricher bounds header-derived values.
+- 3765322: Access logs now report the status of a returned `Response`; a custom log that was filtered out no longer suppresses the access log; an error thrown after the handler produces one final line with the request's real duration and context; in-handler custom logs show the elapsed request time instead of `0ms`; `store.beforeTime` is populated per request; the AsyncLocalStorage logger is reset when a request ends.
+
 ## 6.8.1
 
 ### Patch Changes
