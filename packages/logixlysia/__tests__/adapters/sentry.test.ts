@@ -52,6 +52,22 @@ describe('logixlysia/sentry', () => {
     }
   })
 
+  test('throws on a DSN missing a project id without echoing the DSN', () => {
+    const restoreEnv = stubEnv(CLEAR_ENV)
+    try {
+      let thrown: Error | undefined
+      try {
+        createSentryTransport({ dsn: 'https://fakekey123@sentry.example.com' })
+      } catch (error) {
+        thrown = error as Error
+      }
+      expect(thrown).toBeDefined()
+      expect(thrown?.message).not.toContain('fakekey123')
+    } finally {
+      restoreEnv()
+    }
+  })
+
   test('sends a log envelope to the project envelope endpoint', async () => {
     const restoreEnv = stubEnv({ ...CLEAR_ENV, SENTRY_DSN: DSN })
     const stub = stubFetch()
