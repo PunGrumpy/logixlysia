@@ -108,15 +108,29 @@ const logixlysia = <TFields extends object = LogFields>(
   const sinks = resolveSinks(options.config)
 
   /**
-   * A custom log suppresses the access line, so it may only claim the request
-   * when it will actually reach a sink. Marking before the level filter and
-   * the sink check left a request whose only `log.debug(...)` was filtered out
-   * with no log line at all.
+   * A custom log inside a request. It applies the same gate the logger's own
+   * `debug`/`info`/... apply, for two reasons: a record the level filter drops
+   * must not claim the request and suppress its access line, and the record
+   * that does go out has to be timed from the request's start rather than from
+   * the moment the handler called it.
    */
-  const markIfEmitting = (level: LogLevel, request: Request): void => {
-    if (!sinks.isEffectivelyDisabled && shouldLog(level, logFilter)) {
-      didCustomLog.add(request)
+  const emitCustomLog = (
+    level: LogLevel,
+    request: Request,
+    message: string,
+    context?: Record<string, unknown>
+  ): void => {
+    if (sinks.isEffectivelyDisabled || !shouldLog(level, logFilter)) {
+      return
     }
+
+    didCustomLog.add(request)
+    baseLogger.log(
+      level,
+      request,
+      { context, message },
+      { beforeTime: requestStartTimes.get(request) ?? process.hrtime.bigint() }
+    )
   }
 
   const logger = {
@@ -126,43 +140,43 @@ const logixlysia = <TFields extends object = LogFields>(
       message: string,
       context?: Record<string, unknown>
     ) => {
-      markIfEmitting('DEBUG', request)
-      baseLogger.debug(request, message, context)
+      emitCustomLog('DEBUG', request, message, context)
     },
     error: (
       request: Request,
       message: string,
       context?: Record<string, unknown>
     ) => {
-      markIfEmitting('ERROR', request)
-      baseLogger.error(request, message, context)
+      emitCustomLog('ERROR', request, message, context)
     },
     info: (
       request: Request,
       message: string,
       context?: Record<string, unknown>
     ) => {
-      markIfEmitting('INFO', request)
-      baseLogger.info(request, message, context)
+      emitCustomLog('INFO', request, message, context)
     },
     warn: (
       request: Request,
       message: string,
       context?: Record<string, unknown>
     ) => {
-      markIfEmitting('WARNING', request)
-      baseLogger.warn(request, message, context)
+      emitCustomLog('WARNING', request, message, context)
     }
   }
 
   const createRequestScopedLogger = (
     request: Request
   ): RequestScopedLogger => ({
-    debug: (message, context) => logger.debug(request, message, context),
-    error: (message, context) => logger.error(request, message, context),
-    info: (message, context) => logger.info(request, message, context),
+    debug: (message, context) =>
+      emitCustomLog('DEBUG', request, message, context),
+    error: (message, context) =>
+      emitCustomLog('ERROR', request, message, context),
+    info: (message, context) =>
+      emitCustomLog('INFO', request, message, context),
     mergeContext: partial => contextStore.mergeContext(request, partial),
-    warn: (message, context) => logger.warn(request, message, context)
+    warn: (message, context) =>
+      emitCustomLog('WARNING', request, message, context)
   })
 
   /**

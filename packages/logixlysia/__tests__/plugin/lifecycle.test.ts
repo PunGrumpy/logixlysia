@@ -120,4 +120,21 @@ describe('logixlysia plugin - request lifecycle', () => {
     expect(errorRecord.meta.durationMs).toBeGreaterThan(0)
     expect(errorRecord.meta.context?.requestId).toBeDefined()
   })
+
+  test('custom logs report elapsed request time', async () => {
+    const { options, transport } = createCaptureTransport()
+
+    const app = new Elysia()
+      .use(logixlysia(options))
+      .get('/slow', async ({ log }) => {
+        await sleep(15)
+        log.info('x')
+        return 'ok'
+      })
+
+    await app.handle(new Request('http://localhost/slow'))
+
+    expect(transport).toHaveBeenCalledTimes(1)
+    expect(recordAt(transport, 0).meta.durationMs).toBeGreaterThanOrEqual(10)
+  })
 })
