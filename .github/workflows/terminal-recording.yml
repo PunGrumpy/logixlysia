@@ -59,6 +59,10 @@ jobs:
         with:
           path: apps/elysia/demo.tape
           install-fonts: true
+          # VHS 0.12.0 (2026-09-09) records nothing here: every Wait resolves
+          # instantly and no GIF or MP4 is written. 0.11.0 is the last release
+          # that renders this tape; bump deliberately after checking a run.
+          version: v0.11.0
       - name: 📥 Collect recording
         # VHS resolves `Output` relative to the tape file, so the files land
         # under apps/elysia/ rather than the artifacts/ directory prepared
