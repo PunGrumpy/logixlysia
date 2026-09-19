@@ -10,7 +10,7 @@ export interface WsHandlerHooks<
   TMessage = unknown,
   TWs extends WebSocketLike = WebSocketLike
 > {
-  close?: (ws: TWs) => void
+  close?: (ws: TWs, code?: number, reason?: string) => void
   message?: (ws: TWs, message: TMessage) => void
   open?: (ws: TWs) => void
 }
@@ -70,10 +70,23 @@ export const createWsHandlerWrapper = (
   ): THooks =>
     ({
       ...hooks,
-      close(ws) {
-        hooks.close?.(ws)
+      close(ws, code, reason) {
+        hooks.close?.(ws, code, reason)
         if (options.config?.disableWebSocketLogging !== true) {
-          logWs('INFO', ws, path, 'WebSocket closed')
+          const extra: Record<string, unknown> = {}
+          if (code !== undefined) {
+            extra.code = code
+          }
+          if (reason !== undefined) {
+            extra.reason = reason
+          }
+          logWs(
+            'INFO',
+            ws,
+            path,
+            'WebSocket closed',
+            Object.keys(extra).length > 0 ? extra : undefined
+          )
         }
         contextStore.clearContext(ws as object)
         wsTimings.delete(ws as object)
