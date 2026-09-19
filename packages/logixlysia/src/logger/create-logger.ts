@@ -33,20 +33,52 @@ const shouldUseColors = (options: Options): boolean => {
   return enabledByConfig && isTty
 }
 
+// pino-pretty's shorthand for `yyyy-mm-dd HH:MM:ss.SSS` (minus the `o`
+// timezone-offset token, which this formatter does not support).
+const STANDARD_TIMESTAMP_PATTERN = 'yyyy-mm-dd HH:MM:ss.SSS'
+
+const SYS_PREFIX_REGEX = /^sys:/i
+const UTC_PREFIX_REGEX = /^utc:/i
+
+/**
+ * Splits a `timestamp.translateTime` value into the literal pattern to
+ * expand and whether it should be read with UTC getters. Mirrors
+ * pino-pretty's `SYS:`/`UTC:` prefixes (case-insensitive); a bare pattern
+ * keeps this formatter's historical local-time behaviour.
+ */
+const resolveTimestampPattern = (
+  pattern: string
+): { pattern: string; utc: boolean } => {
+  let rest = pattern
+  let utc = false
+
+  if (SYS_PREFIX_REGEX.test(rest)) {
+    rest = rest.slice('sys:'.length)
+  } else if (UTC_PREFIX_REGEX.test(rest)) {
+    rest = rest.slice('utc:'.length)
+    utc = true
+  }
+
+  const resolved = rest === 'standard' ? STANDARD_TIMESTAMP_PATTERN : rest
+  return { pattern: resolved, utc }
+}
+
 const formatTimestamp = (date: Date, pattern?: string): string => {
   if (!pattern) {
     return date.toISOString()
   }
 
-  const yyyy = String(date.getFullYear())
-  const mm = pad2(date.getMonth() + 1)
-  const dd = pad2(date.getDate())
-  const HH = pad2(date.getHours())
-  const MM = pad2(date.getMinutes())
-  const ss = pad2(date.getSeconds())
-  const SSS = pad3(date.getMilliseconds())
+  const { pattern: resolved, utc } = resolveTimestampPattern(pattern)
 
-  return pattern
+  const yyyy = String(utc ? date.getUTCFullYear() : date.getFullYear())
+  const mm = pad2((utc ? date.getUTCMonth() : date.getMonth()) + 1)
+  const dd = pad2(utc ? date.getUTCDate() : date.getDate())
+  const HH = pad2(utc ? date.getUTCHours() : date.getHours())
+  const MM = pad2(utc ? date.getUTCMinutes() : date.getMinutes())
+  const ss = pad2(utc ? date.getUTCSeconds() : date.getSeconds())
+  const SSS = pad3(utc ? date.getUTCMilliseconds() : date.getMilliseconds())
+
+  return resolved
     .replaceAll('yyyy', yyyy)
     .replaceAll('mm', mm)
     .replaceAll('dd', dd)

@@ -148,6 +148,13 @@ export interface FormattingConfig {
   slowThreshold?: number
   startupMessageFormat?: 'simple' | 'banner'
   timestamp?: {
+    /**
+     * A `yyyy`/`mm`/`dd`/`HH`/`MM`/`ss`/`SSS` token pattern, e.g.
+     * `'yyyy-mm-dd HH:MM:ss'`, rendered with local time. Also accepts
+     * pino-pretty's prefixed forms: `'SYS:standard'` or `'SYS:<pattern>'`
+     * for local time, and `'UTC:standard'` or `'UTC:<pattern>'` for UTC.
+     * `standard` expands to `yyyy-mm-dd HH:MM:ss.SSS`.
+     */
     translateTime?: string
   }
   useColors?: boolean
