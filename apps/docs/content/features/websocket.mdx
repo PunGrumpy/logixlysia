@@ -33,7 +33,7 @@ const app = new Elysia()
   )
 ```
 
-Each lifecycle event logs with HTTP method `WS`, the route path, duration, and optional `wsId` in context.
+Each lifecycle event logs with HTTP method `WS`, the route path, duration, and optional `wsId` in context. Your `close` hook receives the WebSocket's close `code` and `reason`, and the "WebSocket closed" line logs them too.
 
 ## Request context on WebSockets
 

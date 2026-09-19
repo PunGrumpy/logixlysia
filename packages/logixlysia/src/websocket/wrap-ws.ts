@@ -28,6 +28,16 @@ const wsSyntheticRequest = (path: string): Request => {
   return request
 }
 
+const payloadTypeOf = (message: unknown): string => {
+  if (message instanceof ArrayBuffer || ArrayBuffer.isView(message)) {
+    return 'binary'
+  }
+  if (typeof message === 'string') {
+    return 'string'
+  }
+  return typeof message
+}
+
 export const createWsHandlerWrapper = (
   options: Options,
   logger: Logger,
@@ -100,7 +110,7 @@ export const createWsHandlerWrapper = (
         } finally {
           if (options.config?.disableWebSocketLogging !== true) {
             logWs('INFO', ws, path, 'WebSocket message', {
-              payloadType: typeof message
+              payloadType: payloadTypeOf(message)
             })
           }
         }

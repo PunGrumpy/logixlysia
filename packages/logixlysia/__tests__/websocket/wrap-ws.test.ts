@@ -4,7 +4,8 @@ import { createRequestContextStore } from '../../src/context/request-context'
 import { createLogger } from '../../src/logger'
 import {
   createWsHandlerWrapper,
-  type WebSocketLike
+  type WebSocketLike,
+  type WsHandlerHooks
 } from '../../src/websocket/wrap-ws'
 
 type TransportMock = ReturnType<
@@ -122,5 +123,22 @@ describe('wrapWs', () => {
     expect(() => hooks.open(ws)).toThrow('boom')
 
     expect(messagesFrom(transport)).toContain('WebSocket opened')
+  })
+
+  test('reports binary frames as binary', () => {
+    const { transport, wrapWs } = setup()
+    const ws = { id: 'ws-1' }
+
+    const hooks = wrapWs<unknown, WebSocketLike, WsHandlerHooks>('/chat', {})
+
+    hooks.message?.(ws, new Uint8Array([1, 2]))
+    hooks.message?.(ws, new ArrayBuffer(4))
+    hooks.message?.(ws, 'hello')
+    hooks.message?.(ws, { hello: 'world' })
+
+    const payloadTypes = transport.mock.calls.map(
+      (_call, index) => contextFrom(transport, index).payloadType
+    )
+    expect(payloadTypes).toEqual(['binary', 'binary', 'string', 'object'])
   })
 })
