@@ -238,6 +238,8 @@ interface HttpErrorInit {
 **Example:**
 
 ```ts
+import { HttpError } from 'logixlysia'
+
 throw new HttpError(402, 'Card declined', {
   code: 'PAYMENT_DECLINED',
   why: 'The issuing bank rejected the charge.',

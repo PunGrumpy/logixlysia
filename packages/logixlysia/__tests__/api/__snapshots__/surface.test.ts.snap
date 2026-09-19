@@ -1,0 +1,62 @@
+// Bun Snapshot v1, https://bun.sh/docs/test/snapshots
+
+exports[`published API surface every exports subpath resolves and its named exports match the snapshot 1`] = `
+{
+  ".": [
+    "HttpError",
+    "createLogger",
+    "createPluginLogger",
+    "createWsHandlerWrapper",
+    "default",
+    "getOrCreateRequestId",
+    "logixlysia",
+    "resolveOptions",
+    "resolveRequestIdConfig",
+    "resolveSampling",
+    "useLogger",
+  ],
+  "./ai": [
+    "mergeAIMetrics",
+  ],
+  "./axiom": [
+    "createAxiomTransport",
+  ],
+  "./better-stack": [
+    "createBetterStackTransport",
+  ],
+  "./clickhouse": [
+    "createClickHouseTransport",
+  ],
+  "./datadog": [
+    "createDatadogTransport",
+  ],
+  "./desertant": [
+    "withRedaction",
+  ],
+  "./enrichers": [
+    "geoEnricher",
+    "sizeEnricher",
+    "traceparentEnricher",
+    "userAgentEnricher",
+  ],
+  "./hyperdx": [
+    "createHyperDXTransport",
+  ],
+  "./loki": [
+    "createLokiTransport",
+  ],
+  "./otel": [
+    "__resetForTesting",
+    "injectTraceContext",
+  ],
+  "./otlp": [
+    "createOtlpTransport",
+  ],
+  "./posthog": [
+    "createPostHogTransport",
+  ],
+  "./sentry": [
+    "createSentryTransport",
+  ],
+}
+`;
