@@ -33,6 +33,32 @@ export interface EmptyElysiaSlot {
   readonly __logixlysiaEmpty?: never
 }
 
+const DEFAULT_STATUS = 200
+
+/**
+ * The status the client actually sees. Elysia leaves `set.status` at 200
+ * unless a handler assigned one, and on the wire a returned `Response` beats
+ * that untouched default — so a streaming, redirecting or proxying handler's
+ * own status is the one worth logging.
+ */
+const resolveHandledStatus = (
+  setStatus: unknown,
+  response: unknown
+): number => {
+  if (setStatus !== undefined && setStatus !== null) {
+    const assigned = getStatusCode(setStatus)
+    if (assigned !== DEFAULT_STATUS) {
+      return assigned
+    }
+  }
+
+  if (response instanceof Response) {
+    return response.status
+  }
+
+  return DEFAULT_STATUS
+}
+
 /**
  * Explicit singleton without Elysia's `SingletonBase` `Record<string, unknown>` on decorator/derive/resolve so
  * merged `Context` and WebSocket `ws.data` keep precise keys after `.use(logixlysia())`.
@@ -227,10 +253,7 @@ const logixlysia = <TFields extends object = LogFields>(
     })
     .onAfterHandle(({ request, set, response }) => {
       try {
-        const status =
-          set.status === undefined || set.status === null
-            ? 200
-            : getStatusCode(set.status)
+        const status = resolveHandledStatus(set.status, response)
 
         // Runs before the early return: a request that only emitted custom
         // logs still needs its buffered records replayed.
