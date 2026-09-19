@@ -1,5 +1,13 @@
 # Changelog
 
+## 6.9.1
+
+### Patch Changes
+
+- 83c935e: Built-in adapters no longer follow HTTP redirects on ingest requests, so a credential header cannot be forwarded to another origin; a redirect now fails the batch and is reported like any other transport error. Endpoint URLs from options or env vars are validated when the transport is created and must use `http:` or `https:`.
+- 10a8889: A failed gzip during rotation no longer skips `maxFiles` cleanup and is reported once. `timestamp.translateTime` understands pino-pretty's `SYS:standard`, `SYS:<pattern>` and `UTC:<pattern>` forms on the console line. `resolveOptions` now rejects `slowThreshold` greater than `verySlowThreshold` and a numeric `logRotation.maxFiles` that is not a positive integer.
+- 8249fa9: `wrapWs` now forwards the close `code` and `reason` to your `close` hook and logs them on the "WebSocket closed" line; a hook that throws no longer skips the lifecycle log or leaks the connection's context; message logs report `payloadType: 'binary'` for `ArrayBuffer`/typed-array frames.
+
 ## 6.9.0
 
 ### Minor Changes
