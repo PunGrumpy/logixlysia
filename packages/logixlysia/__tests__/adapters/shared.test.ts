@@ -1,5 +1,4 @@
-import { describe, expect, test } from 'bun:test'
-
+import { describe, expect, mock, test } from 'bun:test'
 import {
   createBatchQueue,
   defaultBody,
@@ -9,6 +8,7 @@ import {
   postWithRetry,
   stripTrailingSlashes
 } from '../../src/adapters/shared'
+import { spyConsole } from '../_helpers/console'
 import { stubFetch } from './helpers'
 
 interface Deferred {
@@ -24,6 +24,12 @@ const deferred = (): Deferred => {
   })
   return { promise, resolve }
 }
+
+/** Lets pending promise callbacks and the 5 ms flush timer run. */
+const settle = (): Promise<void> =>
+  new Promise(resolve => {
+    setTimeout(resolve, 10)
+  })
 
 const entry = (overrides: Partial<LogEntry> = {}): LogEntry => ({
   level: 'INFO',
@@ -269,6 +275,73 @@ describe('createBatchQueue', () => {
     slow.resolve()
     await flushing
     expect(flushed).toBe(true)
+  })
+
+  test('drops batches beyond maxPendingBatches and reports them', async () => {
+    const stuck = deferred()
+    const onError = mock((_error: unknown) => undefined)
+    const queue = createBatchQueue({
+      flushIntervalMs: 60_000,
+      maxBatchSize: 1,
+      maxPendingBatches: 1,
+      name: 'Test',
+      onError,
+      send: () => stuck.promise
+    })
+
+    queue.push(entry({ message: 'a' }))
+    queue.push(entry({ message: 'dropped-1' }))
+    queue.push(entry({ message: 'dropped-2' }))
+
+    expect(onError).toHaveBeenCalledTimes(2)
+    const [reported] = onError.mock.calls[0] ?? []
+    expect(String(reported)).toContain('dropped')
+
+    stuck.resolve()
+    await queue.flush()
+  })
+
+  test('timer flush failure calls onError', async () => {
+    const onError = mock((_error: unknown) => undefined)
+    const console = spyConsole(['error'])
+    const queue = createBatchQueue({
+      flushIntervalMs: 5,
+      maxBatchSize: 10,
+      name: 'Test',
+      onError,
+      send: () => Promise.reject(new Error('boom'))
+    })
+
+    try {
+      queue.push(entry())
+      await settle()
+
+      expect(onError).toHaveBeenCalledTimes(1)
+      expect(console.spies.error).not.toHaveBeenCalled()
+    } finally {
+      console.restore()
+    }
+  })
+
+  test('timer flush failure without onError logs to stderr once', async () => {
+    const console = spyConsole(['error'])
+    const queue = createBatchQueue({
+      flushIntervalMs: 5,
+      maxBatchSize: 10,
+      name: 'Test',
+      send: () => Promise.reject(new Error('boom'))
+    })
+
+    try {
+      queue.push(entry())
+      await settle()
+      queue.push(entry())
+      await settle()
+
+      expect(console.spies.error).toHaveBeenCalledTimes(1)
+    } finally {
+      console.restore()
+    }
   })
 
   test('a failed send does not block later sends', async () => {
