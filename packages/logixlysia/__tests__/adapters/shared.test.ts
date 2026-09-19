@@ -145,6 +145,24 @@ describe('postWithRetry', () => {
       stub.restore()
     }
   })
+
+  test('sanitizes escape sequences out of the response body preview', async () => {
+    const stub = stubFetch([{ body: 'x\u001b[31my', status: 500 }])
+    try {
+      const rejection = await postWithRetry({
+        body: '{}',
+        headers: {},
+        name: 'Test',
+        retries: 0,
+        timeout: 1000,
+        url: 'https://example.com/ingest'
+      }).catch((error: Error) => error)
+      expect(rejection).toBeInstanceOf(Error)
+      expect((rejection as Error).message).not.toContain('\u001b')
+    } finally {
+      stub.restore()
+    }
+  })
 })
 
 describe('createBatchQueue', () => {
