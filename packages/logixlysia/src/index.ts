@@ -6,7 +6,7 @@ import {
   resolveEnrichers
 } from './context/enrich'
 import { createRequestContextStore } from './context/request-context'
-import { loggerStorage } from './context/storage'
+import { loggerStorage, noopRequestLogger } from './context/storage'
 import { startServer } from './extensions'
 import { getStatusCode } from './helpers/status'
 import type {
@@ -242,6 +242,19 @@ const logixlysia = <TFields extends object = LogFields>(
     return store
   }
 
+  const useAsyncLocalStorage = options.config?.useAsyncLocalStorage === true
+
+  /**
+   * Restores the no-op logger once a request is over, so a promise that
+   * outlives it and calls `useLogger()` writes nowhere instead of into
+   * whichever request happened to run last.
+   */
+  const exitRequestScope = (): void => {
+    if (useAsyncLocalStorage) {
+      loggerStorage.enterWith(noopRequestLogger)
+    }
+  }
+
   /**
    * The timing store for the error line. When a hook after the handler throws,
    * onError runs for a request onAfterHandle already closed: its success line
@@ -287,8 +300,13 @@ const logixlysia = <TFields extends object = LogFields>(
         startServer({ hostname, port, protocol: 'http' }, options)
       }
     })
-    .onRequest(({ request }) => {
-      requestStartTimes.set(request, process.hrtime.bigint())
+    .onRequest(({ request, store }) => {
+      const beforeTime = process.hrtime.bigint()
+      requestStartTimes.set(request, beforeTime)
+      // Published for handlers that read `store.beforeTime`. The plugin's own
+      // timing comes from the per-request map above, since Elysia's store is
+      // app-global and concurrent requests share this slot.
+      store.beforeTime = beforeTime
       logger.beginRequest(request)
       if (requestIdConfig) {
         const requestId = getOrCreateRequestId(request, requestIdConfig)
@@ -299,48 +317,53 @@ const logixlysia = <TFields extends object = LogFields>(
         applyRequestEnrichers(enrichers, contextStore, request, onSinkError)
       }
 
-      if (options.config?.useAsyncLocalStorage) {
+      if (useAsyncLocalStorage) {
         loggerStorage.enterWith(createRequestScopedLogger(request))
       }
     })
     .onAfterHandle(({ request, set, response }) => {
-      if (closed.has(request)) {
-        return
+      try {
+        if (closed.has(request)) {
+          return
+        }
+
+        const status = resolveHandledStatus(set.status, response)
+
+        // Runs before the early return: a request that only emitted custom
+        // logs still needs its buffered records replayed.
+        const store = closeRequest(
+          request,
+          set.headers,
+          status,
+          response instanceof Response ? response.headers : undefined
+        )
+        closed.add(request)
+
+        if (didCustomLog.has(request)) {
+          return
+        }
+
+        let level: 'INFO' | 'WARNING' | 'ERROR' = 'INFO'
+        if (status >= 500) {
+          level = 'ERROR'
+        } else if (status >= 400) {
+          level = 'WARNING'
+        }
+
+        const accumulated = contextStore.getContext(request)
+        const data: Record<string, unknown> = { status }
+        if (Object.keys(accumulated).length > 0) {
+          data.context = { ...accumulated }
+        }
+
+        logger.log(level, request, data, store)
+        // Nothing else is cleaned up here: the timings and the context bag
+        // live in WeakMaps keyed by the request, and a hook running after this
+        // one may still throw, in which case onError needs both to stay
+        // truthful.
+      } finally {
+        exitRequestScope()
       }
-
-      const status = resolveHandledStatus(set.status, response)
-
-      // Runs before the early return: a request that only emitted custom
-      // logs still needs its buffered records replayed.
-      const store = closeRequest(
-        request,
-        set.headers,
-        status,
-        response instanceof Response ? response.headers : undefined
-      )
-      closed.add(request)
-
-      if (didCustomLog.has(request)) {
-        return
-      }
-
-      let level: 'INFO' | 'WARNING' | 'ERROR' = 'INFO'
-      if (status >= 500) {
-        level = 'ERROR'
-      } else if (status >= 400) {
-        level = 'WARNING'
-      }
-
-      const accumulated = contextStore.getContext(request)
-      const data: Record<string, unknown> = { status }
-      if (Object.keys(accumulated).length > 0) {
-        data.context = { ...accumulated }
-      }
-
-      logger.log(level, request, data, store)
-      // Nothing is cleaned up here: the timings and the context bag live in
-      // WeakMaps keyed by the request, and a hook running after this one may
-      // still throw, in which case onError needs both to stay truthful.
     })
     .onError(({ request, error, set }) => {
       try {
@@ -352,6 +375,7 @@ const logixlysia = <TFields extends object = LogFields>(
       } finally {
         requestStartTimes.delete(request)
         contextStore.clearContext(request)
+        exitRequestScope()
       }
     })
     .as('scoped') as Logixlysia<TFields>

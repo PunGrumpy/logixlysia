@@ -4,7 +4,12 @@ import type { LogFields, RequestScopedLogger } from '../interfaces'
 export const loggerStorage: AsyncLocalStorage<RequestScopedLogger> =
   new AsyncLocalStorage<RequestScopedLogger>()
 
-const NOOP_LOGGER: RequestScopedLogger = {
+/**
+ * Stands in wherever no request is in flight, including after one ends: the
+ * plugin restores it so a continuation that outlives its request cannot keep
+ * writing into the finished request's log.
+ */
+export const noopRequestLogger: RequestScopedLogger = {
   debug: () => undefined,
   error: () => undefined,
   info: () => undefined,
@@ -23,4 +28,5 @@ export const useLogger = <
 >(): RequestScopedLogger<TFields> =>
   // The stored logger writes into an untyped context bag; the type parameter
   // only narrows what callers may hand it.
-  (loggerStorage.getStore() ?? NOOP_LOGGER) as RequestScopedLogger<TFields>
+  (loggerStorage.getStore() ??
+    noopRequestLogger) as RequestScopedLogger<TFields>

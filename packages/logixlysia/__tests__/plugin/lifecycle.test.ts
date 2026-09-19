@@ -1,7 +1,7 @@
 import { describe, expect, mock, test } from 'bun:test'
 import { Elysia } from 'elysia'
 
-import logixlysia from '../../src'
+import logixlysia, { useLogger } from '../../src'
 import type { Options } from '../../src/interfaces'
 
 const sleep = (ms: number): Promise<void> =>
@@ -136,5 +136,30 @@ describe('logixlysia plugin - request lifecycle', () => {
 
     expect(transport).toHaveBeenCalledTimes(1)
     expect(recordAt(transport, 0).meta.durationMs).toBeGreaterThanOrEqual(10)
+  })
+
+  test('store.beforeTime is set during a request', async () => {
+    const { options } = createCaptureTransport()
+
+    const app = new Elysia()
+      .use(logixlysia(options))
+      .get('/test', ({ store }) => String(store.beforeTime !== BigInt(0)))
+
+    const response = await app.handle(new Request('http://localhost/test'))
+
+    expect(await response.text()).toBe('true')
+  })
+
+  test('useLogger() outside a finished request is a no-op', async () => {
+    const { options, transport } = createCaptureTransport({
+      useAsyncLocalStorage: true
+    })
+
+    const app = new Elysia().use(logixlysia(options)).get('/test', () => 'ok')
+
+    await app.handle(new Request('http://localhost/test'))
+    useLogger().info('after')
+
+    expect(transport).toHaveBeenCalledTimes(1)
   })
 })
