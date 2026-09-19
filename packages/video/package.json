@@ -1,0 +1,26 @@
+{
+  "name": "video",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Promo video for logixlysia, built with Remotion",
+  "type": "module",
+  "scripts": {
+    "dev": "remotion studio",
+    "preview": "remotion render Promo ../../out/logixlysia-promo-preview.mp4 --scale 0.5 --crf 28",
+    "render": "remotion render Promo ../../out/logixlysia-promo.mp4 --codec h264 --crf 18",
+    "typecheck": "tsc --noEmit",
+    "upgrade": "remotion upgrade"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.526",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "remotion": "4.0.526"
+  },
+  "devDependencies": {
+    "@repo/typescript-config": "workspace:*",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "typescript": "^6.0.3"
+  }
+}
