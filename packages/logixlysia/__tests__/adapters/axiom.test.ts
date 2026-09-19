@@ -111,6 +111,21 @@ describe('logixlysia/axiom', () => {
     }
   })
 
+  test('throws for an invalid base URL', () => {
+    const restoreEnv = stubEnv(CLEAR_ENV)
+    try {
+      expect(() =>
+        createAxiomTransport({
+          apiKey: 'xaat-test',
+          baseUrl: 'not a url',
+          dataset: 'my-logs'
+        })
+      ).toThrow('Axiom')
+    } finally {
+      restoreEnv()
+    }
+  })
+
   test('meta cannot overwrite _time, level, or message', async () => {
     const restoreEnv = stubEnv(CLEAR_ENV)
     const stub = stubFetch()

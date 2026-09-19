@@ -6,6 +6,7 @@ import {
   getPath,
   type LogEntry,
   postWithRetry,
+  resolveEndpoint,
   resolveRetryDelay,
   stripTrailingSlashes
 } from '../../src/adapters/shared'
@@ -111,7 +112,44 @@ describe('stripTrailingSlashes', () => {
   })
 })
 
+describe('resolveEndpoint', () => {
+  test('returns a well-formed URL unchanged', () => {
+    expect(resolveEndpoint('Test', 'https://a.example/v1/x')).toBe(
+      'https://a.example/v1/x'
+    )
+  })
+
+  test('throws with the adapter name for an unparsable URL', () => {
+    expect(() => resolveEndpoint('Test', 'not a url')).toThrow(
+      "[logixlysia] Test transport: invalid endpoint URL 'not a url'"
+    )
+  })
+
+  test('throws for a non-http(s) protocol', () => {
+    expect(() => resolveEndpoint('Test', 'ftp://a.example/x')).toThrow(
+      'http or https'
+    )
+  })
+})
+
 describe('postWithRetry', () => {
+  test('sends ingest requests with redirect: error', async () => {
+    const stub = stubFetch([{ status: 200 }])
+    try {
+      await postWithRetry({
+        body: '{}',
+        headers: {},
+        name: 'Test',
+        retries: 2,
+        timeout: 1000,
+        url: 'https://example.com/ingest'
+      })
+      expect(stub.calls[0]?.redirect).toBe('error')
+    } finally {
+      stub.restore()
+    }
+  })
+
   test('retries 5xx responses and succeeds', async () => {
     const stub = stubFetch([{ status: 500 }, { status: 200 }])
     try {

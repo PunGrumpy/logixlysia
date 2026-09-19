@@ -73,6 +73,17 @@ describe('logixlysia/otlp', () => {
     }
   })
 
+  test('throws for an invalid endpoint', () => {
+    const restoreEnv = stubEnv(CLEAR_ENV)
+    try {
+      expect(() => createOtlpTransport({ endpoint: 'not a url' })).toThrow(
+        'OTLP'
+      )
+    } finally {
+      restoreEnv()
+    }
+  })
+
   test('option headers override environment headers', async () => {
     const restoreEnv = stubEnv({
       ...CLEAR_ENV,

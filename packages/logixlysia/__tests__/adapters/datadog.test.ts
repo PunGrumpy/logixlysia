@@ -58,6 +58,17 @@ describe('logixlysia/datadog', () => {
     }
   })
 
+  test('throws for a site that produces an invalid URL', () => {
+    const restoreEnv = stubEnv(CLEAR_ENV)
+    try {
+      expect(() =>
+        createDatadogTransport({ apiKey: 'dd-key', site: 'bad site' })
+      ).toThrow('Datadog')
+    } finally {
+      restoreEnv()
+    }
+  })
+
   test('respects the DD_SITE region', async () => {
     const restoreEnv = stubEnv({ ...CLEAR_ENV, DD_SITE: 'datadoghq.eu' })
     const stub = stubFetch()

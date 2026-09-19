@@ -90,8 +90,28 @@ export const envString = (name: string): string | undefined => {
 }
 
 /** A configuration error for the named adapter, thrown at creation time. */
-export const transportError = (adapter: string, detail: string): Error =>
-  new Error(`[logixlysia] ${adapter} transport: ${detail}`)
+export const transportError = (
+  adapter: string,
+  detail: string,
+  options?: ErrorOptions
+): Error => new Error(`[logixlysia] ${adapter} transport: ${detail}`, options)
+
+/** Parses a fully built endpoint once, at construction, so a bad env var fails here rather than on the first flush. */
+export const resolveEndpoint = (name: string, url: string): string => {
+  let parsed: URL
+  try {
+    parsed = new URL(url)
+  } catch (cause) {
+    throw transportError(name, `invalid endpoint URL '${url}'`, { cause })
+  }
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+    throw transportError(
+      name,
+      `endpoint must use http or https, got '${parsed.protocol}'`
+    )
+  }
+  return parsed.toString()
+}
 
 const NANOS_PER_MILLI = 1_000_000n
 
@@ -163,6 +183,7 @@ const attemptPost = async (
       body: input.body,
       headers: input.headers,
       method: 'POST',
+      redirect: 'error',
       signal: AbortSignal.timeout(input.timeout)
     })
   } catch (fetchError) {
@@ -341,6 +362,7 @@ export const createHttpTransport = (
 ): AdapterTransport => {
   const retries = input.options.retries ?? DEFAULT_RETRIES
   const timeout = input.options.timeout ?? DEFAULT_TIMEOUT_MS
+  const url = resolveEndpoint(input.name, input.url)
 
   const queue = createBatchQueue({
     flushIntervalMs: input.options.flushIntervalMs ?? DEFAULT_FLUSH_INTERVAL_MS,
@@ -355,7 +377,7 @@ export const createHttpTransport = (
         name: input.name,
         retries,
         timeout,
-        url: input.url
+        url
       })
   })
 

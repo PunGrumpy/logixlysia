@@ -32,7 +32,7 @@ describe('logixlysia/better-stack', () => {
       await transport.flush()
 
       const [call] = stub.calls
-      expect(call?.url).toBe('https://in.logs.betterstack.com')
+      expect(call?.url).toBe('https://in.logs.betterstack.com/')
       expect(call?.headers.authorization).toBe('Bearer bs-token')
 
       const logs = JSON.parse(call?.body ?? '[]') as Record<string, unknown>[]
@@ -59,10 +59,24 @@ describe('logixlysia/better-stack', () => {
       transport.log('INFO', 'hi')
       await transport.flush()
       expect(stub.calls[0]?.url).toBe(
-        'https://s123.eu-nbg-2.betterstackdata.com'
+        'https://s123.eu-nbg-2.betterstackdata.com/'
       )
     } finally {
       stub.restore()
+      restoreEnv()
+    }
+  })
+
+  test('throws for an invalid endpoint', () => {
+    const restoreEnv = stubEnv(CLEAR_ENV)
+    try {
+      expect(() =>
+        createBetterStackTransport({
+          endpoint: 'not a url',
+          sourceToken: 'bs-token'
+        })
+      ).toThrow('Better Stack')
+    } finally {
       restoreEnv()
     }
   })
