@@ -301,3 +301,44 @@ describe('redactRequest', () => {
     expect(out.url).toContain('promo=redacted')
   })
 })
+
+describe('error.cause redaction', () => {
+  test('preserves and redacts error.cause instead of dropping it', () => {
+    const outer = new Error('outer', { cause: new Error('a@b.co') })
+    const result = redact({ error: outer }) as {
+      error: Error & { cause?: Error }
+    }
+    expect(result.error.cause).toBeDefined()
+    expect((result.error.cause as Error).message).toBe('[REDACTED]')
+  })
+
+  test('redacts a nested cause chain of depth 3', () => {
+    const root = new Error('root: r@x.com')
+    const mid = new Error('mid: m@x.com', { cause: root })
+    const top = new Error('top: t@x.com', { cause: mid })
+    const result = redact(top) as Error & { cause?: Error & { cause?: Error } }
+    expect(result.message).toBe('top: [REDACTED]')
+    expect(result.cause?.message).toBe('mid: [REDACTED]')
+    expect(result.cause?.cause?.message).toBe('root: [REDACTED]')
+  })
+
+  test('does not loop on a self-referential cause', () => {
+    const err = new Error('self') as Error & { cause?: unknown }
+    err.cause = err
+    const result = redact(err) as Error & { cause?: unknown }
+    expect(result.cause).toBe('[Circular]')
+  })
+
+  test('cause stays non-enumerable on the redacted error, matching the original', () => {
+    const outer = new Error('outer', { cause: new Error('inner') })
+    const result = redact(outer) as Error
+    expect(Object.propertyIsEnumerable.call(result, 'cause')).toBe(false)
+  })
+
+  test('preserves HttpError.internal as non-enumerable after redaction', () => {
+    const err = new HttpError(500, 'boom', { internal: { note: 'x@y.com' } })
+    const result = redact(err) as HttpError
+    expect(Object.propertyIsEnumerable.call(result, 'internal')).toBe(false)
+    expect(result.internal).toEqual({ note: '[REDACTED]' })
+  })
+})

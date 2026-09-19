@@ -196,12 +196,29 @@ const redactErrorClone = (
 
   const errorRecord = originalError as unknown as Record<string, unknown>
 
-  for (const key of Object.keys(errorRecord)) {
-    if (key !== 'message' && key !== 'name' && key !== 'stack') {
-      newError[key] = isSensitiveKey(key, extraKeys)
-        ? REDACTED_TEXT
-        : redactInner(errorRecord[key], inProgress, extraKeys)
+  for (const key of Object.getOwnPropertyNames(errorRecord)) {
+    if (key === 'message' || key === 'name' || key === 'stack') {
+      continue
     }
+
+    const descriptor = Object.getOwnPropertyDescriptor(errorRecord, key)
+    if (descriptor === undefined) {
+      continue
+    }
+
+    if (descriptor.get !== undefined || descriptor.set !== undefined) {
+      Object.defineProperty(newError, key, descriptor)
+      continue
+    }
+
+    const redactedValue = isSensitiveKey(key, extraKeys)
+      ? REDACTED_TEXT
+      : redactInner(descriptor.value, inProgress, extraKeys)
+
+    Object.defineProperty(newError, key, {
+      ...descriptor,
+      value: redactedValue
+    })
   }
 
   return newError
