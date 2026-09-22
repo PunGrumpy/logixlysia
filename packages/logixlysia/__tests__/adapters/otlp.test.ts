@@ -18,14 +18,14 @@ interface OtlpAttribute {
 interface OtlpPayload {
   resourceLogs: {
     resource: { attributes: OtlpAttribute[] }
-    scopeLogs: Array<{
-      logRecords: Array<{
+    scopeLogs: {
+      logRecords: {
         attributes: OtlpAttribute[]
         body: { stringValue: string }
         severityNumber: number
         severityText: string
-      }>
-    }>
+      }[]
+    }[]
   }[]
 }
 

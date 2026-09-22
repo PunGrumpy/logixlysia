@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import { promises as fs } from 'node:fs'
-import { join } from 'node:path'
+import path from 'node:path'
 import {
   getRotatedFiles,
   parseInterval,
@@ -113,7 +113,7 @@ describe('getRotatedFiles', () => {
   test('returns only rotated sibling files', async () => {
     const dir = await createTempDir()
     try {
-      const filePath = join(dir, 'app.log')
+      const filePath = path.join(dir, 'app.log')
 
       await fs.writeFile(filePath, 'live')
       await fs.writeFile(`${filePath}.2026-01-02-03-04-05`, 'a')
@@ -124,14 +124,14 @@ describe('getRotatedFiles', () => {
       const rotated = await getRotatedFiles(filePath)
       const names = rotated
         .map(p => p.slice(dir.length + 1))
-        .sort((a, b) => a.localeCompare(b))
+        .toSorted((a, b) => a.localeCompare(b))
 
       expect(names).toEqual(
         [
           'app.log.2026-01-02-03-04-05',
           'app.log.2026-01-02-03-04-05-123-9999999',
           'app.log.2026-01-02-03-04-05.gz'
-        ].sort((a, b) => a.localeCompare(b))
+        ].toSorted((a, b) => a.localeCompare(b))
       )
     } finally {
       await removeTempDir(dir)

@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import { promises as fs } from 'node:fs'
-import { join } from 'node:path'
+import path from 'node:path'
 import type { Options } from '../../src/interfaces'
 import { logToFile } from '../../src/output/file'
 import { createMockRequest } from '../_helpers/request'
@@ -17,7 +17,7 @@ describe('logToFile race condition', () => {
   test('handles concurrent writes during rotation without data loss', async () => {
     const dir = await createTempDir()
     try {
-      const filePath = join(dir, 'logs', 'concurrent.log')
+      const filePath = path.join(dir, 'logs', 'concurrent.log')
       const options: Options = {
         config: {
           // Very small size to trigger rotation quickly
@@ -41,7 +41,7 @@ describe('logToFile race condition', () => {
       await Promise.all(writes)
 
       // Read all log files (original + rotated)
-      const files = await fs.readdir(join(dir, 'logs'))
+      const files = await fs.readdir(path.join(dir, 'logs'))
       const logFiles = files.filter(
         name => name === 'concurrent.log' || name.startsWith('concurrent.log.')
       )
@@ -50,7 +50,7 @@ describe('logToFile race condition', () => {
       const allMessages = new Set<string>()
 
       const contents = await Promise.all(
-        logFiles.map(file => fs.readFile(join(dir, 'logs', file), 'utf-8'))
+        logFiles.map(file => fs.readFile(path.join(dir, 'logs', file), 'utf-8'))
       )
       for (const content of contents) {
         const lines = content.split('\n').filter(l => l.length > 0)
@@ -81,7 +81,7 @@ describe('logToFile race condition', () => {
   test('serializes rotation operations to prevent file conflicts', async () => {
     const dir = await createTempDir()
     try {
-      const filePath = join(dir, 'logs', 'serialize.log')
+      const filePath = path.join(dir, 'logs', 'serialize.log')
       const options: Options = {
         config: {
           // Trigger rotation on every write
@@ -105,11 +105,11 @@ describe('logToFile race condition', () => {
       await expect(Promise.all(writes)).resolves.toBeDefined()
 
       // Count total log entries across all files
-      const files = await fs.readdir(join(dir, 'logs'))
+      const files = await fs.readdir(path.join(dir, 'logs'))
       let totalEntries = 0
 
       const contents = await Promise.all(
-        files.map(file => fs.readFile(join(dir, 'logs', file), 'utf-8'))
+        files.map(file => fs.readFile(path.join(dir, 'logs', file), 'utf-8'))
       )
       for (const content of contents) {
         const lines = content.split('\n').filter(l => l.length > 0)
@@ -126,7 +126,7 @@ describe('logToFile race condition', () => {
   test('same-tick logToFile calls to one path never interleave writes', async () => {
     const dir = await createTempDir()
     try {
-      const filePath = join(dir, 'logs', 'exclusion.log')
+      const filePath = path.join(dir, 'logs', 'exclusion.log')
       const options: Options = {
         config: {
           // Rotate on every write so the critical section races with rotation
@@ -151,7 +151,7 @@ describe('logToFile race condition', () => {
 
       await Promise.all(writes)
 
-      const files = await fs.readdir(join(dir, 'logs'))
+      const files = await fs.readdir(path.join(dir, 'logs'))
       const logFiles = files.filter(
         name => name === 'exclusion.log' || name.startsWith('exclusion.log.')
       )
@@ -160,7 +160,7 @@ describe('logToFile race condition', () => {
       const seenIds = new Set<string>()
 
       const contents = await Promise.all(
-        logFiles.map(file => fs.readFile(join(dir, 'logs', file), 'utf-8'))
+        logFiles.map(file => fs.readFile(path.join(dir, 'logs', file), 'utf-8'))
       )
       for (const content of contents) {
         const lines = content.split('\n').filter(l => l.length > 0)

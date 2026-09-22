@@ -93,17 +93,18 @@ describe('redact', () => {
   })
 
   test('preserves custom Error subclasses', () => {
-    class CustomErr extends Error {
+    class CustomCodeError extends Error {
       readonly code: string
       constructor(message: string, code: string) {
         super(message)
+        this.name = 'CustomCodeError'
         this.code = code
       }
     }
-    const err = new CustomErr('x@test.com', 'E1')
+    const err = new CustomCodeError('x@test.com', 'E1')
     const result = redact(err)
-    expect(result).toBeInstanceOf(CustomErr)
-    expect((result as CustomErr).code).toBe('E1')
+    expect(result).toBeInstanceOf(CustomCodeError)
+    expect((result as CustomCodeError).code).toBe('E1')
     expect(result.message).toBe('[REDACTED]')
   })
 

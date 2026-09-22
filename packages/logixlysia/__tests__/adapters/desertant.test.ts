@@ -210,9 +210,11 @@ describe('logixlysia/desertant', () => {
       redaction: (text: string) => {
         const ms = delay
         delay = 0
-        return new Promise(resolve => {
-          setTimeout(() => resolve({ redactedText: text }), ms)
-        })
+        const { promise, resolve } = Promise.withResolvers<{
+          redactedText: string
+        }>()
+        setTimeout(() => resolve({ redactedText: text }), ms)
+        return promise
       }
     }
     const transport = withRedaction(sink, slowFirst)

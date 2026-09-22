@@ -19,12 +19,12 @@ describe('sanitizeLogText', () => {
   })
 
   test('strips ANSI escape sequences', () => {
-    const esc = String.fromCharCode(27)
+    const esc = String.fromCodePoint(27)
     expect(sanitizeLogText(`${esc}[31mred`)).toBe('[31mred')
   })
 
   test('strips NUL bytes', () => {
-    const nul = String.fromCharCode(0)
+    const nul = String.fromCodePoint(0)
     expect(sanitizeLogText(`a${nul}b`)).toBe('ab')
   })
 

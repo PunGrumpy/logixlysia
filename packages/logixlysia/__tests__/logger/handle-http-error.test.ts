@@ -1,6 +1,6 @@
 import { describe, expect, mock, test } from 'bun:test'
 import { Elysia, t } from 'elysia'
-import logixlysia from '../../src'
+import { logixlysia } from '../../src'
 import { HttpError } from '../../src/interfaces'
 import type { Options } from '../../src/interfaces'
 import { normalizeLoggedError } from '../../src/utils/error'
@@ -143,17 +143,25 @@ describe('handleHttpError', () => {
   // Class names (and thus `.name`/`.constructor.name`) are mangled under
   // bundler minification (e.g. `bun build --minify`, esbuild). Elysia's
   // `code === 'VALIDATION'` is the minification-safe discriminant; simulate
-  // a mangled class to prove detection still works.
+  // a mangled class to prove detection still works: neither `.name` nor
+  // `.constructor.name` is `'ValidationError'`, only `code` identifies it.
   test('detects a validation error by code when class names are minified', () => {
-    class MangledClassName extends Error {}
+    class MangledError extends Error {
+      constructor(message: string) {
+        super(message)
+        this.name = 'MangledError'
+      }
+    }
     const mangled = Object.assign(
-      new MangledClassName('{"found":{"password":"leak-me"}}'),
+      new MangledError('{"found":{"password":"leak-me"}}'),
       {
         all: [{ path: '/password' }],
         code: 'VALIDATION',
         type: 'body'
       }
     )
+    expect(mangled.name).not.toBe('ValidationError')
+    expect(mangled.constructor.name).not.toBe('ValidationError')
 
     const { error: metaError, message } = normalizeLoggedError(mangled, false)
 

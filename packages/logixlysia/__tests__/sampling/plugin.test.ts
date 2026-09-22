@@ -1,6 +1,6 @@
 import { describe, expect, mock, test } from 'bun:test'
 import { Elysia } from 'elysia'
-import logixlysia from '../../src'
+import { logixlysia } from '../../src'
 import { HttpError } from '../../src/interfaces'
 import type { Options } from '../../src/interfaces'
 
@@ -165,10 +165,10 @@ const TAIL_PATHS_ERROR = /tail\.paths must contain non-empty glob strings/u
 const MAX_BUFFERED_ERROR =
   /maxBufferedPerRequest must be a non-negative integer/u
 
-describe('sampling config validation', () => {
-  const build = (config: NonNullable<Options['config']>) => () =>
-    logixlysia({ config })
+const build = (config: NonNullable<Options['config']>) => () =>
+  logixlysia({ config })
 
+describe('sampling config validation', () => {
   test('rejects a rate outside 0-100', () => {
     expect(build({ sampling: { head: { INFO: 150 } } })).toThrow(
       HEAD_RATE_ERROR

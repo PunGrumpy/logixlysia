@@ -72,7 +72,7 @@ export const stubEnv = (
   for (const [key, value] of Object.entries(vars)) {
     previous.set(key, process.env[key])
     if (value === undefined) {
-      delete process.env[key]
+      Reflect.deleteProperty(process.env, key)
     } else {
       process.env[key] = value
     }
@@ -80,7 +80,7 @@ export const stubEnv = (
   return () => {
     for (const [key, value] of previous.entries()) {
       if (value === undefined) {
-        delete process.env[key]
+        Reflect.deleteProperty(process.env, key)
       } else {
         process.env[key] = value
       }

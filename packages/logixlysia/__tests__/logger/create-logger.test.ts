@@ -1,18 +1,18 @@
 import { describe, expect, mock, test } from 'bun:test'
 import type pino from 'pino'
 import type { Options, Pino } from '../../src/interfaces'
+import { createLogger } from '../../src/logger'
+import { spyConsole } from '../_helpers/console'
+import { createMockRequest } from '../_helpers/request'
+import { sleep } from '../_helpers/sleep'
 
-let prettyOptionsCaptured: any = null
+let prettyOptionsCaptured: unknown = null
 mock.module('pino-pretty', () => ({
-  default: (opts: any) => {
+  default: (opts: unknown) => {
     prettyOptionsCaptured = opts
     return { prettyStreamMock: true }
   }
 }))
-
-import { createLogger } from '../../src/logger'
-import { spyConsole } from '../_helpers/console'
-import { createMockRequest } from '../_helpers/request'
 
 describe('createLogger', () => {
   test('returns a logger with expected methods', () => {
@@ -65,7 +65,7 @@ describe('createLogger', () => {
     restore()
 
     // Avoid unhandled async noise if any transport returns a promise in future
-    await new Promise(resolve => setTimeout(resolve, 0))
+    await sleep(0)
   })
 
   test('autoRedact redacts request URL in transport meta', async () => {
@@ -98,7 +98,7 @@ describe('createLogger', () => {
     expect(reqMeta?.url).toContain('%5BREDACTED%5D')
     expect(reqMeta?.url).not.toContain(sampleJwt)
 
-    await new Promise(resolve => setTimeout(resolve, 0))
+    await sleep(0)
   })
 
   test('handleHttpError emits transport error log', async () => {
@@ -128,13 +128,13 @@ describe('createLogger', () => {
     const [secondLevelValue] = transport.mock.calls[1] ?? [undefined]
     expect(secondLevelValue).toBe('ERROR')
 
-    await new Promise(resolve => setTimeout(resolve, 0))
+    await sleep(0)
   })
 
   test('prettyPrint true configures pino-pretty transport', () => {
     prettyOptionsCaptured = null
-    const captured: { options?: any; stream?: any } = {}
-    const fakePino = (options: any, stream: any) => {
+    const captured: { options?: unknown; stream?: unknown } = {}
+    const fakePino = (options: unknown, stream: unknown) => {
       captured.options = options
       captured.stream = stream
       return {} as unknown as Pino
@@ -159,8 +159,8 @@ describe('createLogger', () => {
 
   test('prettyPrint options override defaults', () => {
     prettyOptionsCaptured = null
-    const captured: { options?: any; stream?: any } = {}
-    const fakePino = (options: any, stream: any) => {
+    const captured: { options?: unknown; stream?: unknown } = {}
+    const fakePino = (options: unknown, stream: unknown) => {
       captured.options = options
       captured.stream = stream
       return {} as unknown as Pino
@@ -216,8 +216,8 @@ describe('createLogger', () => {
 
   test('prettyPrint uses messageKey override when provided', () => {
     prettyOptionsCaptured = null
-    const captured: { options?: any; stream?: any } = {}
-    const fakePino = (options: any, stream: any) => {
+    const captured: { options?: unknown; stream?: unknown } = {}
+    const fakePino = (options: unknown, stream: unknown) => {
       captured.options = options
       captured.stream = stream
       return {} as unknown as Pino
@@ -243,8 +243,8 @@ describe('createLogger', () => {
 
   test('prettyPrint uses errorKey override when provided', () => {
     prettyOptionsCaptured = null
-    const captured: { options?: any; stream?: any } = {}
-    const fakePino = (options: any, stream: any) => {
+    const captured: { options?: unknown; stream?: unknown } = {}
+    const fakePino = (options: unknown, stream: unknown) => {
       captured.options = options
       captured.stream = stream
       return {} as unknown as Pino
@@ -332,8 +332,8 @@ describe('createLogger', () => {
 
   test('prettyPrint merges with default translateTime from config', () => {
     prettyOptionsCaptured = null
-    const captured: { options?: any; stream?: any } = {}
-    const fakePino = (options: any, stream: any) => {
+    const captured: { options?: unknown; stream?: unknown } = {}
+    const fakePino = (options: unknown, stream: unknown) => {
       captured.options = options
       captured.stream = stream
       return {} as unknown as Pino

@@ -1,6 +1,6 @@
 import { describe, expect, mock, test } from 'bun:test'
 import { Elysia } from 'elysia'
-import logixlysia from '../../src'
+import { logixlysia } from '../../src'
 import { HttpError } from '../../src/interfaces'
 import type { Options } from '../../src/interfaces'
 
@@ -169,8 +169,10 @@ describe('logixlysia plugin', () => {
     const app = new Elysia()
       .use(logixlysia(options))
       .get('/test', ({ request, store }) => {
-        store.logger.info(request, 'custom info') // Should be filtered out
-        store.logger.error(request, 'custom error') // Should be allowed
+        // Should be filtered out
+        store.logger.info(request, 'custom info')
+        // Should be allowed
+        store.logger.error(request, 'custom error')
         return 'ok'
       })
 

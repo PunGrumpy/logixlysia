@@ -1,6 +1,6 @@
 import { describe, expect, mock, test } from 'bun:test'
 import { Elysia } from 'elysia'
-import logixlysia, { HttpError } from '../../src'
+import { logixlysia, HttpError } from '../../src'
 import { normalizeLoggedError } from '../../src/utils/error'
 
 const INTERNAL_SECRET = 'sk_live_do_not_leak'

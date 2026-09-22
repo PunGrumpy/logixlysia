@@ -3,6 +3,7 @@ import type { Options } from '../../src/interfaces'
 import { logToTransports } from '../../src/output'
 import { spyConsole } from '../_helpers/console'
 import { createMockRequest } from '../_helpers/request'
+import { sleep } from '../_helpers/sleep'
 
 describe('logToTransports', () => {
   test('calls all transports with level/message/meta', () => {
@@ -188,7 +189,7 @@ describe('logToTransports', () => {
     })
 
     // Let promise microtasks run; rejections should be caught internally.
-    await new Promise(resolve => setTimeout(resolve, 0))
+    await sleep(0)
 
     expect(rejecting).toHaveBeenCalledTimes(1)
   })

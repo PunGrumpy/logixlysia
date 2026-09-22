@@ -1,7 +1,7 @@
 import { describe, expect, mock, test } from 'bun:test'
 import nodeAdapter from '@elysiajs/node'
 import { Elysia } from 'elysia'
-import logixlysia from '../../src'
+import { logixlysia } from '../../src'
 import { createDemoApp, silentTestOptions } from './demo-app'
 import type { TransportLog } from './demo-app'
 

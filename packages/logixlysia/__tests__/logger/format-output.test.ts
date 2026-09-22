@@ -28,14 +28,14 @@ describe('formatDuration', () => {
   })
 })
 
-describe('formatLogOutput', () => {
-  const baseOptions = (overrides?: Options): Options => ({
-    config: {
-      useColors: false,
-      ...overrides?.config
-    }
-  })
+const baseOptions = (overrides?: Options): Options => ({
+  config: {
+    useColors: false,
+    ...overrides?.config
+  }
+})
 
+describe('formatLogOutput', () => {
   test('includes path, status, and icon in main line', () => {
     const request = createMockRequest('http://localhost/api/hello')
     const store = { beforeTime: 0n }
@@ -248,29 +248,29 @@ describe('formatLogOutput', () => {
 
 const STANDARD_TIMESTAMP_REGEX = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3}$/u
 
+const renderTimestamp = (translateTime: string): string => {
+  const request = createMockRequest('http://localhost/x')
+  const store = { beforeTime: 0n }
+  const out = formatLogOutput({
+    data: { status: 200 },
+    level: 'INFO',
+    options: {
+      config: {
+        customLogFormat: '{now}',
+        timestamp: { translateTime },
+        useColors: false
+      }
+    },
+    request,
+    store
+  })
+  return out.main
+}
+
 describe('formatLogOutput timestamp prefixes', () => {
   afterEach(() => {
     setSystemTime()
   })
-
-  const renderTimestamp = (translateTime: string): string => {
-    const request = createMockRequest('http://localhost/x')
-    const store = { beforeTime: 0n }
-    const out = formatLogOutput({
-      data: { status: 200 },
-      level: 'INFO',
-      options: {
-        config: {
-          customLogFormat: '{now}',
-          timestamp: { translateTime },
-          useColors: false
-        }
-      },
-      request,
-      store
-    })
-    return out.main
-  }
 
   test("'SYS:standard' renders the standard local pattern", () => {
     setSystemTime(new Date(2026, 0, 2, 3, 4, 5, 123))
@@ -328,6 +328,11 @@ describe('buildContextTreeLines', () => {
       fix = 'Try another card'
       link = 'https://link.com'
       internal = { code: 'NSF' }
+
+      constructor(message: string) {
+        super(message)
+        this.name = 'CustomStructuredError'
+      }
     }
 
     const lines = buildContextTreeLines(

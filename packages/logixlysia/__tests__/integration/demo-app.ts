@@ -1,5 +1,5 @@
 import { Elysia } from 'elysia'
-import logixlysia from '../../src'
+import { logixlysia } from '../../src'
 import { mergeAIMetrics } from '../../src/ai'
 import type { Options } from '../../src/interfaces'
 import { injectTraceContext } from '../../src/otel'
@@ -38,7 +38,8 @@ export const createDemoApp = (options: Options) => {
       return { status: set.status }
     })
     .get('/status/name/:name', ({ params, set }) => {
-      set.status = decodeURIComponent(params.name) as never // e.g. "Not Found" — exercises string statuses
+      // e.g. "Not Found" — exercises string statuses
+      set.status = decodeURIComponent(params.name) as never
       return { status: set.status }
     })
 }

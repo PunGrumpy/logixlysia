@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import { createKeyedMutex } from '../../src/output/keyed-mutex'
+import { sleep } from '../_helpers/sleep'
 
 describe('createKeyedMutex', () => {
   test('same-tick acquires for the same key are never held concurrently', async () => {
@@ -13,7 +14,7 @@ describe('createKeyedMutex', () => {
       maxHolders = Math.max(maxHolders, holders)
       // Hold the lock across a macrotask window: any concurrent holder would
       // overlap here and push `holders` above 1.
-      await new Promise(resolve => setTimeout(resolve, 5))
+      await sleep(5)
       holders -= 1
       release()
     }
@@ -67,7 +68,7 @@ describe('createKeyedMutex', () => {
     })
 
     // Give any wrongly-unblocked C a window to (incorrectly) start.
-    await new Promise(resolve => setTimeout(resolve, 5))
+    await sleep(5)
     expect(cStarted).toBe(false)
 
     releaseB()

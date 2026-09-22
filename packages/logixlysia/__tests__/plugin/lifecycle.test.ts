@@ -1,10 +1,8 @@
 import { describe, expect, mock, test } from 'bun:test'
 import { Elysia } from 'elysia'
-import logixlysia, { useLogger } from '../../src'
+import { logixlysia, useLogger } from '../../src'
 import type { Options } from '../../src/interfaces'
-
-const sleep = (ms: number): Promise<void> =>
-  new Promise(resolve => setTimeout(resolve, ms))
+import { sleep } from '../_helpers/sleep'
 
 interface CapturedMeta {
   context?: Record<string, unknown>

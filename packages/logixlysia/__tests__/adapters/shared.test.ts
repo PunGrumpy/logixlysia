@@ -11,6 +11,7 @@ import {
 } from '../../src/adapters/shared'
 import type { LogEntry } from '../../src/adapters/shared'
 import { spyConsole } from '../_helpers/console'
+import { sleep } from '../_helpers/sleep'
 import { stubFetch } from './helpers'
 
 interface Deferred {
@@ -20,18 +21,13 @@ interface Deferred {
 
 /** A promise a test resolves by hand, to stand in for a slow send. */
 const deferred = (): Deferred => {
-  let resolve: () => void = () => {}
-  const promise = new Promise<void>(res => {
-    resolve = () => res()
-  })
+  const { promise, resolve }: PromiseWithResolvers<void> =
+    Promise.withResolvers()
   return { promise, resolve }
 }
 
 /** Lets pending promise callbacks and the 5 ms flush timer run. */
-const settle = (): Promise<void> =>
-  new Promise(resolve => {
-    setTimeout(resolve, 10)
-  })
+const settle = (): Promise<void> => sleep(10)
 
 const entry = (overrides: Partial<LogEntry> = {}): LogEntry => ({
   level: 'INFO',
@@ -285,27 +281,27 @@ describe('postWithRetry', () => {
   })
 })
 
-describe('resolveRetryDelay', () => {
-  const response = (retryAfter: string): Response =>
-    new Response(null, {
-      headers: { 'retry-after': retryAfter },
-      status: 429
-    })
+const retryAfterResponse = (retryAfter: string): Response =>
+  new Response(null, {
+    headers: { 'retry-after': retryAfter },
+    status: 429
+  })
 
+describe('resolveRetryDelay', () => {
   test('caps a long Retry-After at 30 seconds', () => {
-    expect(resolveRetryDelay(response('3600'), 0)).toBe(30_000)
+    expect(resolveRetryDelay(retryAfterResponse('3600'), 0)).toBe(30_000)
   })
 
   test('accepts an HTTP-date Retry-After', () => {
     // An HTTP-date only carries whole seconds, so the delay lands just under.
     const fiveSecondsAhead = new Date(Date.now() + 5000).toUTCString()
-    const delay = resolveRetryDelay(response(fiveSecondsAhead), 0)
+    const delay = resolveRetryDelay(retryAfterResponse(fiveSecondsAhead), 0)
     expect(delay).toBeGreaterThan(3900)
     expect(delay).toBeLessThanOrEqual(5000)
   })
 
   test('falls back to jittered linear backoff for an unparsable value', () => {
-    const delay = resolveRetryDelay(response('abc'), 0)
+    const delay = resolveRetryDelay(retryAfterResponse('abc'), 0)
     expect(delay).toBeGreaterThanOrEqual(125)
     expect(delay).toBeLessThanOrEqual(375)
   })

@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import { readFile } from 'node:fs/promises'
-import { join } from 'node:path'
+import path from 'node:path'
 import { flushAllFileSinks, getFileSink } from '../../src/output/file-sink'
 import { createTempDir, removeTempDir } from '../_helpers/tmp'
 
@@ -8,7 +8,7 @@ describe('file sink lifecycle', () => {
   test('flush() resolves after a write issued in the same tick is on disk', async () => {
     const dir = await createTempDir()
     try {
-      const filePath = join(dir, 'logs', 'flush.log')
+      const filePath = path.join(dir, 'logs', 'flush.log')
       const sink = getFileSink(filePath)
 
       sink.write('same-tick\n', {})
@@ -23,7 +23,7 @@ describe('file sink lifecycle', () => {
   test('close() releases the handle and a later write reopens the file', async () => {
     const dir = await createTempDir()
     try {
-      const filePath = join(dir, 'logs', 'close.log')
+      const filePath = path.join(dir, 'logs', 'close.log')
       const first = getFileSink(filePath)
 
       await first.write('before-close\n', {})
@@ -46,7 +46,7 @@ describe('file sink lifecycle', () => {
   test('close() is idempotent', async () => {
     const dir = await createTempDir()
     try {
-      const filePath = join(dir, 'logs', 'idempotent.log')
+      const filePath = path.join(dir, 'logs', 'idempotent.log')
       const sink = getFileSink(filePath)
 
       await sink.write('once\n', {})
@@ -62,8 +62,8 @@ describe('file sink lifecycle', () => {
   test('flushAllFileSinks() drains every registered sink', async () => {
     const dir = await createTempDir()
     try {
-      const firstPath = join(dir, 'logs', 'all-1.log')
-      const secondPath = join(dir, 'logs', 'all-2.log')
+      const firstPath = path.join(dir, 'logs', 'all-1.log')
+      const secondPath = path.join(dir, 'logs', 'all-2.log')
 
       getFileSink(firstPath).write('first\n', {})
       getFileSink(secondPath).write('second\n', {})
