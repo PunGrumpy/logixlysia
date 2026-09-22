@@ -5,7 +5,7 @@ Bun 1.3.14 workspaces + Turborepo. Published package: `packages/logixlysia` (Ely
 ## Verify your work
 
 | What | Command | Expect |
-|---|---|---|
+| --- | --- | --- |
 | Lint + format check | `bun run lint` | exit 0 |
 | Auto-format | `bun run format` | exit 0 |
 | Typecheck | `bun run typecheck` | exit 0 |
@@ -24,7 +24,7 @@ This project uses **Ultracite**, a zero-config preset that enforces strict code 
 - **Check for issues**: `bun x ultracite check`
 - **Diagnose setup**: `bun x ultracite doctor`
 
-Biome (the underlying engine) provides robust linting and formatting. Most issues are automatically fixable.
+Oxlint + Oxfmt (the underlying engine) provides robust linting and formatting. Most issues are automatically fixable.
 
 ---
 
@@ -94,11 +94,11 @@ Write code that is **accessible, performant, type-safe, and maintainable**. Focu
 - Don't use `.only` or `.skip` in committed code
 - Keep test suites reasonably flat - avoid excessive `describe` nesting
 
-## When Biome Can't Help
+## When Oxlint + Oxfmt Can't Help
 
-Biome's linter will catch most issues automatically. Focus your attention on:
+Oxlint will catch most issues automatically. Focus your attention on:
 
-1. **Business logic correctness** - Biome can't validate your algorithms
+1. **Business logic correctness** - Oxlint can't validate your algorithms
 2. **Meaningful naming** - Use descriptive names for functions, variables, and types
 3. **Architecture decisions** - Component structure, data flow, and API design
 4. **Edge cases** - Handle boundary conditions and error states
@@ -107,4 +107,4 @@ Biome's linter will catch most issues automatically. Focus your attention on:
 
 ---
 
-Most formatting and common issues are automatically fixed by Biome. Run `bun x ultracite fix` before committing to ensure compliance.
+Most formatting and common issues are automatically fixed by Oxlint + Oxfmt. Run `bun x ultracite fix` before committing to ensure compliance.

@@ -3,8 +3,7 @@ enhancement:
       ['^feature', 'feature', '^feat', 'feat', '^enhancement', 'enhancement']
 
 docs:
-  - head-branch:
-      ['^docs', 'docs']
+  - head-branch: ['^docs', 'docs']
   - changed-files:
       - any-glob-to-any-file: 'apps/docs/**/*'
   - changed-files:
@@ -30,7 +29,9 @@ test:
 
 lint:
   - changed-files:
-      - any-glob-to-any-file: 'biome.jsonc'
+      - any-glob-to-any-file: 'oxlint.config.ts'
+  - changed-files:
+      - any-glob-to-any-file: 'oxfmt.config.ts'
   - changed-files:
       - any-glob-to-any-file: '.ultracite/**/*'
 
@@ -56,7 +57,9 @@ config:
   - changed-files:
       - any-glob-to-any-file: '**/tsconfig*.json'
   - changed-files:
-      - any-glob-to-any-file: 'biome.jsonc'
+      - any-glob-to-any-file: 'oxlint.config.ts'
+  - changed-files:
+      - any-glob-to-any-file: 'oxfmt.config.ts'
   - changed-files:
       - any-glob-to-any-file: 'bun.lock'
   - changed-files:
