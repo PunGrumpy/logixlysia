@@ -1,11 +1,10 @@
 import { createOtlpCore } from './adapters/otlp-core'
 import {
-  type AdapterTransport,
-  type BatchTransportOptions,
   envString,
   stripTrailingSlashes,
   transportError
 } from './adapters/shared'
+import type { AdapterTransport, BatchTransportOptions } from './adapters/shared'
 
 const DEFAULT_ENDPOINT = 'https://in-otel.hyperdx.io'
 

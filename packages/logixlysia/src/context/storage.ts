@@ -10,11 +10,11 @@ export const loggerStorage: AsyncLocalStorage<RequestScopedLogger> =
  * writing into the finished request's log.
  */
 export const noopRequestLogger: RequestScopedLogger = {
-  debug: () => undefined,
-  error: () => undefined,
-  info: () => undefined,
-  mergeContext: () => undefined,
-  warn: () => undefined
+  debug: () => {},
+  error: () => {},
+  info: () => {},
+  mergeContext: () => {},
+  warn: () => {}
 }
 
 /**

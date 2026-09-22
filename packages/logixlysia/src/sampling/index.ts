@@ -119,7 +119,7 @@ const resolveRates = (
  * @param random Injectable for deterministic tests; defaults to `Math.random`.
  */
 export const resolveSampling = (
-  config: SamplingConfig | undefined,
+  config?: SamplingConfig,
   random: () => number = Math.random
 ): SamplingRuntime | undefined => {
   const rates = resolveRates(config?.head)

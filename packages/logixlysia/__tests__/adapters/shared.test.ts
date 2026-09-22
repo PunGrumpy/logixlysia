@@ -4,12 +4,12 @@ import {
   defaultBody,
   flattenMeta,
   getPath,
-  type LogEntry,
   postWithRetry,
   resolveEndpoint,
   resolveRetryDelay,
   stripTrailingSlashes
 } from '../../src/adapters/shared'
+import type { LogEntry } from '../../src/adapters/shared'
 import { spyConsole } from '../_helpers/console'
 import { stubFetch } from './helpers'
 
@@ -20,7 +20,7 @@ interface Deferred {
 
 /** A promise a test resolves by hand, to stand in for a slow send. */
 const deferred = (): Deferred => {
-  let resolve: () => void = () => undefined
+  let resolve: () => void = () => {}
   const promise = new Promise<void>(res => {
     resolve = () => res()
   })
@@ -267,7 +267,7 @@ describe('postWithRetry', () => {
   })
 
   test('sanitizes escape sequences out of the response body preview', async () => {
-    const stub = stubFetch([{ body: 'x\u001b[31my', status: 500 }])
+    const stub = stubFetch([{ body: 'x\u001B[31my', status: 500 }])
     try {
       const rejection = await postWithRetry({
         body: '{}',
@@ -278,7 +278,7 @@ describe('postWithRetry', () => {
         url: 'https://example.com/ingest'
       }).catch((error: Error) => error)
       expect(rejection).toBeInstanceOf(Error)
-      expect((rejection as Error).message).not.toContain('\u001b')
+      expect((rejection as Error).message).not.toContain('\u001B')
     } finally {
       stub.restore()
     }
@@ -387,10 +387,9 @@ describe('createBatchQueue', () => {
       }
     })
 
-    queue.push(entry({ message: 'a' }))
-    queue.push(entry({ message: 'b' }))
-    queue.push(entry({ message: 'c' }))
-    queue.push(entry({ message: 'd' }))
+    for (const message of ['a', 'b', 'c', 'd']) {
+      queue.push(entry({ message }))
+    }
 
     await Promise.resolve()
     expect(batches).toHaveLength(1)
@@ -429,7 +428,7 @@ describe('createBatchQueue', () => {
 
   test('drops batches beyond maxPendingBatches and reports them', async () => {
     const stuck = deferred()
-    const onError = mock((_error: unknown) => undefined)
+    const onError = mock((_error: unknown) => {})
     const queue = createBatchQueue({
       flushIntervalMs: 60_000,
       maxBatchSize: 1,
@@ -439,9 +438,9 @@ describe('createBatchQueue', () => {
       send: () => stuck.promise
     })
 
-    queue.push(entry({ message: 'a' }))
-    queue.push(entry({ message: 'dropped-1' }))
-    queue.push(entry({ message: 'dropped-2' }))
+    for (const message of ['a', 'dropped-1', 'dropped-2']) {
+      queue.push(entry({ message }))
+    }
 
     expect(onError).toHaveBeenCalledTimes(2)
     const [reported] = onError.mock.calls[0] ?? []
@@ -452,7 +451,7 @@ describe('createBatchQueue', () => {
   })
 
   test('timer flush failure calls onError', async () => {
-    const onError = mock((_error: unknown) => undefined)
+    const onError = mock((_error: unknown) => {})
     const console = spyConsole(['error'])
     const queue = createBatchQueue({
       flushIntervalMs: 5,

@@ -38,7 +38,7 @@ const LEVEL_COLOR: Record<string, string> = {
 const LINE_FADE_FRAMES = 6
 const FIRST_LINE_DELAY = 0.35
 const LINE_GAP = 0.19
-const WIPE_SECONDS = 1.0
+const WIPE_SECONDS = 1
 
 /** The hot field the wipe reveals and Act 3 opens on. */
 export const HotField = ({ dots = 1 }: { dots?: number }) => (

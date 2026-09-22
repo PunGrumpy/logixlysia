@@ -722,14 +722,14 @@ export const formatLogOutput = ({
     '{message}': message,
     '{method}': coloredMethod,
     '{now}': timestamp,
-    '{path}': coloredPathname,
     '{pathname}': coloredPathname,
+    '{path}': coloredPathname,
     '{query}': query,
     '{requestId}': requestId,
     '{service}': serviceToken,
     '{speed}': speedToken,
-    '{status}': coloredStatus,
-    '{statusText}': statusText
+    '{statusText}': statusText,
+    '{status}': coloredStatus
   }
 
   const main = format.replace(

@@ -24,7 +24,7 @@ describe('logToFile', () => {
         level: 'INFO',
         options,
         request: createMockRequest('http://localhost/test'),
-        store: { beforeTime: BigInt(0) }
+        store: { beforeTime: 0n }
       })
 
       const content = await fs.readFile(filePath, 'utf-8')
@@ -50,7 +50,7 @@ describe('logToFile', () => {
         level: 'INFO',
         options,
         request: createMockRequest('http://localhost/test'),
-        store: { beforeTime: BigInt(0) }
+        store: { beforeTime: 0n }
       })
 
       const files = await fs.readdir(join(dir, 'logs'))
@@ -77,7 +77,7 @@ describe('logToFile', () => {
         level: 'INFO',
         options,
         request: createMockRequest('http://localhost/api/test?user=123'),
-        store: { beforeTime: BigInt(0) }
+        store: { beforeTime: 0n }
       })
 
       const content = await fs.readFile(filePath, 'utf-8')
@@ -99,7 +99,7 @@ describe('logToFile', () => {
         level: 'INFO',
         options,
         request: createMockRequest('http://localhost/test'),
-        store: { beforeTime: BigInt(0) }
+        store: { beforeTime: 0n }
       })
 
       const content = await fs.readFile(filePath, 'utf-8')
@@ -123,7 +123,7 @@ describe('logToFile', () => {
         level: 'INFO',
         options,
         request: createMockRequest('http://localhost/test'),
-        store: { beforeTime: BigInt(0) }
+        store: { beforeTime: 0n }
       })
 
       const fileStat = await fs.stat(filePath)
@@ -147,7 +147,7 @@ describe('logToFile', () => {
         level: 'INFO',
         options,
         request: createMockRequest('http://localhost/test'),
-        store: { beforeTime: BigInt(0) }
+        store: { beforeTime: 0n }
       })
 
       const fileStat = await fs.stat(filePath)
@@ -172,7 +172,7 @@ describe('logToFile', () => {
           level: 'INFO',
           options,
           request: createMockRequest(`http://localhost/test${i}`),
-          store: { beforeTime: BigInt(0) }
+          store: { beforeTime: 0n }
         })
       )
 
@@ -213,7 +213,7 @@ describe('logToFile', () => {
         level: 'INFO',
         options,
         request: createMockRequest('http://localhost/first'),
-        store: { beforeTime: BigInt(0) }
+        store: { beforeTime: 0n }
       })
 
       // Small enough to stay under maxSize: proves the live file was
@@ -224,7 +224,7 @@ describe('logToFile', () => {
         level: 'INFO',
         options,
         request: createMockRequest('http://localhost/second'),
-        store: { beforeTime: BigInt(0) }
+        store: { beforeTime: 0n }
       })
 
       const entries = await fs.readdir(join(dir, 'logs'))
@@ -260,7 +260,7 @@ describe('logToFile', () => {
         level: 'INFO',
         options,
         request: createMockRequest('http://localhost/first'),
-        store: { beforeTime: BigInt(0) }
+        store: { beforeTime: 0n }
       })
 
       // Two small writes after the reset: if bytesWritten leaked across the
@@ -272,7 +272,7 @@ describe('logToFile', () => {
         level: 'INFO',
         options,
         request: createMockRequest('http://localhost/second'),
-        store: { beforeTime: BigInt(0) }
+        store: { beforeTime: 0n }
       })
       await logToFile({
         data: { message: 'b' },
@@ -280,7 +280,7 @@ describe('logToFile', () => {
         level: 'INFO',
         options,
         request: createMockRequest('http://localhost/third'),
-        store: { beforeTime: BigInt(0) }
+        store: { beforeTime: 0n }
       })
 
       const entries = await fs.readdir(join(dir, 'logs'))
@@ -309,7 +309,7 @@ describe('logToFile', () => {
         level: 'INFO',
         options,
         request: createMockRequest('http://localhost/first'),
-        store: { beforeTime: BigInt(0) }
+        store: { beforeTime: 0n }
       })
       await logToFile({
         data: { message: 'hello' },
@@ -317,7 +317,7 @@ describe('logToFile', () => {
         level: 'INFO',
         options,
         request: createMockRequest('http://localhost/second'),
-        store: { beforeTime: BigInt(0) }
+        store: { beforeTime: 0n }
       })
 
       const fileStat = await fs.stat(filePath)
@@ -351,7 +351,7 @@ describe('logToFile', () => {
           level: 'INFO',
           options,
           request: createMockRequest('http://localhost/test'),
-          store: { beforeTime: BigInt(0) }
+          store: { beforeTime: 0n }
         })
       ).rejects.toBeDefined()
 

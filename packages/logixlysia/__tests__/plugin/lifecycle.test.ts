@@ -142,7 +142,7 @@ describe('logixlysia plugin - request lifecycle', () => {
 
     const app = new Elysia()
       .use(logixlysia(options))
-      .get('/test', ({ store }) => String(store.beforeTime !== BigInt(0)))
+      .get('/test', ({ store }) => String(store.beforeTime !== 0n))
 
     const response = await app.handle(new Request('http://localhost/test'))
 

@@ -1,13 +1,15 @@
 import {
-  type AdapterTransport,
-  type BatchTransportOptions,
   createHttpTransport,
   defaultBody,
-  type FlatValue,
   flattenMeta,
-  type LogEntry,
   OTEL_SEVERITY,
   toUnixNanos
+} from './shared'
+import type {
+  AdapterTransport,
+  BatchTransportOptions,
+  FlatValue,
+  LogEntry
 } from './shared'
 
 interface OtlpAnyValue {
@@ -31,7 +33,7 @@ const toOtlpValue = (value: FlatValue): OtlpAnyValue => {
 
 const toOtlpAttributes = (
   flat: Record<string, FlatValue>
-): Array<{ key: string; value: OtlpAnyValue }> =>
+): { key: string; value: OtlpAnyValue }[] =>
   Object.entries(flat).map(([key, value]) => ({
     key,
     value: toOtlpValue(value)

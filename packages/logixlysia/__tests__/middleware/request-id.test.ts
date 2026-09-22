@@ -1,16 +1,16 @@
 import { describe, expect, test } from 'bun:test'
 import {
   getOrCreateRequestId,
-  type ResolvedRequestIdConfig,
   resolveRequestIdConfig
 } from '../../src/middleware/request-id'
+import type { ResolvedRequestIdConfig } from '../../src/middleware/request-id'
 
 const UUID_V4_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
 describe('resolveRequestIdConfig', () => {
   test('returns null when undefined', () => {
-    expect(resolveRequestIdConfig(undefined)).toBeNull()
+    expect(resolveRequestIdConfig()).toBeNull()
   })
 
   test('returns null when false', () => {

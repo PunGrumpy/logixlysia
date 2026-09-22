@@ -4,7 +4,7 @@ import { createLogger } from '../../src/logger'
 import { spyConsole } from '../_helpers/console'
 import { createMockRequest } from '../_helpers/request'
 
-const ESCAPE = '\u001b'
+const ESCAPE = '\u001B'
 
 describe('console path sanitization', () => {
   test('sanitizes a forged-log-line message from a thrown error', () => {
@@ -16,7 +16,7 @@ describe('console path sanitization', () => {
     }
     const logger = createLogger(options)
     const request = createMockRequest('http://localhost/test')
-    const store = { beforeTime: BigInt(0) }
+    const store = { beforeTime: 0n }
 
     const { spies, restore } = spyConsole(['error'])
 

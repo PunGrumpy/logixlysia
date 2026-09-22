@@ -1,11 +1,13 @@
 import {
-  type AdapterTransport,
-  type BatchTransportOptions,
   createHttpTransport,
   defaultBody,
   envString,
-  type LogEntry,
   transportError
+} from './adapters/shared'
+import type {
+  AdapterTransport,
+  BatchTransportOptions,
+  LogEntry
 } from './adapters/shared'
 
 const DEFAULT_SITE = 'datadoghq.com'

@@ -161,7 +161,7 @@ const passesLuhn = (digits: string): boolean => {
 
 const redactCreditCardCandidates = (text: string): string =>
   text.replace(CREDIT_CARD_CANDIDATE_REGEX, match => {
-    const digits = match.replace(/\D/g, '')
+    const digits = match.replaceAll(/\D/g, '')
     if (
       digits.length >= PAN_MIN_LEN &&
       digits.length <= PAN_MAX_LEN &&

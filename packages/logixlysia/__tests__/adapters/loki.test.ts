@@ -14,10 +14,10 @@ const CLEAR_ENV = {
 const NANO_TIMESTAMP = /^\d+$/
 
 interface LokiPayload {
-  streams: Array<{
+  streams: {
     stream: Record<string, string>
     values: [string, string][]
-  }>
+  }[]
 }
 
 describe('logixlysia/loki', () => {

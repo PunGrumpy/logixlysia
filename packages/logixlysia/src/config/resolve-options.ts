@@ -1,7 +1,7 @@
 import type { LogPreset, Options } from '../interfaces'
 import { parseInterval, parseRetention, parseSize } from '../utils/rotation'
 
-const VALID_PRESETS: readonly LogPreset[] = ['dev', 'prod', 'json']
+const VALID_PRESETS: ReadonlySet<LogPreset> = new Set(['dev', 'prod', 'json'])
 
 const validateLogRotation = (config: Options['config']): void => {
   const logRotation = config?.logRotation
@@ -215,7 +215,7 @@ const mergeConfig = (
 /** Applies preset defaults; explicit `config` keys override preset values. */
 export const resolveOptions = (options: Options = {}): Options => {
   const { preset } = options
-  if (preset && !VALID_PRESETS.includes(preset)) {
+  if (preset && !VALID_PRESETS.has(preset)) {
     throw new Error(`logixlysia: invalid preset — ${preset}`)
   }
 

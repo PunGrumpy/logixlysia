@@ -29,7 +29,7 @@ export const Fonts = () => {
   useEffect(() => {
     const style = document.createElement('style')
     style.textContent = css
-    document.head.appendChild(style)
+    document.head.append(style)
     const loads = [
       document.fonts.load("400 40px 'Inter'"),
       document.fonts.load("600 40px 'Inter'"),
@@ -37,7 +37,7 @@ export const Fonts = () => {
       document.fonts.load("700 20px 'JetBrains Mono'")
     ]
     Promise.all(loads)
-      .catch(() => undefined)
+      .catch(() => {})
       .finally(() => continueRender(handle))
     return () => {
       style.remove()

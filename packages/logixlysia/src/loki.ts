@@ -1,13 +1,15 @@
 import {
-  type AdapterTransport,
-  type BatchTransportOptions,
   createHttpTransport,
   defaultBody,
   envString,
-  type LogEntry,
   stripTrailingSlashes,
   toUnixNanos,
   transportError
+} from './adapters/shared'
+import type {
+  AdapterTransport,
+  BatchTransportOptions,
+  LogEntry
 } from './adapters/shared'
 import type { LogLevel } from './interfaces'
 

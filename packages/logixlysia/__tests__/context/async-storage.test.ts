@@ -5,9 +5,7 @@ import type { Options } from '../../src/interfaces'
 
 describe('AsyncLocalStorage & useLogger() context integration', () => {
   test('derived log object is available on context and logs to transport', async () => {
-    const transport = mock<(lvl: any, msg: any, meta?: any) => void>(
-      () => undefined
-    )
+    const transport = mock<(lvl: any, msg: any, meta?: any) => void>(() => {})
     const options: Options = {
       config: {
         disableFileLogging: true,
@@ -38,9 +36,7 @@ describe('AsyncLocalStorage & useLogger() context integration', () => {
   })
 
   test('useLogger() works within route handler and async boundaries when enabled', async () => {
-    const transport = mock<(lvl: any, msg: any, meta?: any) => void>(
-      () => undefined
-    )
+    const transport = mock<(lvl: any, msg: any, meta?: any) => void>(() => {})
     const options: Options = {
       config: {
         disableFileLogging: true,
@@ -81,9 +77,7 @@ describe('AsyncLocalStorage & useLogger() context integration', () => {
   })
 
   test('useLogger() does not crash and behaves as no-op when disabled', async () => {
-    const transport = mock<(lvl: any, msg: any, meta?: any) => void>(
-      () => undefined
-    )
+    const transport = mock<(lvl: any, msg: any, meta?: any) => void>(() => {})
     const options: Options = {
       config: {
         disableFileLogging: true,

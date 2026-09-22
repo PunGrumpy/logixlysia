@@ -16,7 +16,7 @@ interface OtlpAttribute {
 }
 
 interface OtlpPayload {
-  resourceLogs: Array<{
+  resourceLogs: {
     resource: { attributes: OtlpAttribute[] }
     scopeLogs: Array<{
       logRecords: Array<{
@@ -26,7 +26,7 @@ interface OtlpPayload {
         severityText: string
       }>
     }>
-  }>
+  }[]
 }
 
 describe('logixlysia/otlp', () => {

@@ -23,9 +23,7 @@ const track = (promise: Promise<unknown>): void => {
     }
   }
   pendingTransportWork.add(promise)
-  promise
-    .finally(() => pendingTransportWork.delete(promise))
-    .catch(() => undefined)
+  promise.finally(() => pendingTransportWork.delete(promise)).catch(() => {})
 }
 
 interface LogToTransportsInput {

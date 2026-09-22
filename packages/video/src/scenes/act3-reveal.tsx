@@ -29,10 +29,10 @@ import { HotField } from './act2-noise'
 const ORB_SIZE = 360
 const ORB_COLLAPSE_AT = sec(0.2)
 const TEXT_AT = sec(0.9)
-const FOX_AT = sec(3.0)
+const FOX_AT = sec(3)
 const STAGE_AT = sec(4.6)
 const LINE_AT = STAGE_AT + sec(0.8)
-const TREE_AT = LINE_AT + sec(1.0)
+const TREE_AT = LINE_AT + sec(1)
 const TREE_GAP = sec(0.22)
 const LINE_TEXT = 'POST /checkout 402 1.20s'
 const METHOD_LEN = 4
@@ -42,7 +42,7 @@ const FOX_BLUR_PX = 4
 const FOX_SCALE_FROM = 0.25
 const EXIT_RISE_PX = 8
 const RING_SCALES = [1.45, 1.95, 2.6]
-const RING_GROWTH = 0.000_35
+const RING_GROWTH = 0.00035
 const EXIT_FRAMES = sec(0.5)
 
 const TREE = [

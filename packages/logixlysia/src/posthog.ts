@@ -1,14 +1,16 @@
 import {
-  type AdapterTransport,
-  type BatchTransportOptions,
   createHttpTransport,
   defaultBody,
   envString,
   flattenMeta,
   getPath,
-  type LogEntry,
   stripTrailingSlashes,
   transportError
+} from './adapters/shared'
+import type {
+  AdapterTransport,
+  BatchTransportOptions,
+  LogEntry
 } from './adapters/shared'
 
 const DEFAULT_HOST = 'https://us.i.posthog.com'

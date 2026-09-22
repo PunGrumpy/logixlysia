@@ -1,12 +1,11 @@
 import {
-  type AdapterTransport,
-  type BatchTransportOptions,
   createHttpTransport,
   defaultBody,
   envString,
   stripTrailingSlashes,
   transportError
 } from './adapters/shared'
+import type { AdapterTransport, BatchTransportOptions } from './adapters/shared'
 
 const DEFAULT_ENDPOINT = 'https://in.logs.betterstack.com'
 

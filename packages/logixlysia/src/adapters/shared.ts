@@ -101,8 +101,10 @@ export const resolveEndpoint = (name: string, url: string): string => {
   let parsed: URL
   try {
     parsed = new URL(url)
-  } catch (cause) {
-    throw transportError(name, `invalid endpoint URL '${url}'`, { cause })
+  } catch (error) {
+    throw transportError(name, `invalid endpoint URL '${url}'`, {
+      cause: error
+    })
   }
   if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
     throw transportError(
@@ -305,7 +307,7 @@ export const createBatchQueue = (input: {
     // Swallow the failure on the chain itself so one bad batch cannot poison
     // the batches after it; the caller of enqueueSend still sees the rejection.
     tail = send
-      .catch(() => undefined)
+      .catch(() => {})
       .then(() => {
         pending -= 1
       })

@@ -47,7 +47,7 @@ describe('plugin shutdown', () => {
     const app = startApp({
       config: {
         ...baseConfig,
-        transports: [{ flush, log: () => undefined }]
+        transports: [{ flush, log: () => {} }]
       }
     })
 
@@ -58,7 +58,7 @@ describe('plugin shutdown', () => {
   })
 
   test('onStop tolerates transports without flush', async () => {
-    const log = mock(() => undefined)
+    const log = mock(() => {})
     const app = startApp({
       config: { ...baseConfig, transports: [{ log }] }
     })
@@ -70,7 +70,7 @@ describe('plugin shutdown', () => {
   })
 
   test('onStop reports a timeout through onError with sink shutdown', async () => {
-    const onError = mock(() => undefined)
+    const onError = mock(() => {})
     const { restore, spies } = spyConsole(['error'])
 
     try {
@@ -81,8 +81,8 @@ describe('plugin shutdown', () => {
           onError,
           transports: [
             {
-              flush: () => new Promise<void>(() => undefined),
-              log: () => undefined
+              flush: () => new Promise<void>(() => {}),
+              log: () => {}
             }
           ]
         }
@@ -101,7 +101,7 @@ describe('plugin shutdown', () => {
   })
 
   test('onStop with flushTimeoutMs 0 does not wait', async () => {
-    const onError = mock(() => undefined)
+    const onError = mock(() => {})
     const app = startApp({
       config: {
         ...baseConfig,
@@ -109,8 +109,8 @@ describe('plugin shutdown', () => {
         onError,
         transports: [
           {
-            flush: () => new Promise<void>(() => undefined),
-            log: () => undefined
+            flush: () => new Promise<void>(() => {}),
+            log: () => {}
           }
         ]
       }
@@ -139,7 +139,7 @@ describe('plugin shutdown', () => {
       await app.handle(new Request('http://localhost/flush-me'))
       await flushLogixlysia(options, { close: true })
 
-      expect(await readFile(logFilePath, 'utf8')).toContain('/flush-me')
+      expect(await readFile(logFilePath, 'utf-8')).toContain('/flush-me')
       expect(getFileSink(logFilePath)).not.toBe(sinkBefore)
     } finally {
       await removeTempDir(dir)

@@ -1,13 +1,15 @@
 import {
-  type AdapterTransport,
-  type BatchTransportOptions,
   createHttpTransport,
   defaultBody,
   envString,
   flattenMeta,
-  type LogEntry,
   stripTrailingSlashes,
   transportError
+} from './adapters/shared'
+import type {
+  AdapterTransport,
+  BatchTransportOptions,
+  LogEntry
 } from './adapters/shared'
 
 const DEFAULT_URL = 'http://localhost:8123'

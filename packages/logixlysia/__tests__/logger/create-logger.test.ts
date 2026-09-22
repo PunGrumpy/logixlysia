@@ -117,7 +117,7 @@ describe('createLogger', () => {
 
     const logger = createLogger(options)
     const request = createMockRequest('http://localhost/test')
-    const store = { beforeTime: BigInt(0) }
+    const store = { beforeTime: 0n }
 
     logger.handleHttpError(request, { message: 'bad', status: 400 }, store)
     logger.handleHttpError(request, { message: 'down', status: 503 }, store)
@@ -285,7 +285,7 @@ describe('createLogger', () => {
   })
 
   test('constructs pino exactly once on first logger.pino access, not again on subsequent access', () => {
-    const fakePinoInstance = { info: mock(() => undefined) } as unknown as Pino
+    const fakePinoInstance = { info: mock(() => {}) } as unknown as Pino
     const fakePinoFactory = mock(() => fakePinoInstance)
 
     const logger = createLogger({}, fakePinoFactory as unknown as typeof pino)
@@ -300,7 +300,7 @@ describe('createLogger', () => {
   })
 
   test('logger.pino.child returns a working child logger through the lazy proxy', () => {
-    const childInfo = mock(() => undefined)
+    const childInfo = mock(() => {})
     const fakeChildLogger = { info: childInfo }
     const fakePinoInstance = {
       child: mock((bindings: Record<string, unknown>) => {

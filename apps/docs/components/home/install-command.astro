@@ -59,7 +59,7 @@ const { command } = Astro.props
     }
     let timeout: ReturnType<typeof setTimeout> | undefined
     button.addEventListener('click', async () => {
-      const value = block.getAttribute('data-copy')
+      const value = block.dataset.copy
       if (!value) {
         return
       }

@@ -33,7 +33,7 @@ describe('logToFile race condition', () => {
           level: 'INFO',
           options,
           request: createMockRequest(`http://localhost/test${i}`),
-          store: { beforeTime: BigInt(0) }
+          store: { beforeTime: 0n }
         })
       )
 
@@ -97,7 +97,7 @@ describe('logToFile race condition', () => {
           level: 'INFO',
           options,
           request: createMockRequest(`http://localhost/test${i}`),
-          store: { beforeTime: BigInt(0) }
+          store: { beforeTime: 0n }
         })
       )
 
@@ -145,7 +145,7 @@ describe('logToFile race condition', () => {
           level: 'INFO',
           options,
           request: createMockRequest(`http://localhost/test${i}`),
-          store: { beforeTime: BigInt(0) }
+          store: { beforeTime: 0n }
         })
       )
 

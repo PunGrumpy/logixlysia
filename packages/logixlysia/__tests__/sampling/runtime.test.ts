@@ -21,7 +21,7 @@ const outcome = (partial: Partial<RequestOutcome> = {}): RequestOutcome => ({
 
 describe('resolveSampling', () => {
   test('is off when no head rate drops anything', () => {
-    expect(resolveSampling(undefined)).toBeUndefined()
+    expect(resolveSampling()).toBeUndefined()
     expect(resolveSampling({})).toBeUndefined()
     expect(resolveSampling({ head: {} })).toBeUndefined()
     expect(resolveSampling({ head: { INFO: 100 } })).toBeUndefined()

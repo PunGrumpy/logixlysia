@@ -3,7 +3,7 @@ import type { Logixlysia } from 'logixlysia'
 const BASE64URL_PAD_STRIP = /[=]+$/
 
 const b64urlJson = (value: object) =>
-  Buffer.from(JSON.stringify(value), 'utf8')
+  Buffer.from(JSON.stringify(value), 'utf-8')
     .toString('base64url')
     .replace(BASE64URL_PAD_STRIP, '')
 

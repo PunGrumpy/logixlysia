@@ -30,7 +30,7 @@ describe('interval rotation', () => {
         level: 'INFO',
         options,
         request: createMockRequest('http://localhost/first'),
-        store: { beforeTime: BigInt(0) }
+        store: { beforeTime: 0n }
       })
 
       setSystemTime(new Date(Date.now() + TWO_HOURS_MS))
@@ -41,7 +41,7 @@ describe('interval rotation', () => {
         level: 'INFO',
         options,
         request: createMockRequest('http://localhost/second'),
-        store: { beforeTime: BigInt(0) }
+        store: { beforeTime: 0n }
       })
 
       const logsDir = join(dir, 'logs')
@@ -69,7 +69,7 @@ describe('interval rotation', () => {
         level: 'INFO',
         options,
         request: createMockRequest('http://localhost/third'),
-        store: { beforeTime: BigInt(0) }
+        store: { beforeTime: 0n }
       })
 
       const liveContent = await fs.readFile(filePath, 'utf-8')
@@ -95,7 +95,7 @@ describe('interval rotation', () => {
         level: 'INFO',
         options,
         request: createMockRequest('http://localhost/first'),
-        store: { beforeTime: BigInt(0) }
+        store: { beforeTime: 0n }
       })
       await logToFile({
         data: { message: 'msg-2' },
@@ -103,7 +103,7 @@ describe('interval rotation', () => {
         level: 'INFO',
         options,
         request: createMockRequest('http://localhost/second'),
-        store: { beforeTime: BigInt(0) }
+        store: { beforeTime: 0n }
       })
 
       const logsDir = join(dir, 'logs')
@@ -132,7 +132,7 @@ describe('interval rotation', () => {
         level: 'INFO',
         options,
         request: createMockRequest('http://localhost/first'),
-        store: { beforeTime: BigInt(0) }
+        store: { beforeTime: 0n }
       })
 
       const logsDir = join(dir, 'logs')
@@ -158,7 +158,7 @@ describe('interval rotation', () => {
         level: 'INFO',
         options,
         request: createMockRequest('http://localhost/first'),
-        store: { beforeTime: BigInt(0) }
+        store: { beforeTime: 0n }
       })
 
       setSystemTime(new Date(Date.now() + TWO_HOURS_MS))
@@ -169,7 +169,7 @@ describe('interval rotation', () => {
         level: 'INFO',
         options,
         request: createMockRequest('http://localhost/second'),
-        store: { beforeTime: BigInt(0) }
+        store: { beforeTime: 0n }
       })
 
       const logsDir = join(dir, 'logs')
@@ -205,7 +205,7 @@ describe('interval rotation', () => {
         level: 'INFO',
         options,
         request: createMockRequest('http://localhost/first'),
-        store: { beforeTime: BigInt(0) }
+        store: { beforeTime: 0n }
       })
 
       const entries = await fs.readdir(logsDir)
@@ -241,7 +241,7 @@ describe('interval rotation', () => {
         level: 'INFO',
         options,
         request: createMockRequest('http://localhost/first'),
-        store: { beforeTime: BigInt(0) }
+        store: { beforeTime: 0n }
       })
 
       setSystemTime(new Date(Date.now() + TWO_HOURS_MS))
@@ -260,7 +260,7 @@ describe('interval rotation', () => {
         level: 'INFO',
         options,
         request: createMockRequest('http://localhost/second'),
-        store: { beforeTime: BigInt(0) }
+        store: { beforeTime: 0n }
       })
 
       const afterWriteEntries = await fs.readdir(logsDir)

@@ -1,11 +1,8 @@
 import { describe, expect, mock, test } from 'bun:test'
 import { createRequestContextStore } from '../../src/context/request-context'
 import { createLogger } from '../../src/logger'
-import {
-  createWsHandlerWrapper,
-  type WebSocketLike,
-  type WsHandlerHooks
-} from '../../src/websocket/wrap-ws'
+import { createWsHandlerWrapper } from '../../src/websocket/wrap-ws'
+import type { WebSocketLike, WsHandlerHooks } from '../../src/websocket/wrap-ws'
 
 type TransportMock = ReturnType<
   typeof mock<(lvl: unknown, msg: unknown, meta?: unknown) => void>

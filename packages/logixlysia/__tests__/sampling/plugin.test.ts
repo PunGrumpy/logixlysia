@@ -1,7 +1,8 @@
 import { describe, expect, mock, test } from 'bun:test'
 import { Elysia } from 'elysia'
 import logixlysia from '../../src'
-import { HttpError, type Options } from '../../src/interfaces'
+import { HttpError } from '../../src/interfaces'
+import type { Options } from '../../src/interfaces'
 
 interface CapturedEvent {
   level: string

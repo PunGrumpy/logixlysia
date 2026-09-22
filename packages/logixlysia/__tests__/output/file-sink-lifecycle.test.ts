@@ -14,7 +14,7 @@ describe('file sink lifecycle', () => {
       sink.write('same-tick\n', {})
       await sink.flush()
 
-      expect(await readFile(filePath, 'utf8')).toContain('same-tick')
+      expect(await readFile(filePath, 'utf-8')).toContain('same-tick')
     } finally {
       await removeTempDir(dir)
     }
@@ -35,7 +35,7 @@ describe('file sink lifecycle', () => {
       second.write('after-close\n', {})
       await second.flush()
 
-      const contents = await readFile(filePath, 'utf8')
+      const contents = await readFile(filePath, 'utf-8')
       expect(contents).toContain('before-close')
       expect(contents).toContain('after-close')
     } finally {
@@ -53,7 +53,7 @@ describe('file sink lifecycle', () => {
       await sink.close()
       await sink.close()
 
-      expect(await readFile(filePath, 'utf8')).toContain('once')
+      expect(await readFile(filePath, 'utf-8')).toContain('once')
     } finally {
       await removeTempDir(dir)
     }
@@ -69,8 +69,8 @@ describe('file sink lifecycle', () => {
       getFileSink(secondPath).write('second\n', {})
       await flushAllFileSinks()
 
-      expect(await readFile(firstPath, 'utf8')).toContain('first')
-      expect(await readFile(secondPath, 'utf8')).toContain('second')
+      expect(await readFile(firstPath, 'utf-8')).toContain('first')
+      expect(await readFile(secondPath, 'utf-8')).toContain('second')
     } finally {
       await removeTempDir(dir)
     }

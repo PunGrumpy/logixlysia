@@ -230,7 +230,7 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
     }
 
     const store: StoreData = {
-      beforeTime: requestStartTimes.get(request) ?? BigInt(0)
+      beforeTime: requestStartTimes.get(request) ?? 0n
     }
 
     if (enrichers) {
@@ -277,7 +277,7 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
     error: unknown
   ): StoreData => {
     if (closed.has(request)) {
-      return { beforeTime: requestStartTimes.get(request) ?? BigInt(0) }
+      return { beforeTime: requestStartTimes.get(request) ?? 0n }
     }
 
     const store = closeRequest(request, setHeaders, errorStatus(error))
@@ -298,7 +298,7 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
   const plugin = app
     .state('logger', logger)
     .state('pino', logger.pino)
-    .state('beforeTime', BigInt(0))
+    .state('beforeTime', 0n)
     .derive(({ request }) => ({ log: createRequestScopedLogger(request) }))
     .onStart(({ server }): void => {
       if (server) {

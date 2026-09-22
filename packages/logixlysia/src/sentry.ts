@@ -1,14 +1,16 @@
 import {
-  type AdapterTransport,
-  type BatchTransportOptions,
   createHttpTransport,
   defaultBody,
   envString,
-  type FlatValue,
   flattenMeta,
   getPath,
-  type LogEntry,
   transportError
+} from './adapters/shared'
+import type {
+  AdapterTransport,
+  BatchTransportOptions,
+  FlatValue,
+  LogEntry
 } from './adapters/shared'
 import type { LogLevel } from './interfaces'
 

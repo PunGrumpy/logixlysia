@@ -23,9 +23,9 @@ export const PROMO_DURATION = sec(T.end)
 export const Promo = () => (
   <AbsoluteFill
     style={{
-      background: black,
       MozOsxFontSmoothing: 'grayscale',
-      WebkitFontSmoothing: 'antialiased'
+      WebkitFontSmoothing: 'antialiased',
+      background: black
     }}
   >
     <Fonts />

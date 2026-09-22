@@ -9,12 +9,12 @@ const CLEAR_ENV = {
 
 interface CaptureBatch {
   api_key: string
-  batch: Array<{
+  batch: {
     distinct_id: string
     event: string
     properties: Record<string, unknown>
     timestamp: string
-  }>
+  }[]
 }
 
 describe('logixlysia/posthog', () => {

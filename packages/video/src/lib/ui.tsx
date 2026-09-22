@@ -175,7 +175,7 @@ export const BlockWipe = ({
       )}
       <AbsoluteFill
         style={
-          full ? undefined : { mask: `url(#${id})`, WebkitMask: `url(#${id})` }
+          full ? undefined : { WebkitMask: `url(#${id})`, mask: `url(#${id})` }
         }
       >
         {children}

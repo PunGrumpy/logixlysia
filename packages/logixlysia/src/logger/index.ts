@@ -1,9 +1,7 @@
 import pino from 'pino'
 import pretty from 'pino-pretty'
-import {
-  createRequestContextStore,
-  type RequestContextStore
-} from '../context/request-context'
+import { createRequestContextStore } from '../context/request-context'
+import type { RequestContextStore } from '../context/request-context'
 import type {
   Logger,
   LogLevel,
@@ -19,7 +17,7 @@ import { createFormatContext } from './create-logger'
 import { emit, parseRequestUrlOnce, resolveSinks, shouldLog } from './emit'
 import { handleHttpError } from './handle-http-error'
 
-const ZERO_STORE: StoreData = { beforeTime: BigInt(0) }
+const ZERO_STORE: StoreData = { beforeTime: 0n }
 
 export const createLogger = (
   options: Options = {},

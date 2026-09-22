@@ -1,11 +1,10 @@
 import {
-  type AdapterTransport,
-  type BatchTransportOptions,
   createHttpTransport,
   envString,
   stripTrailingSlashes,
   transportError
 } from './adapters/shared'
+import type { AdapterTransport, BatchTransportOptions } from './adapters/shared'
 
 const DEFAULT_BASE_URL = 'https://api.axiom.co'
 
