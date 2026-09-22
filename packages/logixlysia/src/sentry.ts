@@ -136,7 +136,7 @@ const parseDsn = (dsn: string): ParsedDsn => {
  * typed, searchable attribute; `trace_id` from the request context (as set by
  * `logixlysia/otel`) links logs to traces.
  *
- * @throws When no DSN is configured or the DSN is malformed.
+ * @throws {Error} When no DSN is configured or the DSN is malformed.
  */
 export const createSentryTransport = (
   options: SentryTransportOptions = {}

@@ -1,3 +1,4 @@
+import type { Stats } from 'node:fs'
 import { promises as fs } from 'node:fs'
 import { promisify } from 'node:util'
 import { gzip } from 'node:zlib'
@@ -102,7 +103,7 @@ export const shouldRotate = async (
 
 interface FileStat {
   path: string
-  stat: import('node:fs').Stats
+  stat: Stats
 }
 
 const isFulfilled = <T>(
@@ -154,7 +155,7 @@ const cleanupRotated = async (
   )
 
   // Log failures but don't crash
-  deleteResults.forEach((result, idx) => {
+  for (const [idx, result] of deleteResults.entries()) {
     if (result.status === 'rejected') {
       reportRotationError(
         `[logixlysia] Failed to delete rotated log ${toDelete[idx].path}:`,
@@ -162,7 +163,7 @@ const cleanupRotated = async (
         onError
       )
     }
-  })
+  }
 }
 
 export const performRotation = async (

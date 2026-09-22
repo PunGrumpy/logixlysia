@@ -4,6 +4,7 @@ import { getStatusCode } from '../helpers/status'
 import type { LogLevel, Options, RequestInfo, StoreData } from '../interfaces'
 import { elapsedMs } from '../utils/duration'
 import { isStructuredError, parseError } from '../utils/error'
+import { parseLeadingInteger } from '../utils/number'
 import { sanitizeLogText } from '../utils/sanitize'
 
 const pad2 = (value: number): string => String(value).padStart(2, '0')
@@ -246,7 +247,7 @@ const getColoredStatus = (status: string, useColors: boolean): string => {
     return status
   }
 
-  const numeric = Number.parseInt(status, 10)
+  const numeric = parseLeadingInteger(status)
   if (!Number.isFinite(numeric)) {
     return status
   }
@@ -321,7 +322,7 @@ export const createFormatContext = (options: Options): FormatContext => {
   const { config } = options
   const useColors = shouldUseColors(options)
   const format = config?.customLogFormat ?? DEFAULT_LOG_FORMAT
-  const tokens = new Set(format.match(LOG_FORMAT_REGEX) ?? [])
+  const tokens = new Set(format.match(LOG_FORMAT_REGEX))
   const { slow: slowThreshold, verySlow: verySlowThreshold } =
     getSlowThresholds(options)
   const serviceToken = getServiceToken(options, useColors)

@@ -37,7 +37,7 @@ export interface AxiomTransportOptions extends BatchTransportOptions {
  * Events keep their nested structure — Axiom indexes every field without a
  * schema, so `request.method`, `context.requestId`, etc. are all queryable.
  *
- * @throws When no API token or dataset is configured.
+ * @throws {Error} When no API token or dataset is configured.
  */
 export const createAxiomTransport = (
   options: AxiomTransportOptions = {}

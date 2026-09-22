@@ -96,7 +96,26 @@ export type LogixlysiaPlugin<TFields extends object = LogFields> =
 const DEFAULT_FLUSH_TIMEOUT_MS = 5000
 
 /**
- * @typeParam TFields - Field bag for the request-scoped `log`. Supply your own
+ * The response headers an enricher gets to read. `set.headers` alone misses
+ * anything a handler put on a returned `Response` (a `content-length`, say),
+ * so the two are merged — with `set.headers` winning, since Elysia applies
+ * it last. Only built when an enricher will actually read it.
+ */
+const readableResponseHeaders = (
+  setHeaders: Record<string, string | number>,
+  responseHeaders?: Headers
+): Record<string, unknown> => {
+  const merged: Record<string, unknown> = {}
+  if (responseHeaders) {
+    for (const [key, value] of responseHeaders) {
+      merged[key] = value
+    }
+  }
+  return Object.assign(merged, setHeaders)
+}
+
+/**
+ * @template TFields - Field bag for the request-scoped `log`. Supply your own
  * interface to have TypeScript reject misspelled context keys; the default
  * allows any key, so untyped usage is unchanged.
  */
@@ -187,23 +206,6 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
     warn: (message, context) =>
       emitCustomLog('WARNING', request, message, context)
   })
-
-  /**
-   * The response headers an enricher gets to read. `set.headers` alone misses
-   * anything a handler put on a returned `Response` (a `content-length`, say),
-   * so the two are merged — with `set.headers` winning, since Elysia applies
-   * it last. Only built when an enricher will actually read it.
-   */
-  const readableResponseHeaders = (
-    setHeaders: Record<string, string | number>,
-    responseHeaders?: Headers
-  ): Record<string, unknown> => {
-    const merged: Record<string, unknown> = {}
-    responseHeaders?.forEach((value, key) => {
-      merged[key] = value
-    })
-    return Object.assign(merged, setHeaders)
-  }
 
   /**
    * Everything both exits share once the status is known: echo the request id,

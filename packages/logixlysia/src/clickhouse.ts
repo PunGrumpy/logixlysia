@@ -79,7 +79,7 @@ const toRow = (entry: LogEntry): string => {
  * and an `attributes` map of the flattened meta (`request.method`,
  * `context.requestId`, …) with values rendered as strings.
  *
- * @throws When the database or table name is not a plain identifier.
+ * @throws {Error} When the database or table name is not a plain identifier.
  */
 export const createClickHouseTransport = (
   options: ClickHouseTransportOptions = {}

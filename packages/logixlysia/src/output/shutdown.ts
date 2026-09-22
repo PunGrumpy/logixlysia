@@ -2,6 +2,16 @@ import type { Options, SinkErrorContext } from '../interfaces'
 import { flushAllFileSinks } from './file-sink'
 import { flushTransports } from './index'
 
+/** Resolves once `work` settles, whichever way. */
+const settle = async (work: Promise<unknown>): Promise<void> => {
+  try {
+    await work
+  } catch {
+    // A failed flush is reported by the sinks themselves; here it only counts
+    // as "settled".
+  }
+}
+
 /**
  * Resolves `true` when `ms` elapsed before `work` settled, `false` otherwise.
  * A non-positive `ms` means "start the work but do not wait".
@@ -10,27 +20,24 @@ export const raceWithTimeout = (
   work: Promise<unknown>,
   ms: number
 ): Promise<boolean> => {
-  // A failed flush is reported by the sinks themselves; here it only counts
-  // as "settled", so swallow the rejection either way.
-  const settled = work.then(
-    () => false,
-    () => false
-  )
+  const settled = settle(work)
 
   if (ms <= 0) {
     return Promise.resolve(true)
   }
 
-  return new Promise<boolean>(resolve => {
-    const timer = setTimeout(() => resolve(true), ms)
-    // Never hold the event loop open just to observe a flush that is racing
-    // an exiting process.
-    timer.unref?.()
-    settled.then(timedOut => {
-      clearTimeout(timer)
-      resolve(timedOut)
-    })
-  })
+  const { promise, resolve } = Promise.withResolvers<boolean>()
+  const timer = setTimeout(() => resolve(true), ms)
+  // Never hold the event loop open just to observe a flush that is racing
+  // an exiting process.
+  timer.unref?.()
+  const settleFirst = async (): Promise<void> => {
+    await settled
+    clearTimeout(timer)
+    resolve(false)
+  }
+  settleFirst()
+  return promise
 }
 
 /**

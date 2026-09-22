@@ -48,42 +48,46 @@ const isNonNegativeNumber = (value: unknown): boolean =>
 
 const VALID_SAMPLING_LEVELS = ['DEBUG', 'INFO', 'WARNING', 'ERROR'] as const
 
+const invalidSampling = (detail: string): never => {
+  throw new Error(`logixlysia: invalid sampling config — ${detail}`)
+}
+
+const invalidFormatting = (detail: string): never => {
+  throw new Error(`logixlysia: invalid formatting config — ${detail}`)
+}
+
 const validateSampling = (config: Options['config']): void => {
   const sampling = config?.sampling
   if (!sampling) {
     return
   }
 
-  const invalid = (detail: string): never => {
-    throw new Error(`logixlysia: invalid sampling config — ${detail}`)
-  }
-
   for (const [level, rate] of Object.entries(sampling.head ?? {})) {
     if (!VALID_SAMPLING_LEVELS.includes(level as never)) {
-      invalid(
+      invalidSampling(
         `head.${level} is not a valid level (must be DEBUG, INFO, WARNING, or ERROR)`
       )
     }
     if (!isPercentage(rate)) {
-      invalid(`head.${level} must be a number between 0 and 100`)
+      invalidSampling(`head.${level} must be a number between 0 and 100`)
     }
   }
 
   const { tail } = sampling
   if (tail?.status !== undefined && !isNonNegativeNumber(tail.status)) {
-    invalid('tail.status must be a non-negative number')
+    invalidSampling('tail.status must be a non-negative number')
   }
   if (tail?.durationMs !== undefined && !isNonNegativeNumber(tail.durationMs)) {
-    invalid('tail.durationMs must be a non-negative number')
+    invalidSampling('tail.durationMs must be a non-negative number')
   }
   if (tail?.paths !== undefined) {
     if (!Array.isArray(tail.paths)) {
-      invalid('tail.paths must be an array')
+      invalidSampling('tail.paths must be an array')
     }
     if (
       tail.paths.some(path => typeof path !== 'string' || path.length === 0)
     ) {
-      invalid('tail.paths must contain non-empty glob strings')
+      invalidSampling('tail.paths must contain non-empty glob strings')
     }
   }
 
@@ -92,7 +96,7 @@ const validateSampling = (config: Options['config']): void => {
     maxBufferedPerRequest !== undefined &&
     !(Number.isInteger(maxBufferedPerRequest) && maxBufferedPerRequest >= 0)
   ) {
-    invalid('maxBufferedPerRequest must be a non-negative integer')
+    invalidSampling('maxBufferedPerRequest must be a non-negative integer')
   }
 }
 
@@ -100,12 +104,8 @@ const validateFormatting = (config: Options['config']): void => {
   const slowThreshold = config?.slowThreshold
   const verySlowThreshold = config?.verySlowThreshold
 
-  const invalid = (detail: string): never => {
-    throw new Error(`logixlysia: invalid formatting config — ${detail}`)
-  }
-
   if (slowThreshold !== undefined && !isNonNegativeNumber(slowThreshold)) {
-    invalid(
+    invalidFormatting(
       `slowThreshold must be a finite non-negative number, got ${slowThreshold}`
     )
   }
@@ -113,7 +113,7 @@ const validateFormatting = (config: Options['config']): void => {
     verySlowThreshold !== undefined &&
     !isNonNegativeNumber(verySlowThreshold)
   ) {
-    invalid(
+    invalidFormatting(
       `verySlowThreshold must be a finite non-negative number, got ${verySlowThreshold}`
     )
   }
@@ -122,7 +122,7 @@ const validateFormatting = (config: Options['config']): void => {
     verySlowThreshold !== undefined &&
     slowThreshold > verySlowThreshold
   ) {
-    invalid(
+    invalidFormatting(
       `slowThreshold (${slowThreshold}) must not exceed verySlowThreshold (${verySlowThreshold})`
     )
   }

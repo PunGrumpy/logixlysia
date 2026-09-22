@@ -9,12 +9,16 @@ export const loggerStorage: AsyncLocalStorage<RequestScopedLogger> =
  * plugin restores it so a continuation that outlives its request cannot keep
  * writing into the finished request's log.
  */
+const discard = (): void => {
+  // Outside a request there is no log to write into.
+}
+
 export const noopRequestLogger: RequestScopedLogger = {
-  debug: () => {},
-  error: () => {},
-  info: () => {},
-  mergeContext: () => {},
-  warn: () => {}
+  debug: discard,
+  error: discard,
+  info: discard,
+  mergeContext: discard,
+  warn: discard
 }
 
 /**

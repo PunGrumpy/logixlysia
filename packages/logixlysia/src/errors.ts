@@ -91,13 +91,9 @@ export class HttpError extends Error {
 
     // Set explicitly — a native subclass otherwise reports the generic
     // "Error", and the constructor-name fallback breaks under minification.
-    // Non-enumerable to match `Error.prototype.name`.
-    Object.defineProperty(this, 'name', {
-      configurable: true,
-      enumerable: false,
-      value: 'HttpError',
-      writable: true
-    })
+    // Then made non-enumerable to match `Error.prototype.name`.
+    this.name = 'HttpError'
+    Object.defineProperty(this, 'name', { enumerable: false })
 
     // Non-enumerable so `JSON.stringify`, spreads, and framework serializers
     // that walk own keys cannot pick it up. Property access still works, which

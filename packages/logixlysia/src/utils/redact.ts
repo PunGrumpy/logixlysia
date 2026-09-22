@@ -85,52 +85,6 @@ export const buildPinoRedactPaths = (
   })
 }
 
-/**
- * Host and userinfo cannot contain `[REDACTED]` — `[` begins an IPv6 literal in URLs and breaks parsing.
- */
-const URL_SAFE_REDACT = 'redacted'
-
-const redactUrlAuthoritySegment = (value: string): string =>
-  redactString(value).replaceAll(REDACTED_TEXT, URL_SAFE_REDACT)
-
-/** Apply PII redaction to a request URL while keeping the result parseable by the URL/Request constructors. */
-const redactRequestUrl = (
-  urlString: string,
-  extraKeys?: readonly string[]
-): string => {
-  try {
-    const u = new URL(urlString)
-    if (u.username !== '') {
-      u.username = redactUrlAuthoritySegment(u.username)
-    }
-    if (u.password !== '') {
-      u.password = redactUrlAuthoritySegment(u.password)
-    }
-    u.hostname = redactUrlAuthoritySegment(u.hostname)
-    u.pathname = redactString(u.pathname)
-    // `searchParams.set` re-serializes the whole query string, so redact
-    // decoded values directly rather than re-running pattern redaction on
-    // `u.search` afterward (which would see already percent-encoded text).
-    for (const key of [...u.searchParams.keys()]) {
-      if (isSensitiveKey(key, extraKeys)) {
-        u.searchParams.set(key, URL_SAFE_REDACT)
-        continue
-      }
-      const value = u.searchParams.get(key)
-      if (value !== null) {
-        const redactedValue = redactString(value)
-        if (redactedValue !== value) {
-          u.searchParams.set(key, redactedValue)
-        }
-      }
-    }
-    u.hash = redactString(u.hash)
-    return u.toString()
-  } catch {
-    return redactString(urlString).replaceAll(REDACTED_TEXT, URL_SAFE_REDACT)
-  }
-}
-
 /** Luhn checksum; `digits` must contain only `0-9` and length in PAN range. */
 const passesLuhn = (digits: string): boolean => {
   if (digits.length < PAN_MIN_LEN || digits.length > PAN_MAX_LEN) {
@@ -141,7 +95,7 @@ const passesLuhn = (digits: string): boolean => {
   let alternate = false
 
   for (let i = digits.length - 1; i >= 0; i -= 1) {
-    const code = digits.charCodeAt(i)
+    const code = digits.codePointAt(i) ?? 0
     if (code < 48 || code > 57) {
       return false
     }
@@ -185,13 +139,70 @@ export const redactString = (text: string): string => {
   return result
 }
 
+/**
+ * Host and userinfo cannot contain `[REDACTED]` — `[` begins an IPv6 literal in URLs and breaks parsing.
+ */
+const URL_SAFE_REDACT = 'redacted'
+
+const redactUrlAuthoritySegment = (value: string): string =>
+  redactString(value).replaceAll(REDACTED_TEXT, URL_SAFE_REDACT)
+
+/** Apply PII redaction to a request URL while keeping the result parseable by the URL/Request constructors. */
+const redactRequestUrl = (
+  urlString: string,
+  extraKeys?: readonly string[]
+): string => {
+  try {
+    const u = new URL(urlString)
+    if (u.username !== '') {
+      u.username = redactUrlAuthoritySegment(u.username)
+    }
+    if (u.password !== '') {
+      u.password = redactUrlAuthoritySegment(u.password)
+    }
+    u.hostname = redactUrlAuthoritySegment(u.hostname)
+    u.pathname = redactString(u.pathname)
+    // `searchParams.set` re-serializes the whole query string, so redact
+    // decoded values directly rather than re-running pattern redaction on
+    // `u.search` afterward (which would see already percent-encoded text).
+    // Iterate a copy: `set` below rewrites the live list.
+    for (const key of new URLSearchParams(u.searchParams).keys()) {
+      if (isSensitiveKey(key, extraKeys)) {
+        u.searchParams.set(key, URL_SAFE_REDACT)
+        continue
+      }
+      const value = u.searchParams.get(key)
+      if (value !== null) {
+        const redactedValue = redactString(value)
+        if (redactedValue !== value) {
+          u.searchParams.set(key, redactedValue)
+        }
+      }
+    }
+    u.hash = redactString(u.hash)
+    return u.toString()
+  } catch {
+    return redactString(urlString).replaceAll(REDACTED_TEXT, URL_SAFE_REDACT)
+  }
+}
+
+type RedactInner = <T>(
+  value: T,
+  inProgress: WeakSet<object>,
+  extraKeys: readonly string[] | undefined
+) => T
+
+// The walkers below recurse through `redactInner`, which is defined after
+// them and passed in as `recurse`.
+
 // Errors are exempt from the identity fast path below: a redacted Error is always constructed
 // fresh (even when nothing changed) so consumers never receive the original, potentially
 // stack-trace-carrying instance by reference.
 const redactErrorClone = (
   originalError: Error,
   inProgress: WeakSet<object>,
-  extraKeys?: readonly string[]
+  extraKeys: readonly string[] | undefined,
+  recurse: RedactInner
 ): Error & Record<string, unknown> => {
   const redactedMessage = redactString(originalError.message)
   const proto = Object.getPrototypeOf(originalError) as object
@@ -223,7 +234,7 @@ const redactErrorClone = (
 
     const redactedValue = isSensitiveKey(key, extraKeys)
       ? REDACTED_TEXT
-      : redactInner(descriptor.value, inProgress, extraKeys)
+      : recurse(descriptor.value, inProgress, extraKeys)
 
     Object.defineProperty(newError, key, {
       ...descriptor,
@@ -243,12 +254,13 @@ const redactErrorClone = (
 const redactArrayItems = (
   value: unknown[],
   inProgress: WeakSet<object>,
-  extraKeys?: readonly string[]
+  extraKeys: readonly string[] | undefined,
+  recurse: RedactInner
 ): unknown[] => {
   let result: unknown[] | undefined
 
   for (const [index, original] of value.entries()) {
-    const redacted = redactInner(original, inProgress, extraKeys)
+    const redacted = recurse(original, inProgress, extraKeys)
     if (result === undefined && redacted !== original) {
       result = value.slice(0, index)
     }
@@ -262,7 +274,8 @@ const redactArrayItems = (
 const redactRecordEntries = (
   recordValue: Record<string, unknown>,
   inProgress: WeakSet<object>,
-  extraKeys?: readonly string[]
+  extraKeys: readonly string[] | undefined,
+  recurse: RedactInner
 ): Record<string, unknown> => {
   const keys = Object.keys(recordValue)
   let result: Record<string, unknown> | undefined
@@ -272,7 +285,7 @@ const redactRecordEntries = (
     const sensitive = isSensitiveKey(key, extraKeys)
     const redacted = sensitive
       ? REDACTED_TEXT
-      : redactInner(original, inProgress, extraKeys)
+      : recurse(original, inProgress, extraKeys)
 
     if (result === undefined && (sensitive || redacted !== original)) {
       result = {}
@@ -301,10 +314,10 @@ const withReentrancyGuard = <T>(
   }
 }
 
-const redactInner = <T>(
+const redactInner: RedactInner = <T>(
   value: T,
   inProgress: WeakSet<object>,
-  extraKeys?: readonly string[]
+  extraKeys: readonly string[] | undefined
 ): T => {
   if (value === null || value === undefined) {
     return value
@@ -333,18 +346,23 @@ const redactInner = <T>(
 
   if (value instanceof Error) {
     return withReentrancyGuard(obj, inProgress, () =>
-      redactErrorClone(value, inProgress, extraKeys)
+      redactErrorClone(value, inProgress, extraKeys, redactInner)
     ) as unknown as T
   }
 
   if (Array.isArray(value)) {
     return withReentrancyGuard(obj, inProgress, () =>
-      redactArrayItems(value, inProgress, extraKeys)
+      redactArrayItems(value, inProgress, extraKeys, redactInner)
     ) as unknown as T
   }
 
   return withReentrancyGuard(obj, inProgress, () =>
-    redactRecordEntries(value as Record<string, unknown>, inProgress, extraKeys)
+    redactRecordEntries(
+      value as Record<string, unknown>,
+      inProgress,
+      extraKeys,
+      redactInner
+    )
   ) as unknown as T
 }
 

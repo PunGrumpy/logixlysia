@@ -15,6 +15,17 @@ import { redact, redactRequest } from '../utils/redact'
 import { formatLogOutput } from './create-logger'
 import type { FormatContext, PrecomputedLogParts } from './create-logger'
 
+/** Like `logToFile`, minus the rejection: file.ts already reported it (console.error or config.onError). */
+const writeToFile = async (
+  input: Parameters<typeof logToFile>[0]
+): Promise<void> => {
+  try {
+    await logToFile(input)
+  } catch {
+    // Already reported.
+  }
+}
+
 /**
  * Which sinks are active for a given config, resolved once per logger
  * instance (see `createLogger`) since none of these depend on per-request
@@ -211,7 +222,7 @@ export const emit = ({
   if (sinks.hasFileLogging) {
     const filePath = config?.logFilePath
     if (filePath) {
-      logToFile({
+      writeToFile({
         data: logData,
         filePath,
         level,
@@ -219,8 +230,6 @@ export const emit = ({
         precomputed,
         request: logRequest,
         store
-      }).catch(() => {
-        /* Ignore errors: file.ts already reported them (console.error or config.onError). */
       })
     }
   }

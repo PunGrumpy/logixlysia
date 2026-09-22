@@ -1,5 +1,5 @@
 import { promises as fs } from 'node:fs'
-import { basename, dirname } from 'node:path'
+import path from 'node:path'
 
 const SIZE_REGEX = /^(?<amount>\d+(?:\.\d+)?)(?<unit>[GKMgkm][Bb]?)$/u
 const INTERVAL_REGEX = /^(?<amount>\d+)(?<unit>[dhw])$/iu
@@ -87,8 +87,8 @@ export const shouldRotateBySize = async (
 }
 
 export const getRotatedFiles = async (filePath: string): Promise<string[]> => {
-  const dir = dirname(filePath)
-  const base = basename(filePath)
+  const dir = path.dirname(filePath)
+  const base = path.basename(filePath)
 
   let entries: string[]
   try {

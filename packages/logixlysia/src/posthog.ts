@@ -57,7 +57,7 @@ export interface PostHogTransportOptions extends BatchTransportOptions {
  * `context.requestId`, …) usable in filters, insights, and cohorts. Logs
  * carrying a `userId` in the request context are linked to PostHog persons.
  *
- * @throws When no API key is configured.
+ * @throws {Error} When no API key is configured.
  */
 export const createPostHogTransport = (
   options: PostHogTransportOptions = {}

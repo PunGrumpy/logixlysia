@@ -1,6 +1,6 @@
 import type { FileHandle } from 'node:fs/promises'
 import { open } from 'node:fs/promises'
-import { dirname } from 'node:path'
+import path from 'node:path'
 import type { LogRotationConfig } from '../interfaces'
 import { parseInterval, parseSize } from '../utils/rotation'
 import { ensureDir } from './fs'
@@ -44,6 +44,8 @@ interface PendingBatch {
   resolvers: BatchResolver[]
 }
 
+const sinks = new Map<string, FileSink>()
+
 class FileSinkImpl implements FileSink {
   private readonly filePath: string
   private handle: FileHandle | null = null
@@ -65,27 +67,40 @@ class FileSinkImpl implements FileSink {
     // calls to the same path (e.g. in tests).
     this.latestOptions = options
 
-    return new Promise((resolve, reject) => {
-      if (this.pendingBatch) {
-        this.pendingBatch.lines.push(line)
-        this.pendingBatch.resolvers.push({ reject, resolve })
-        return
-      }
+    const { promise, reject, resolve }: PromiseWithResolvers<void> =
+      Promise.withResolvers()
 
-      const batch: PendingBatch = {
-        lines: [line],
-        resolvers: [{ reject, resolve }]
-      }
-      this.pendingBatch = batch
+    if (this.pendingBatch) {
+      this.pendingBatch.lines.push(line)
+      this.pendingBatch.resolvers.push({ reject, resolve })
+      return promise
+    }
 
-      queueMicrotask(() => {
-        this.pendingBatch = null
-        this.flushChain = this.flushChain.then(
-          () => this.flushBatch(batch),
-          () => this.flushBatch(batch)
-        )
-      })
+    const batch: PendingBatch = {
+      lines: [line],
+      resolvers: [{ reject, resolve }]
+    }
+    this.pendingBatch = batch
+
+    queueMicrotask(() => {
+      this.pendingBatch = null
+      this.flushChain = this.flushAfter(this.flushChain, batch)
     })
+
+    return promise
+  }
+
+  /** Runs `batch` once `prior` settles, whether it resolved or rejected. */
+  private async flushAfter(
+    prior: Promise<void>,
+    batch: PendingBatch
+  ): Promise<void> {
+    try {
+      await prior
+    } catch {
+      // A failed batch already rejected its own writers; the next one still runs.
+    }
+    await this.flushBatch(batch)
   }
 
   private async flushBatch(batch: PendingBatch): Promise<void> {
@@ -123,7 +138,7 @@ class FileSinkImpl implements FileSink {
 
     // The directory only needs creating on first open (or on reopen after a
     // rotation cleared the handle) — never per line.
-    await ensureDir(dirname(this.filePath), options.logDirMode)
+    await ensureDir(path.dirname(this.filePath), options.logDirMode)
     const handle = await open(this.filePath, 'a', options.logFileMode ?? 0o600)
     const stat = await handle.stat()
     this.handle = handle
@@ -194,8 +209,6 @@ class FileSinkImpl implements FileSink {
     sinks.delete(this.filePath)
   }
 }
-
-const sinks = new Map<string, FileSink>()
 
 export const getFileSink = (filePath: string): FileSink => {
   let sink = sinks.get(filePath)

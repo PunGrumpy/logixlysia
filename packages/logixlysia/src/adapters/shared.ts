@@ -1,4 +1,5 @@
 import type { LogLevel, Transport } from '../interfaces'
+import { parseLeadingInteger } from '../utils/number'
 import { sanitizeLogText } from '../utils/sanitize'
 
 /** OpenTelemetry severity numbers for each Logixlysia log level. */
@@ -121,10 +122,12 @@ const NANOS_PER_MILLI = 1_000_000n
 export const toUnixNanos = (date: Date): string =>
   String(BigInt(date.getTime()) * NANOS_PER_MILLI)
 
-const sleep = (ms: number): Promise<void> =>
-  new Promise(resolve => {
-    setTimeout(resolve, ms)
-  })
+const sleep = (ms: number): Promise<void> => {
+  const { promise, resolve }: PromiseWithResolvers<void> =
+    Promise.withResolvers()
+  setTimeout(resolve, ms)
+  return promise
+}
 
 export interface PostWithRetryInput {
   body: string
@@ -137,7 +140,7 @@ export interface PostWithRetryInput {
 }
 
 const parseRetryAfterMs = (value: string): number | undefined => {
-  const seconds = Number.parseInt(value, 10)
+  const seconds = parseLeadingInteger(value)
   if (Number.isFinite(seconds) && seconds >= 0) {
     return seconds * MILLIS_PER_SECOND
   }
@@ -206,9 +209,13 @@ const attemptPost = async (
     }
     return
   }
-  const detail = sanitizeLogText(
-    (await response.text().catch(() => '')).slice(0, ERROR_BODY_PREVIEW_LENGTH)
-  )
+  let body = ''
+  try {
+    body = await response.text()
+  } catch {
+    // An unreadable body only costs the error message its detail.
+  }
+  const detail = sanitizeLogText(body.slice(0, ERROR_BODY_PREVIEW_LENGTH))
   const httpError = new Error(
     `[logixlysia] ${input.name} transport: HTTP ${response.status}${
       detail ? ` — ${detail}` : ''
@@ -293,6 +300,25 @@ export const createBatchQueue = (input: {
   const maxPendingBatches =
     input.maxPendingBatches ?? DEFAULT_MAX_PENDING_BATCHES
 
+  const sendAfter = async (
+    prior: Promise<void>,
+    entries: LogEntry[]
+  ): Promise<void> => {
+    await prior
+    await input.send(entries)
+  }
+
+  // Swallow the failure on the chain itself so one bad batch cannot poison
+  // the batches after it; the caller of enqueueSend still sees the rejection.
+  const settleSend = async (send: Promise<void>): Promise<void> => {
+    try {
+      await send
+    } catch {
+      // Reported by whoever awaits `send`.
+    }
+    pending -= 1
+  }
+
   const enqueueSend = (entries: LogEntry[]): Promise<void> => {
     if (pending >= maxPendingBatches) {
       report(
@@ -303,15 +329,14 @@ export const createBatchQueue = (input: {
       return tail
     }
     pending += 1
-    const send = tail.then(() => input.send(entries))
-    // Swallow the failure on the chain itself so one bad batch cannot poison
-    // the batches after it; the caller of enqueueSend still sees the rejection.
-    tail = send
-      .catch(() => {})
-      .then(() => {
-        pending -= 1
-      })
+    const send = sendAfter(tail, entries)
+    tail = settleSend(send)
     return send
+  }
+
+  const drain = async (entries: LogEntry[]): Promise<void> => {
+    await enqueueSend(entries)
+    await tail
   }
 
   const flush = (): Promise<void> => {
@@ -324,11 +349,15 @@ export const createBatchQueue = (input: {
     }
     const entries = buffer
     buffer = []
-    return enqueueSend(entries).then(() => tail)
+    return drain(entries)
   }
 
-  const flushFromTimer = (): void => {
-    flush().catch(report)
+  const flushFromTimer = async (): Promise<void> => {
+    try {
+      await flush()
+    } catch (error) {
+      report(error)
+    }
   }
 
   const push = (entry: LogEntry): Promise<void> | undefined => {

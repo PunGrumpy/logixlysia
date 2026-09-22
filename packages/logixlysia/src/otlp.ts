@@ -92,7 +92,7 @@ const resolveLogsUrl = (endpointOption: string | undefined): string => {
  * Meta fields become dot-notation log attributes (`request.method`,
  * `context.requestId`, …).
  *
- * @throws When no endpoint is configured.
+ * @throws {Error} When no endpoint is configured.
  */
 export const createOtlpTransport = (
   options: OtlpTransportOptions = {}

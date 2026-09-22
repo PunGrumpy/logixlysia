@@ -1,6 +1,6 @@
 import type { LoggerOptions as PinoLoggerOptions } from 'pino'
 import type { LogLevel } from './core'
-import type { Enricher, EnricherLike } from './enricher'
+import type { EnricherLike } from './enricher'
 
 export interface Transport {
   /**
@@ -228,7 +228,7 @@ export interface RequestTrackingConfig {
    * into the request context, so the fields reach the console tree, file logs,
    * and every transport at once.
    *
-   * Each entry is either an {@link Enricher} (a `request` phase, a `response`
+   * Each entry is either an `Enricher` (a `request` phase, a `response`
    * phase, or both) or a bare function, which is treated as the request phase.
    * Ready-made ones — traceparent, user agent, geo, sizes — live in
    * `logixlysia/enrichers`.
