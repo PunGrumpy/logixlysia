@@ -3,7 +3,7 @@
   "hooks": {
     "afterFileEdit": [
       {
-        "command": "bun run format"
+        "command": "bun x oxfmt"
       }
     ]
   }

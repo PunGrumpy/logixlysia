@@ -4,7 +4,7 @@
       {
         "hooks": [
           {
-            "command": "bun run format",
+            "command": "bun x oxfmt",
             "type": "command"
           }
         ],
