@@ -27,7 +27,7 @@ afterAll(() => {
 
 type ConsoleMethod = 'debug' | 'error' | 'info' | 'log' | 'warn'
 
-const DATE_PATTERN_REGEX = /\d{4}-\d{2}-\d{2}/
+const DATE_PATTERN_REGEX = /\d{4}-\d{2}-\d{2}/u
 
 /** Creates a logger with `config`, runs `act` against it, and returns the string
  * logged to `console[method]` (as an internal-console-sink test always emits

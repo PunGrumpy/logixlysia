@@ -16,7 +16,7 @@ import type { LogLevel } from './interfaces'
 
 const MILLIS_PER_SECOND = 1000
 const TRACE_ID_BYTES = 16
-const TRACE_ID_PATTERN = /^[0-9a-f]{32}$/i
+const TRACE_ID_PATTERN = /^[0-9a-fA-F]{32}$/u
 
 export interface SentryTransportOptions extends BatchTransportOptions {
   /**

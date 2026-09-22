@@ -41,7 +41,7 @@ const legacyDocsPaths = [
 // interpolation.
 const mintlifyWidgetId = process.env.MINTLIFY_WIDGET_ID?.trim()
 
-if (mintlifyWidgetId && !/^[\w-]+$/.test(mintlifyWidgetId)) {
+if (mintlifyWidgetId && !/^[\w-]+$/u.test(mintlifyWidgetId)) {
   throw new Error(
     'MINTLIFY_WIDGET_ID must be the plain widget ID from the Mintlify dashboard (letters, digits, "_" and "-" only).'
   )

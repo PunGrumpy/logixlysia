@@ -17,7 +17,7 @@ const DEFAULT_LOG_FORMAT =
   '{now} {service}{icon} {method} {pathname} {status} {duration} {message}{speed}'
 
 const LOG_FORMAT_REGEX =
-  /\{(now|epoch|level|icon|duration|method|pathname|path|query|status|statusText|message|ip|context|service|speed|requestId)\}/g
+  /\{(?:now|epoch|level|icon|duration|method|pathname|path|query|status|statusText|message|ip|context|service|speed|requestId)\}/gu
 
 export interface FormattedLogOutput {
   contextLines: string[]
@@ -37,8 +37,8 @@ const shouldUseColors = (options: Options): boolean => {
 // timezone-offset token, which this formatter does not support).
 const STANDARD_TIMESTAMP_PATTERN = 'yyyy-mm-dd HH:MM:ss.SSS'
 
-const SYS_PREFIX_REGEX = /^sys:/i
-const UTC_PREFIX_REGEX = /^utc:/i
+const SYS_PREFIX_REGEX = /^[Ss][Yy][Ss]:/u
+const UTC_PREFIX_REGEX = /^utc:/iu
 
 /**
  * Splits a `timestamp.translateTime` value into the literal pattern to

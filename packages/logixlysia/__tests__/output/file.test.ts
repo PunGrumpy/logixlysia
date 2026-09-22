@@ -9,7 +9,7 @@ import { createTempDir, removeTempDir } from '../_helpers/tmp'
 /** Owner/group/other permission bits as a 3-digit octal string, e.g. '600'. */
 const permBits = (mode: number): string => mode.toString(8).slice(-3)
 
-const MESSAGE_ID_REGEX = /msg-(\d+)$/
+const MESSAGE_ID_REGEX = /msg-(?<id>\d+)$/u
 
 describe('logToFile', () => {
   test('writes to file and creates directories', async () => {

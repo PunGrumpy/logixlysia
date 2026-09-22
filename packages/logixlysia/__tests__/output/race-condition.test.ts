@@ -6,12 +6,12 @@ import { logToFile } from '../../src/output/file'
 import { createMockRequest } from '../_helpers/request'
 import { createTempDir, removeTempDir } from '../_helpers/tmp'
 
-const MESSAGE_REGEX = /message-(\d+)/
+const MESSAGE_REGEX = /message-(?<id>\d+)/u
 // A full-line regex: a torn line (cut mid-write) or a merged line (two
 // writes concatenated without a newline in between) will not match this
 // anchored pattern, revealing broken mutual exclusion.
 const EXCLUSION_LINE_REGEX =
-  /^(DEBUG|INFO|WARNING|ERROR) [\d.]+ms GET \/test\d+ msg-(\d+)-x+$/
+  /^(?:DEBUG|INFO|WARNING|ERROR) [\d.]+ms GET \/test\d+ msg-(?<id>\d+)-x+$/u
 
 describe('logToFile race condition', () => {
   test('handles concurrent writes during rotation without data loss', async () => {
@@ -171,7 +171,7 @@ describe('logToFile race condition', () => {
           expect(line).toMatch(EXCLUSION_LINE_REGEX)
           const match = line.match(EXCLUSION_LINE_REGEX)
           if (match) {
-            seenIds.add(match[2])
+            seenIds.add(match[1])
           }
         }
       }

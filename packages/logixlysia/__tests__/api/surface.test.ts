@@ -7,8 +7,8 @@ import packageJson from '../../package.json'
 const packageRoot = join(import.meta.dir, '..', '..')
 const distReady = existsSync(join(packageRoot, 'dist', 'index.js'))
 
-const SRC_PREFIX = /^src\//
-const TS_EXTENSION = /\.ts$/
+const SRC_PREFIX = /^src\//u
+const TS_EXTENSION = /\.ts$/u
 
 type ExportEntry =
   | string

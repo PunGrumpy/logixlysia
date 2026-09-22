@@ -8,7 +8,7 @@ import {
 import { redactRequest } from '../../src/utils/redact'
 import { createMockRequest } from '../_helpers/request'
 
-const DIGITS_ONLY_REGEX = /^\d+$/
+const DIGITS_ONLY_REGEX = /^\d+$/u
 
 describe('formatDuration', () => {
   test('formats sub-second requests as ms', () => {
@@ -246,7 +246,7 @@ describe('formatLogOutput', () => {
   })
 })
 
-const STANDARD_TIMESTAMP_REGEX = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3}$/
+const STANDARD_TIMESTAMP_REGEX = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3}$/u
 
 describe('formatLogOutput timestamp prefixes', () => {
   afterEach(() => {

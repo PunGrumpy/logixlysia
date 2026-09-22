@@ -29,7 +29,7 @@ const metaOf = (records: Recorded[], index = 0): Record<string, unknown> => {
   return meta
 }
 
-const NAME_PATTERN = /Anna Müller/g
+const NAME_PATTERN = /Anna Müller/gu
 
 /**
  * Stands in for `@desert-ant-labs/redact`: masks one known name so a test can

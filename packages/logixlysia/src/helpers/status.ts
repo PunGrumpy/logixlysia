@@ -1,12 +1,12 @@
 import { StatusMap } from 'elysia'
 
-const DIGITS_ONLY = /^\d+$/
-const DELIMITERS = /[_-]+/g
-const CAMEL_BOUNDARY_1 = /([a-z0-9])([A-Z])/g
-const CAMEL_BOUNDARY_2 = /([A-Z])([A-Z][a-z])/g
-const APOSTROPHES = /['’]/g
-const NON_ALPHANUMERIC = /[^a-z0-9\s]+/g
-const WHITESPACE = /\s+/g
+const DIGITS_ONLY = /^\d+$/u
+const DELIMITERS = /[_-]+/gu
+const CAMEL_BOUNDARY_1 = /(?<before>[a-z0-9])(?<after>[A-Z])/gu
+const CAMEL_BOUNDARY_2 = /(?<before>[A-Z])(?<after>[A-Z][a-z])/gu
+const APOSTROPHES = /['’]/gu
+const NON_ALPHANUMERIC = /[^a-z0-9\s]+/gu
+const WHITESPACE = /\s+/gu
 
 const normalizeStatusName = (value: string): string => {
   // Handles common variants:
@@ -20,8 +20,8 @@ const normalizeStatusName = (value: string): string => {
 
   return trimmed
     .replace(DELIMITERS, ' ')
-    .replace(CAMEL_BOUNDARY_1, '$1 $2')
-    .replace(CAMEL_BOUNDARY_2, '$1 $2')
+    .replace(CAMEL_BOUNDARY_1, '$<before> $<after>')
+    .replace(CAMEL_BOUNDARY_2, '$<before> $<after>')
     .replace(APOSTROPHES, '')
     .toLowerCase()
     .replace(NON_ALPHANUMERIC, ' ')

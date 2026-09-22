@@ -15,7 +15,7 @@ import type {
 const DEFAULT_URL = 'http://localhost:8123'
 const DEFAULT_DATABASE = 'default'
 const DEFAULT_TABLE = 'logs'
-const IDENTIFIER = /^[A-Za-z0-9_]+$/
+const IDENTIFIER = /^[A-Za-z0-9_]+$/u
 
 export interface ClickHouseTransportOptions extends BatchTransportOptions {
   /**

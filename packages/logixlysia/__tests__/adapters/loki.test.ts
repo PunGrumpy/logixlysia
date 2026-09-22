@@ -11,7 +11,7 @@ const CLEAR_ENV = {
   OTEL_SERVICE_NAME: undefined
 }
 
-const NANO_TIMESTAMP = /^\d+$/
+const NANO_TIMESTAMP = /^\d+$/u
 
 interface LokiPayload {
   streams: {

@@ -1,8 +1,8 @@
 // Local part ≤64, domain ≤253, TLD 2–63 (RFC 5321 / 1035-ish limits; bounded to avoid ReDoS)
 const EMAIL_REGEX =
-  /[a-zA-Z0-9._%+-]{1,64}@[a-zA-Z0-9.-]{1,253}\.[a-zA-Z]{2,63}/g
+  /[a-zA-Z0-9._%+-]{1,64}@[a-zA-Z0-9.-]{1,253}\.[a-zA-Z]{2,63}/gu
 const IPV4_REGEX =
-  /(?<![\w/.])(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(?![\w.])/g
+  /(?<![\w/.])(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(?![\w.])/gu
 /**
  * Bounded IPv6: either all 8 groups, or a single `::` compression. Requiring
  * one of those shapes (rather than "2+ colon-separated hex groups") keeps
@@ -10,10 +10,10 @@ const IPV4_REGEX =
  * matching.
  */
 const IPV6_REGEX =
-  /(?<![\w:])(?:(?:[0-9a-f]{1,4}:){7}[0-9a-f]{1,4}|(?:[0-9a-f]{1,4}:){1,7}:(?:[0-9a-f]{1,4}(?::[0-9a-f]{1,4}){0,6})?|::(?:[0-9a-f]{1,4}(?::[0-9a-f]{1,4}){0,6}))(?![\w:])/gi
+  /(?<![\w:])(?:(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}|(?:[0-9a-fA-F]{1,4}:){1,7}:(?:[0-9a-fA-F]{1,4}(?::[0-9a-fA-F]{1,4}){0,6})?|::(?:[0-9a-fA-F]{1,4}(?::[0-9a-fA-F]{1,4}){0,6}))(?![\w:])/gu
 /** Digit runs that may be formatted PANs (spaces/dashes); validated with Luhn before redacting. */
-const CREDIT_CARD_CANDIDATE_REGEX = /\b(?:\d[ -]*?){13,19}\b/g
-const JWT_REGEX = /eyJ[a-zA-Z0-9_-]+\.eyJ[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+/g
+const CREDIT_CARD_CANDIDATE_REGEX = /\b(?:\d[ -]*?){13,19}\b/gu
+const JWT_REGEX = /eyJ[a-zA-Z0-9_-]+\.eyJ[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+/gu
 
 const PAN_MIN_LEN = 13
 const PAN_MAX_LEN = 19
@@ -48,12 +48,12 @@ export const DEFAULT_REDACT_KEYS: readonly string[] = [
   'ssn'
 ]
 
-const CAMEL_CASE_BOUNDARY_REGEX = /([a-z0-9])([A-Z])/g
+const CAMEL_CASE_BOUNDARY_REGEX = /(?<before>[a-z0-9])(?<after>[A-Z])/gu
 
 /** Normalize `X_Api-Key` / `apiKey` style variants to `x-api-key` form. */
 const normalizeKeyName = (key: string): string =>
   key
-    .replace(CAMEL_CASE_BOUNDARY_REGEX, '$1-$2')
+    .replace(CAMEL_CASE_BOUNDARY_REGEX, '$<before>-$<after>')
     .replaceAll('_', '-')
     .toLowerCase()
 
@@ -161,7 +161,7 @@ const passesLuhn = (digits: string): boolean => {
 
 const redactCreditCardCandidates = (text: string): string =>
   text.replace(CREDIT_CARD_CANDIDATE_REGEX, match => {
-    const digits = match.replaceAll(/\D/g, '')
+    const digits = match.replaceAll(/\D/gu, '')
     if (
       digits.length >= PAN_MIN_LEN &&
       digits.length <= PAN_MAX_LEN &&

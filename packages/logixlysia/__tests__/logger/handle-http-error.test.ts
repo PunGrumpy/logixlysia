@@ -12,7 +12,7 @@ interface CapturedEvent {
   meta: Record<string, unknown>
 }
 
-const VALIDATION_FAILED_BODY_REGEX = /^Validation failed \(body\)/
+const VALIDATION_FAILED_BODY_REGEX = /^Validation failed \(body\)/u
 
 const createCaptureTransport = () => {
   const events: CapturedEvent[] = []
