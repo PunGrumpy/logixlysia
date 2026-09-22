@@ -1,5 +1,4 @@
 import { describe, expect, test } from 'bun:test'
-
 import type { RequestOutcome } from '../../src/sampling'
 import { resolveSampling } from '../../src/sampling'
 

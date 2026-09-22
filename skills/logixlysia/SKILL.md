@@ -32,6 +32,7 @@ const app = new Elysia()
 Logixlysia derives a `log` object (of type `RequestScopedLogger`) onto the Elysia request context. Always prefer using this request-scoped logger inside route handlers instead of importing global loggers, as it tracks timing, request paths, and request-specific context.
 
 ### Basic Logging in Route Handlers
+
 ```typescript
 app.get('/user/:id', ({ params, log }) => {
   log.info('Fetching user', { userId: params.id })
@@ -40,6 +41,7 @@ app.get('/user/:id', ({ params, log }) => {
 ```
 
 ### Merging Request Context
+
 You can append custom fields to the current request's log using `log.mergeContext()`. These fields are automatically displayed as an easy-to-read tree structure underneath the main HTTP log line.
 
 ```typescript
@@ -70,7 +72,7 @@ app.use(
       // Request tracing and propagation
       requestId: {
         enabled: true,
-        header: 'X-Request-Id', // Default tracing header
+        header: 'X-Request-Id' // Default tracing header
       },
 
       // Custom formatting and coloring
@@ -84,7 +86,7 @@ app.use(
       autoRedact: true,
 
       // AsyncLocalStorage integration
-      useAsyncLocalStorage: true,
+      useAsyncLocalStorage: true
     }
   })
 )
@@ -119,19 +121,17 @@ import { logixlysia } from 'logixlysia'
 
 const logger = logixlysia()
 
-const app = new Elysia()
-  .use(logger)
-  .ws('/chat', {
-    ...logger.wrapWs('/chat', {
-      open(ws) {
-        ws.data.store.logger.mergeContext(ws, { room: 'lobby' })
-      },
-      message(ws, message) {
-        ws.send(message)
-      }
-      // close is optional: wrapWs logs it automatically
-    })
+const app = new Elysia().use(logger).ws('/chat', {
+  ...logger.wrapWs('/chat', {
+    open(ws) {
+      ws.data.store.logger.mergeContext(ws, { room: 'lobby' })
+    },
+    message(ws, message) {
+      ws.send(message)
+    }
+    // close is optional: wrapWs logs it automatically
   })
+})
 ```
 
 ---
@@ -139,6 +139,7 @@ const app = new Elysia()
 ## 6. Code Standards and Constraints
 
 When writing or modifying code relating to Logixlysia:
+
 1. **Never use `any`** for context arguments. Leverage the `RequestScopedLogger` and `LogixlysiaContext` interfaces.
 2. **Prefer explicit return types** for custom logging utilities and transport implementations.
 3. **Empty Singleton Slots Constraint**: If writing middleware or plugins that extend Elysia context slots, avoid returning `Record<string, never>`. Use a dedicated empty interface like:
@@ -203,7 +204,12 @@ Sampling is off unless at least one head rate is below `100`.
 `config.enrichers` runs contributors on every request and merges their return value into the request context, reaching the console tree, file logs, and every transport. Each entry is an `Enricher` (with `request` and/or `response` phases) or a bare function treated as the request phase.
 
 ```typescript
-import { geoEnricher, traceparentEnricher, userAgentEnricher, sizeEnricher } from 'logixlysia/enrichers'
+import {
+  geoEnricher,
+  traceparentEnricher,
+  userAgentEnricher,
+  sizeEnricher
+} from 'logixlysia/enrichers'
 
 logixlysia({
   config: {

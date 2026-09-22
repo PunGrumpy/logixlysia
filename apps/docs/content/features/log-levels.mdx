@@ -47,9 +47,10 @@ logixlysia({
 logixlysia({
   config: {
     logFilter: {
-      level: process.env.NODE_ENV === 'production' 
-        ? ['ERROR', 'WARNING']
-        : ['DEBUG', 'INFO', 'WARNING', 'ERROR']
+      level:
+        process.env.NODE_ENV === 'production'
+          ? ['ERROR', 'WARNING']
+          : ['DEBUG', 'INFO', 'WARNING', 'ERROR']
     }
   }
 })

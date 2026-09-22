@@ -263,7 +263,8 @@ export interface PinoConfig {
 }
 
 export interface LogixlysiaConfig
-  extends FormattingConfig,
+  extends
+    FormattingConfig,
     OutputConfig,
     RedactionConfig,
     RequestTrackingConfig,

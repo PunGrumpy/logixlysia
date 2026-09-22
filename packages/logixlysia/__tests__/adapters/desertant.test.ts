@@ -1,5 +1,4 @@
 import { describe, expect, test } from 'bun:test'
-
 import type { NeuralCallOptions, NeuralRedactor } from '../../src/desertant'
 import { withRedaction } from '../../src/desertant'
 import type { LogLevel, Transport } from '../../src/interfaces'

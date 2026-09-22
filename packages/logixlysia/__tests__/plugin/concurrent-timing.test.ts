@@ -1,6 +1,5 @@
 import { describe, expect, test } from 'bun:test'
 import { Elysia } from 'elysia'
-
 import logixlysia from '../../src'
 import type { Options } from '../../src/interfaces'
 

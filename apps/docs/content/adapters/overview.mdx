@@ -10,7 +10,7 @@ Send your logs to external observability platforms with built-in adapters. Each 
 ### Cloud Platforms
 
 | Platform | Import | Best for |
-|----------|--------|----------|
+| --- | --- | --- |
 | [Axiom](/docs/adapters/axiom) | `logixlysia/axiom` | Schema-free log analytics — every field is queryable |
 | [Better Stack](/docs/adapters/better-stack) | `logixlysia/better-stack` | Logs, uptime, and alerting in one place |
 | [Datadog](/docs/adapters/datadog) | `logixlysia/datadog` | Enterprise observability with facets and pipelines |
@@ -20,7 +20,7 @@ Send your logs to external observability platforms with built-in adapters. Each 
 ### Self-Hosted & Open Standards
 
 | Platform | Import | Best for |
-|----------|--------|----------|
+| --- | --- | --- |
 | [OTLP](/docs/adapters/otlp) | `logixlysia/otlp` | Any OpenTelemetry backend — collectors, Grafana Cloud, New Relic, Honeycomb, SigNoz |
 | [HyperDX](/docs/adapters/hyperdx) | `logixlysia/hyperdx` | Open-source observability via OTLP |
 | [Grafana Loki](/docs/adapters/loki) | `logixlysia/loki` | Label-indexed logs for the Grafana stack |
@@ -63,7 +63,7 @@ All adapters share the same core:
 Every adapter accepts these options on top of its platform-specific ones:
 
 | Option | Type | Default | Description |
-|--------|------|---------|-------------|
+| --- | --- | --- | --- |
 | `maxBatchSize` | `number` | `20` | Entries buffered before an immediate flush |
 | `flushIntervalMs` | `number` | `2000` | Max time an entry waits before the buffer is sent |
 | `timeout` | `number` | `5000` | Per-request timeout in milliseconds |

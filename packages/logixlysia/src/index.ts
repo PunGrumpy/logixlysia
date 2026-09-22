@@ -417,7 +417,6 @@ export const flushLogixlysia = async (
   }
 }
 
-// biome-ignore lint/performance/noBarrelFile: public package entry re-exports
 export { resolveOptions } from './config/resolve-options'
 export { useLogger } from './context/storage'
 export type { HttpErrorInit, HttpErrorPayload } from './errors'

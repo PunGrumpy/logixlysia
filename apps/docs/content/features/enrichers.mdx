@@ -31,10 +31,10 @@ traceparentEnricher()
 
 The `trace_id` / `span_id` naming matches what Sentry, HyperDX, and OTLP backends expect, so logs link to traces as soon as an upstream service propagates the header.
 
-| Option       | Type      | Default         | Description                                    |
-| ------------ | --------- | --------------- | ---------------------------------------------- |
-| `header`     | `string`  | `'traceparent'` | Header to read the trace context from          |
-| `tracestate` | `boolean` | `false`         | Also record `tracestate`, capped at 512 chars  |
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `header` | `string` | `'traceparent'` | Header to read the trace context from |
+| `tracestate` | `boolean` | `false` | Also record `tracestate`, capped at 512 chars |
 
 Malformed headers are ignored rather than partially parsed: the reserved `ff` version, all-zero trace or span ids, and a version `00` header carrying extra fields all add nothing.
 
@@ -99,10 +99,10 @@ Return `undefined` to add nothing.
 
 ### Phases
 
-| Phase      | Runs                            | Receives                                   |
-| ---------- | ------------------------------- | ------------------------------------------ |
-| `request`  | At request start                | The `Request`                              |
-| `response` | Once the outcome is known       | `{ request, status, durationMs, headers }` |
+| Phase | Runs | Receives |
+| --- | --- | --- |
+| `request` | At request start | The `Request` |
+| `response` | Once the outcome is known | `{ request, status, durationMs, headers }` |
 
 The response phase runs before the request's final log line on both the success and the error path, so its fields are on the access log and on the error log alike. Request-phase fields, being merged at the start, also reach any `log.info()` you make inside the handler.
 

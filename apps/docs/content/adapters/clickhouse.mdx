@@ -54,7 +54,7 @@ const app = new Elysia()
 ## Environment Variables
 
 | Variable | Required | Description |
-|----------|----------|-------------|
+| --- | --- | --- |
 | `CLICKHOUSE_URL` | No | HTTP interface base URL (default `http://localhost:8123`) |
 | `CLICKHOUSE_DATABASE` | No | Target database (default `default`) |
 | `CLICKHOUSE_TABLE` | No | Target table (default `logs`) |
@@ -70,13 +70,13 @@ const clickhouse = createClickHouseTransport({
 })
 ```
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `url` | `string` | `http://localhost:8123` | HTTP interface base URL |
-| `database` | `string` | `default` | Target database |
-| `table` | `string` | `logs` | Target table |
-| `username` | `string` | `CLICKHOUSE_USERNAME` | Username |
-| `password` | `string` | `CLICKHOUSE_PASSWORD` | Password |
+| Option     | Type     | Default                 | Description             |
+| ---------- | -------- | ----------------------- | ----------------------- |
+| `url`      | `string` | `http://localhost:8123` | HTTP interface base URL |
+| `database` | `string` | `default`               | Target database         |
+| `table`    | `string` | `logs`                  | Target table            |
+| `username` | `string` | `CLICKHOUSE_USERNAME`   | Username                |
+| `password` | `string` | `CLICKHOUSE_PASSWORD`   | Password                |
 
 Plus the shared batching options: `maxBatchSize`, `flushIntervalMs`, `timeout`, `retries` — see the [overview](/docs/adapters/overview#shared-behavior).
 

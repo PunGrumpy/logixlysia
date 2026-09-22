@@ -71,6 +71,7 @@ ip: true
 ```
 
 **How IP is resolved:** The client IP is read from HTTP headers in this order:
+
 1. `x-forwarded-for` — uses the first (leftmost) IP in the comma-separated list (the original client when behind proxies)
 2. `x-real-ip` — fallback when `x-forwarded-for` is not present
 
@@ -177,6 +178,7 @@ customLogFormat: '{now} {level} {duration}ms {method} {pathname} {status}'
 When `customLogFormat` is omitted, Logixlysia uses a built-in default that includes `{now}`, `{service}`, `{icon}`, `{method}`, `{pathname}`, `{status}`, `{duration}`, `{message}`, and `{speed}`.
 
 Available placeholders:
+
 - `{now}` - Current timestamp
 - `{level}` - Log level
 - `{duration}` - Request duration (formatted, e.g. `12ms`, `1.5s`)
@@ -519,16 +521,16 @@ pino: {
 
 #### Common prettyPrint Options
 
-| Option | Type | Description |
-|--------|------|-------------|
-| `colorize` | `boolean` | Enable colors in output |
-| `translateTime` | `string \| boolean` | Format timestamps |
-| `ignore` | `string` | Comma-separated keys to exclude |
-| `singleLine` | `boolean` | Print each log on one line |
-| `messageFormat` | `string` | Custom message format |
-| `levelFirst` | `boolean` | Show level before timestamp |
-| `messageKey` | `string` | Key containing log message |
-| `errorKey` | `string` | Key containing error info |
+| Option          | Type                | Description                     |
+| --------------- | ------------------- | ------------------------------- |
+| `colorize`      | `boolean`           | Enable colors in output         |
+| `translateTime` | `string \| boolean` | Format timestamps               |
+| `ignore`        | `string`            | Comma-separated keys to exclude |
+| `singleLine`    | `boolean`           | Print each log on one line      |
+| `messageFormat` | `string`            | Custom message format           |
+| `levelFirst`    | `boolean`           | Show level before timestamp     |
+| `messageKey`    | `string`            | Key containing log message      |
+| `errorKey`      | `string`            | Key containing error info       |
 
 See [pino-pretty documentation](https://github.com/pinojs/pino-pretty#options) for complete reference.
 
@@ -581,19 +583,19 @@ logixlysia({
     // Startup
     showStartupMessage: true,
     startupMessageFormat: 'banner',
-    
+
     // Display
     useColors: true,
     ip: true,
     autoRedact: false,
     logQueryParams: false,
-    
+
     // Formatting
     timestamp: {
       translateTime: 'yyyy-mm-dd HH:MM:ss'
     },
     customLogFormat: '{now} {level} {duration}ms {method} {pathname} {status}',
-    
+
     // File Logging
     logFilePath: './logs/app.log',
     logRotation: {
@@ -601,13 +603,13 @@ logixlysia({
       maxFiles: '30d',
       compress: true
     },
-    
+
     // Output Control
     disableInternalLogger: false,
     disableFileLogging: false,
     useTransportsOnly: false,
     transports: [],
-    
+
     // Pino
     pino: {
       level: 'info',
@@ -621,4 +623,3 @@ logixlysia({
   }
 })
 ```
-

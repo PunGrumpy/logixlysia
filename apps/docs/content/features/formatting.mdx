@@ -20,7 +20,7 @@ logixlysia({
 ## Available Placeholders
 
 | Placeholder | Description |
-|-------------|-------------|
+| --- | --- |
 | `{now}` | Current date and time |
 | `{level}` | Log level (`DEBUG`, `INFO`, `WARNING`, `ERROR`); with colors, level-colored background chip |
 | `{duration}` | Request duration (e.g. `12ms`, `1.5s`); with colors, green / yellow / red based on `slowThreshold` and `verySlowThreshold` |
@@ -46,6 +46,7 @@ customLogFormat: '{method} {pathname} {status}'
 ```
 
 Output:
+
 ```
 GET /api/users 200
 ```
@@ -58,7 +59,8 @@ Use `{icon}` for the Logixlysia fox (level styling applies when colors and a TTY
 logixlysia({
   config: {
     service: 'my-api',
-    customLogFormat: '{now} {service}{icon} {method} {pathname} {status} {duration} {message}{speed}'
+    customLogFormat:
+      '{now} {service}{icon} {method} {pathname} {status} {duration} {message}{speed}'
   }
 })
 ```
@@ -129,8 +131,7 @@ Logixlysia natively supports structured errors (similar to the `evlog` pattern) 
 
 If a caught error contains any of these fields, they are automatically extracted and rendered under the `error.` namespace (`error.why`, `error.fix`, `error.link`, and `error.internal`) as individual tree branches.
 
-> [!WARNING]
-> Because `error.internal` is emitted verbatim to logs, it should contain only log-safe diagnostic metadata. Do not place sensitive secrets, credentials, or PII (Personally Identifiable Information) in this field.
+> [!WARNING] Because `error.internal` is emitted verbatim to logs, it should contain only log-safe diagnostic metadata. Do not place sensitive secrets, credentials, or PII (Personally Identifiable Information) in this field.
 
 ```ts
 // Custom error implementation
@@ -168,4 +169,3 @@ The `customLogFormat` applies to both regular access logs and error logs. When a
 - Use consistent formatting across environments
 - Consider log parsing requirements when designing formats
 - Error logs will include the error message in the `{message}` placeholder
-

@@ -17,7 +17,7 @@ import { Elysia } from 'elysia'
 import logixlysia from 'logixlysia' // or import { logixlysia } from 'logixlysia'
 
 const app = new Elysia({
-    name: "Elysia with Logixlysia"
+  name: 'Elysia with Logixlysia'
 })
   .use(
     logixlysia({
@@ -33,12 +33,13 @@ const app = new Elysia({
           translateTime: 'yyyy-mm-dd HH:MM:ss.SSS'
         },
         ip: true
-        }
-    }))
-    .get('/', () => {
-        return { message: 'Welcome to Basic Elysia with Logixlysia' }
+      }
     })
-        
+  )
+  .get('/', () => {
+    return { message: 'Welcome to Basic Elysia with Logixlysia' }
+  })
+
 app.listen(3000)
 ```
 

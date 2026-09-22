@@ -1,6 +1,5 @@
 import { describe, expectTypeOf, test } from 'bun:test'
 import { Elysia } from 'elysia'
-
 import logixlysia from '../../src'
 
 describe('logixlysia WebSocket typing (#220)', () => {

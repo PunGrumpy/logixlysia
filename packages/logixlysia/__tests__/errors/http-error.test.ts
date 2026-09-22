@@ -1,6 +1,5 @@
 import { describe, expect, mock, test } from 'bun:test'
 import { Elysia } from 'elysia'
-
 import logixlysia, { HttpError } from '../../src'
 import { normalizeLoggedError } from '../../src/utils/error'
 

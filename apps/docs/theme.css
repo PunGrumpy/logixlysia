@@ -36,7 +36,7 @@ img {
 }
 
 .dark img,
-[data-theme="dark"] img {
+[data-theme='dark'] img {
   outline-color: rgba(255, 255, 255, 0.1);
 }
 
@@ -99,7 +99,7 @@ code,
 .astro-code,
 .astro-code code {
   font-feature-settings:
-    "liga" 0,
-    "calt" 0;
+    'liga' 0,
+    'calt' 0;
   font-variant-ligatures: none;
 }

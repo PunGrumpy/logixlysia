@@ -1,5 +1,4 @@
 import { describe, expect, test } from 'bun:test'
-
 import { createLokiTransport } from '../../src/loki'
 import { stubEnv, stubFetch } from './helpers'
 

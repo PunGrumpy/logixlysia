@@ -1,5 +1,4 @@
 import { describe, expect, test } from 'bun:test'
-
 import { createPostHogTransport } from '../../src/posthog'
 import { stubEnv, stubFetch } from './helpers'
 

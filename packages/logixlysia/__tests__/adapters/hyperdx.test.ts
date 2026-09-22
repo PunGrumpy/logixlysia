@@ -1,5 +1,4 @@
 import { describe, expect, test } from 'bun:test'
-
 import { createHyperDXTransport } from '../../src/hyperdx'
 import { stubEnv, stubFetch } from './helpers'
 

@@ -1,7 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import { promises as fs } from 'node:fs'
 import { join } from 'node:path'
-
 import {
   getRotatedFiles,
   parseInterval,

@@ -1,19 +1,8 @@
 # Plan 027: Log the real status, never lose a request's log line, and stop emitting two final lines
 
-> **Executor instructions**: Follow this plan step by step. Run every
-> verification command and confirm the expected result before moving to the
-> next step. If anything in the "STOP conditions" section occurs, stop and
-> report — do not improvise. When done, update the status row for this plan
-> in `plans/README.md` — unless a reviewer dispatched you and told you they
-> maintain the index.
+> **Executor instructions**: Follow this plan step by step. Run every verification command and confirm the expected result before moving to the next step. If anything in the "STOP conditions" section occurs, stop and report — do not improvise. When done, update the status row for this plan in `plans/README.md` — unless a reviewer dispatched you and told you they maintain the index.
 >
-> **Drift check (run first)**:
-> `git diff --stat 478f40d..HEAD -- packages/logixlysia/src/index.ts packages/logixlysia/src/logger/index.ts packages/logixlysia/src/types/logger.ts packages/logixlysia/src/types/core.ts packages/logixlysia/src/context/storage.ts packages/logixlysia/__tests__/plugin`
-> If any in-scope file changed since this plan was written, compare the
-> "Current state" excerpts against the live code before proceeding; on a
-> mismatch, treat it as a STOP condition. (Plan 025 adds an `.onStop` hook to
-> `index.ts`; that alone is not a conflict — the hooks this plan edits are
-> `onRequest`, `onAfterHandle`, `onError` and the `logger` wrapper.)
+> **Drift check (run first)**: `git diff --stat 478f40d..HEAD -- packages/logixlysia/src/index.ts packages/logixlysia/src/logger/index.ts packages/logixlysia/src/types/logger.ts packages/logixlysia/src/types/core.ts packages/logixlysia/src/context/storage.ts packages/logixlysia/__tests__/plugin` If any in-scope file changed since this plan was written, compare the "Current state" excerpts against the live code before proceeding; on a mismatch, treat it as a STOP condition. (Plan 025 adds an `.onStop` hook to `index.ts`; that alone is not a conflict — the hooks this plan edits are `onRequest`, `onAfterHandle`, `onError` and the `logger` wrapper.)
 
 ## Status
 
@@ -45,7 +34,7 @@ Files and roles:
 - `packages/logixlysia/src/context/storage.ts` — `loggerStorage` (ALS), `NOOP_LOGGER`, `useLogger()`.
 - `packages/logixlysia/src/logger/create-logger.ts:512–533` — `getStatusTokens` defaults a missing `data.status` to `200`.
 - `packages/logixlysia/src/utils/duration.ts` — `elapsedMs(beforeTime)` returns `0` for `BigInt(0)`.
-- `packages/logixlysia/__tests__/plugin/logixlysia.test.ts` — plugin tests; `'does not duplicate logs when a custom log is emitted'` (line 47) pins that an *emitted* custom log replaces the access line.
+- `packages/logixlysia/__tests__/plugin/logixlysia.test.ts` — plugin tests; `'does not duplicate logs when a custom log is emitted'` (line 47) pins that an _emitted_ custom log replaces the access line.
 
 The wrapper and hooks today (`src/index.ts`):
 
@@ -118,13 +107,13 @@ The wrapper and hooks today (`src/index.ts`):
 `logWithContext` today (`logger/index.ts:175–186`):
 
 ```ts
-  const logWithContext = (level, request, message, context?): void => {
-    if (sinks.isEffectivelyDisabled || !shouldLog(level, config?.logFilter)) {
-      return
-    }
-    const store: StoreData = { beforeTime: process.hrtime.bigint() }
-    log(level, request, { context, message }, store)
+const logWithContext = (level, request, message, context?): void => {
+  if (sinks.isEffectivelyDisabled || !shouldLog(level, config?.logFilter)) {
+    return
   }
+  const store: StoreData = { beforeTime: process.hrtime.bigint() }
+  log(level, request, { context, message }, store)
+}
 ```
 
 Sampling: `emit()` (`logger/emit.ts:166–181`) may also `drop` or `buffer` a custom record after `logWithContext` let it through.
@@ -144,7 +133,7 @@ Conventions: Biome via `ultracite`; plugin tests use `new Elysia().use(logixlysi
 ## Commands you will need
 
 | Purpose | Command | Expected on success |
-|---|---|---|
+| --- | --- | --- |
 | Typecheck | `bun run typecheck` | exit 0 |
 | Lint / Format | `bun run lint` / `bun run format` | exit 0 |
 | Plugin tests | `cd packages/logixlysia && bun test __tests__/plugin` | all pass |
@@ -196,12 +185,12 @@ Conventions: Biome via `ultracite`; plugin tests use `new Elysia().use(logixlysi
 In `onAfterHandle`, compute status as: explicit `set.status` wins; otherwise `response instanceof Response ? response.status : 200`.
 
 ```ts
-        const status =
-          set.status === undefined || set.status === null
-            ? response instanceof Response
-              ? response.status
-              : 200
-            : getStatusCode(set.status)
+const status =
+  set.status === undefined || set.status === null
+    ? response instanceof Response
+      ? response.status
+      : 200
+    : getStatusCode(set.status)
 ```
 
 Biome forbids nested ternaries (`noNestedTernary`); write it as a small helper `resolveHandledStatus(set.status, response)` with early returns.

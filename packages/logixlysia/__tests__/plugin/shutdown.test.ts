@@ -2,7 +2,6 @@ import { describe, expect, mock, test } from 'bun:test'
 import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { Elysia } from 'elysia'
-
 import logixlysia, { flushLogixlysia } from '../../src'
 import type { Options } from '../../src/interfaces'
 import { getFileSink } from '../../src/output/file-sink'

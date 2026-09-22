@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, describe, expect, spyOn, test } from 'bun:test'
 import { promises as fs } from 'node:fs'
 import { join } from 'node:path'
-
 import {
   getRotatedFileName,
   performRotation,

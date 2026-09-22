@@ -1,5 +1,4 @@
 import { describe, expect, test } from 'bun:test'
-
 import { createOtlpTransport } from '../../src/otlp'
 import { stubEnv, stubFetch } from './helpers'
 

@@ -1,18 +1,8 @@
 # Plan 029: Make the docs, README, agent skill, and AGENTS.md describe the package that actually ships
 
-> **Executor instructions**: Follow this plan step by step. Run every
-> verification command and confirm the expected result before moving to the
-> next step. If anything in the "STOP conditions" section occurs, stop and
-> report — do not improvise. When done, update the status row for this plan
-> in `plans/README.md` — unless a reviewer dispatched you and told you they
-> maintain the index.
+> **Executor instructions**: Follow this plan step by step. Run every verification command and confirm the expected result before moving to the next step. If anything in the "STOP conditions" section occurs, stop and report — do not improvise. When done, update the status row for this plan in `plans/README.md` — unless a reviewer dispatched you and told you they maintain the index.
 >
-> **Drift check (run first)**:
-> `git diff --stat 478f40d..HEAD -- apps/docs/content/features/filtering.mdx apps/docs/content/comparison.mdx apps/docs/content/migration-from-evlog.mdx apps/docs/content/introduction.mdx packages/logixlysia/README.md skills/logixlysia/SKILL.md AGENTS.md .vscode/settings.json`
-> If any in-scope file changed since this plan was written, re-read it before
-> editing. This plan depends on plan 024 having landed (the named
-> `logixlysia` export and the `HttpError` export); confirm with
-> `grep -n "export { logixlysia }\|export { HttpError }" packages/logixlysia/src/index.ts` → two matches. If not, STOP.
+> **Drift check (run first)**: `git diff --stat 478f40d..HEAD -- apps/docs/content/features/filtering.mdx apps/docs/content/comparison.mdx apps/docs/content/migration-from-evlog.mdx apps/docs/content/introduction.mdx packages/logixlysia/README.md skills/logixlysia/SKILL.md AGENTS.md .vscode/settings.json` If any in-scope file changed since this plan was written, re-read it before editing. This plan depends on plan 024 having landed (the named `logixlysia` export and the `HttpError` export); confirm with `grep -n "export { logixlysia }\|export { HttpError }" packages/logixlysia/src/index.ts` → two matches. If not, STOP.
 
 ## Status
 
@@ -88,12 +78,12 @@ Docs conventions: MDX with `title`/`description` frontmatter; internal links lik
 ## Commands you will need
 
 | Purpose | Command | Expected on success |
-|---|---|---|
+| --- | --- | --- |
 | Lint (checks md/mdx formatting too where Biome applies) | `bun run lint` | exit 0 |
 | Format | `bun run format` | exit 0 |
 | Docs build (proves MDX parses) | `cd apps/docs && bun run build` | exit 0 (may take a minute; if it needs env vars, see STOP conditions) |
 | Docs dev (optional visual check) | `cd apps/docs && bun run dev` | serves on localhost:3000 |
-| Grep truth checks | see each step | |
+| Grep truth checks | see each step |  |
 
 ## Scope
 
@@ -168,22 +158,29 @@ Add a `### logFilter` entry to `configuration.mdx` next to `sampling` with type 
   ```ts
   const plugin = logixlysia()
 
-  const app = new Elysia()
-    .use(plugin)
-    .ws('/ws', plugin.wrapWs('/ws', {
+  const app = new Elysia().use(plugin).ws(
+    '/ws',
+    plugin.wrapWs('/ws', {
       open(ws) {
-        ws.data.store.logger.info(ws.data.request, 'WebSocket connection opened')
+        ws.data.store.logger.info(
+          ws.data.request,
+          'WebSocket connection opened'
+        )
       },
       message(ws, message) {
-        ws.data.store.logger.info(ws.data.request, 'Message received', { payload: message })
+        ws.data.store.logger.info(ws.data.request, 'Message received', {
+          payload: message
+        })
       },
       close(ws) {
         ws.data.store.logger.info(ws.data.request, 'WebSocket closed')
       }
-    }))
+    })
+  )
   ```
 
   Cross-check the exact shape against `apps/docs/content/features/websocket.mdx` and `apps/elysia/src/index.ts` (the playground has a `wrapWs` demo) and use whichever compiles there. Note that the wrapper logs open/message/close itself, so user hooks are optional.
+
 - Section 6 item 4: replace the `onStop` claim with "The plugin flushes transports and the file sink on `app.stop()` (bounded by `config.flushTimeoutMs`); for scripts call `flushLogixlysia(options)`" **only if plan 025 has merged** (`grep -n onStop packages/logixlysia/src/index.ts`). Otherwise delete the item.
 - Add sections: "7. Destinations" (import `createXTransport` from `logixlysia/<name>`, `transports: [...]`, `useTransportsOnly`, `onError`), "8. Sampling" (`head` percentages per level, `tail: { status, durationMs, paths }`), "9. Enrichers" (`logixlysia/enrichers` built-ins `traceparentEnricher`, `userAgentEnricher`, `geoEnricher`, `sizeEnricher` — verify the exact export names with `grep -n "^export const" packages/logixlysia/src/enrichers.ts`; custom enricher shape), "10. Structured errors" (`HttpError` fields), "11. Typed fields" (`logixlysia<MyFields>()` and `useLogger<MyFields>()`), "12. Neural redaction" (two-line `withRedaction` example from `src/desertant.ts`'s doc comment).
 - Add a maintenance line at the top: "Keep in sync with `packages/logixlysia/package.json#exports`."
@@ -202,7 +199,7 @@ Bun 1.3.14 workspaces + Turborepo. Published package: `packages/logixlysia` (Ely
 ## Verify your work
 
 | What | Command | Expect |
-|---|---|---|
+| --- | --- | --- |
 | Lint + format check | `bun run lint` | exit 0 |
 | Auto-format | `bun run format` | exit 0 |
 | Typecheck | `bun run typecheck` | exit 0 |

@@ -1,17 +1,8 @@
 # Plan 030: Forward the WebSocket close code and reason, and make `wrapWs` exception-safe
 
-> **Executor instructions**: Follow this plan step by step. Run every
-> verification command and confirm the expected result before moving to the
-> next step. If anything in the "STOP conditions" section occurs, stop and
-> report — do not improvise. When done, update the status row for this plan
-> in `plans/README.md` — unless a reviewer dispatched you and told you they
-> maintain the index.
+> **Executor instructions**: Follow this plan step by step. Run every verification command and confirm the expected result before moving to the next step. If anything in the "STOP conditions" section occurs, stop and report — do not improvise. When done, update the status row for this plan in `plans/README.md` — unless a reviewer dispatched you and told you they maintain the index.
 >
-> **Drift check (run first)**:
-> `git diff --stat 5522d31..HEAD -- packages/logixlysia/src/websocket/wrap-ws.ts packages/logixlysia/__tests__/websocket/wrap-ws.test.ts apps/docs/content/features/websocket.mdx`
-> If any in-scope file changed since this plan was written, compare the
-> "Current state" excerpts against the live code before proceeding; on a
-> mismatch, treat it as a STOP condition.
+> **Drift check (run first)**: `git diff --stat 5522d31..HEAD -- packages/logixlysia/src/websocket/wrap-ws.ts packages/logixlysia/__tests__/websocket/wrap-ws.test.ts apps/docs/content/features/websocket.mdx` If any in-scope file changed since this plan was written, compare the "Current state" excerpts against the live code before proceeding; on a mismatch, treat it as a STOP condition.
 
 ## Status
 
@@ -90,7 +81,7 @@ Conventions: Biome via `ultracite` (single quotes, no semicolons, sorted object 
 ## Commands you will need
 
 | Purpose | Command | Expected on success |
-|---|---|---|
+| --- | --- | --- |
 | Install | `bun install --frozen-lockfile` | exit 0 |
 | Typecheck | `bun run typecheck` | exit 0 |
 | Lint / Format | `bun run lint` / `bun run format` | exit 0 |
@@ -100,6 +91,7 @@ Conventions: Biome via `ultracite` (single quotes, no semicolons, sorted object 
 ## Scope
 
 **In scope**:
+
 - `packages/logixlysia/src/websocket/wrap-ws.ts`
 - `packages/logixlysia/__tests__/websocket/wrap-ws.test.ts`
 - `packages/logixlysia/__tests__/plugin/ws-data-types.test.ts` (only if the widened `close` type breaks a type assertion there)

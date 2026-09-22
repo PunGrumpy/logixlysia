@@ -69,7 +69,7 @@ async function findUser(id: string) {
   const log = useLogger()
   log.mergeContext({ action: 'db_query' })
   log.info('Executing database lookup...')
-  
+
   // Database lookup logic...
   return { id, name: 'John Doe' }
 }

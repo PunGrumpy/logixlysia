@@ -60,8 +60,7 @@ When geometric centering looks off, align optically instead.
 
 ### Buttons with Text + Icon
 
-Use slightly less padding on the icon side to make the button feel balanced. A reliable rule of thumb is:
-`icon-side padding = text-side padding - 2px`.
+Use slightly less padding on the icon side to make the button feel balanced. A reliable rule of thumb is: `icon-side padding = text-side padding - 2px`.
 
 ```css
 /* Good — less padding on icon side */
@@ -127,12 +126,10 @@ The shadow is comprised of three layers. The first acts as a 1px border ring, th
 ```css
 :root {
   --shadow-border:
-    0px 0px 0px 1px rgba(0, 0, 0, 0.06),
-    0px 1px 2px -1px rgba(0, 0, 0, 0.06),
+    0px 0px 0px 1px rgba(0, 0, 0, 0.06), 0px 1px 2px -1px rgba(0, 0, 0, 0.06),
     0px 2px 4px 0px rgba(0, 0, 0, 0.04);
   --shadow-border-hover:
-    0px 0px 0px 1px rgba(0, 0, 0, 0.08),
-    0px 1px 2px -1px rgba(0, 0, 0, 0.08),
+    0px 0px 0px 1px rgba(0, 0, 0, 0.08), 0px 1px 2px -1px rgba(0, 0, 0, 0.08),
     0px 2px 4px 0px rgba(0, 0, 0, 0.06);
 }
 ```
@@ -173,7 +170,7 @@ Apply the variable and add `transition-[box-shadow]` for a smooth hover:
 | Buttons with bordered styles | Table cell boundaries |
 | Elevated elements (dropdowns, modals) | Form input outlines (for accessibility) |
 | Elements on varied backgrounds | Hairline separators in dense UI |
-| Hover/focus states for lift effect | |
+| Hover/focus states for lift effect |  |
 
 ## Image Outlines
 
@@ -233,7 +230,7 @@ Interactive elements should prefer a 44×44px hit area for touch or mobile conte
 }
 
 .checkbox::after {
-  content: "";
+  content: '';
   position: absolute;
   top: 50%;
   left: 50%;

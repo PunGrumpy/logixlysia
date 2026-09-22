@@ -1,5 +1,4 @@
 import { Elysia } from 'elysia'
-
 import logixlysia from '../../src'
 import { mergeAIMetrics } from '../../src/ai'
 import type { Options } from '../../src/interfaces'

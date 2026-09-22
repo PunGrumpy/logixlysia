@@ -1,5 +1,4 @@
 import { describe, expect, test } from 'bun:test'
-
 import { createSentryTransport } from '../../src/sentry'
 import { stubEnv, stubFetch } from './helpers'
 

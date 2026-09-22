@@ -1,5 +1,4 @@
 import { afterEach, describe, expect, mock, test } from 'bun:test'
-
 import { createLogger } from '../../src/logger'
 import { __resetForTesting, injectTraceContext } from '../../src/otel'
 

@@ -26,12 +26,13 @@ function logixlysia(options?: Options): Logixlysia
 ```ts
 import logixlysia from 'logixlysia'
 
-const app = new Elysia()
-  .use(logixlysia({
+const app = new Elysia().use(
+  logixlysia({
     config: {
       showStartupMessage: true
     }
-  }))
+  })
+)
 ```
 
 ## Types
@@ -273,13 +274,13 @@ An error with no client-facing fields keeps its previous behaviour exactly — `
 ```ts
 app.get('/users/:id', ({ store, params, request }) => {
   const { logger, pino } = store
-  
+
   // Use logger helper methods
   logger.info(request, 'User accessed', { userId: params.id })
-  
+
   // Or use Pino directly
   pino.info({ userId: params.id }, 'User accessed')
-  
+
   return { user: 'data' }
 })
 ```
@@ -289,14 +290,13 @@ app.get('/users/:id', ({ store, params, request }) => {
 ```ts
 app.post('/users', ({ store, body, request }) => {
   const { logger } = store
-  
+
   logger.debug(request, 'Creating user', { email: body.email })
-  
+
   // ... create user logic
-  
+
   logger.info(request, 'User created', { userId: newUser.id })
-  
+
   return newUser
 })
 ```
-

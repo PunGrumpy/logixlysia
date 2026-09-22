@@ -8,7 +8,7 @@ Users change intent mid-interaction. If animations aren't interruptible, the int
 
 ### CSS Transitions vs. Keyframes
 
-| | CSS Transitions | CSS Keyframe Animations |
+|  | CSS Transitions | CSS Keyframe Animations |
 | --- | --- | --- |
 | **Behavior** | Interpolate toward latest state | Run on a fixed timeline |
 | **Interruptible** | Yes — retargets mid-animation | No — restarts from beginning |
@@ -60,13 +60,13 @@ function PageHeader() {
       initial="hidden"
       animate="visible"
       variants={{
-        visible: { transition: { staggerChildren: 0.1 } },
+        visible: { transition: { staggerChildren: 0.1 } }
       }}
     >
       <motion.h1
         variants={{
-          hidden: { opacity: 0, y: 12, filter: "blur(4px)" },
-          visible: { opacity: 1, y: 0, filter: "blur(0px)" },
+          hidden: { opacity: 0, y: 12, filter: 'blur(4px)' },
+          visible: { opacity: 1, y: 0, filter: 'blur(0px)' }
         }}
       >
         Welcome
@@ -74,8 +74,8 @@ function PageHeader() {
 
       <motion.p
         variants={{
-          hidden: { opacity: 0, y: 12, filter: "blur(4px)" },
-          visible: { opacity: 1, y: 0, filter: "blur(0px)" },
+          hidden: { opacity: 0, y: 12, filter: 'blur(4px)' },
+          visible: { opacity: 1, y: 0, filter: 'blur(0px)' }
         }}
       >
         A description of the page.
@@ -83,14 +83,14 @@ function PageHeader() {
 
       <motion.div
         variants={{
-          hidden: { opacity: 0, y: 12, filter: "blur(4px)" },
-          visible: { opacity: 1, y: 0, filter: "blur(0px)" },
+          hidden: { opacity: 0, y: 12, filter: 'blur(4px)' },
+          visible: { opacity: 1, y: 0, filter: 'blur(0px)' }
         }}
       >
         <Button>Get started</Button>
       </motion.div>
     </motion.div>
-  );
+  )
 }
 ```
 
@@ -104,9 +104,15 @@ function PageHeader() {
   animation: fadeInUp 400ms ease-out forwards;
 }
 
-.stagger-item:nth-child(1) { animation-delay: 0ms; }
-.stagger-item:nth-child(2) { animation-delay: 100ms; }
-.stagger-item:nth-child(3) { animation-delay: 200ms; }
+.stagger-item:nth-child(1) {
+  animation-delay: 0ms;
+}
+.stagger-item:nth-child(2) {
+  animation-delay: 100ms;
+}
+.stagger-item:nth-child(3) {
+  animation-delay: 200ms;
+}
 
 @keyframes fadeInUp {
   to {
@@ -129,8 +135,8 @@ Exit animations should be softer and less attention-grabbing than enter animatio
   exit={{
     opacity: 0,
     y: -12,
-    filter: "blur(4px)",
-    transition: { duration: 0.15, ease: "easeIn" },
+    filter: 'blur(4px)',
+    transition: { duration: 0.15, ease: 'easeIn' }
   }}
 >
   {content}
@@ -145,8 +151,8 @@ Exit animations should be softer and less attention-grabbing than enter animatio
 <motion.div
   exit={{
     opacity: 0,
-    x: "-100%",
-    transition: { duration: 0.2, ease: "easeIn" },
+    x: '-100%',
+    transition: { duration: 0.2, ease: 'easeIn' }
   }}
 >
   {content}
@@ -160,7 +166,9 @@ Exit animations should be softer and less attention-grabbing than enter animatio
 .item-exit {
   opacity: 0;
   transform: translateY(-12px);
-  transition: opacity 150ms ease-in, transform 150ms ease-in;
+  transition:
+    opacity 150ms ease-in,
+    transform 150ms ease-in;
 }
 
 /* Bad — dramatic exit that steals focus */
@@ -177,6 +185,7 @@ Exit animations should be softer and less attention-grabbing than enter animatio
 ```
 
 **Key points:**
+
 - Use a small fixed `translateY` (e.g., `-12px`) instead of the full container height
 - Keep some directional movement to indicate where the element went
 - Exit duration should be shorter than enter duration (150ms vs 300ms)
@@ -189,24 +198,24 @@ When icons appear or disappear contextually (on hover, on state change), animate
 ### Motion Example
 
 ```tsx
-import { AnimatePresence, motion } from "motion/react";
+import { AnimatePresence, motion } from 'motion/react'
 
 function IconButton({ isActive, icon: Icon }) {
   return (
     <button>
       <AnimatePresence mode="popLayout">
         <motion.span
-          key={isActive ? "active" : "inactive"}
-          initial={{ opacity: 0, scale: 0.25, filter: "blur(4px)" }}
-          animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
-          exit={{ opacity: 0, scale: 0.25, filter: "blur(4px)" }}
-          transition={{ type: "spring", duration: 0.3, bounce: 0 }}
+          key={isActive ? 'active' : 'inactive'}
+          initial={{ opacity: 0, scale: 0.25, filter: 'blur(4px)' }}
+          animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
+          exit={{ opacity: 0, scale: 0.25, filter: 'blur(4px)' }}
+          transition={{ type: 'spring', duration: 0.3, bounce: 0 }}
         >
           <Icon />
         </motion.span>
       </AnimatePresence>
     </button>
-  );
+  )
 }
 ```
 
@@ -223,30 +232,30 @@ function IconButton({ isActive, ActiveIcon, InactiveIcon }) {
       <div className="relative">
         <div
           className={cn(
-            "absolute inset-0 flex items-center justify-center",
-            "transition-[opacity,filter,scale] duration-300",
-            "cubic-bezier(0.2, 0, 0, 1)",
+            'absolute inset-0 flex items-center justify-center',
+            'transition-[opacity,filter,scale] duration-300',
+            'cubic-bezier(0.2, 0, 0, 1)',
             isActive
-              ? "scale-100 opacity-100 blur-0"
-              : "scale-[0.25] opacity-0 blur-[4px]"
+              ? 'scale-100 opacity-100 blur-0'
+              : 'scale-[0.25] opacity-0 blur-[4px]'
           )}
         >
           <ActiveIcon />
         </div>
         <div
           className={cn(
-            "transition-[opacity,filter,scale] duration-300",
-            "cubic-bezier(0.2, 0, 0, 1)",
+            'transition-[opacity,filter,scale] duration-300',
+            'cubic-bezier(0.2, 0, 0, 1)',
             isActive
-              ? "scale-[0.25] opacity-0 blur-[4px]"
-              : "scale-100 opacity-100 blur-0"
+              ? 'scale-[0.25] opacity-0 blur-[4px]'
+              : 'scale-100 opacity-100 blur-0'
           )}
         >
           <InactiveIcon />
         </div>
       </div>
     </button>
-  );
+  )
 }
 ```
 
@@ -254,7 +263,7 @@ The non-absolute icon (InactiveIcon) defines the layout size. The absolute icon 
 
 ### Choosing Between Motion and CSS
 
-| | Motion (Framer Motion) | CSS transitions (both icons in DOM) |
+|  | Motion (Framer Motion) | CSS transitions (both icons in DOM) |
 | --- | --- | --- |
 | **Enter animation** | Yes | Yes |
 | **Exit animation** | Yes (via `AnimatePresence`) | Yes (cross-fade — icon never unmounts) |
@@ -273,6 +282,7 @@ The non-absolute icon (InactiveIcon) defines the layout size. The absolute icon 
 | Loading/success state indicators | Icon labels (text next to icon) |
 
 **Important:** Always use exactly these values for contextual icon animations — do not deviate:
+
 - `scale`: `0.25` → `1` (never use `0.5` or `0.6`)
 - `opacity`: `0` → `1`
 - `filter`: `"blur(4px)"` → `"blur(0px)"`
@@ -309,9 +319,7 @@ Not every button needs this. Add a `static` prop to your button component that d
 ### Motion Example
 
 ```tsx
-<motion.button whileTap={{ scale: 0.96 }}>
-  Click me
-</motion.button>
+<motion.button whileTap={{ scale: 0.96 }}>Click me</motion.button>
 ```
 
 ### Static Prop Pattern
@@ -351,10 +359,10 @@ Use `initial={false}` on `AnimatePresence` to prevent enter animations from firi
 // Good — icon doesn't animate in on mount, only on state change
 <AnimatePresence initial={false} mode="popLayout">
   <motion.span
-    key={isActive ? "active" : "inactive"}
-    initial={{ opacity: 0, scale: 0.25, filter: "blur(4px)" }}
-    animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
-    exit={{ opacity: 0, scale: 0.25, filter: "blur(4px)" }}
+    key={isActive ? 'active' : 'inactive'}
+    initial={{ opacity: 0, scale: 0.25, filter: 'blur(4px)' }}
+    animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
+    exit={{ opacity: 0, scale: 0.25, filter: 'blur(4px)' }}
   >
     <Icon />
   </motion.span>
