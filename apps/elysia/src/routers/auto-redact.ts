@@ -20,7 +20,7 @@ const mockCreditCard = () =>
     0x34, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31,
     0x31, 0x31, 0x31, 0x31
   ]
-    .map(c => String.fromCharCode(c))
+    .map(c => String.fromCodePoint(c))
     .join('')
 
 export const autoRedactRouter = <App extends Logixlysia>(app: App) =>

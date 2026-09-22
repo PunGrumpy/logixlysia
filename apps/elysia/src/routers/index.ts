@@ -1,5 +1,5 @@
-import Elysia from 'elysia'
-import logixlysia from 'logixlysia'
+import { Elysia } from 'elysia'
+import { logixlysia } from 'logixlysia'
 import { aiMetricsRouter } from './ai-metrics'
 import { autoRedactRouter } from './auto-redact'
 import { boomRouter } from './boom'

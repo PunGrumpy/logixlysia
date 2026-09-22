@@ -681,7 +681,12 @@ const files = [
 </section>
 
 <script>
-  const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
+  const sleep = (ms: number): Promise<void> => {
+    const { promise, resolve }: PromiseWithResolvers<void> =
+      Promise.withResolvers()
+    setTimeout(resolve, ms)
+    return promise
+  }
 
   const reduceMotion = window.matchMedia(
     '(prefers-reduced-motion: reduce)'
@@ -701,12 +706,15 @@ const files = [
       },
       { threshold: 0.35 }
     ).observe(el)
-    return () =>
-      visible
-        ? Promise.resolve()
-        : new Promise<void>(resolve => {
-            onVisible = resolve
-          })
+    return (): Promise<void> => {
+      if (visible) {
+        return Promise.resolve()
+      }
+      const { promise, resolve }: PromiseWithResolvers<void> =
+        Promise.withResolvers()
+      onVisible = resolve
+      return promise
+    }
   }
 
   // 01 · Tail the access log: rows arrive one by one, like a live stream.
@@ -715,21 +723,23 @@ const files = [
     const rows = [...tailDemo.querySelectorAll<HTMLElement>('[data-log]')]
     const waitUntilVisible = visibilityGate(tailDemo)
     // setTimeout chain instead of an awaited loop: rows reveal one by one.
-    const revealRows = () =>
-      new Promise<void>(resolve => {
-        let index = 0
-        const tick = () => {
-          const row = rows[index]
-          if (!row) {
-            resolve()
-            return
-          }
-          index += 1
-          row.classList.remove('opacity-0')
-          setTimeout(tick, 220)
+    const revealRows = (): Promise<void> => {
+      const { promise, resolve }: PromiseWithResolvers<void> =
+        Promise.withResolvers()
+      let index = 0
+      const tick = () => {
+        const row = rows[index]
+        if (!row) {
+          resolve()
+          return
         }
-        tick()
-      })
+        index += 1
+        row.classList.remove('opacity-0')
+        setTimeout(tick, 220)
+      }
+      tick()
+      return promise
+    }
     const round = async () => {
       await waitUntilVisible()
       for (const row of rows) {
@@ -742,13 +752,12 @@ const files = [
     // Bounded replay (WCAG 2.2.2): stop after a few rounds instead of looping
     // forever; the resting state matches the static markup.
     let rounds = 0
-    const loop = () => {
-      round().then(() => {
-        rounds += 1
-        if (rounds < 3) {
-          loop()
-        }
-      })
+    const loop = async () => {
+      await round()
+      rounds += 1
+      if (rounds < 3) {
+        loop()
+      }
     }
     loop()
   }
@@ -760,21 +769,23 @@ const files = [
     const chip = filterDemo.querySelector<HTMLElement>('[data-filter-chip]')
     const waitUntilVisible = visibilityGate(filterDemo)
     // setTimeout chain instead of an awaited loop: lines reveal one by one.
-    const revealLines = () =>
-      new Promise<void>(resolve => {
-        let index = 0
-        const tick = () => {
-          const line = lines[index]
-          if (!line) {
-            resolve()
-            return
-          }
-          index += 1
-          line.classList.remove('opacity-0')
-          setTimeout(tick, 180)
+    const revealLines = (): Promise<void> => {
+      const { promise, resolve }: PromiseWithResolvers<void> =
+        Promise.withResolvers()
+      let index = 0
+      const tick = () => {
+        const line = lines[index]
+        if (!line) {
+          resolve()
+          return
         }
-        tick()
-      })
+        index += 1
+        line.classList.remove('opacity-0')
+        setTimeout(tick, 180)
+      }
+      tick()
+      return promise
+    }
     const round = async () => {
       await waitUntilVisible()
       for (const line of lines) {
@@ -795,13 +806,12 @@ const files = [
       await sleep(2800)
     }
     let rounds = 0
-    const loop = () => {
-      round().then(() => {
-        rounds += 1
-        if (rounds < 3) {
-          loop()
-        }
-      })
+    const loop = async () => {
+      await round()
+      rounds += 1
+      if (rounds < 3) {
+        loop()
+      }
     }
     loop()
   }
@@ -834,13 +844,12 @@ const files = [
       await sleep(2400)
     }
     let rounds = 0
-    const loop = () => {
-      round().then(() => {
-        rounds += 1
-        if (rounds < 3) {
-          loop()
-        }
-      })
+    const loop = async () => {
+      await round()
+      rounds += 1
+      if (rounds < 3) {
+        loop()
+      }
     }
     loop()
   }
@@ -854,21 +863,23 @@ const files = [
     const waitUntilVisible = visibilityGate(rotation)
     if (row && size && bar) {
       // setTimeout chain instead of an awaited loop: the size ticks upward.
-      const growFile = () =>
-        new Promise<void>(resolve => {
-          let megabytes = 0.1
-          const tick = () => {
-            if (megabytes >= 10) {
-              resolve()
-              return
-            }
-            size.textContent = `${megabytes.toFixed(1)} MB`
-            bar.style.width = `${megabytes * 10}%`
-            megabytes += 0.3
-            setTimeout(tick, 120)
+      const growFile = (): Promise<void> => {
+        const { promise, resolve }: PromiseWithResolvers<void> =
+          Promise.withResolvers()
+        let megabytes = 0.1
+        const tick = () => {
+          if (megabytes >= 10) {
+            resolve()
+            return
           }
-          tick()
-        })
+          size.textContent = `${megabytes.toFixed(1)} MB`
+          bar.style.width = `${megabytes * 10}%`
+          megabytes += 0.3
+          setTimeout(tick, 120)
+        }
+        tick()
+        return promise
+      }
       const round = async () => {
         await waitUntilVisible()
         await growFile()
@@ -881,16 +892,15 @@ const files = [
       const initialSize = size.textContent
       const initialWidth = bar.style.width
       let rounds = 0
-      const loop = () => {
-        round().then(() => {
-          rounds += 1
-          if (rounds < 3) {
-            loop()
-            return
-          }
-          size.textContent = initialSize
-          bar.style.width = initialWidth
-        })
+      const loop = async () => {
+        await round()
+        rounds += 1
+        if (rounds < 3) {
+          loop()
+          return
+        }
+        size.textContent = initialSize
+        bar.style.width = initialWidth
       }
       loop()
     }

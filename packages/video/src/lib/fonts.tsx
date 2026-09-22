@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef } from 'react'
 import { continueRender, delayRender, staticFile } from 'remotion'
 
 const css = `
@@ -22,11 +22,31 @@ const css = `
 }
 `
 
+const waitForFonts = async (
+  loads: Promise<unknown>[],
+  handle: number
+): Promise<void> => {
+  try {
+    await Promise.all(loads)
+  } catch {
+    // A font that fails to load falls back; render anyway.
+  }
+  continueRender(handle)
+}
+
 /** Injects the bundled fonts and holds the render until the browser has them. */
 export const Fonts = () => {
-  const [handle] = useState(() => delayRender('fonts'))
+  // Created once, on first render, like a `useState` initializer.
+  const handleRef = useRef<number | null>(null)
+  if (handleRef.current === null) {
+    handleRef.current = delayRender('fonts')
+  }
 
   useEffect(() => {
+    const handle = handleRef.current
+    if (handle === null) {
+      return
+    }
     const style = document.createElement('style')
     style.textContent = css
     document.head.append(style)
@@ -36,13 +56,11 @@ export const Fonts = () => {
       document.fonts.load("500 20px 'JetBrains Mono'"),
       document.fonts.load("700 20px 'JetBrains Mono'")
     ]
-    Promise.all(loads)
-      .catch(() => {})
-      .finally(() => continueRender(handle))
+    waitForFonts(loads, handle)
     return () => {
       style.remove()
     }
-  }, [handle])
+  }, [])
 
   return null
 }

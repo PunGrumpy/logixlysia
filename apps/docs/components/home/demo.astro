@@ -371,7 +371,12 @@ const interactiveRoutes = [
 </section>
 
 <script>
-  const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
+  const sleep = (ms: number): Promise<void> => {
+    const { promise, resolve }: PromiseWithResolvers<void> =
+      Promise.withResolvers()
+    setTimeout(resolve, ms)
+    return promise
+  }
 
   const terminal = document.querySelector('[data-term]')
   const body = terminal?.querySelector<HTMLElement>('[data-term-body]')
@@ -424,12 +429,15 @@ const interactiveRoutes = [
     )
     observer.observe(terminal)
 
-    const waitUntilReady = () =>
-      ready()
-        ? Promise.resolve()
-        : new Promise<void>(resolve => {
-            onReady = resolve
-          })
+    const waitUntilReady = (): Promise<void> => {
+      if (ready()) {
+        return Promise.resolve()
+      }
+      const { promise, resolve }: PromiseWithResolvers<void> =
+        Promise.withResolvers()
+      onReady = resolve
+      return promise
+    }
 
     if (pauseButton) {
       pauseButton.hidden = false
@@ -447,46 +455,50 @@ const interactiveRoutes = [
 
     // setTimeout chains instead of awaited loops keep each frame's timing
     // identical while staying sequential.
-    const typeCommand = () =>
-      new Promise<void>(resolve => {
-        let index = 0
-        const tick = () => {
-          if (!ready()) {
-            onReady = tick
-            return
-          }
-          if (index >= command.length) {
-            resolve()
-            return
-          }
-          cmd.textContent += command.charAt(index)
-          index += 1
-          setTimeout(tick, 55)
+    const typeCommand = (): Promise<void> => {
+      const { promise, resolve }: PromiseWithResolvers<void> =
+        Promise.withResolvers()
+      let index = 0
+      const tick = () => {
+        if (!ready()) {
+          onReady = tick
+          return
         }
-        tick()
-      })
+        if (index >= command.length) {
+          resolve()
+          return
+        }
+        cmd.textContent += command.charAt(index)
+        index += 1
+        setTimeout(tick, 55)
+      }
+      tick()
+      return promise
+    }
 
-    const revealLines = () =>
-      new Promise<void>(resolve => {
-        let index = 0
-        const tick = () => {
-          if (!ready()) {
-            onReady = tick
-            return
-          }
-          const line = lines[index]
-          if (!line) {
-            resolve()
-            return
-          }
-          index += 1
-          setTimeout(() => {
-            line.style.display = ''
-            tick()
-          }, Number(line.dataset.delay) || 40)
+    const revealLines = (): Promise<void> => {
+      const { promise, resolve }: PromiseWithResolvers<void> =
+        Promise.withResolvers()
+      let index = 0
+      const tick = () => {
+        if (!ready()) {
+          onReady = tick
+          return
         }
-        tick()
-      })
+        const line = lines[index]
+        if (!line) {
+          resolve()
+          return
+        }
+        index += 1
+        setTimeout(() => {
+          line.style.display = ''
+          tick()
+        }, Number(line.dataset.delay) || 40)
+      }
+      tick()
+      return promise
+    }
 
     const playRound = async () => {
       await waitUntilReady()
@@ -505,12 +517,11 @@ const interactiveRoutes = [
       await sleep(3200)
     }
 
-    const play = () => {
-      playRound().then(() => {
-        if (!interactive) {
-          play()
-        }
-      })
+    const play = async () => {
+      await playRound()
+      if (!interactive) {
+        play()
+      }
     }
     play()
   }
