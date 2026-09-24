@@ -681,22 +681,10 @@ const files = [
 </section>
 
 <script>
-  // Promise.withResolvers only landed in Safari 17.4 and Chrome 119; this
-  // script runs in the visitor's browser, so it brings its own.
-  const withResolvers = (): PromiseWithResolvers<void> => {
-    let settle!: Omit<PromiseWithResolvers<void>, 'promise'>
-    const promise = new Promise<void>((resolve, reject) => {
-      settle = { reject, resolve }
+  const sleep = (ms: number): Promise<void> =>
+    new Promise(resolve => {
+      setTimeout(resolve, ms)
     })
-    return { promise, ...settle }
-  }
-
-  const sleep = (ms: number): Promise<void> => {
-    const { promise, resolve }: PromiseWithResolvers<void> =
-      withResolvers()
-    setTimeout(resolve, ms)
-    return promise
-  }
 
   const reduceMotion = window.matchMedia(
     '(prefers-reduced-motion: reduce)'
@@ -716,15 +704,12 @@ const files = [
       },
       { threshold: 0.35 }
     ).observe(el)
-    return (): Promise<void> => {
-      if (visible) {
-        return Promise.resolve()
-      }
-      const { promise, resolve }: PromiseWithResolvers<void> =
-        withResolvers()
-      onVisible = resolve
-      return promise
-    }
+    return () =>
+      visible
+        ? Promise.resolve()
+        : new Promise<void>(resolve => {
+            onVisible = resolve
+          })
   }
 
   // 01 · Tail the access log: rows arrive one by one, like a live stream.
@@ -733,23 +718,21 @@ const files = [
     const rows = [...tailDemo.querySelectorAll<HTMLElement>('[data-log]')]
     const waitUntilVisible = visibilityGate(tailDemo)
     // setTimeout chain instead of an awaited loop: rows reveal one by one.
-    const revealRows = (): Promise<void> => {
-      const { promise, resolve }: PromiseWithResolvers<void> =
-        withResolvers()
-      let index = 0
-      const tick = () => {
-        const row = rows[index]
-        if (!row) {
-          resolve()
-          return
+    const revealRows = () =>
+      new Promise<void>(resolve => {
+        let index = 0
+        const tick = () => {
+          const row = rows[index]
+          if (!row) {
+            resolve()
+            return
+          }
+          index += 1
+          row.classList.remove('opacity-0')
+          setTimeout(tick, 220)
         }
-        index += 1
-        row.classList.remove('opacity-0')
-        setTimeout(tick, 220)
-      }
-      tick()
-      return promise
-    }
+        tick()
+      })
     const round = async () => {
       await waitUntilVisible()
       for (const row of rows) {
@@ -779,23 +762,21 @@ const files = [
     const chip = filterDemo.querySelector<HTMLElement>('[data-filter-chip]')
     const waitUntilVisible = visibilityGate(filterDemo)
     // setTimeout chain instead of an awaited loop: lines reveal one by one.
-    const revealLines = (): Promise<void> => {
-      const { promise, resolve }: PromiseWithResolvers<void> =
-        withResolvers()
-      let index = 0
-      const tick = () => {
-        const line = lines[index]
-        if (!line) {
-          resolve()
-          return
+    const revealLines = () =>
+      new Promise<void>(resolve => {
+        let index = 0
+        const tick = () => {
+          const line = lines[index]
+          if (!line) {
+            resolve()
+            return
+          }
+          index += 1
+          line.classList.remove('opacity-0')
+          setTimeout(tick, 180)
         }
-        index += 1
-        line.classList.remove('opacity-0')
-        setTimeout(tick, 180)
-      }
-      tick()
-      return promise
-    }
+        tick()
+      })
     const round = async () => {
       await waitUntilVisible()
       for (const line of lines) {
@@ -873,23 +854,21 @@ const files = [
     const waitUntilVisible = visibilityGate(rotation)
     if (row && size && bar) {
       // setTimeout chain instead of an awaited loop: the size ticks upward.
-      const growFile = (): Promise<void> => {
-        const { promise, resolve }: PromiseWithResolvers<void> =
-          withResolvers()
-        let megabytes = 0.1
-        const tick = () => {
-          if (megabytes >= 10) {
-            resolve()
-            return
+      const growFile = () =>
+        new Promise<void>(resolve => {
+          let megabytes = 0.1
+          const tick = () => {
+            if (megabytes >= 10) {
+              resolve()
+              return
+            }
+            size.textContent = `${megabytes.toFixed(1)} MB`
+            bar.style.width = `${megabytes * 10}%`
+            megabytes += 0.3
+            setTimeout(tick, 120)
           }
-          size.textContent = `${megabytes.toFixed(1)} MB`
-          bar.style.width = `${megabytes * 10}%`
-          megabytes += 0.3
-          setTimeout(tick, 120)
-        }
-        tick()
-        return promise
-      }
+          tick()
+        })
       const round = async () => {
         await waitUntilVisible()
         await growFile()

@@ -371,22 +371,10 @@ const interactiveRoutes = [
 </section>
 
 <script>
-  // Promise.withResolvers only landed in Safari 17.4 and Chrome 119; this
-  // script runs in the visitor's browser, so it brings its own.
-  const withResolvers = (): PromiseWithResolvers<void> => {
-    let settle!: Omit<PromiseWithResolvers<void>, 'promise'>
-    const promise = new Promise<void>((resolve, reject) => {
-      settle = { reject, resolve }
+  const sleep = (ms: number): Promise<void> =>
+    new Promise(resolve => {
+      setTimeout(resolve, ms)
     })
-    return { promise, ...settle }
-  }
-
-  const sleep = (ms: number): Promise<void> => {
-    const { promise, resolve }: PromiseWithResolvers<void> =
-      withResolvers()
-    setTimeout(resolve, ms)
-    return promise
-  }
 
   const terminal = document.querySelector('[data-term]')
   const body = terminal?.querySelector<HTMLElement>('[data-term-body]')
@@ -439,15 +427,12 @@ const interactiveRoutes = [
     )
     observer.observe(terminal)
 
-    const waitUntilReady = (): Promise<void> => {
-      if (ready()) {
-        return Promise.resolve()
-      }
-      const { promise, resolve }: PromiseWithResolvers<void> =
-        withResolvers()
-      onReady = resolve
-      return promise
-    }
+    const waitUntilReady = () =>
+      ready()
+        ? Promise.resolve()
+        : new Promise<void>(resolve => {
+            onReady = resolve
+          })
 
     if (pauseButton) {
       pauseButton.hidden = false
@@ -465,50 +450,46 @@ const interactiveRoutes = [
 
     // setTimeout chains instead of awaited loops keep each frame's timing
     // identical while staying sequential.
-    const typeCommand = (): Promise<void> => {
-      const { promise, resolve }: PromiseWithResolvers<void> =
-        withResolvers()
-      let index = 0
-      const tick = () => {
-        if (!ready()) {
-          onReady = tick
-          return
+    const typeCommand = () =>
+      new Promise<void>(resolve => {
+        let index = 0
+        const tick = () => {
+          if (!ready()) {
+            onReady = tick
+            return
+          }
+          if (index >= command.length) {
+            resolve()
+            return
+          }
+          cmd.textContent += command.charAt(index)
+          index += 1
+          setTimeout(tick, 55)
         }
-        if (index >= command.length) {
-          resolve()
-          return
-        }
-        cmd.textContent += command.charAt(index)
-        index += 1
-        setTimeout(tick, 55)
-      }
-      tick()
-      return promise
-    }
+        tick()
+      })
 
-    const revealLines = (): Promise<void> => {
-      const { promise, resolve }: PromiseWithResolvers<void> =
-        withResolvers()
-      let index = 0
-      const tick = () => {
-        if (!ready()) {
-          onReady = tick
-          return
+    const revealLines = () =>
+      new Promise<void>(resolve => {
+        let index = 0
+        const tick = () => {
+          if (!ready()) {
+            onReady = tick
+            return
+          }
+          const line = lines[index]
+          if (!line) {
+            resolve()
+            return
+          }
+          index += 1
+          setTimeout(() => {
+            line.style.display = ''
+            tick()
+          }, Number(line.dataset.delay) || 40)
         }
-        const line = lines[index]
-        if (!line) {
-          resolve()
-          return
-        }
-        index += 1
-        setTimeout(() => {
-          line.style.display = ''
-          tick()
-        }, Number(line.dataset.delay) || 40)
-      }
-      tick()
-      return promise
-    }
+        tick()
+      })
 
     const playRound = async () => {
       await waitUntilReady()
