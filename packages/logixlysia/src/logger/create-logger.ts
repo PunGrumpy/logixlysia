@@ -36,9 +36,8 @@ const shouldUseColors = (options: Options): boolean => {
 // pino-pretty's shorthand for `yyyy-mm-dd HH:MM:ss.SSS` (minus the `o`
 // timezone-offset token, which this formatter does not support).
 const STANDARD_TIMESTAMP_PATTERN = 'yyyy-mm-dd HH:MM:ss.SSS'
-
-const SYS_PREFIX_REGEX = /^[Ss][Yy][Ss]:/u
-const UTC_PREFIX_REGEX = /^utc:/iu
+// `SYS:` and `UTC:` are the same length.
+const TIMESTAMP_PREFIX_LENGTH = 'sys:'.length
 
 /**
  * Splits a `timestamp.translateTime` value into the literal pattern to
@@ -49,18 +48,14 @@ const UTC_PREFIX_REGEX = /^utc:/iu
 const resolveTimestampPattern = (
   pattern: string
 ): { pattern: string; utc: boolean } => {
-  let rest = pattern
-  let utc = false
-
-  if (SYS_PREFIX_REGEX.test(rest)) {
-    rest = rest.slice('sys:'.length)
-  } else if (UTC_PREFIX_REGEX.test(rest)) {
-    rest = rest.slice('utc:'.length)
-    utc = true
+  const prefix = pattern.slice(0, TIMESTAMP_PREFIX_LENGTH).toLowerCase()
+  const utc = prefix === 'utc:'
+  const rest =
+    utc || prefix === 'sys:' ? pattern.slice(TIMESTAMP_PREFIX_LENGTH) : pattern
+  return {
+    pattern: rest === 'standard' ? STANDARD_TIMESTAMP_PATTERN : rest,
+    utc
   }
-
-  const resolved = rest === 'standard' ? STANDARD_TIMESTAMP_PATTERN : rest
-  return { pattern: resolved, utc }
 }
 
 const formatTimestamp = (date: Date, pattern?: string): string => {
