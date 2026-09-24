@@ -7,7 +7,7 @@ import { flushTransports } from './index'
  * Resolves `true` when `ms` elapsed before `work` settled, `false` otherwise.
  * A non-positive `ms` means "start the work but do not wait".
  */
-export const raceWithTimeout = (
+export const raceWithTimeout = async (
   work: Promise<unknown>,
   ms: number
 ): Promise<boolean> => {
@@ -16,21 +16,17 @@ export const raceWithTimeout = (
   const settled = settle(work)
 
   if (ms <= 0) {
-    return Promise.resolve(true)
+    return true
   }
 
-  const { promise, resolve } = Promise.withResolvers<boolean>()
-  const timer = setTimeout(() => resolve(true), ms)
+  const timeout = Promise.withResolvers<'timeout'>()
+  const timer = setTimeout(() => timeout.resolve('timeout'), ms)
   // Never hold the event loop open just to observe a flush that is racing
   // an exiting process.
   timer.unref?.()
-  const settleFirst = async (): Promise<void> => {
-    await settled
-    clearTimeout(timer)
-    resolve(false)
-  }
-  settleFirst()
-  return promise
+  const winner = await Promise.race([settled, timeout.promise])
+  clearTimeout(timer)
+  return winner === 'timeout'
 }
 
 /**
