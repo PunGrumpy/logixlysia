@@ -16,40 +16,28 @@ const reportTransportError = createErrorReporter(
 const MAX_TRACKED_PENDING = 1024
 const pendingTransportWork = new Set<Promise<unknown>>()
 
-/** Drops `promise` from the tracked set once it settles; never rejects. */
-const untrackWhenSettled = async (promise: Promise<unknown>): Promise<void> => {
-  try {
-    await promise
-  } catch {
-    // The failure is reported where the promise came from.
-  }
-  pendingTransportWork.delete(promise)
-}
-
 /**
- * Remembers in-flight `log()` promises so shutdown can wait for them. The set
- * is bounded: under sustained load the oldest entry is dropped rather than
- * letting a slow transport grow it without limit.
+ * Remembers an in-flight `log()` promise so shutdown can wait for it, and
+ * reports its rejection. The set is bounded: under sustained load the oldest
+ * entry is dropped rather than letting a slow transport grow it without limit.
  */
-const track = (promise: Promise<unknown>): void => {
+const watch = async (
+  pending: Promise<void>,
+  onError: ((context: SinkErrorContext) => void) | undefined
+): Promise<void> => {
   if (pendingTransportWork.size >= MAX_TRACKED_PENDING) {
     const oldest = pendingTransportWork.values().next().value
     if (oldest) {
       pendingTransportWork.delete(oldest)
     }
   }
-  pendingTransportWork.add(promise)
-  untrackWhenSettled(promise)
-}
-
-const reportRejection = async (
-  pending: Promise<void>,
-  onError: ((context: SinkErrorContext) => void) | undefined
-): Promise<void> => {
+  pendingTransportWork.add(pending)
   try {
     await pending
   } catch (error) {
     reportTransportError(error, onError)
+  } finally {
+    pendingTransportWork.delete(pending)
   }
 }
 
@@ -84,13 +72,8 @@ export const logToTransports = (input: LogToTransportsInput): void => {
   for (const transport of transports) {
     try {
       const result = transport.log(level, message, meta)
-      if (
-        result &&
-        typeof (result as { catch?: unknown }).catch === 'function'
-      ) {
-        const pending = result as Promise<void>
-        track(pending)
-        reportRejection(pending, onError)
+      if (result) {
+        watch(result, onError)
       }
     } catch (error) {
       reportTransportError(error, onError)
