@@ -344,22 +344,17 @@ export const createBatchQueue = (input: {
     return send
   }
 
-  const drain = async (entries: LogEntry[]): Promise<void> => {
-    await enqueueSend(entries)
-    await tail
-  }
-
-  const flush = (): Promise<void> => {
+  const flush = async (): Promise<void> => {
     if (timer) {
       clearTimeout(timer)
       timer = undefined
     }
-    if (buffer.length === 0) {
-      return tail
-    }
     const entries = buffer
     buffer = []
-    return drain(entries)
+    if (entries.length > 0) {
+      await enqueueSend(entries)
+    }
+    await tail
   }
 
   const flushFromTimer = async (): Promise<void> => {
