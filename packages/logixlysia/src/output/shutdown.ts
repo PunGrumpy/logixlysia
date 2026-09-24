@@ -1,16 +1,7 @@
 import type { Options, SinkErrorContext } from '../interfaces'
+import { settle } from '../utils/settle'
 import { flushAllFileSinks } from './file-sink'
 import { flushTransports } from './index'
-
-/** Resolves once `work` settles, whichever way. */
-const settle = async (work: Promise<unknown>): Promise<void> => {
-  try {
-    await work
-  } catch {
-    // A failed flush is reported by the sinks themselves; here it only counts
-    // as "settled".
-  }
-}
 
 /**
  * Resolves `true` when `ms` elapsed before `work` settled, `false` otherwise.
@@ -20,6 +11,8 @@ export const raceWithTimeout = (
   work: Promise<unknown>,
   ms: number
 ): Promise<boolean> => {
+  // The sinks report a failed flush themselves; here it only counts as
+  // settled.
   const settled = settle(work)
 
   if (ms <= 0) {

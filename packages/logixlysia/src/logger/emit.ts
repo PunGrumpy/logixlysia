@@ -12,19 +12,9 @@ import { logToFile } from '../output/file'
 import type { SamplingRuntime } from '../sampling'
 import { elapsedMs } from '../utils/duration'
 import { redact, redactRequest } from '../utils/redact'
+import { settle } from '../utils/settle'
 import { formatLogOutput } from './create-logger'
 import type { FormatContext, PrecomputedLogParts } from './create-logger'
-
-/** Like `logToFile`, minus the rejection: file.ts already reported it (console.error or config.onError). */
-const writeToFile = async (
-  input: Parameters<typeof logToFile>[0]
-): Promise<void> => {
-  try {
-    await logToFile(input)
-  } catch {
-    // Already reported.
-  }
-}
 
 /**
  * Which sinks are active for a given config, resolved once per logger
@@ -222,15 +212,18 @@ export const emit = ({
   if (sinks.hasFileLogging) {
     const filePath = config?.logFilePath
     if (filePath) {
-      writeToFile({
-        data: logData,
-        filePath,
-        level,
-        options,
-        precomputed,
-        request: logRequest,
-        store
-      })
+      // file.ts reports a failed write itself (console.error or config.onError).
+      settle(
+        logToFile({
+          data: logData,
+          filePath,
+          level,
+          options,
+          precomputed,
+          request: logRequest,
+          store
+        })
+      )
     }
   }
 

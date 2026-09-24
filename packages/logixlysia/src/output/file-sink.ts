@@ -3,6 +3,7 @@ import { open } from 'node:fs/promises'
 import path from 'node:path'
 import type { LogRotationConfig } from '../interfaces'
 import { parseInterval, parseSize } from '../utils/rotation'
+import { settle } from '../utils/settle'
 import { ensureDir } from './fs'
 import { performRotation } from './rotation-manager'
 
@@ -95,11 +96,8 @@ class FileSinkImpl implements FileSink {
     prior: Promise<void>,
     batch: PendingBatch
   ): Promise<void> {
-    try {
-      await prior
-    } catch {
-      // A failed batch already rejected its own writers; the next one still runs.
-    }
+    // A failed batch already rejected its own writers; the next one still runs.
+    await settle(prior)
     await this.flushBatch(batch)
   }
 

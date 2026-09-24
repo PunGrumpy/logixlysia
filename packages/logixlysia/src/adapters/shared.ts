@@ -1,5 +1,6 @@
 import type { LogLevel, Transport } from '../interfaces'
 import { sanitizeLogText } from '../utils/sanitize'
+import { settle } from '../utils/settle'
 
 /** OpenTelemetry severity numbers for each Logixlysia log level. */
 export const OTEL_SEVERITY: Record<LogLevel, number> = {
@@ -324,11 +325,7 @@ export const createBatchQueue = (input: {
   // Swallow the failure on the chain itself so one bad batch cannot poison
   // the batches after it; the caller of enqueueSend still sees the rejection.
   const settleSend = async (send: Promise<void>): Promise<void> => {
-    try {
-      await send
-    } catch {
-      // Reported by whoever awaits `send`.
-    }
+    await settle(send)
     pending -= 1
   }
 
