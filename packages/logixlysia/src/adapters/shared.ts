@@ -1,5 +1,4 @@
 import type { LogLevel, Transport } from '../interfaces'
-import { parseLeadingInteger } from '../utils/number'
 import { sanitizeLogText } from '../utils/sanitize'
 
 /** OpenTelemetry severity numbers for each Logixlysia log level. */
@@ -139,13 +138,27 @@ export interface PostWithRetryInput {
   url: string
 }
 
+/**
+ * RFC 9110 `delta-seconds`: digits and nothing else. Reading the value the
+ * way `parseInt` does would take `"1e3"` as 1 s and `"+5"` as 5 s, values the
+ * spec does not allow; those fall through to the date branch instead.
+ */
+const DELTA_SECONDS_REGEX = /^\d+$/u
+
 const parseRetryAfterMs = (value: string): number | undefined => {
-  const seconds = parseLeadingInteger(value)
-  if (Number.isFinite(seconds) && seconds >= 0) {
-    return seconds * MILLIS_PER_SECOND
+  const trimmed = value.trim()
+  if (DELTA_SECONDS_REGEX.test(trimmed)) {
+    return Number(trimmed) * MILLIS_PER_SECOND
   }
-  const at = Date.parse(value)
-  return Number.isNaN(at) ? undefined : at - Date.now()
+  // `Date.parse` is lenient enough to read `"+5"` and `"5.5"` as dates in
+  // 2001, so a date already in the past is no hint at all rather than a delay
+  // of zero, which would retry with no backoff.
+  const at = Date.parse(trimmed)
+  if (Number.isNaN(at)) {
+    return
+  }
+  const delta = at - Date.now()
+  return delta > 0 ? delta : undefined
 }
 
 /**

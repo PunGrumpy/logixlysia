@@ -311,6 +311,33 @@ describe('resolveRetryDelay', () => {
     expect(delay).toBeGreaterThanOrEqual(250)
     expect(delay).toBeLessThanOrEqual(750)
   })
+
+  test.each([
+    ['5', 5000],
+    [' 5 ', 5000],
+    ['0', 0]
+  ])('reads the delta-seconds Retry-After %j as %p ms', (retryAfter, ms) => {
+    expect(resolveRetryDelay(retryAfterResponse(retryAfter), 0)).toBe(ms)
+  })
+
+  // `1e3` and `0x10` are not `delta-seconds`, and `Date.parse` reads `+5` and
+  // `5.5` as dates in 2001. Reading any of them as a delay would replace the
+  // backoff with a wait the server never asked for, or with none at all.
+  test.each(['1e3', '0x10', '+5', '5.5'])(
+    'ignores the non-conforming Retry-After %j and backs off instead',
+    retryAfter => {
+      const delay = resolveRetryDelay(retryAfterResponse(retryAfter), 0)
+      expect(delay).toBeGreaterThanOrEqual(125)
+      expect(delay).toBeLessThanOrEqual(375)
+    }
+  )
+
+  test('ignores an HTTP-date Retry-After that already passed', () => {
+    const anHourAgo = new Date(Date.now() - 3_600_000).toUTCString()
+    const delay = resolveRetryDelay(retryAfterResponse(anHourAgo), 0)
+    expect(delay).toBeGreaterThanOrEqual(125)
+    expect(delay).toBeLessThanOrEqual(375)
+  })
 })
 
 describe('createBatchQueue', () => {
