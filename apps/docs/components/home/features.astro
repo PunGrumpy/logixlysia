@@ -681,9 +681,19 @@ const files = [
 </section>
 
 <script>
+  // Promise.withResolvers only landed in Safari 17.4 and Chrome 119; this
+  // script runs in the visitor's browser, so it brings its own.
+  const withResolvers = (): PromiseWithResolvers<void> => {
+    let settle!: Omit<PromiseWithResolvers<void>, 'promise'>
+    const promise = new Promise<void>((resolve, reject) => {
+      settle = { reject, resolve }
+    })
+    return { promise, ...settle }
+  }
+
   const sleep = (ms: number): Promise<void> => {
     const { promise, resolve }: PromiseWithResolvers<void> =
-      Promise.withResolvers()
+      withResolvers()
     setTimeout(resolve, ms)
     return promise
   }
@@ -711,7 +721,7 @@ const files = [
         return Promise.resolve()
       }
       const { promise, resolve }: PromiseWithResolvers<void> =
-        Promise.withResolvers()
+        withResolvers()
       onVisible = resolve
       return promise
     }
@@ -725,7 +735,7 @@ const files = [
     // setTimeout chain instead of an awaited loop: rows reveal one by one.
     const revealRows = (): Promise<void> => {
       const { promise, resolve }: PromiseWithResolvers<void> =
-        Promise.withResolvers()
+        withResolvers()
       let index = 0
       const tick = () => {
         const row = rows[index]
@@ -771,7 +781,7 @@ const files = [
     // setTimeout chain instead of an awaited loop: lines reveal one by one.
     const revealLines = (): Promise<void> => {
       const { promise, resolve }: PromiseWithResolvers<void> =
-        Promise.withResolvers()
+        withResolvers()
       let index = 0
       const tick = () => {
         const line = lines[index]
@@ -865,7 +875,7 @@ const files = [
       // setTimeout chain instead of an awaited loop: the size ticks upward.
       const growFile = (): Promise<void> => {
         const { promise, resolve }: PromiseWithResolvers<void> =
-          Promise.withResolvers()
+          withResolvers()
         let megabytes = 0.1
         const tick = () => {
           if (megabytes >= 10) {
