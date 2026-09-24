@@ -10,9 +10,7 @@ Distributes text evenly across lines, preventing orphaned words on headings and 
 
 ```css
 /* Good — even line lengths on short text */
-h1,
-h2,
-h3 {
+h1, h2, h3 {
   text-wrap: balance;
 }
 ```
@@ -42,10 +40,7 @@ This should be your **default for short-to-medium text** — paragraphs, descrip
 
 ```css
 /* Good — descriptions, captions, short paragraphs */
-p,
-li,
-figcaption,
-blockquote {
+p, li, figcaption, blockquote {
   text-wrap: pretty;
 }
 ```
@@ -112,19 +107,14 @@ Use the product's existing type system unless the task explicitly asks for a typ
 ```css
 /* System-native macOS/iOS feel */
 html {
-  font-family:
-    system-ui,
-    -apple-system,
-    BlinkMacSystemFont,
-    'Segoe UI',
-    sans-serif;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 ```
 
 ```css
 /* Commercial brand face with safe fallbacks */
 html {
-  font-family: 'Helvetica Now', 'Helvetica Neue', Arial, sans-serif;
+  font-family: "Helvetica Now", "Helvetica Neue", Arial, sans-serif;
 }
 ```
 
@@ -148,13 +138,13 @@ When numbers update dynamically (counters, prices, timers, table columns), use t
 
 ### When to Use
 
-| Use tabular-nums            | Don't use tabular-nums   |
-| --------------------------- | ------------------------ |
-| Counters and timers         | Static display numbers   |
-| Prices that update          | Decorative large numbers |
-| Table columns with numbers  | Phone numbers, zip codes |
+| Use tabular-nums | Don't use tabular-nums |
+| --- | --- |
+| Counters and timers | Static display numbers |
+| Prices that update | Decorative large numbers |
+| Table columns with numbers | Phone numbers, zip codes |
 | Animated number transitions | Version numbers (v2.1.0) |
-| Scoreboards, dashboards     |                          |
+| Scoreboards, dashboards | |
 
 ### Caveat
 

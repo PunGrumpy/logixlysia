@@ -30,7 +30,7 @@
           "disableNestedConfig": false,
           "fixKind": "safe_fix",
           "run": "onType",
-          "typeAware": true,
+          "typeAware": false,
           "unusedDisableDirectives": "deny"
         }
       }

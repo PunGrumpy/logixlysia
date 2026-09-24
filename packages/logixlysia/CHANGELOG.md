@@ -60,7 +60,15 @@
 
 ### Minor Changes
 
-- 64333ca: `logRotation.interval` now actually rotates. The live file's age (from filesystem creation time, falling back to open time where the filesystem reports none) is checked after every write, and the file rotates on the first write after the interval elapses — no timers, so an idle process rotates on its next write rather than on a wall-clock schedule. When both `maxSize` and `interval` are set, whichever trigger is crossed first rotates. Previously `interval` was accepted and format-validated but never triggered rotation; configs that already set it will begin rotating on upgrade.
+- 64333ca: `logRotation.interval` now actually rotates. The live file's age (from
+  filesystem creation time, falling back to open time where the filesystem
+  reports none) is checked after every write, and the file rotates on the
+  first write after the interval elapses — no timers, so an idle process
+  rotates on its next write rather than on a wall-clock schedule. When both
+  `maxSize` and `interval` are set, whichever trigger is crossed first
+  rotates. Previously `interval` was accepted and format-validated but
+  never triggered rotation; configs that already set it will begin rotating
+  on upgrade.
 - 964e60c: `autoRedact` now redacts by sensitive key/header names (authorization, cookie, x-api-key, password, secret, token, session, …) in addition to value patterns; new `config.redactKeys` extends the list, and pino gets matching `redact.paths` defaults.
 - 1e949a1: Harden log output: file-sink lines, client IPs, and context-tree values are sanitized (control characters escaped/stripped, lengths bounded); malformed inbound request IDs are replaced with generated ones; log files/dirs are created with `0600`/`0700` modes, configurable via `logFileMode`/`logDirMode` (existing files keep their mode).
 - 3267e1f: Internal log/error pipelines are unified: error-path logs now honor the same sink gates and console-method-by-level as success-path logs (a 4xx warning now prints via `console.warn` instead of `console.error`). New `config.onError` hook surfaces transport/file/rotation sink failures to your code.
@@ -76,7 +84,12 @@
 
 ### Correction (2026-08-10)
 
-The 5.3.0 entries "log-rotation: implement complete rotation with interval support" (673b800, 9016a51) added the `interval` config field and its format validation, but did not wire it to actually trigger rotation — `interval` was a no-op from 5.3.0 until the lazy-on-write implementation landed on 2026-08-10. See `plans/spikes/021-interval-rotation-decision.md` for the investigation.
+The 5.3.0 entries "log-rotation: implement complete rotation with
+interval support" (673b800, 9016a51) added the `interval` config field
+and its format validation, but did not wire it to actually trigger
+rotation — `interval` was a no-op from 5.3.0 until the lazy-on-write
+implementation landed on 2026-08-10. See
+`plans/spikes/021-interval-rotation-decision.md` for the investigation.
 
 ## 6.6.1
 
