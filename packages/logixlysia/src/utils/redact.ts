@@ -307,21 +307,16 @@ const walker = {
     return result ?? recordValue
   },
 
-  value: <T>(
-    value: T,
+  value: (
+    value: unknown,
     inProgress: WeakSet<object>,
     extraKeys?: readonly string[]
-  ): T => {
-    if (value === null || value === undefined) {
-      return value
-    }
-
+  ): unknown => {
     if (typeof value === 'string') {
-      return redactString(value) as unknown as T
+      return redactString(value)
     }
 
-    const type = typeof value
-    if (type !== 'object') {
+    if (value === null || typeof value !== 'object') {
       return value
     }
 
@@ -332,31 +327,35 @@ const walker = {
       return value
     }
 
-    const obj = value as object
-    if (inProgress.has(obj)) {
-      return CIRCULAR_REF as unknown as T
+    if (inProgress.has(value)) {
+      return CIRCULAR_REF
     }
 
     if (value instanceof Error) {
-      return withReentrancyGuard(obj, inProgress, () =>
+      return withReentrancyGuard(value, inProgress, () =>
         walker.error(value, inProgress, extraKeys)
-      ) as unknown as T
+      )
     }
 
     if (Array.isArray(value)) {
-      return withReentrancyGuard(obj, inProgress, () =>
+      return withReentrancyGuard(value, inProgress, () =>
         walker.array(value, inProgress, extraKeys)
-      ) as unknown as T
+      )
     }
 
-    return withReentrancyGuard(obj, inProgress, () =>
+    return withReentrancyGuard(value, inProgress, () =>
       walker.record(value as Record<string, unknown>, inProgress, extraKeys)
-    ) as unknown as T
+    )
   }
 }
 
+/**
+ * Apart from a circular reference, which becomes the marker string, the walk
+ * keeps each value's shape: a string stays a string, an array an array, an
+ * Error an Error. The input type therefore still describes the output.
+ */
 export const redact = <T>(value: T, extraKeys?: readonly string[]): T =>
-  walker.value(value, new WeakSet(), extraKeys)
+  walker.value(value, new WeakSet(), extraKeys) as T
 
 /**
  * Clone request URL, method and headers for logging with the same string redaction as {@link redact}.

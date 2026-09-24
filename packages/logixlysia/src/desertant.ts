@@ -164,7 +164,7 @@ const redactText = async (
   return redactedText
 }
 
-const isPlainObject = (value: object): boolean => {
+const isPlainObject = (value: object): value is Record<string, unknown> => {
   const proto = Object.getPrototypeOf(value) as object | null
   return proto === Object.prototype || proto === null
 }
@@ -243,11 +243,7 @@ const walker = {
       return await walker.error(value, childContext, depth)
     }
     if (isPlainObject(value)) {
-      return await walker.entries(
-        value as Record<string, unknown>,
-        childContext,
-        depth
-      )
+      return await walker.entries(value, childContext, depth)
     }
     // Dates, Maps, class instances and the like: no safe generic way to rebuild
     // them, so they pass through. Flatten anything that can carry free-text PII
