@@ -4,7 +4,6 @@ import { getStatusCode } from '../helpers/status'
 import type { LogLevel, Options, RequestInfo, StoreData } from '../interfaces'
 import { elapsedMs } from '../utils/duration'
 import { isStructuredError, parseError } from '../utils/error'
-import { parseLeadingInteger } from '../utils/number'
 import { sanitizeLogText } from '../utils/sanitize'
 
 const pad2 = (value: number): string => String(value).padStart(2, '0')
@@ -242,26 +241,22 @@ const getColoredMethodToken = (method: string, useColors: boolean): string => {
   return getColoredMethod(upper, useColors) + padding
 }
 
-const getColoredStatus = (status: string, useColors: boolean): string => {
-  if (!useColors) {
+const getColoredStatus = (statusCode: number, useColors: boolean): string => {
+  const status = String(statusCode)
+  if (!(useColors && Number.isFinite(statusCode))) {
     return status
   }
 
-  const numeric = parseLeadingInteger(status)
-  if (!Number.isFinite(numeric)) {
-    return status
-  }
-
-  if (numeric >= 500) {
+  if (statusCode >= 500) {
     return chalk.red(status)
   }
-  if (numeric >= 400) {
+  if (statusCode >= 400) {
     return chalk.yellow(status)
   }
-  if (numeric >= 300) {
+  if (statusCode >= 300) {
     return chalk.cyan(status)
   }
-  if (numeric >= 200) {
+  if (statusCode >= 200) {
     return chalk.green(status)
   }
   return chalk.gray(status)
@@ -570,9 +565,7 @@ const getStatusTokens = (
       ? 200
       : getStatusCode(statusValue)
   return {
-    coloredStatus: needsStatus
-      ? getColoredStatus(String(statusCode), useColors)
-      : '',
+    coloredStatus: needsStatus ? getColoredStatus(statusCode, useColors) : '',
     statusText: needsStatusText ? getStatusText(statusCode) : ''
   }
 }
