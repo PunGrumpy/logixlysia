@@ -186,121 +186,6 @@ const redactRequestUrl = (
   }
 }
 
-type RedactInner = <T>(
-  value: T,
-  inProgress: WeakSet<object>,
-  extraKeys: readonly string[] | undefined
-) => T
-
-// The walkers below recurse through `redactInner`, which is defined after
-// them and passed in as `recurse`.
-
-// Errors are exempt from the identity fast path below: a redacted Error is always constructed
-// fresh (even when nothing changed) so consumers never receive the original, potentially
-// stack-trace-carrying instance by reference.
-const redactErrorClone = (
-  originalError: Error,
-  inProgress: WeakSet<object>,
-  extraKeys: readonly string[] | undefined,
-  recurse: RedactInner
-): Error & Record<string, unknown> => {
-  const redactedMessage = redactString(originalError.message)
-  const proto = Object.getPrototypeOf(originalError) as object
-  const newError = Object.create(proto) as Error & Record<string, unknown>
-
-  newError.message = redactedMessage
-  newError.name = originalError.name
-
-  if (originalError.stack !== undefined) {
-    newError.stack = redactString(originalError.stack)
-  }
-
-  const errorRecord = originalError as unknown as Record<string, unknown>
-
-  for (const key of Object.getOwnPropertyNames(errorRecord)) {
-    if (key === 'message' || key === 'name' || key === 'stack') {
-      continue
-    }
-
-    const descriptor = Object.getOwnPropertyDescriptor(errorRecord, key)
-    if (descriptor === undefined) {
-      continue
-    }
-
-    if (descriptor.get !== undefined || descriptor.set !== undefined) {
-      Object.defineProperty(newError, key, descriptor)
-      continue
-    }
-
-    const redactedValue = isSensitiveKey(key, extraKeys)
-      ? REDACTED_TEXT
-      : recurse(descriptor.value, inProgress, extraKeys)
-
-    Object.defineProperty(newError, key, {
-      ...descriptor,
-      value: redactedValue
-    })
-  }
-
-  return newError
-}
-
-/**
- * Redacts each item; returns the ORIGINAL array reference when no item changed (zero
- * allocations for the common no-PII case). A new array is materialized lazily, starting from
- * the first item that changes — items before that point are known-unchanged, so they're copied
- * from `value` as-is rather than recomputed.
- */
-const redactArrayItems = (
-  value: unknown[],
-  inProgress: WeakSet<object>,
-  extraKeys: readonly string[] | undefined,
-  recurse: RedactInner
-): unknown[] => {
-  let result: unknown[] | undefined
-
-  for (const [index, original] of value.entries()) {
-    const redacted = recurse(original, inProgress, extraKeys)
-    if (result === undefined && redacted !== original) {
-      result = value.slice(0, index)
-    }
-    result?.push(redacted)
-  }
-
-  return result ?? value
-}
-
-/** Same lazy-materialization strategy as {@link redactArrayItems}, for plain objects. */
-const redactRecordEntries = (
-  recordValue: Record<string, unknown>,
-  inProgress: WeakSet<object>,
-  extraKeys: readonly string[] | undefined,
-  recurse: RedactInner
-): Record<string, unknown> => {
-  const keys = Object.keys(recordValue)
-  let result: Record<string, unknown> | undefined
-
-  for (const [index, key] of keys.entries()) {
-    const original = recordValue[key]
-    const sensitive = isSensitiveKey(key, extraKeys)
-    const redacted = sensitive
-      ? REDACTED_TEXT
-      : recurse(original, inProgress, extraKeys)
-
-    if (result === undefined && (sensitive || redacted !== original)) {
-      result = {}
-      for (const priorKey of keys.slice(0, index)) {
-        result[priorKey] = recordValue[priorKey]
-      }
-    }
-    if (result !== undefined) {
-      result[key] = redacted
-    }
-  }
-
-  return result ?? recordValue
-}
-
 const withReentrancyGuard = <T>(
   obj: object,
   inProgress: WeakSet<object>,
@@ -314,60 +199,164 @@ const withReentrancyGuard = <T>(
   }
 }
 
-const redactInner: RedactInner = <T>(
-  value: T,
-  inProgress: WeakSet<object>,
-  extraKeys: readonly string[] | undefined
-): T => {
-  if (value === null || value === undefined) {
-    return value
-  }
+/**
+ * Mutually recursive. One object lets each walker reach the others by
+ * property instead of by a binding declared later in the file.
+ */
+const walker = {
+  /**
+   * Redacts each item; returns the ORIGINAL array reference when no item changed (zero
+   * allocations for the common no-PII case). A new array is materialized lazily, starting from
+   * the first item that changes — items before that point are known-unchanged, so they're copied
+   * from `value` as-is rather than recomputed.
+   */
+  array: (
+    value: unknown[],
+    inProgress: WeakSet<object>,
+    extraKeys?: readonly string[]
+  ): unknown[] => {
+    let result: unknown[] | undefined
 
-  if (typeof value === 'string') {
-    return redactString(value) as unknown as T
-  }
+    for (const [index, original] of value.entries()) {
+      const redacted = walker.value(original, inProgress, extraKeys)
+      if (result === undefined && redacted !== original) {
+        result = value.slice(0, index)
+      }
+      result?.push(redacted)
+    }
 
-  const type = typeof value
-  if (type !== 'object') {
-    return value
-  }
+    return result ?? value
+  },
 
-  if (value instanceof Date) {
-    // Dates carry no redactable string content and are never mutated by this module, so they
-    // pass through by reference (part of the identity fast path) instead of being defensively
-    // cloned as before.
-    return value
-  }
+  // Errors are exempt from the identity fast path: a redacted Error is always constructed
+  // fresh (even when nothing changed) so consumers never receive the original, potentially
+  // stack-trace-carrying instance by reference.
+  error: (
+    originalError: Error,
+    inProgress: WeakSet<object>,
+    extraKeys?: readonly string[]
+  ): Error & Record<string, unknown> => {
+    const redactedMessage = redactString(originalError.message)
+    const proto = Object.getPrototypeOf(originalError) as object
+    const newError = Object.create(proto) as Error & Record<string, unknown>
 
-  const obj = value as object
-  if (inProgress.has(obj)) {
-    return CIRCULAR_REF as unknown as T
-  }
+    newError.message = redactedMessage
+    newError.name = originalError.name
 
-  if (value instanceof Error) {
+    if (originalError.stack !== undefined) {
+      newError.stack = redactString(originalError.stack)
+    }
+
+    const errorRecord = originalError as unknown as Record<string, unknown>
+
+    for (const key of Object.getOwnPropertyNames(errorRecord)) {
+      if (key === 'message' || key === 'name' || key === 'stack') {
+        continue
+      }
+
+      const descriptor = Object.getOwnPropertyDescriptor(errorRecord, key)
+      if (descriptor === undefined) {
+        continue
+      }
+
+      if (descriptor.get !== undefined || descriptor.set !== undefined) {
+        Object.defineProperty(newError, key, descriptor)
+        continue
+      }
+
+      const redactedValue = isSensitiveKey(key, extraKeys)
+        ? REDACTED_TEXT
+        : walker.value(descriptor.value, inProgress, extraKeys)
+
+      Object.defineProperty(newError, key, {
+        ...descriptor,
+        value: redactedValue
+      })
+    }
+
+    return newError
+  },
+
+  /** Same lazy-materialization strategy as {@link walker.array}, for plain objects. */
+  record: (
+    recordValue: Record<string, unknown>,
+    inProgress: WeakSet<object>,
+    extraKeys?: readonly string[]
+  ): Record<string, unknown> => {
+    const keys = Object.keys(recordValue)
+    let result: Record<string, unknown> | undefined
+
+    for (const [index, key] of keys.entries()) {
+      const original = recordValue[key]
+      const sensitive = isSensitiveKey(key, extraKeys)
+      const redacted = sensitive
+        ? REDACTED_TEXT
+        : walker.value(original, inProgress, extraKeys)
+
+      if (result === undefined && (sensitive || redacted !== original)) {
+        result = {}
+        for (const priorKey of keys.slice(0, index)) {
+          result[priorKey] = recordValue[priorKey]
+        }
+      }
+      if (result !== undefined) {
+        result[key] = redacted
+      }
+    }
+
+    return result ?? recordValue
+  },
+
+  value: <T>(
+    value: T,
+    inProgress: WeakSet<object>,
+    extraKeys?: readonly string[]
+  ): T => {
+    if (value === null || value === undefined) {
+      return value
+    }
+
+    if (typeof value === 'string') {
+      return redactString(value) as unknown as T
+    }
+
+    const type = typeof value
+    if (type !== 'object') {
+      return value
+    }
+
+    if (value instanceof Date) {
+      // Dates carry no redactable string content and are never mutated by this module, so they
+      // pass through by reference (part of the identity fast path) instead of being defensively
+      // cloned as before.
+      return value
+    }
+
+    const obj = value as object
+    if (inProgress.has(obj)) {
+      return CIRCULAR_REF as unknown as T
+    }
+
+    if (value instanceof Error) {
+      return withReentrancyGuard(obj, inProgress, () =>
+        walker.error(value, inProgress, extraKeys)
+      ) as unknown as T
+    }
+
+    if (Array.isArray(value)) {
+      return withReentrancyGuard(obj, inProgress, () =>
+        walker.array(value, inProgress, extraKeys)
+      ) as unknown as T
+    }
+
     return withReentrancyGuard(obj, inProgress, () =>
-      redactErrorClone(value, inProgress, extraKeys, redactInner)
+      walker.record(value as Record<string, unknown>, inProgress, extraKeys)
     ) as unknown as T
   }
-
-  if (Array.isArray(value)) {
-    return withReentrancyGuard(obj, inProgress, () =>
-      redactArrayItems(value, inProgress, extraKeys, redactInner)
-    ) as unknown as T
-  }
-
-  return withReentrancyGuard(obj, inProgress, () =>
-    redactRecordEntries(
-      value as Record<string, unknown>,
-      inProgress,
-      extraKeys,
-      redactInner
-    )
-  ) as unknown as T
 }
 
 export const redact = <T>(value: T, extraKeys?: readonly string[]): T =>
-  redactInner(value, new WeakSet(), extraKeys)
+  walker.value(value, new WeakSet(), extraKeys)
 
 /**
  * Clone request URL, method and headers for logging with the same string redaction as {@link redact}.

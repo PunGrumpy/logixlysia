@@ -169,111 +169,108 @@ const isPlainObject = (value: object): boolean => {
   return proto === Object.prototype || proto === null
 }
 
-type RedactValue = (
-  value: unknown,
-  context: WalkContext,
-  depth: number
-) => Promise<unknown>
-
-// The walkers below recurse through `redactValue`, which is defined after
-// them and passed in as `recurse`.
-
 /**
- * Errors are rebuilt rather than mutated: the message and stack of a failed
- * request are exactly where free-text PII ("user Anna Müller not found") tends
- * to surface, and the original instance must stay untouched for the rest of
- * the pipeline.
+ * Mutually recursive. One object lets each walker reach the others by
+ * property instead of by a binding declared later in the file.
  */
-const redactError = async (
-  original: Error,
-  context: WalkContext,
-  depth: number,
-  recurse: RedactValue
-): Promise<Error> => {
-  const clone = Object.create(
-    Object.getPrototypeOf(original) as object
-  ) as Error & Record<string, unknown>
-  clone.name = original.name
-  clone.message = await redactText(original.message, context)
-  if (original.stack !== undefined) {
-    clone.stack = await redactText(original.stack, context)
-  }
-
-  const record = original as unknown as Record<string, unknown>
-  const ownKeys = Object.getOwnPropertyNames(original).filter(
-    key => key !== 'message' && key !== 'name' && key !== 'stack'
-  )
-  const values = await Promise.all(
-    ownKeys.map(key => recurse(record[key], context, depth + 1))
-  )
-  for (const [index, key] of ownKeys.entries()) {
-    clone[key] = values[index]
-  }
-  return clone
-}
-
-const redactEntries = async (
-  record: Record<string, unknown>,
-  context: WalkContext,
-  depth: number,
-  recurse: RedactValue
-): Promise<Record<string, unknown>> => {
-  const entries = await Promise.all(
-    Object.entries(record).map(
-      async ([key, value]) =>
-        [key, await recurse(value, context, depth + 1)] as const
+const walker = {
+  entries: async (
+    record: Record<string, unknown>,
+    context: WalkContext,
+    depth: number
+  ): Promise<Record<string, unknown>> => {
+    const entries = await Promise.all(
+      Object.entries(record).map(
+        async ([key, value]) =>
+          [key, await walker.value(value, context, depth + 1)] as const
+      )
     )
-  )
-  return Object.fromEntries(entries)
-}
+    return Object.fromEntries(entries)
+  },
 
-const redactObject = async (
-  value: object,
-  context: WalkContext,
-  depth: number,
-  recurse: RedactValue
-): Promise<unknown> => {
-  if (context.seen.has(value)) {
-    return CIRCULAR_REF
-  }
+  /**
+   * Errors are rebuilt rather than mutated: the message and stack of a failed
+   * request are exactly where free-text PII ("user Anna Müller not found") tends
+   * to surface, and the original instance must stay untouched for the rest of
+   * the pipeline.
+   */
+  error: async (
+    original: Error,
+    context: WalkContext,
+    depth: number
+  ): Promise<Error> => {
+    const clone = Object.create(
+      Object.getPrototypeOf(original) as object
+    ) as Error & Record<string, unknown>
+    clone.name = original.name
+    clone.message = await redactText(original.message, context)
+    if (original.stack !== undefined) {
+      clone.stack = await redactText(original.stack, context)
+    }
 
-  const childContext: WalkContext = {
-    ...context,
-    seen: new Set(context.seen).add(value)
-  }
-  if (Array.isArray(value)) {
-    return await Promise.all(
-      value.map(item => recurse(item, childContext, depth + 1))
+    const record = original as unknown as Record<string, unknown>
+    const ownKeys = Object.getOwnPropertyNames(original).filter(
+      key => key !== 'message' && key !== 'name' && key !== 'stack'
     )
-  }
-  if (value instanceof Error) {
-    return await redactError(value, childContext, depth, recurse)
-  }
-  if (isPlainObject(value)) {
-    return await redactEntries(
-      value as Record<string, unknown>,
-      childContext,
-      depth,
-      recurse
+    const values = await Promise.all(
+      ownKeys.map(key => walker.value(record[key], context, depth + 1))
     )
-  }
-  // Dates, Maps, class instances and the like: no safe generic way to rebuild
-  // them, so they pass through. Flatten anything that can carry free-text PII
-  // into plain fields before it reaches the transport.
-  return value
-}
+    for (const [index, key] of ownKeys.entries()) {
+      clone[key] = values[index]
+    }
+    return clone
+  },
 
-const redactValue: RedactValue = (value, context, depth) => {
-  if (typeof value === 'string') {
-    return redactText(value, context)
+  object: async (
+    value: object,
+    context: WalkContext,
+    depth: number
+  ): Promise<unknown> => {
+    if (context.seen.has(value)) {
+      return CIRCULAR_REF
+    }
+
+    const childContext: WalkContext = {
+      ...context,
+      seen: new Set(context.seen).add(value)
+    }
+    if (Array.isArray(value)) {
+      return await Promise.all(
+        value.map(item => walker.value(item, childContext, depth + 1))
+      )
+    }
+    if (value instanceof Error) {
+      return await walker.error(value, childContext, depth)
+    }
+    if (isPlainObject(value)) {
+      return await walker.entries(
+        value as Record<string, unknown>,
+        childContext,
+        depth
+      )
+    }
+    // Dates, Maps, class instances and the like: no safe generic way to rebuild
+    // them, so they pass through. Flatten anything that can carry free-text PII
+    // into plain fields before it reaches the transport.
+    return value
+  },
+
+  value: (
+    value: unknown,
+    context: WalkContext,
+    depth: number
+  ): Promise<unknown> => {
+    if (typeof value === 'string') {
+      return redactText(value, context)
+    }
+    if (value === null || typeof value !== 'object') {
+      return Promise.resolve(value)
+    }
+    if (depth >= context.maxDepth) {
+      return Promise.resolve(value)
+    }
+    return walker.object(value, context, depth)
   }
-  if (value === null || typeof value !== 'object') {
-    return Promise.resolve(value)
-  }
-  if (depth >= context.maxDepth) {
-    return Promise.resolve(value)
-  }
-  return redactObject(value, context, depth, redactValue)
 }
 
 interface Queue {
@@ -386,7 +383,7 @@ export const withRedaction = (
       message: await redactText(message, context),
       meta:
         includeMeta && meta !== undefined
-          ? await redactEntries(meta, context, 0, redactValue)
+          ? await walker.entries(meta, context, 0)
           : meta
     }
   }
