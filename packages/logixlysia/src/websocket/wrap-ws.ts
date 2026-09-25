@@ -1,10 +1,6 @@
 import type { RequestContextStore } from '../context/request-context'
 import type { Logger, Options, StoreData } from '../interfaces'
 
-/**
- * Elysia 2 merges the route context into the socket object and removed
- * `ws.data`, so `store` is a property of the handler's `ws`.
- */
 export interface WebSocketLike {
   readonly id?: string
   readonly store?: { logger?: Logger }

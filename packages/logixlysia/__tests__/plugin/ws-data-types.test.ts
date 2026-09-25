@@ -3,9 +3,6 @@ import { Elysia } from 'elysia'
 import { websocket } from 'elysia/websocket'
 import { logixlysia } from '../../src'
 
-// Elysia 2 merges the route context into the socket object, so the old
-// `ws.data.store` is now `ws.store`. `.ws()` also needs the app to register
-// `elysia/websocket`.
 describe('logixlysia WebSocket typing (#220)', () => {
   test('infers plugin store on ws when .ws follows .use(logixlysia()) on a bare Elysia', () => {
     new Elysia()

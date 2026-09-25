@@ -71,9 +71,6 @@ const resolveHandledStatus = (
 /**
  * Explicit singleton without Elysia's `SingletonBase` `Record<string, unknown>` on decorator/derive so
  * merged `Context` and WebSocket handler contexts keep precise keys after `.use(logixlysia())`.
- *
- * Elysia 2 removed the `resolve` slot from `SingletonBase` along with the `resolve` lifecycle.
- * `derive` now runs during `beforeHandle`, where `resolve` used to run.
  */
 export interface LogixlysiaSingleton<TFields extends object = LogFields> {
   decorator: EmptyElysiaSlot
@@ -83,9 +80,6 @@ export interface LogixlysiaSingleton<TFields extends object = LogFields> {
   store: LogixlysiaStore
 }
 
-// Elysia 2 adds `Scope` as the second type parameter, between `BasePath` and `Singleton`. The
-// plugin never sets `config.as`, so its scope stays the default `'local'`. `.as('plugin')`
-// promotes the hooks to the consumer without changing that parameter.
 // Elysia's `SingletonBase` slots are `Record<string, unknown>`; ours are intentionally closed (see #220).
 export type Logixlysia<TFields extends object = LogFields> = Elysia<
   '',

@@ -10,8 +10,6 @@ import { pinoRouter } from './pino'
 import { requestContextRouter } from './request-context'
 import { statusRouter } from './status'
 
-// Elysia 2 merges the route context into the socket object, so the old
-// `ws.data.store` is now `ws.store`.
 interface DemoWs {
   id?: string
   send: (payload: unknown) => void
@@ -39,8 +37,6 @@ export const logging = logixlysia({
 })
 
 export const routers = new Elysia()
-  // Elysia 2 makes WebSocket support opt-in. Without `elysia/websocket`,
-  // `.ws()` throws when the app builds.
   .use(websocket())
   .use(logging)
   .get(
