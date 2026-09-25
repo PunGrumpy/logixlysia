@@ -55,32 +55,36 @@ jobs:
             echo "Base and head resolve to the same commit — nothing to compare." >&2
             exit 1
           fi
+      # Both runs use the head checkout's bench harness and lockfile; only
+      # packages/logixlysia is swapped to the base commit. vitest 5 has no
+      # --compare flag: the harness stores results with BENCH_BASELINE=write
+      # and reads them back as "(base)" rows with BENCH_BASELINE=compare.
       - name: 📏 Bench base
         env:
           BASE_SHA: ${{ steps.refs.outputs.base }}
           FILTER: ${{ inputs.filter }}
           NO_COLOR: '1'
         run: |
-          git checkout --detach "$BASE_SHA"
-          bun install --frozen-lockfile
+          git restore --source="$BASE_SHA" --staged --worktree -- packages/logixlysia
+          bun install
           bun run build --filter logixlysia
           cd packages/bench
-          bun x vitest bench --run ${FILTER:+-t "$FILTER"} \
-            --outputJson "$RUNNER_TEMP/bench-base.json"
+          BENCH_BASELINE=write bun x vitest bench --run ${FILTER:+-t "$FILTER"}
       - name: 📐 Bench head and compare
         env:
           HEAD_SHA: ${{ steps.refs.outputs.head }}
           FILTER: ${{ inputs.filter }}
           NO_COLOR: '1'
         run: |
-          git checkout --detach "$HEAD_SHA"
+          git restore --source="$HEAD_SHA" --staged --worktree -- packages/logixlysia bun.lock
           bun install --frozen-lockfile
           bun run build --filter logixlysia
           cd packages/bench
-          bun x vitest bench --run ${FILTER:+-t "$FILTER"} \
-            --compare "$RUNNER_TEMP/bench-base.json" \
-            --outputJson "$RUNNER_TEMP/bench-head.json" \
+          BENCH_BASELINE=compare bun x vitest bench --run ${FILTER:+-t "$FILTER"} \
+            --reporter=default --reporter=json \
+            --outputFile.json="$RUNNER_TEMP/bench-head.json" \
             2>&1 | tee "$RUNNER_TEMP/bench-compare.txt"
+          cp -R .baseline "$RUNNER_TEMP/bench-base"
       - name: 📝 Write job summary
         env:
           BASE_SHA: ${{ steps.refs.outputs.base }}
@@ -89,7 +93,8 @@ jobs:
           {
             echo "## Bench: base \`${BASE_SHA}\` vs head \`${HEAD_SHA}\`"
             echo
-            echo "Same-runner comparison — read \`min\`/\`p75\` for ordering;"
+            echo "Same-runner comparison; rows marked (base) ran the base commit."
+            echo "Read \`min\`/\`p75\` for ordering;"
             echo "\`mean\`/\`hz\` flip run-to-run at sub-microsecond medians."
             echo "Absolute numbers are NOT comparable across workflow runs."
             echo
@@ -103,6 +108,6 @@ jobs:
         with:
           name: bench-results-${{ steps.refs.outputs.head }}
           path: |
-            ${{ runner.temp }}/bench-base.json
+            ${{ runner.temp }}/bench-base
             ${{ runner.temp }}/bench-head.json
             ${{ runner.temp }}/bench-compare.txt
