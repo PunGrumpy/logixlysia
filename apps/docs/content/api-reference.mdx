@@ -44,10 +44,10 @@ Elysia instance type with Logixlysia store.
 ```ts
 import type { LogixlysiaSingleton } from 'logixlysia'
 
-type Logixlysia = Elysia<'', LogixlysiaSingleton>
+type Logixlysia = Elysia<'', 'local', LogixlysiaSingleton>
 ```
 
-The plugin uses an explicit `LogixlysiaSingleton`: a closed `store` plus empty `decorator` / `derive` / `resolve` slots that avoid both `SingletonBase`’s wide `Record<string, unknown>` and `Record<string, never>` (the latter would intersect Elysia’s `Context` keys with `never`). That keeps `Context` and WebSocket `ws.data` precise after `.use(logixlysia())`.
+The plugin uses an explicit `LogixlysiaSingleton`: a closed `store`, a `derive` slot holding `log`, and an empty `decorator` slot, which avoid both `SingletonBase`’s wide `Record<string, unknown>` and `Record<string, never>` (the latter would intersect Elysia’s `Context` keys with `never`). That keeps `Context` and the WebSocket handler context precise after `.use(logixlysia())`.
 
 ### `Options`
 

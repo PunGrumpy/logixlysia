@@ -3,10 +3,11 @@ title: WebSocket logging
 description: Log WebSocket open, message, and close events
 ---
 
-Use `wrapWs` on the plugin instance to add lifecycle logs for WebSocket routes:
+Use `wrapWs` on the plugin instance to add lifecycle logs for WebSocket routes. Elysia 2 makes WebSocket support opt-in, so register `elysia/websocket` before any `.ws()` route:
 
 ```ts
 import { Elysia } from 'elysia'
+import { websocket } from 'elysia/websocket'
 import logixlysia from 'logixlysia'
 
 const plugin = logixlysia({
@@ -15,20 +16,23 @@ const plugin = logixlysia({
   }
 })
 
-const app = new Elysia().use(plugin).ws(
-  '/chat',
-  plugin.wrapWs({
-    open(ws) {
-      ws.send('connected')
-    },
-    message(ws, message) {
-      ws.send(message)
-    },
-    close(ws) {
-      console.log('bye', ws.id)
-    }
-  })
-)
+const app = new Elysia()
+  .use(websocket())
+  .use(plugin)
+  .ws(
+    '/chat',
+    plugin.wrapWs({
+      open(ws) {
+        ws.send('connected')
+      },
+      message(ws, message) {
+        ws.send(message)
+      },
+      close(ws) {
+        console.log('bye', ws.id)
+      }
+    })
+  )
 ```
 
 Each lifecycle event logs with HTTP method `WS`, the route path, duration, and optional `wsId` in context. Your `close` hook receives the WebSocket's close `code` and `reason`, and the "WebSocket closed" line logs them too.
@@ -42,7 +46,7 @@ Accumulate context with the WebSocket instance as the key:
   '/chat',
   plugin.wrapWs({
     message(ws, payload) {
-      ws.data.store.logger.mergeContext(ws, { lastPayloadType: typeof payload })
+      ws.store.logger.mergeContext(ws, { lastPayloadType: typeof payload })
     }
   })
 )
