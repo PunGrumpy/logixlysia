@@ -1,6 +1,6 @@
 import { describe, expect, mock, test } from 'bun:test'
 import { Elysia } from 'elysia'
-import logixlysia, { useLogger } from '../../src'
+import { logixlysia, useLogger } from '../../src'
 
 /**
  * These assertions are checked by `tsc --noEmit` as much as by the runtime:

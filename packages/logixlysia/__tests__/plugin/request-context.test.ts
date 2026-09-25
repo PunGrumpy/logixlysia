@@ -1,7 +1,6 @@
 import { describe, expect, mock, test } from 'bun:test'
 import { Elysia } from 'elysia'
-
-import logixlysia from '../../src'
+import { logixlysia } from '../../src'
 import type { Options } from '../../src/interfaces'
 
 describe('logixlysia request context', () => {

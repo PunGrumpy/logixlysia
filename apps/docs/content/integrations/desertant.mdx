@@ -3,14 +3,9 @@ title: Neural PII redaction
 description: Mask names, addresses and IDs with an on-device model before logs leave the process
 ---
 
-`autoRedact` is a synchronous pattern pass: it masks emails, IP addresses,
-Luhn-valid card numbers, JWTs, and any value under a sensitive key name. What it
-cannot see is free-text PII — a person's name, a street address, a phone number,
-a national ID — because those have no fixed shape.
+`autoRedact` is a synchronous pattern pass: it masks emails, IP addresses, Luhn-valid card numbers, JWTs, and any value under a sensitive key name. What it cannot see is free-text PII — a person's name, a street address, a phone number, a national ID — because those have no fixed shape.
 
-A token-classification model does see them. The `logixlysia/desertant` subpath
-wires one in at the transport boundary, so console output keeps its current
-speed and only records leaving the process pay for inference.
+A token-classification model does see them. The `logixlysia/desertant` subpath wires one in at the transport boundary, so console output keeps its current speed and only records leaving the process pay for inference.
 
 ```ts
 import { Redact } from '@desert-ant-labs/redact/native'
@@ -41,9 +36,7 @@ GET /orders/42 200 — Anna Müller, Hauptstraße 5, +49 151 23456789
 
 ## No dependency is added
 
-Logixlysia does not import
-[`@desert-ant-labs/redact`](https://desertant.com/models/redact/) — you pass the
-model in, and the subpath only describes the shape it needs:
+Logixlysia does not import [`@desert-ant-labs/redact`](https://desertant.com/models/redact/) — you pass the model in, and the subpath only describes the shape it needs:
 
 ```ts
 interface NeuralRedactor {
@@ -55,11 +48,7 @@ interface NeuralRedactor {
 }
 ```
 
-Anything matching that works — another model, a stub in tests, a call out to a
-DLP service. Nothing about Desert Ant's install size (~195 MB of native and Wasm
-builds), its runtime model download, or its
-[source-available licence](https://license.desertant.com/1.0) (free below
-100,000 monthly active devices per platform) reaches users who do not opt in.
+Anything matching that works — another model, a stub in tests, a call out to a DLP service. Nothing about Desert Ant's install size (~195 MB of native and Wasm builds), its runtime model download, or its [source-available licence](https://license.desertant.com/1.0) (free below 100,000 monthly active devices per platform) reaches users who do not opt in.
 
 The model itself is installed by you:
 
@@ -67,45 +56,31 @@ The model itself is installed by you:
 bun add @desert-ant-labs/redact          # server-side inference in Node.js
 ```
 
-Its native build covers linux-x64, linux-arm64 and darwin-arm64; elsewhere
-`load()` throws a clear error.
+Its native build covers linux-x64, linux-arm64 and darwin-arm64; elsewhere `load()` throws a clear error.
 
 ## Loading the model
 
-`withRedaction` accepts a redactor, a promise for one, or a loader called once
-on the first record. Passing `Redact.load` directly keeps the model download off
-the boot path:
+`withRedaction` accepts a redactor, a promise for one, or a loader called once on the first record. Passing `Redact.load` directly keeps the model download off the boot path:
 
 ```ts
-withRedaction(transport, Redact.load)                 // lazy, on first log
-withRedaction(transport, await Redact.load())         // eager, at boot
+withRedaction(transport, Redact.load) // lazy, on first log
+withRedaction(transport, await Redact.load()) // eager, at boot
 withRedaction(transport, () => Redact.load({ directory: '/models/redact' })) // self-hosted
 ```
 
-A failed load stays failed — retrying per record would hammer the model host —
-and every affected record is reported through `onError`.
+A failed load stays failed — retrying per record would hammer the model host — and every affected record is reported through `onError`.
 
 ## Behaviour worth knowing
 
-**Redaction runs off the request path.** `log()` returns immediately and the
-record is delivered when the model finishes, so a slow model never adds latency
-to a response.
+**Redaction runs off the request path.** `log()` returns immediately and the record is delivered when the model finishes, so a slow model never adds latency to a response.
 
-**Order is preserved.** Records reach the transport in the order they were
-logged, not in the order inference happens to finish.
+**Order is preserved.** Records reach the transport in the order they were logged, not in the order inference happens to finish.
 
-**It fails closed.** A record the model could not process is dropped and
-reported, never forwarded unredacted. Set `onFailure: 'forward'` only when
-losing the log is worse than shipping raw PII.
+**It fails closed.** A record the model could not process is dropped and reported, never forwarded unredacted. Set `onFailure: 'forward'` only when losing the log is worse than shipping raw PII.
 
-**The queue is bounded.** Inference is far slower than logging, so at most
-`maxQueue` records (default 1000) wait at once; beyond that, records are dropped
-and reported rather than growing the queue until the process runs out of memory.
-A record dropped this way is never forwarded, whatever `onFailure` says.
+**The queue is bounded.** Inference is far slower than logging, so at most `maxQueue` records (default 1000) wait at once; beyond that, records are dropped and reported rather than growing the queue until the process runs out of memory. A record dropped this way is never forwarded, whatever `onFailure` says.
 
-**Errors are rebuilt, not mutated.** An `Error` in `meta` gets a redacted copy —
-message, stack and own fields — while the original instance is left untouched
-for the rest of the pipeline.
+**Errors are rebuilt, not mutated.** An `Error` in `meta` gets a redacted copy — message, stack and own fields — while the original instance is left untouched for the rest of the pipeline.
 
 ## Options
 
@@ -119,13 +94,11 @@ for the rest of the pipeline.
 | `onError` | `(error: unknown) => void` | — | Called on load failure, redaction failure, and dropped records |
 | `onFailure` | `'drop' \| 'forward'` | `'drop'` | What to do with a record the model could not process |
 
-The returned transport exposes `flush()`, which awaits the queued records and
-then flushes the wrapped transport — call it before process exit.
+The returned transport exposes `flush()`, which awaits the queued records and then flushes the wrapped transport — call it before process exit.
 
 ## Restricting what gets masked
 
-Every string costs one model call, so narrowing the categories is the cheapest
-lever when throughput matters:
+Every string costs one model call, so narrowing the categories is the cheapest lever when throughput matters:
 
 ```ts
 withRedaction(transport, Redact.load, {
@@ -134,5 +107,4 @@ withRedaction(transport, Redact.load, {
 })
 ```
 
-Keep `autoRedact: true` on as well: the pattern pass protects console and file
-output, which never reach the model, and it costs microseconds.
+Keep `autoRedact: true` on as well: the pattern pass protects console and file output, which never reach the model, and it costs microseconds.

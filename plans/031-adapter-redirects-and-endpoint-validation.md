@@ -1,17 +1,8 @@
 # Plan 031: Stop following redirects on credentialed ingest POSTs and validate adapter endpoints at construction
 
-> **Executor instructions**: Follow this plan step by step. Run every
-> verification command and confirm the expected result before moving to the
-> next step. If anything in the "STOP conditions" section occurs, stop and
-> report — do not improvise. When done, update the status row for this plan
-> in `plans/README.md` — unless a reviewer dispatched you and told you they
-> maintain the index.
+> **Executor instructions**: Follow this plan step by step. Run every verification command and confirm the expected result before moving to the next step. If anything in the "STOP conditions" section occurs, stop and report — do not improvise. When done, update the status row for this plan in `plans/README.md` — unless a reviewer dispatched you and told you they maintain the index.
 >
-> **Drift check (run first)**:
-> `git diff --stat 5522d31..HEAD -- packages/logixlysia/src/adapters packages/logixlysia/src/axiom.ts packages/logixlysia/src/better-stack.ts packages/logixlysia/src/clickhouse.ts packages/logixlysia/src/datadog.ts packages/logixlysia/src/hyperdx.ts packages/logixlysia/src/loki.ts packages/logixlysia/src/otlp.ts packages/logixlysia/src/posthog.ts packages/logixlysia/src/sentry.ts packages/logixlysia/__tests__/adapters`
-> If any in-scope file changed since this plan was written, compare the
-> "Current state" excerpts against the live code before proceeding; on a
-> mismatch, treat it as a STOP condition.
+> **Drift check (run first)**: `git diff --stat 5522d31..HEAD -- packages/logixlysia/src/adapters packages/logixlysia/src/axiom.ts packages/logixlysia/src/better-stack.ts packages/logixlysia/src/clickhouse.ts packages/logixlysia/src/datadog.ts packages/logixlysia/src/hyperdx.ts packages/logixlysia/src/loki.ts packages/logixlysia/src/otlp.ts packages/logixlysia/src/posthog.ts packages/logixlysia/src/sentry.ts packages/logixlysia/__tests__/adapters` If any in-scope file changed since this plan was written, compare the "Current state" excerpts against the live code before proceeding; on a mismatch, treat it as a STOP condition.
 
 ## Status
 
@@ -50,7 +41,7 @@ Conventions: Biome via `ultracite`; constants `UPPER_SNAKE`; errors via `transpo
 ## Commands you will need
 
 | Purpose | Command | Expected |
-|---|---|---|
+| --- | --- | --- |
 | Install | `bun install --frozen-lockfile` | exit 0 |
 | Typecheck / Lint / Format | `bun run typecheck` / `bun run lint` / `bun run format` | exit 0 |
 | Adapter tests | `cd packages/logixlysia && bun test __tests__/adapters` | all pass |
@@ -100,7 +91,10 @@ export const resolveEndpoint = (name: string, url: string): string => {
     throw transportError(name, `invalid endpoint URL '${url}'`)
   }
   if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
-    throw transportError(name, `endpoint must use http or https, got '${parsed.protocol}'`)
+    throw transportError(
+      name,
+      `endpoint must use http or https, got '${parsed.protocol}'`
+    )
   }
   return parsed.toString()
 }

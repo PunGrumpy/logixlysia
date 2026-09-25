@@ -1,7 +1,5 @@
-import {
-  mergeLogDataContext,
-  type RequestContextStore
-} from '../context/request-context'
+import { mergeLogDataContext } from '../context/request-context'
+import type { RequestContextStore } from '../context/request-context'
 import type {
   LogFilter,
   LogLevel,
@@ -14,11 +12,9 @@ import { logToFile } from '../output/file'
 import type { SamplingRuntime } from '../sampling'
 import { elapsedMs } from '../utils/duration'
 import { redact, redactRequest } from '../utils/redact'
-import {
-  type FormatContext,
-  formatLogOutput,
-  type PrecomputedLogParts
-} from './create-logger'
+import { settle } from '../utils/settle'
+import { formatLogOutput } from './create-logger'
+import type { FormatContext, PrecomputedLogParts } from './create-logger'
 
 /**
  * Which sinks are active for a given config, resolved once per logger
@@ -216,17 +212,18 @@ export const emit = ({
   if (sinks.hasFileLogging) {
     const filePath = config?.logFilePath
     if (filePath) {
-      logToFile({
-        data: logData,
-        filePath,
-        level,
-        options,
-        precomputed,
-        request: logRequest,
-        store
-      }).catch(() => {
-        /* Ignore errors: file.ts already reported them (console.error or config.onError). */
-      })
+      // file.ts reports a failed write itself (console.error or config.onError).
+      settle(
+        logToFile({
+          data: logData,
+          filePath,
+          level,
+          options,
+          precomputed,
+          request: logRequest,
+          store
+        })
+      )
     }
   }
 

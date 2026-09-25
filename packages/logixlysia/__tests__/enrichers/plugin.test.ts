@@ -1,13 +1,13 @@
 import { describe, expect, mock, test } from 'bun:test'
 import { Elysia } from 'elysia'
-
-import logixlysia from '../../src'
+import { logixlysia } from '../../src'
 import {
   sizeEnricher,
   traceparentEnricher,
   userAgentEnricher
 } from '../../src/enrichers'
-import { HttpError, type Options } from '../../src/interfaces'
+import { HttpError } from '../../src/interfaces'
+import type { Options } from '../../src/interfaces'
 
 const TRACE_ID = '4bf92f3577b34da6a3ce929d0e0e4736'
 const SPAN_ID = '00f067aa0ba902b7'
@@ -176,7 +176,7 @@ describe('enrichers through the plugin', () => {
 
   test('an enricher returning nothing adds no context', async () => {
     const { events, transport } = createCaptureTransport()
-    const app = buildApp({ enrichers: [() => undefined] }, transport)
+    const app = buildApp({ enrichers: [() => {}] }, transport)
 
     await app.handle(new Request('http://localhost/ok'))
 

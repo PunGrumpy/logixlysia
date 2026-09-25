@@ -1,5 +1,4 @@
 import { describe, expect, test } from 'bun:test'
-
 import { createAxiomTransport } from '../../src/axiom'
 import { stubEnv, stubFetch } from './helpers'
 

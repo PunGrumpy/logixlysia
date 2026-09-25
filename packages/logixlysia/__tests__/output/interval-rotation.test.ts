@@ -1,10 +1,11 @@
 import { afterEach, describe, expect, setSystemTime, test } from 'bun:test'
 import { promises as fs } from 'node:fs'
-import { join } from 'node:path'
+import path from 'node:path'
 import type { Options } from '../../src/interfaces'
 import { logToFile } from '../../src/output/file'
 import { resolveOpenedAt } from '../../src/output/file-sink'
 import { createMockRequest } from '../_helpers/request'
+import { sleep } from '../_helpers/sleep'
 import { createTempDir, removeTempDir } from '../_helpers/tmp'
 
 const ONE_HOUR_MS = 60 * 60 * 1000
@@ -19,7 +20,7 @@ describe('interval rotation', () => {
   test('rotates on the first write after the interval elapses', async () => {
     const dir = await createTempDir()
     try {
-      const filePath = join(dir, 'logs', 'interval.log')
+      const filePath = path.join(dir, 'logs', 'interval.log')
       const options: Options = {
         config: { logRotation: { interval: '1h' } }
       }
@@ -30,7 +31,7 @@ describe('interval rotation', () => {
         level: 'INFO',
         options,
         request: createMockRequest('http://localhost/first'),
-        store: { beforeTime: BigInt(0) }
+        store: { beforeTime: 0n }
       })
 
       setSystemTime(new Date(Date.now() + TWO_HOURS_MS))
@@ -41,10 +42,10 @@ describe('interval rotation', () => {
         level: 'INFO',
         options,
         request: createMockRequest('http://localhost/second'),
-        store: { beforeTime: BigInt(0) }
+        store: { beforeTime: 0n }
       })
 
-      const logsDir = join(dir, 'logs')
+      const logsDir = path.join(dir, 'logs')
       const entriesAfterSecond = await fs.readdir(logsDir)
       const rotated = entriesAfterSecond.filter(name =>
         name.startsWith('interval.log.')
@@ -52,7 +53,7 @@ describe('interval rotation', () => {
       expect(rotated.length).toBe(1)
 
       const rotatedContent = await fs.readFile(
-        join(logsDir, rotated[0]),
+        path.join(logsDir, rotated[0]),
         'utf-8'
       )
       expect(rotatedContent).toContain('msg-1')
@@ -69,7 +70,7 @@ describe('interval rotation', () => {
         level: 'INFO',
         options,
         request: createMockRequest('http://localhost/third'),
-        store: { beforeTime: BigInt(0) }
+        store: { beforeTime: 0n }
       })
 
       const liveContent = await fs.readFile(filePath, 'utf-8')
@@ -84,7 +85,7 @@ describe('interval rotation', () => {
   test('does not rotate before the interval elapses', async () => {
     const dir = await createTempDir()
     try {
-      const filePath = join(dir, 'logs', 'no-rotate.log')
+      const filePath = path.join(dir, 'logs', 'no-rotate.log')
       const options: Options = {
         config: { logRotation: { interval: '1h' } }
       }
@@ -95,7 +96,7 @@ describe('interval rotation', () => {
         level: 'INFO',
         options,
         request: createMockRequest('http://localhost/first'),
-        store: { beforeTime: BigInt(0) }
+        store: { beforeTime: 0n }
       })
       await logToFile({
         data: { message: 'msg-2' },
@@ -103,10 +104,10 @@ describe('interval rotation', () => {
         level: 'INFO',
         options,
         request: createMockRequest('http://localhost/second'),
-        store: { beforeTime: BigInt(0) }
+        store: { beforeTime: 0n }
       })
 
-      const logsDir = join(dir, 'logs')
+      const logsDir = path.join(dir, 'logs')
       const entries = await fs.readdir(logsDir)
       expect(entries).toEqual(['no-rotate.log'])
 
@@ -121,7 +122,7 @@ describe('interval rotation', () => {
   test('maxSize fires first when both triggers are configured', async () => {
     const dir = await createTempDir()
     try {
-      const filePath = join(dir, 'logs', 'both-size.log')
+      const filePath = path.join(dir, 'logs', 'both-size.log')
       const options: Options = {
         config: { logRotation: { interval: '1w', maxSize: 50 } }
       }
@@ -132,10 +133,10 @@ describe('interval rotation', () => {
         level: 'INFO',
         options,
         request: createMockRequest('http://localhost/first'),
-        store: { beforeTime: BigInt(0) }
+        store: { beforeTime: 0n }
       })
 
-      const logsDir = join(dir, 'logs')
+      const logsDir = path.join(dir, 'logs')
       const entries = await fs.readdir(logsDir)
       const rotated = entries.filter(name => name.startsWith('both-size.log.'))
       expect(rotated.length).toBe(1)
@@ -147,7 +148,7 @@ describe('interval rotation', () => {
   test('interval fires first when both triggers are configured', async () => {
     const dir = await createTempDir()
     try {
-      const filePath = join(dir, 'logs', 'both-interval.log')
+      const filePath = path.join(dir, 'logs', 'both-interval.log')
       const options: Options = {
         config: { logRotation: { interval: '1h', maxSize: 10_000_000 } }
       }
@@ -158,7 +159,7 @@ describe('interval rotation', () => {
         level: 'INFO',
         options,
         request: createMockRequest('http://localhost/first'),
-        store: { beforeTime: BigInt(0) }
+        store: { beforeTime: 0n }
       })
 
       setSystemTime(new Date(Date.now() + TWO_HOURS_MS))
@@ -169,10 +170,10 @@ describe('interval rotation', () => {
         level: 'INFO',
         options,
         request: createMockRequest('http://localhost/second'),
-        store: { beforeTime: BigInt(0) }
+        store: { beforeTime: 0n }
       })
 
-      const logsDir = join(dir, 'logs')
+      const logsDir = path.join(dir, 'logs')
       const entries = await fs.readdir(logsDir)
       const rotated = entries.filter(name =>
         name.startsWith('both-interval.log.')
@@ -186,8 +187,8 @@ describe('interval rotation', () => {
   test('restart simulation: birthtime survives, fresh sink rotates immediately', async () => {
     const dir = await createTempDir()
     try {
-      const logsDir = join(dir, 'logs')
-      const filePath = join(logsDir, 'restart.log')
+      const logsDir = path.join(dir, 'logs')
+      const filePath = path.join(logsDir, 'restart.log')
       await fs.mkdir(logsDir, { recursive: true })
       // Seed the file directly (no sink involved), so its birthtime is the
       // real filesystem creation time — simulating a file left over from a
@@ -205,7 +206,7 @@ describe('interval rotation', () => {
         level: 'INFO',
         options,
         request: createMockRequest('http://localhost/first'),
-        store: { beforeTime: BigInt(0) }
+        store: { beforeTime: 0n }
       })
 
       const entries = await fs.readdir(logsDir)
@@ -213,7 +214,7 @@ describe('interval rotation', () => {
       expect(rotated.length).toBe(1)
 
       const rotatedContent = await fs.readFile(
-        join(logsDir, rotated[0]),
+        path.join(logsDir, rotated[0]),
         'utf-8'
       )
       expect(rotatedContent).toContain('seed')
@@ -230,7 +231,7 @@ describe('interval rotation', () => {
     // write arrives.
     const dir = await createTempDir()
     try {
-      const filePath = join(dir, 'logs', 'idle.log')
+      const filePath = path.join(dir, 'logs', 'idle.log')
       const options: Options = {
         config: { logRotation: { interval: '1h' } }
       }
@@ -241,16 +242,16 @@ describe('interval rotation', () => {
         level: 'INFO',
         options,
         request: createMockRequest('http://localhost/first'),
-        store: { beforeTime: BigInt(0) }
+        store: { beforeTime: 0n }
       })
 
       setSystemTime(new Date(Date.now() + TWO_HOURS_MS))
 
       // No write happens here — just wait one macrotask so any (nonexistent)
       // background rotation would have had a chance to run.
-      await new Promise(resolve => setTimeout(resolve, 10))
+      await sleep(10)
 
-      const logsDir = join(dir, 'logs')
+      const logsDir = path.join(dir, 'logs')
       const idleEntries = await fs.readdir(logsDir)
       expect(idleEntries).toEqual(['idle.log'])
 
@@ -260,7 +261,7 @@ describe('interval rotation', () => {
         level: 'INFO',
         options,
         request: createMockRequest('http://localhost/second'),
-        store: { beforeTime: BigInt(0) }
+        store: { beforeTime: 0n }
       })
 
       const afterWriteEntries = await fs.readdir(logsDir)

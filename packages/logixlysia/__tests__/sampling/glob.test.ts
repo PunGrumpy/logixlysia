@@ -1,5 +1,4 @@
 import { describe, expect, test } from 'bun:test'
-
 import { globToRegExp } from '../../src/sampling/glob'
 
 describe('globToRegExp', () => {

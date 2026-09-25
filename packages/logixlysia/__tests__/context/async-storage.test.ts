@@ -1,13 +1,11 @@
 import { describe, expect, mock, test } from 'bun:test'
 import { Elysia } from 'elysia'
-import logixlysia, { useLogger } from '../../src'
-import type { Options } from '../../src/interfaces'
+import { logixlysia, useLogger } from '../../src'
+import type { Options, Transport } from '../../src/interfaces'
 
 describe('AsyncLocalStorage & useLogger() context integration', () => {
   test('derived log object is available on context and logs to transport', async () => {
-    const transport = mock<(lvl: any, msg: any, meta?: any) => void>(
-      () => undefined
-    )
+    const transport = mock<Transport['log']>(() => {})
     const options: Options = {
       config: {
         disableFileLogging: true,
@@ -27,20 +25,14 @@ describe('AsyncLocalStorage & useLogger() context integration', () => {
     await app.handle(new Request('http://localhost/test'))
 
     expect(transport).toHaveBeenCalledTimes(1)
-    const [level, message, meta] = (transport.mock.calls[0] ?? []) as [
-      any,
-      any,
-      any
-    ]
+    const [level, message, meta] = transport.mock.calls[0] ?? []
     expect(level).toBe('INFO')
     expect(message).toBe('hello from derive')
-    expect(meta.context).toEqual({ custom: 'val' })
+    expect(meta?.context).toEqual({ custom: 'val' })
   })
 
   test('useLogger() works within route handler and async boundaries when enabled', async () => {
-    const transport = mock<(lvl: any, msg: any, meta?: any) => void>(
-      () => undefined
-    )
+    const transport = mock<Transport['log']>(() => {})
     const options: Options = {
       config: {
         disableFileLogging: true,
@@ -56,11 +48,12 @@ describe('AsyncLocalStorage & useLogger() context integration', () => {
       log.info('hello from useLogger')
 
       // Nested async operation using actual Promise resolve to verify async hook context
-      await new Promise<void>(resolve => {
-        const nestedLog = useLogger()
-        nestedLog.info('hello from nested')
-        resolve()
-      })
+      const { promise, resolve }: PromiseWithResolvers<void> =
+        Promise.withResolvers()
+      const nestedLog = useLogger()
+      nestedLog.info('hello from nested')
+      resolve()
+      await promise
 
       return 'ok'
     })
@@ -68,22 +61,20 @@ describe('AsyncLocalStorage & useLogger() context integration', () => {
     await app.handle(new Request('http://localhost/test'))
 
     expect(transport).toHaveBeenCalledTimes(2)
-    const call1 = (transport.mock.calls[0] ?? []) as [any, any, any]
-    const call2 = (transport.mock.calls[1] ?? []) as [any, any, any]
+    const call1 = transport.mock.calls[0] ?? []
+    const call2 = transport.mock.calls[1] ?? []
 
     expect(call1[0]).toBe('INFO')
     expect(call1[1]).toBe('hello from useLogger')
-    expect(call1[2].context).toEqual({ deep: 'context' })
+    expect(call1[2]?.context).toEqual({ deep: 'context' })
 
     expect(call2[0]).toBe('INFO')
     expect(call2[1]).toBe('hello from nested')
-    expect(call2[2].context).toEqual({ deep: 'context' })
+    expect(call2[2]?.context).toEqual({ deep: 'context' })
   })
 
   test('useLogger() does not crash and behaves as no-op when disabled', async () => {
-    const transport = mock<(lvl: any, msg: any, meta?: any) => void>(
-      () => undefined
-    )
+    const transport = mock<Transport['log']>(() => {})
     const options: Options = {
       config: {
         disableFileLogging: true,
@@ -102,7 +93,7 @@ describe('AsyncLocalStorage & useLogger() context integration', () => {
     await app.handle(new Request('http://localhost/test'))
 
     expect(transport).toHaveBeenCalledTimes(1)
-    const [level, message] = (transport.mock.calls[0] ?? []) as [any, any]
+    const [level, message] = transport.mock.calls[0] ?? []
     expect(level).toBe('INFO')
     expect(message).toBe('')
   })

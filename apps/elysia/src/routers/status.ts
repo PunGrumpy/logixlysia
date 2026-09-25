@@ -20,7 +20,8 @@ export const statusRouter = <App extends Logixlysia>(app: App) =>
     .get(
       '/status/name/:name',
       ({ params, set }) => {
-        set.status = decodeURIComponent(params.name) as never // e.g. "Not Found" — exercises string statuses
+        // e.g. "Not Found" — exercises string statuses
+        set.status = decodeURIComponent(params.name) as never
         return { status: set.status }
       },
       {

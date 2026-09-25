@@ -1,9 +1,7 @@
 import pino from 'pino'
 import pretty from 'pino-pretty'
-import {
-  createRequestContextStore,
-  type RequestContextStore
-} from '../context/request-context'
+import { createRequestContextStore } from '../context/request-context'
+import type { RequestContextStore } from '../context/request-context'
 import type {
   Logger,
   LogLevel,
@@ -19,19 +17,16 @@ import { createFormatContext } from './create-logger'
 import { emit, parseRequestUrlOnce, resolveSinks, shouldLog } from './emit'
 import { handleHttpError } from './handle-http-error'
 
-const ZERO_STORE: StoreData = { beforeTime: BigInt(0) }
+const ZERO_STORE: StoreData = { beforeTime: 0n }
 
-export const createLogger = (
-  options: Options = {},
-  pinoFactory: typeof pino = pino,
-  externalContextStore?: RequestContextStore
-): Logger => {
-  const contextStore = externalContextStore ?? createRequestContextStore()
-  const { config } = options
-  // Hoisted once per logger instance: colors/format/thresholds/service don't change across
-  // requests within a process lifetime (see createFormatContext's doc comment).
-  const formatContext = createFormatContext(options)
-
+/**
+ * A stable stand-in for pino that only builds the real instance on first use,
+ * or right away when `config.pino` is set.
+ */
+const createLazyPino = (
+  config: Options['config'],
+  pinoFactory: typeof pino
+): Pino => {
   const pinoConfig = config?.pino
   const { prettyPrint, ...pinoOptions } = pinoConfig ?? {}
 
@@ -113,6 +108,22 @@ export const createLogger = (
   if (config?.pino !== undefined) {
     getPino()
   }
+
+  return lazyPino
+}
+
+export const createLogger = (
+  options: Options = {},
+  pinoFactory: typeof pino = pino,
+  externalContextStore?: RequestContextStore
+): Logger => {
+  const contextStore = externalContextStore ?? createRequestContextStore()
+  const { config } = options
+  // Hoisted once per logger instance: colors/format/thresholds/service don't change across
+  // requests within a process lifetime (see createFormatContext's doc comment).
+  const formatContext = createFormatContext(options)
+
+  const lazyPino = createLazyPino(config, pinoFactory)
 
   // Resolved once per logger instance: none of these depend on per-request state.
   const sinks = resolveSinks(config)

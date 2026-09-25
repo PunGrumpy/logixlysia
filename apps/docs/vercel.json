@@ -2,6 +2,6 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "bunVersion": "1.x",
   "framework": null,
-  "ignoreCommand": "node scripts/skip-ci.js",
+  "ignoreCommand": "node scripts/skip-ci.mjs",
   "outputDirectory": "dist"
 }

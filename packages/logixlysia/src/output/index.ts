@@ -1,4 +1,10 @@
-import type { LogLevel, Options, RequestInfo, StoreData } from '../interfaces'
+import type {
+  LogLevel,
+  Options,
+  RequestInfo,
+  SinkErrorContext,
+  StoreData
+} from '../interfaces'
 import { elapsedMs } from '../utils/duration'
 import { createErrorReporter } from '../utils/report'
 
@@ -11,21 +17,28 @@ const MAX_TRACKED_PENDING = 1024
 const pendingTransportWork = new Set<Promise<unknown>>()
 
 /**
- * Remembers in-flight `log()` promises so shutdown can wait for them. The set
- * is bounded: under sustained load the oldest entry is dropped rather than
- * letting a slow transport grow it without limit.
+ * Remembers an in-flight `log()` promise so shutdown can wait for it, and
+ * reports its rejection. The set is bounded: under sustained load the oldest
+ * entry is dropped rather than letting a slow transport grow it without limit.
  */
-const track = (promise: Promise<unknown>): void => {
+const watch = async (
+  pending: Promise<void>,
+  onError: ((context: SinkErrorContext) => void) | undefined
+): Promise<void> => {
   if (pendingTransportWork.size >= MAX_TRACKED_PENDING) {
     const oldest = pendingTransportWork.values().next().value
     if (oldest) {
       pendingTransportWork.delete(oldest)
     }
   }
-  pendingTransportWork.add(promise)
-  promise
-    .finally(() => pendingTransportWork.delete(promise))
-    .catch(() => undefined)
+  pendingTransportWork.add(pending)
+  try {
+    await pending
+  } catch (error) {
+    reportTransportError(error, onError)
+  } finally {
+    pendingTransportWork.delete(pending)
+  }
 }
 
 interface LogToTransportsInput {
@@ -59,13 +72,8 @@ export const logToTransports = (input: LogToTransportsInput): void => {
   for (const transport of transports) {
     try {
       const result = transport.log(level, message, meta)
-      if (
-        result &&
-        typeof (result as { catch?: unknown }).catch === 'function'
-      ) {
-        const pending = result as Promise<void>
-        track(pending)
-        pending.catch(error => reportTransportError(error, onError))
+      if (result) {
+        watch(result, onError)
       }
     } catch (error) {
       reportTransportError(error, onError)
@@ -82,11 +90,15 @@ const runTransportLifecycle = (
   method: 'close' | 'flush'
 ): Promise<unknown>[] => {
   const onError = options.config?.onError
-  return (options.config?.transports ?? []).map(transport =>
-    Promise.resolve()
-      .then(() => transport[method]?.())
-      .catch(error => reportTransportError(error, onError))
-  )
+  return (options.config?.transports ?? []).map(async transport => {
+    try {
+      // Yield first so the method is called from a microtask, never inline.
+      await Promise.resolve()
+      await transport[method]?.()
+    } catch (error) {
+      reportTransportError(error, onError)
+    }
+  })
 }
 
 /** Waits for in-flight `log()` work and every transport's own `flush()`. */

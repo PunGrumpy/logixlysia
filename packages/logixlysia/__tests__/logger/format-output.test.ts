@@ -8,7 +8,7 @@ import {
 import { redactRequest } from '../../src/utils/redact'
 import { createMockRequest } from '../_helpers/request'
 
-const DIGITS_ONLY_REGEX = /^\d+$/
+const DIGITS_ONLY_REGEX = /^\d+$/u
 
 describe('formatDuration', () => {
   test('formats sub-second requests as ms', () => {
@@ -28,17 +28,17 @@ describe('formatDuration', () => {
   })
 })
 
-describe('formatLogOutput', () => {
-  const baseOptions = (overrides?: Options): Options => ({
-    config: {
-      useColors: false,
-      ...overrides?.config
-    }
-  })
+const baseOptions = (overrides?: Options): Options => ({
+  config: {
+    useColors: false,
+    ...overrides?.config
+  }
+})
 
+describe('formatLogOutput', () => {
   test('includes path, status, and icon in main line', () => {
     const request = createMockRequest('http://localhost/api/hello')
-    const store = { beforeTime: BigInt(0) }
+    const store = { beforeTime: 0n }
     const out = formatLogOutput({
       data: { status: 200 },
       level: 'INFO',
@@ -56,7 +56,7 @@ describe('formatLogOutput', () => {
 
   test('appends context tree when context object is non-empty', () => {
     const request = createMockRequest('http://localhost/x')
-    const store = { beforeTime: BigInt(0) }
+    const store = { beforeTime: 0n }
     const out = formatLogOutput({
       data: {
         context: { feature: 'test', userId: 42 },
@@ -79,7 +79,7 @@ describe('formatLogOutput', () => {
 
   test('inlines JSON context when showContextTree is false', () => {
     const request = createMockRequest('http://localhost/x')
-    const store = { beforeTime: BigInt(0) }
+    const store = { beforeTime: 0n }
     const out = formatLogOutput({
       data: {
         context: { a: 1 },
@@ -105,7 +105,7 @@ describe('formatLogOutput', () => {
     const request = createMockRequest(
       'http://localhost/api/hello?foo=bar&baz=123'
     )
-    const store = { beforeTime: BigInt(0) }
+    const store = { beforeTime: 0n }
     const out = formatLogOutput({
       data: { status: 200 },
       level: 'INFO',
@@ -121,7 +121,7 @@ describe('formatLogOutput', () => {
 
   test('supports explicit {query} token', () => {
     const request = createMockRequest('http://localhost/api/hello?a=b')
-    const store = { beforeTime: BigInt(0) }
+    const store = { beforeTime: 0n }
     const out = formatLogOutput({
       data: { status: 200 },
       level: 'INFO',
@@ -139,7 +139,7 @@ describe('formatLogOutput', () => {
 
   test('includes service token when configured', () => {
     const request = createMockRequest('http://localhost/')
-    const store = { beforeTime: BigInt(0) }
+    const store = { beforeTime: 0n }
     const out = formatLogOutput({
       data: { status: 200 },
       level: 'INFO',
@@ -155,7 +155,7 @@ describe('formatLogOutput', () => {
 
   test('includes statusText token in custom format', () => {
     const request = createMockRequest('http://localhost/not-found')
-    const store = { beforeTime: BigInt(0) }
+    const store = { beforeTime: 0n }
     const out = formatLogOutput({
       data: { status: 404 },
       level: 'INFO',
@@ -182,7 +182,7 @@ describe('formatLogOutput', () => {
       }
     )
     const redacted = redactRequest(request)
-    const store = { beforeTime: BigInt(0) }
+    const store = { beforeTime: 0n }
     const out = formatLogOutput({
       data: { status: 200 },
       level: 'INFO',
@@ -207,7 +207,7 @@ describe('formatLogOutput', () => {
     const request = createMockRequest('http://localhost/api/hello', {
       headers: { 'x-forwarded-for': '10.0.0.1' }
     })
-    const store = { beforeTime: BigInt(0) }
+    const store = { beforeTime: 0n }
     const out = formatLogOutput({
       data: { status: 200 },
       level: 'INFO',
@@ -226,7 +226,7 @@ describe('formatLogOutput', () => {
   test('speed token appears when duration exceeds verySlowThreshold', () => {
     const request = createMockRequest('http://localhost/slow')
     const store = {
-      beforeTime: process.hrtime.bigint() - BigInt(1_200_000_000)
+      beforeTime: process.hrtime.bigint() - 1_200_000_000n
     }
     const out = formatLogOutput({
       data: { status: 200 },
@@ -246,31 +246,31 @@ describe('formatLogOutput', () => {
   })
 })
 
-const STANDARD_TIMESTAMP_REGEX = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3}$/
+const STANDARD_TIMESTAMP_REGEX = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3}$/u
+
+const renderTimestamp = (translateTime: string): string => {
+  const request = createMockRequest('http://localhost/x')
+  const store = { beforeTime: 0n }
+  const out = formatLogOutput({
+    data: { status: 200 },
+    level: 'INFO',
+    options: {
+      config: {
+        customLogFormat: '{now}',
+        timestamp: { translateTime },
+        useColors: false
+      }
+    },
+    request,
+    store
+  })
+  return out.main
+}
 
 describe('formatLogOutput timestamp prefixes', () => {
   afterEach(() => {
     setSystemTime()
   })
-
-  const renderTimestamp = (translateTime: string): string => {
-    const request = createMockRequest('http://localhost/x')
-    const store = { beforeTime: BigInt(0) }
-    const out = formatLogOutput({
-      data: { status: 200 },
-      level: 'INFO',
-      options: {
-        config: {
-          customLogFormat: '{now}',
-          timestamp: { translateTime },
-          useColors: false
-        }
-      },
-      request,
-      store
-    })
-    return out.main
-  }
 
   test("'SYS:standard' renders the standard local pattern", () => {
     setSystemTime(new Date(2026, 0, 2, 3, 4, 5, 123))
@@ -328,6 +328,11 @@ describe('buildContextTreeLines', () => {
       fix = 'Try another card'
       link = 'https://link.com'
       internal = { code: 'NSF' }
+
+      constructor(message: string) {
+        super(message)
+        this.name = 'CustomStructuredError'
+      }
     }
 
     const lines = buildContextTreeLines(

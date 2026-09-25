@@ -13,14 +13,13 @@ You can enable the request ID feature using the `requestId` config option. When 
 import { Elysia } from 'elysia'
 import logixlysia from 'logixlysia'
 
-const app = new Elysia()
-  .use(
-    logixlysia({
-      config: {
-        requestId: true
-      }
-    })
-  )
+const app = new Elysia().use(
+  logixlysia({
+    config: {
+      requestId: true
+    }
+  })
+)
 ```
 
 ## Production Preset
@@ -28,12 +27,11 @@ const app = new Elysia()
 The `prod` preset enables `requestId` automatically by default:
 
 ```ts
-const app = new Elysia()
-  .use(
-    logixlysia({
-      preset: 'prod' // requestId is enabled automatically
-    })
-  )
+const app = new Elysia().use(
+  logixlysia({
+    preset: 'prod' // requestId is enabled automatically
+  })
+)
 ```
 
 ## Custom Configuration
@@ -41,25 +39,24 @@ const app = new Elysia()
 For advanced use cases, you can pass a configuration object instead of a boolean:
 
 ```ts
-const app = new Elysia()
-  .use(
-    logixlysia({
-      config: {
-        requestId: {
-          // Custom header name to read from / write to
-          header: 'X-Correlation-Id',
-          // Custom request ID generator function
-          generator: () => `req-${crypto.randomUUID()}`
-        }
+const app = new Elysia().use(
+  logixlysia({
+    config: {
+      requestId: {
+        // Custom header name to read from / write to
+        header: 'X-Correlation-Id',
+        // Custom request ID generator function
+        generator: () => `req-${crypto.randomUUID()}`
       }
-    })
-  )
+    }
+  })
+)
 ```
 
 ### Options
 
 | Option | Type | Default | Description |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `enabled` | `boolean` | `true` | Turn request ID generation on or off when using object configuration. |
 | `header` | `string` | `'X-Request-Id'` | The header key to check on incoming requests (honoring upstream proxies) and to set on responses. |
 | `generator` | `() => string` | `crypto.randomUUID` | A function that returns a unique string to use as the request ID. |
@@ -69,15 +66,14 @@ const app = new Elysia()
 When Request ID is enabled, you can output it in your custom log format using the `{requestId}` token:
 
 ```ts
-const app = new Elysia()
-  .use(
-    logixlysia({
-      config: {
-        requestId: true,
-        customLogFormat: '{method} {pathname} - Request ID: {requestId}'
-      }
-    })
-  )
+const app = new Elysia().use(
+  logixlysia({
+    config: {
+      requestId: true,
+      customLogFormat: '{method} {pathname} - Request ID: {requestId}'
+    }
+  })
+)
 ```
 
 If Request ID is disabled or not present, the token will render as an empty string.

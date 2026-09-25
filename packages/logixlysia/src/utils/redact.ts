@@ -1,8 +1,8 @@
 // Local part ≤64, domain ≤253, TLD 2–63 (RFC 5321 / 1035-ish limits; bounded to avoid ReDoS)
 const EMAIL_REGEX =
-  /[a-zA-Z0-9._%+-]{1,64}@[a-zA-Z0-9.-]{1,253}\.[a-zA-Z]{2,63}/g
+  /[a-zA-Z0-9._%+-]{1,64}@[a-zA-Z0-9.-]{1,253}\.[a-zA-Z]{2,63}/gu
 const IPV4_REGEX =
-  /(?<![\w/.])(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(?![\w.])/g
+  /(?<![\w/.])(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(?![\w.])/gu
 /**
  * Bounded IPv6: either all 8 groups, or a single `::` compression. Requiring
  * one of those shapes (rather than "2+ colon-separated hex groups") keeps
@@ -10,10 +10,10 @@ const IPV4_REGEX =
  * matching.
  */
 const IPV6_REGEX =
-  /(?<![\w:])(?:(?:[0-9a-f]{1,4}:){7}[0-9a-f]{1,4}|(?:[0-9a-f]{1,4}:){1,7}:(?:[0-9a-f]{1,4}(?::[0-9a-f]{1,4}){0,6})?|::(?:[0-9a-f]{1,4}(?::[0-9a-f]{1,4}){0,6}))(?![\w:])/gi
+  /(?<![\w:])(?:(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}|(?:[0-9a-fA-F]{1,4}:){1,7}:(?:[0-9a-fA-F]{1,4}(?::[0-9a-fA-F]{1,4}){0,6})?|::(?:[0-9a-fA-F]{1,4}(?::[0-9a-fA-F]{1,4}){0,6}))(?![\w:])/gu
 /** Digit runs that may be formatted PANs (spaces/dashes); validated with Luhn before redacting. */
-const CREDIT_CARD_CANDIDATE_REGEX = /\b(?:\d[ -]*?){13,19}\b/g
-const JWT_REGEX = /eyJ[a-zA-Z0-9_-]+\.eyJ[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+/g
+const CREDIT_CARD_CANDIDATE_REGEX = /\b(?:\d[ -]*?){13,19}\b/gu
+const JWT_REGEX = /eyJ[a-zA-Z0-9_-]+\.eyJ[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+/gu
 
 const PAN_MIN_LEN = 13
 const PAN_MAX_LEN = 19
@@ -48,12 +48,12 @@ export const DEFAULT_REDACT_KEYS: readonly string[] = [
   'ssn'
 ]
 
-const CAMEL_CASE_BOUNDARY_REGEX = /([a-z0-9])([A-Z])/g
+const CAMEL_CASE_BOUNDARY_REGEX = /(?<before>[a-z0-9])(?<after>[A-Z])/gu
 
 /** Normalize `X_Api-Key` / `apiKey` style variants to `x-api-key` form. */
 const normalizeKeyName = (key: string): string =>
   key
-    .replace(CAMEL_CASE_BOUNDARY_REGEX, '$1-$2')
+    .replace(CAMEL_CASE_BOUNDARY_REGEX, '$<before>-$<after>')
     .replaceAll('_', '-')
     .toLowerCase()
 
@@ -85,6 +85,60 @@ export const buildPinoRedactPaths = (
   })
 }
 
+/** Luhn checksum; `digits` must contain only `0-9` and length in PAN range. */
+const passesLuhn = (digits: string): boolean => {
+  if (digits.length < PAN_MIN_LEN || digits.length > PAN_MAX_LEN) {
+    return false
+  }
+
+  let sum = 0
+  let alternate = false
+
+  for (let i = digits.length - 1; i >= 0; i -= 1) {
+    const code = digits.codePointAt(i) ?? 0
+    if (code < 48 || code > 57) {
+      return false
+    }
+    let n = code - 48
+    if (alternate) {
+      n *= 2
+      if (n > 9) {
+        n -= 9
+      }
+    }
+    sum += n
+    alternate = !alternate
+  }
+
+  return sum % 10 === 0
+}
+
+const redactCreditCardCandidates = (text: string): string =>
+  text.replace(CREDIT_CARD_CANDIDATE_REGEX, match => {
+    const digits = match.replaceAll(/\D/gu, '')
+    if (
+      digits.length >= PAN_MIN_LEN &&
+      digits.length <= PAN_MAX_LEN &&
+      passesLuhn(digits)
+    ) {
+      return REDACTED_TEXT
+    }
+    return match
+  })
+
+/** Returns `text` unchanged (same value) when nothing matched — callers can compare `=== input`. */
+export const redactString = (text: string): string => {
+  let result = text
+
+  result = result.replace(EMAIL_REGEX, REDACTED_TEXT)
+  result = result.replace(IPV4_REGEX, REDACTED_TEXT)
+  result = result.replace(IPV6_REGEX, REDACTED_TEXT)
+  result = redactCreditCardCandidates(result)
+  result = result.replace(JWT_REGEX, REDACTED_TEXT)
+
+  return result
+}
+
 /**
  * Host and userinfo cannot contain `[REDACTED]` — `[` begins an IPv6 literal in URLs and breaks parsing.
  */
@@ -111,7 +165,8 @@ const redactRequestUrl = (
     // `searchParams.set` re-serializes the whole query string, so redact
     // decoded values directly rather than re-running pattern redaction on
     // `u.search` afterward (which would see already percent-encoded text).
-    for (const key of [...u.searchParams.keys()]) {
+    // Iterate a copy: `set` below rewrites the live list.
+    for (const key of new URLSearchParams(u.searchParams).keys()) {
       if (isSensitiveKey(key, extraKeys)) {
         u.searchParams.set(key, URL_SAFE_REDACT)
         continue
@@ -131,163 +186,6 @@ const redactRequestUrl = (
   }
 }
 
-/** Luhn checksum; `digits` must contain only `0-9` and length in PAN range. */
-const passesLuhn = (digits: string): boolean => {
-  if (digits.length < PAN_MIN_LEN || digits.length > PAN_MAX_LEN) {
-    return false
-  }
-
-  let sum = 0
-  let alternate = false
-
-  for (let i = digits.length - 1; i >= 0; i -= 1) {
-    const code = digits.charCodeAt(i)
-    if (code < 48 || code > 57) {
-      return false
-    }
-    let n = code - 48
-    if (alternate) {
-      n *= 2
-      if (n > 9) {
-        n -= 9
-      }
-    }
-    sum += n
-    alternate = !alternate
-  }
-
-  return sum % 10 === 0
-}
-
-const redactCreditCardCandidates = (text: string): string =>
-  text.replace(CREDIT_CARD_CANDIDATE_REGEX, match => {
-    const digits = match.replace(/\D/g, '')
-    if (
-      digits.length >= PAN_MIN_LEN &&
-      digits.length <= PAN_MAX_LEN &&
-      passesLuhn(digits)
-    ) {
-      return REDACTED_TEXT
-    }
-    return match
-  })
-
-/** Returns `text` unchanged (same value) when nothing matched — callers can compare `=== input`. */
-export const redactString = (text: string): string => {
-  let result = text
-
-  result = result.replace(EMAIL_REGEX, REDACTED_TEXT)
-  result = result.replace(IPV4_REGEX, REDACTED_TEXT)
-  result = result.replace(IPV6_REGEX, REDACTED_TEXT)
-  result = redactCreditCardCandidates(result)
-  result = result.replace(JWT_REGEX, REDACTED_TEXT)
-
-  return result
-}
-
-// Errors are exempt from the identity fast path below: a redacted Error is always constructed
-// fresh (even when nothing changed) so consumers never receive the original, potentially
-// stack-trace-carrying instance by reference.
-const redactErrorClone = (
-  originalError: Error,
-  inProgress: WeakSet<object>,
-  extraKeys?: readonly string[]
-): Error & Record<string, unknown> => {
-  const redactedMessage = redactString(originalError.message)
-  const proto = Object.getPrototypeOf(originalError) as object
-  const newError = Object.create(proto) as Error & Record<string, unknown>
-
-  newError.message = redactedMessage
-  newError.name = originalError.name
-
-  if (originalError.stack !== undefined) {
-    newError.stack = redactString(originalError.stack)
-  }
-
-  const errorRecord = originalError as unknown as Record<string, unknown>
-
-  for (const key of Object.getOwnPropertyNames(errorRecord)) {
-    if (key === 'message' || key === 'name' || key === 'stack') {
-      continue
-    }
-
-    const descriptor = Object.getOwnPropertyDescriptor(errorRecord, key)
-    if (descriptor === undefined) {
-      continue
-    }
-
-    if (descriptor.get !== undefined || descriptor.set !== undefined) {
-      Object.defineProperty(newError, key, descriptor)
-      continue
-    }
-
-    const redactedValue = isSensitiveKey(key, extraKeys)
-      ? REDACTED_TEXT
-      : redactInner(descriptor.value, inProgress, extraKeys)
-
-    Object.defineProperty(newError, key, {
-      ...descriptor,
-      value: redactedValue
-    })
-  }
-
-  return newError
-}
-
-/**
- * Redacts each item; returns the ORIGINAL array reference when no item changed (zero
- * allocations for the common no-PII case). A new array is materialized lazily, starting from
- * the first item that changes — items before that point are known-unchanged, so they're copied
- * from `value` as-is rather than recomputed.
- */
-const redactArrayItems = (
-  value: unknown[],
-  inProgress: WeakSet<object>,
-  extraKeys?: readonly string[]
-): unknown[] => {
-  let result: unknown[] | undefined
-
-  for (const [index, original] of value.entries()) {
-    const redacted = redactInner(original, inProgress, extraKeys)
-    if (result === undefined && redacted !== original) {
-      result = value.slice(0, index)
-    }
-    result?.push(redacted)
-  }
-
-  return result ?? value
-}
-
-/** Same lazy-materialization strategy as {@link redactArrayItems}, for plain objects. */
-const redactRecordEntries = (
-  recordValue: Record<string, unknown>,
-  inProgress: WeakSet<object>,
-  extraKeys?: readonly string[]
-): Record<string, unknown> => {
-  const keys = Object.keys(recordValue)
-  let result: Record<string, unknown> | undefined
-
-  for (const [index, key] of keys.entries()) {
-    const original = recordValue[key]
-    const sensitive = isSensitiveKey(key, extraKeys)
-    const redacted = sensitive
-      ? REDACTED_TEXT
-      : redactInner(original, inProgress, extraKeys)
-
-    if (result === undefined && (sensitive || redacted !== original)) {
-      result = {}
-      for (const priorKey of keys.slice(0, index)) {
-        result[priorKey] = recordValue[priorKey]
-      }
-    }
-    if (result !== undefined) {
-      result[key] = redacted
-    }
-  }
-
-  return result ?? recordValue
-}
-
 const withReentrancyGuard = <T>(
   obj: object,
   inProgress: WeakSet<object>,
@@ -301,55 +199,163 @@ const withReentrancyGuard = <T>(
   }
 }
 
-const redactInner = <T>(
-  value: T,
-  inProgress: WeakSet<object>,
-  extraKeys?: readonly string[]
-): T => {
-  if (value === null || value === undefined) {
-    return value
-  }
+/**
+ * Mutually recursive. One object lets each walker reach the others by
+ * property instead of by a binding declared later in the file.
+ */
+const walker = {
+  /**
+   * Redacts each item; returns the ORIGINAL array reference when no item changed (zero
+   * allocations for the common no-PII case). A new array is materialized lazily, starting from
+   * the first item that changes — items before that point are known-unchanged, so they're copied
+   * from `value` as-is rather than recomputed.
+   */
+  array: (
+    value: unknown[],
+    inProgress: WeakSet<object>,
+    extraKeys?: readonly string[]
+  ): unknown[] => {
+    let result: unknown[] | undefined
 
-  if (typeof value === 'string') {
-    return redactString(value) as unknown as T
-  }
+    for (const [index, original] of value.entries()) {
+      const redacted = walker.value(original, inProgress, extraKeys)
+      if (result === undefined && redacted !== original) {
+        result = value.slice(0, index)
+      }
+      result?.push(redacted)
+    }
 
-  const type = typeof value
-  if (type !== 'object') {
-    return value
-  }
+    return result ?? value
+  },
 
-  if (value instanceof Date) {
-    // Dates carry no redactable string content and are never mutated by this module, so they
-    // pass through by reference (part of the identity fast path) instead of being defensively
-    // cloned as before.
-    return value
-  }
+  // Errors are exempt from the identity fast path: a redacted Error is always constructed
+  // fresh (even when nothing changed) so consumers never receive the original, potentially
+  // stack-trace-carrying instance by reference.
+  error: (
+    originalError: Error,
+    inProgress: WeakSet<object>,
+    extraKeys?: readonly string[]
+  ): Error & Record<string, unknown> => {
+    const redactedMessage = redactString(originalError.message)
+    const proto = Object.getPrototypeOf(originalError) as object
+    const newError = Object.create(proto) as Error & Record<string, unknown>
 
-  const obj = value as object
-  if (inProgress.has(obj)) {
-    return CIRCULAR_REF as unknown as T
-  }
+    newError.message = redactedMessage
+    newError.name = originalError.name
 
-  if (value instanceof Error) {
-    return withReentrancyGuard(obj, inProgress, () =>
-      redactErrorClone(value, inProgress, extraKeys)
-    ) as unknown as T
-  }
+    if (originalError.stack !== undefined) {
+      newError.stack = redactString(originalError.stack)
+    }
 
-  if (Array.isArray(value)) {
-    return withReentrancyGuard(obj, inProgress, () =>
-      redactArrayItems(value, inProgress, extraKeys)
-    ) as unknown as T
-  }
+    const errorRecord = originalError as unknown as Record<string, unknown>
 
-  return withReentrancyGuard(obj, inProgress, () =>
-    redactRecordEntries(value as Record<string, unknown>, inProgress, extraKeys)
-  ) as unknown as T
+    for (const key of Object.getOwnPropertyNames(errorRecord)) {
+      if (key === 'message' || key === 'name' || key === 'stack') {
+        continue
+      }
+
+      const descriptor = Object.getOwnPropertyDescriptor(errorRecord, key)
+      if (descriptor === undefined) {
+        continue
+      }
+
+      if (descriptor.get !== undefined || descriptor.set !== undefined) {
+        Object.defineProperty(newError, key, descriptor)
+        continue
+      }
+
+      const redactedValue = isSensitiveKey(key, extraKeys)
+        ? REDACTED_TEXT
+        : walker.value(descriptor.value, inProgress, extraKeys)
+
+      Object.defineProperty(newError, key, {
+        ...descriptor,
+        value: redactedValue
+      })
+    }
+
+    return newError
+  },
+
+  /** Same lazy-materialization strategy as {@link walker.array}, for plain objects. */
+  record: (
+    recordValue: Record<string, unknown>,
+    inProgress: WeakSet<object>,
+    extraKeys?: readonly string[]
+  ): Record<string, unknown> => {
+    const keys = Object.keys(recordValue)
+    let result: Record<string, unknown> | undefined
+
+    for (const [index, key] of keys.entries()) {
+      const original = recordValue[key]
+      const sensitive = isSensitiveKey(key, extraKeys)
+      const redacted = sensitive
+        ? REDACTED_TEXT
+        : walker.value(original, inProgress, extraKeys)
+
+      if (result === undefined && (sensitive || redacted !== original)) {
+        result = {}
+        for (const priorKey of keys.slice(0, index)) {
+          result[priorKey] = recordValue[priorKey]
+        }
+      }
+      if (result !== undefined) {
+        result[key] = redacted
+      }
+    }
+
+    return result ?? recordValue
+  },
+
+  value: (
+    value: unknown,
+    inProgress: WeakSet<object>,
+    extraKeys?: readonly string[]
+  ): unknown => {
+    if (typeof value === 'string') {
+      return redactString(value)
+    }
+
+    if (value === null || typeof value !== 'object') {
+      return value
+    }
+
+    if (value instanceof Date) {
+      // Dates carry no redactable string content and are never mutated by this module, so they
+      // pass through by reference (part of the identity fast path) instead of being defensively
+      // cloned as before.
+      return value
+    }
+
+    if (inProgress.has(value)) {
+      return CIRCULAR_REF
+    }
+
+    if (value instanceof Error) {
+      return withReentrancyGuard(value, inProgress, () =>
+        walker.error(value, inProgress, extraKeys)
+      )
+    }
+
+    if (Array.isArray(value)) {
+      return withReentrancyGuard(value, inProgress, () =>
+        walker.array(value, inProgress, extraKeys)
+      )
+    }
+
+    return withReentrancyGuard(value, inProgress, () =>
+      walker.record(value as Record<string, unknown>, inProgress, extraKeys)
+    )
+  }
 }
 
+/**
+ * Apart from a circular reference, which becomes the marker string, the walk
+ * keeps each value's shape: a string stays a string, an array an array, an
+ * Error an Error. The input type therefore still describes the output.
+ */
 export const redact = <T>(value: T, extraKeys?: readonly string[]): T =>
-  redactInner(value, new WeakSet(), extraKeys)
+  walker.value(value, new WeakSet(), extraKeys) as T
 
 /**
  * Clone request URL, method and headers for logging with the same string redaction as {@link redact}.

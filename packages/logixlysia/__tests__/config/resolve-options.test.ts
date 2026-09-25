@@ -1,5 +1,4 @@
 import { describe, expect, test } from 'bun:test'
-
 import { resolveOptions } from '../../src/config/resolve-options'
 
 describe('resolveOptions', () => {

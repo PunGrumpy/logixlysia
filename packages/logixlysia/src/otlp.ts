@@ -1,11 +1,10 @@
 import { createOtlpCore } from './adapters/otlp-core'
 import {
-  type AdapterTransport,
-  type BatchTransportOptions,
   envString,
   stripTrailingSlashes,
   transportError
 } from './adapters/shared'
+import type { AdapterTransport, BatchTransportOptions } from './adapters/shared'
 
 const LOGS_PATH = '/v1/logs'
 
@@ -93,7 +92,7 @@ const resolveLogsUrl = (endpointOption: string | undefined): string => {
  * Meta fields become dot-notation log attributes (`request.method`,
  * `context.requestId`, …).
  *
- * @throws When no endpoint is configured.
+ * @throws {Error} When no endpoint is configured.
  */
 export const createOtlpTransport = (
   options: OtlpTransportOptions = {}

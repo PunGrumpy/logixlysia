@@ -1,5 +1,4 @@
 import { describe, expect, test } from 'bun:test'
-
 import { createDatadogTransport } from '../../src/datadog'
 import { stubEnv, stubFetch } from './helpers'
 

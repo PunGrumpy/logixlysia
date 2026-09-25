@@ -4,13 +4,14 @@ import {
   defaultBody,
   flattenMeta,
   getPath,
-  type LogEntry,
   postWithRetry,
   resolveEndpoint,
   resolveRetryDelay,
   stripTrailingSlashes
 } from '../../src/adapters/shared'
+import type { LogEntry } from '../../src/adapters/shared'
 import { spyConsole } from '../_helpers/console'
+import { sleep } from '../_helpers/sleep'
 import { stubFetch } from './helpers'
 
 interface Deferred {
@@ -20,18 +21,13 @@ interface Deferred {
 
 /** A promise a test resolves by hand, to stand in for a slow send. */
 const deferred = (): Deferred => {
-  let resolve: () => void = () => undefined
-  const promise = new Promise<void>(res => {
-    resolve = () => res()
-  })
+  const { promise, resolve }: PromiseWithResolvers<void> =
+    Promise.withResolvers()
   return { promise, resolve }
 }
 
 /** Lets pending promise callbacks and the 5 ms flush timer run. */
-const settle = (): Promise<void> =>
-  new Promise(resolve => {
-    setTimeout(resolve, 10)
-  })
+const settle = (): Promise<void> => sleep(10)
 
 const entry = (overrides: Partial<LogEntry> = {}): LogEntry => ({
   level: 'INFO',
@@ -267,7 +263,7 @@ describe('postWithRetry', () => {
   })
 
   test('sanitizes escape sequences out of the response body preview', async () => {
-    const stub = stubFetch([{ body: 'x\u001b[31my', status: 500 }])
+    const stub = stubFetch([{ body: 'x\u001B[31my', status: 500 }])
     try {
       const rejection = await postWithRetry({
         body: '{}',
@@ -278,34 +274,34 @@ describe('postWithRetry', () => {
         url: 'https://example.com/ingest'
       }).catch((error: Error) => error)
       expect(rejection).toBeInstanceOf(Error)
-      expect((rejection as Error).message).not.toContain('\u001b')
+      expect((rejection as Error).message).not.toContain('\u001B')
     } finally {
       stub.restore()
     }
   })
 })
 
-describe('resolveRetryDelay', () => {
-  const response = (retryAfter: string): Response =>
-    new Response(null, {
-      headers: { 'retry-after': retryAfter },
-      status: 429
-    })
+const retryAfterResponse = (retryAfter: string): Response =>
+  new Response(null, {
+    headers: { 'retry-after': retryAfter },
+    status: 429
+  })
 
+describe('resolveRetryDelay', () => {
   test('caps a long Retry-After at 30 seconds', () => {
-    expect(resolveRetryDelay(response('3600'), 0)).toBe(30_000)
+    expect(resolveRetryDelay(retryAfterResponse('3600'), 0)).toBe(30_000)
   })
 
   test('accepts an HTTP-date Retry-After', () => {
     // An HTTP-date only carries whole seconds, so the delay lands just under.
     const fiveSecondsAhead = new Date(Date.now() + 5000).toUTCString()
-    const delay = resolveRetryDelay(response(fiveSecondsAhead), 0)
+    const delay = resolveRetryDelay(retryAfterResponse(fiveSecondsAhead), 0)
     expect(delay).toBeGreaterThan(3900)
     expect(delay).toBeLessThanOrEqual(5000)
   })
 
   test('falls back to jittered linear backoff for an unparsable value', () => {
-    const delay = resolveRetryDelay(response('abc'), 0)
+    const delay = resolveRetryDelay(retryAfterResponse('abc'), 0)
     expect(delay).toBeGreaterThanOrEqual(125)
     expect(delay).toBeLessThanOrEqual(375)
   })
@@ -314,6 +310,33 @@ describe('resolveRetryDelay', () => {
     const delay = resolveRetryDelay(undefined, 1)
     expect(delay).toBeGreaterThanOrEqual(250)
     expect(delay).toBeLessThanOrEqual(750)
+  })
+
+  test.each([
+    ['5', 5000],
+    [' 5 ', 5000],
+    ['0', 0]
+  ])('reads the delta-seconds Retry-After %j as %p ms', (retryAfter, ms) => {
+    expect(resolveRetryDelay(retryAfterResponse(retryAfter), 0)).toBe(ms)
+  })
+
+  // `1e3` and `0x10` are not `delta-seconds`, and `Date.parse` reads `+5` and
+  // `5.5` as dates in 2001. Reading any of them as a delay would replace the
+  // backoff with a wait the server never asked for, or with none at all.
+  test.each(['1e3', '0x10', '+5', '5.5'])(
+    'ignores the non-conforming Retry-After %j and backs off instead',
+    retryAfter => {
+      const delay = resolveRetryDelay(retryAfterResponse(retryAfter), 0)
+      expect(delay).toBeGreaterThanOrEqual(125)
+      expect(delay).toBeLessThanOrEqual(375)
+    }
+  )
+
+  test('ignores an HTTP-date Retry-After that already passed', () => {
+    const anHourAgo = new Date(Date.now() - 3_600_000).toUTCString()
+    const delay = resolveRetryDelay(retryAfterResponse(anHourAgo), 0)
+    expect(delay).toBeGreaterThanOrEqual(125)
+    expect(delay).toBeLessThanOrEqual(375)
   })
 })
 
@@ -387,10 +410,9 @@ describe('createBatchQueue', () => {
       }
     })
 
-    queue.push(entry({ message: 'a' }))
-    queue.push(entry({ message: 'b' }))
-    queue.push(entry({ message: 'c' }))
-    queue.push(entry({ message: 'd' }))
+    for (const message of ['a', 'b', 'c', 'd']) {
+      queue.push(entry({ message }))
+    }
 
     await Promise.resolve()
     expect(batches).toHaveLength(1)
@@ -429,7 +451,7 @@ describe('createBatchQueue', () => {
 
   test('drops batches beyond maxPendingBatches and reports them', async () => {
     const stuck = deferred()
-    const onError = mock((_error: unknown) => undefined)
+    const onError = mock((_error: unknown) => {})
     const queue = createBatchQueue({
       flushIntervalMs: 60_000,
       maxBatchSize: 1,
@@ -439,9 +461,9 @@ describe('createBatchQueue', () => {
       send: () => stuck.promise
     })
 
-    queue.push(entry({ message: 'a' }))
-    queue.push(entry({ message: 'dropped-1' }))
-    queue.push(entry({ message: 'dropped-2' }))
+    for (const message of ['a', 'dropped-1', 'dropped-2']) {
+      queue.push(entry({ message }))
+    }
 
     expect(onError).toHaveBeenCalledTimes(2)
     const [reported] = onError.mock.calls[0] ?? []
@@ -452,7 +474,7 @@ describe('createBatchQueue', () => {
   })
 
   test('timer flush failure calls onError', async () => {
-    const onError = mock((_error: unknown) => undefined)
+    const onError = mock((_error: unknown) => {})
     const console = spyConsole(['error'])
     const queue = createBatchQueue({
       flushIntervalMs: 5,

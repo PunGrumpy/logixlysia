@@ -1,5 +1,4 @@
 import { afterEach, describe, expect, mock, test } from 'bun:test'
-
 import { createLogger } from '../../src/logger'
 import { __resetForTesting, injectTraceContext } from '../../src/otel'
 
@@ -8,7 +7,11 @@ const fakeSpanContext = {
   traceId: 'abc123def456789012345678abcdef01'
 }
 
-const getSpanMock = mock(() => ({
+interface FakeSpan {
+  spanContext: () => typeof fakeSpanContext
+}
+
+const getSpanMock = mock((): FakeSpan | undefined => ({
   spanContext: () => fakeSpanContext
 }))
 
@@ -54,7 +57,7 @@ describe('logixlysia/otel (mocked)', () => {
 
   test('returns undefined when getSpan returns no active span', () => {
     __resetForTesting()
-    getSpanMock.mockImplementation(() => undefined as any)
+    getSpanMock.mockImplementation(() => {})
 
     const logger = createLogger({
       config: {

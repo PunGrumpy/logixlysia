@@ -1,11 +1,8 @@
 import { describe, expect, mock, test } from 'bun:test'
 import { Elysia } from 'elysia'
-
-import logixlysia, { useLogger } from '../../src'
+import { logixlysia, useLogger } from '../../src'
 import type { Options } from '../../src/interfaces'
-
-const sleep = (ms: number): Promise<void> =>
-  new Promise(resolve => setTimeout(resolve, ms))
+import { sleep } from '../_helpers/sleep'
 
 interface CapturedMeta {
   context?: Record<string, unknown>
@@ -143,7 +140,7 @@ describe('logixlysia plugin - request lifecycle', () => {
 
     const app = new Elysia()
       .use(logixlysia(options))
-      .get('/test', ({ store }) => String(store.beforeTime !== BigInt(0)))
+      .get('/test', ({ store }) => String(store.beforeTime !== 0n))
 
     const response = await app.handle(new Request('http://localhost/test'))
 

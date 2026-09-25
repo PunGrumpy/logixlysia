@@ -1,4 +1,5 @@
 import type { Options, SinkErrorContext } from '../interfaces'
+import { settle } from '../utils/settle'
 import { flushAllFileSinks } from './file-sink'
 import { flushTransports } from './index'
 
@@ -6,31 +7,26 @@ import { flushTransports } from './index'
  * Resolves `true` when `ms` elapsed before `work` settled, `false` otherwise.
  * A non-positive `ms` means "start the work but do not wait".
  */
-export const raceWithTimeout = (
+export const raceWithTimeout = async (
   work: Promise<unknown>,
   ms: number
 ): Promise<boolean> => {
-  // A failed flush is reported by the sinks themselves; here it only counts
-  // as "settled", so swallow the rejection either way.
-  const settled = work.then(
-    () => false,
-    () => false
-  )
+  // The sinks report a failed flush themselves; here it only counts as
+  // settled.
+  const settled = settle(work)
 
   if (ms <= 0) {
-    return Promise.resolve(true)
+    return true
   }
 
-  return new Promise<boolean>(resolve => {
-    const timer = setTimeout(() => resolve(true), ms)
-    // Never hold the event loop open just to observe a flush that is racing
-    // an exiting process.
-    timer.unref?.()
-    settled.then(timedOut => {
-      clearTimeout(timer)
-      resolve(timedOut)
-    })
-  })
+  const timeout = Promise.withResolvers<'timeout'>()
+  const timer = setTimeout(() => timeout.resolve('timeout'), ms)
+  // Never hold the event loop open just to observe a flush that is racing
+  // an exiting process.
+  timer.unref?.()
+  const winner = await Promise.race([settled, timeout.promise])
+  clearTimeout(timer)
+  return winner === 'timeout'
 }
 
 /**

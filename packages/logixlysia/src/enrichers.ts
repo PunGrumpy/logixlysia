@@ -16,7 +16,7 @@ const MAX_TRACESTATE_LENGTH = 512
 
 // version-trace_id-parent_id-flags, with an optional tail for versions > 00.
 const TRACEPARENT =
-  /^([\da-f]{2})-([\da-f]{32})-([\da-f]{16})-([\da-f]{2})(?:-.+)?$/
+  /^(?<version>[\da-f]{2})-(?<traceId>[\da-f]{32})-(?<spanId>[\da-f]{16})-(?<flags>[\da-f]{2})(?:-.+)?$/u
 const ZERO_TRACE_ID = '0'.repeat(32)
 const ZERO_SPAN_ID = '0'.repeat(16)
 const INVALID_VERSION = 'ff'
@@ -98,28 +98,28 @@ export const traceparentEnricher = (
   }
 }
 
-const BOT = /bot|crawl|spider|slurp|facebookexternalhit|preview|headless/i
-const TABLET = /ipad|tablet|playbook|silk|kindle/i
-const MOBILE = /mobi|iphone|ipod|windows phone/i
-const ANDROID_MOBILE = /android.*mobile/i
+const BOT = /bot|crawl|spider|slurp|facebookexternalhit|preview|headless/iu
+const TABLET = /ipad|tablet|playbook|silk|kindle/iu
+const MOBILE = /mobi|iphone|ipod|windows phone/iu
+const ANDROID_MOBILE = /android.*mobile/iu
 
 /** First match wins, so more specific engines are listed before their base. */
 const BROWSERS: readonly [name: string, pattern: RegExp][] = [
-  ['Edge', /edg(?:a|ios)?\/([\d.]+)/i],
-  ['Opera', /(?:opr|opios|opera)\/([\d.]+)/i],
-  ['Samsung Internet', /samsungbrowser\/([\d.]+)/i],
-  ['Firefox', /(?:firefox|fxios)\/([\d.]+)/i],
-  ['Chrome', /(?:chrome|crios)\/([\d.]+)/i],
-  ['Safari', /version\/([\d.]+).*safari/i]
+  ['Edge', /edg(?:a|ios)?\/(?<version>[\d.]+)/iu],
+  ['Opera', /(?:opr|opios|opera)\/(?<version>[\d.]+)/iu],
+  ['Samsung Internet', /samsungbrowser\/(?<version>[\d.]+)/iu],
+  ['Firefox', /(?:firefox|fxios)\/(?<version>[\d.]+)/iu],
+  ['Chrome', /(?:chrome|crios)\/(?<version>[\d.]+)/iu],
+  ['Safari', /version\/(?<version>[\d.]+).*safari/iu]
 ]
 
 const OPERATING_SYSTEMS: readonly [name: string, pattern: RegExp][] = [
-  ['iOS', /iphone|ipad|ipod/i],
-  ['Android', /android/i],
-  ['ChromeOS', /cros/i],
-  ['Windows', /windows nt/i],
-  ['macOS', /mac os x/i],
-  ['Linux', /linux/i]
+  ['iOS', /iphone|ipad|ipod/iu],
+  ['Android', /android/iu],
+  ['ChromeOS', /cros/iu],
+  ['Windows', /windows nt/iu],
+  ['macOS', /mac os x/iu],
+  ['Linux', /linux/iu]
 ]
 
 const matchName = (
@@ -199,7 +199,7 @@ const NETLIFY_GEO_HEADER = 'x-nf-geo'
 const GEO_STRING_MAX = 128
 const GEO_RAW_HEADER_MAX = 2048
 /** ISO-3166-ish country/region codes: short alphanumeric tokens, never free text. */
-const GEO_CODE_REGEX = /^[A-Za-z0-9-]{1,10}$/
+const GEO_CODE_REGEX = /^[A-Za-z0-9-]{1,10}$/u
 
 const firstHeader = (
   request: Request,

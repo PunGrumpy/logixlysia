@@ -26,7 +26,7 @@ new Elysia().use(logixlysia({ preset: 'prod' }))
 With `useAsyncLocalStorage: true`, prefer the derived `log` on the handler context:
 
 | evlog | Logixlysia |
-| ----- | ---------- |
+| --- | --- |
 | `log.set({ userId: 'x' })` | `({ log }) => log.mergeContext({ userId: 'x' })` |
 | `log.set({ cart: { total: 99 } })` | `({ log }) => log.mergeContext({ cart: { total: 99 } })` |
 | `useLogger()` | `useLogger()` from `logixlysia` |
@@ -34,7 +34,7 @@ With `useAsyncLocalStorage: true`, prefer the derived `log` on the handler conte
 Without `useAsyncLocalStorage`, use `store.logger` and pass `request` explicitly:
 
 | evlog | Logixlysia |
-| ----- | ---------- |
+| --- | --- |
 | `log.set({ userId: 'x' })` | `store.logger.mergeContext(request, { userId: 'x' })` |
 | `log.set({ cart: { total: 99 } })` | `store.logger.mergeContext(request, { cart: { total: 99 } })` |
 
@@ -78,7 +78,7 @@ Use `injectTraceContext` from `logixlysia/otel` in `onRequest` (see [OpenTelemet
 evlog **drains** map to Logixlysia **adapters**, which are transports:
 
 | evlog drain | Logixlysia adapter |
-| ----------- | ------------------- |
+| --- | --- |
 | `evlog/axiom` | `createAxiomTransport()` from `logixlysia/axiom` |
 | `evlog/better-stack` | `createBetterStackTransport()` from `logixlysia/better-stack` |
 | `evlog/clickhouse` | `createClickHouseTransport()` from `logixlysia/clickhouse` |

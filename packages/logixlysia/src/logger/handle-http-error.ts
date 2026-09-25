@@ -3,7 +3,8 @@ import type { LogLevel, Options, RequestInfo, StoreData } from '../interfaces'
 import type { SamplingRuntime } from '../sampling'
 import { normalizeLoggedError } from '../utils/error'
 import type { FormatContext } from './create-logger'
-import { emit, type Sinks, shouldLog } from './emit'
+import { emit, shouldLog } from './emit'
+import type { Sinks } from './emit'
 
 const isErrorWithStatus = (
   value: unknown

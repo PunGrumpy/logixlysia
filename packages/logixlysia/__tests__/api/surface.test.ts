@@ -1,14 +1,14 @@
 import { describe, expect, test } from 'bun:test'
 import { existsSync } from 'node:fs'
-import { join } from 'node:path'
+import path from 'node:path'
 import { spawnSync } from 'bun'
 import packageJson from '../../package.json'
 
-const packageRoot = join(import.meta.dir, '..', '..')
-const distReady = existsSync(join(packageRoot, 'dist', 'index.js'))
+const packageRoot = path.join(import.meta.dir, '..', '..')
+const distReady = existsSync(path.join(packageRoot, 'dist', 'index.js'))
 
-const SRC_PREFIX = /^src\//
-const TS_EXTENSION = /\.ts$/
+const SRC_PREFIX = /^src\//u
+const TS_EXTENSION = /\.ts$/u
 
 type ExportEntry =
   | string
@@ -61,14 +61,15 @@ describe('published API surface', () => {
   })
 
   test('every bunup entry has an exports subpath and vice versa', async () => {
-    const bunupConfig = (await import('../../bunup.config')).default as {
+    const bunupModule = await import('../../bunup.config')
+    const bunupConfig = bunupModule.default as {
       entry: string[]
     }
     const built = bunupConfig.entry
       .map(file => file.replace(SRC_PREFIX, '').replace(TS_EXTENSION, ''))
       .map(name => (name === 'index' ? '.' : `./${name}`))
-      .sort()
-    const declared = subpaths.map(([key]) => key).sort()
+      .toSorted()
+    const declared = subpaths.map(([key]) => key).toSorted()
     expect(built).toEqual(declared)
   })
 })

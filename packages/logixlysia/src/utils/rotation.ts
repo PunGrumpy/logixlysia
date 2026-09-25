@@ -1,10 +1,10 @@
 import { promises as fs } from 'node:fs'
-import { basename, dirname } from 'node:path'
+import path from 'node:path'
 
-const SIZE_REGEX = /^(\d+(?:\.\d+)?)(k|kb|m|mb|g|gb)$/i
-const INTERVAL_REGEX = /^(\d+)(h|d|w)$/i
+const SIZE_REGEX = /^(?<amount>\d+(?:\.\d+)?)(?<unit>[GKMgkm][Bb]?)$/u
+const INTERVAL_REGEX = /^(?<amount>\d+)(?<unit>[dhw])$/iu
 const ROTATED_REGEX =
-  /\.(\d{4}-\d{2}-\d{2}-\d{2}-\d{2}-\d{2}(?:-\d{3})?(?:-\d+)?)(?:\.gz)?$/
+  /\.\d{4}-\d{2}-\d{2}-\d{2}-\d{2}-\d{2}(?:-\d{3})?(?:-\d+)?(?:\.gz)?$/u
 
 export const parseSize = (value: number | string): number => {
   if (typeof value === 'number') {
@@ -87,8 +87,8 @@ export const shouldRotateBySize = async (
 }
 
 export const getRotatedFiles = async (filePath: string): Promise<string[]> => {
-  const dir = dirname(filePath)
-  const base = basename(filePath)
+  const dir = path.dirname(filePath)
+  const base = path.basename(filePath)
 
   let entries: string[]
   try {

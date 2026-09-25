@@ -1,9 +1,9 @@
 import type { Logixlysia } from 'logixlysia'
 
-const BASE64URL_PAD_STRIP = /[=]+$/
+const BASE64URL_PAD_STRIP = /[=]+$/u
 
 const b64urlJson = (value: object) =>
-  Buffer.from(JSON.stringify(value), 'utf8')
+  Buffer.from(JSON.stringify(value), 'utf-8')
     .toString('base64url')
     .replace(BASE64URL_PAD_STRIP, '')
 
@@ -20,7 +20,7 @@ const mockCreditCard = () =>
     0x34, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31,
     0x31, 0x31, 0x31, 0x31
   ]
-    .map(c => String.fromCharCode(c))
+    .map(c => String.fromCodePoint(c))
     .join('')
 
 export const autoRedactRouter = <App extends Logixlysia>(app: App) =>

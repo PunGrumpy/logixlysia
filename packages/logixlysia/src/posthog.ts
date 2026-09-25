@@ -1,14 +1,16 @@
 import {
-  type AdapterTransport,
-  type BatchTransportOptions,
   createHttpTransport,
   defaultBody,
   envString,
   flattenMeta,
   getPath,
-  type LogEntry,
   stripTrailingSlashes,
   transportError
+} from './adapters/shared'
+import type {
+  AdapterTransport,
+  BatchTransportOptions,
+  LogEntry
 } from './adapters/shared'
 
 const DEFAULT_HOST = 'https://us.i.posthog.com'
@@ -55,7 +57,7 @@ export interface PostHogTransportOptions extends BatchTransportOptions {
  * `context.requestId`, …) usable in filters, insights, and cohorts. Logs
  * carrying a `userId` in the request context are linked to PostHog persons.
  *
- * @throws When no API key is configured.
+ * @throws {Error} When no API key is configured.
  */
 export const createPostHogTransport = (
   options: PostHogTransportOptions = {}

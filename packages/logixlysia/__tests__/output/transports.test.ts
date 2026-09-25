@@ -3,6 +3,7 @@ import type { Options } from '../../src/interfaces'
 import { logToTransports } from '../../src/output'
 import { spyConsole } from '../_helpers/console'
 import { createMockRequest } from '../_helpers/request'
+import { sleep } from '../_helpers/sleep'
 
 describe('logToTransports', () => {
   test('calls all transports with level/message/meta', () => {
@@ -24,7 +25,7 @@ describe('logToTransports', () => {
     }
 
     const request = createMockRequest('http://localhost/hello')
-    const store = { beforeTime: BigInt(0) }
+    const store = { beforeTime: 0n }
 
     logToTransports({
       data: { message: 'Test message', status: 200 },
@@ -88,7 +89,7 @@ describe('logToTransports', () => {
       }
     )
     const zeroOptions: Options = { config: { transports: [{ log: t2 }] } }
-    const zeroStore = { beforeTime: BigInt(0) }
+    const zeroStore = { beforeTime: 0n }
 
     logToTransports({
       data: { message: 'Test message' },
@@ -119,7 +120,7 @@ describe('logToTransports', () => {
 
       const options: Options = { config: { transports: [{ log: throwing }] } }
       const request = createMockRequest('http://localhost/throw')
-      const store = { beforeTime: BigInt(0) }
+      const store = { beforeTime: 0n }
 
       logToTransports({
         data: { message: 'ignored' },
@@ -157,7 +158,7 @@ describe('logToTransports', () => {
 
     const options: Options = { config: { transports: [{ log: throwing }] } }
     const request = createMockRequest('http://localhost/throw')
-    const store = { beforeTime: BigInt(0) }
+    const store = { beforeTime: 0n }
 
     expect(() => {
       logToTransports({
@@ -177,7 +178,7 @@ describe('logToTransports', () => {
 
     const options: Options = { config: { transports: [{ log: rejecting }] } }
     const request = createMockRequest('http://localhost/reject')
-    const store = { beforeTime: BigInt(0) }
+    const store = { beforeTime: 0n }
 
     logToTransports({
       data: { message: 'async' },
@@ -188,7 +189,7 @@ describe('logToTransports', () => {
     })
 
     // Let promise microtasks run; rejections should be caught internally.
-    await new Promise(resolve => setTimeout(resolve, 0))
+    await sleep(0)
 
     expect(rejecting).toHaveBeenCalledTimes(1)
   })
@@ -207,7 +208,7 @@ describe('logToTransports', () => {
       config: { onError, transports: [{ log: throwing }] }
     }
     const request = createMockRequest('http://localhost/throw')
-    const store = { beforeTime: BigInt(0) }
+    const store = { beforeTime: 0n }
 
     expect(() => {
       logToTransports({

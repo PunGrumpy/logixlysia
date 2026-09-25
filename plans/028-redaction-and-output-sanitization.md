@@ -1,19 +1,8 @@
 # Plan 028: Close the redaction gaps and sanitize every console-bound string
 
-> **Executor instructions**: Follow this plan step by step. Run every
-> verification command and confirm the expected result before moving to the
-> next step. If anything in the "STOP conditions" section occurs, stop and
-> report — do not improvise. When done, update the status row for this plan
-> in `plans/README.md` — unless a reviewer dispatched you and told you they
-> maintain the index.
+> **Executor instructions**: Follow this plan step by step. Run every verification command and confirm the expected result before moving to the next step. If anything in the "STOP conditions" section occurs, stop and report — do not improvise. When done, update the status row for this plan in `plans/README.md` — unless a reviewer dispatched you and told you they maintain the index.
 >
-> **Drift check (run first)**:
-> `git diff --stat 478f40d..HEAD -- packages/logixlysia/src/utils/redact.ts packages/logixlysia/src/utils/sanitize.ts packages/logixlysia/src/logger/create-logger.ts packages/logixlysia/src/adapters/shared.ts packages/logixlysia/src/sentry.ts packages/logixlysia/src/enrichers.ts packages/logixlysia/__tests__/utils packages/logixlysia/__tests__/enrichers`
-> If any in-scope file changed since this plan was written, compare the
-> "Current state" excerpts against the live code before proceeding; on a
-> mismatch, treat it as a STOP condition. Plan 026 edits `adapters/shared.ts`
-> (the batch queue); this plan touches only the error-message line in
-> `attemptPost` — rebase around it.
+> **Drift check (run first)**: `git diff --stat 478f40d..HEAD -- packages/logixlysia/src/utils/redact.ts packages/logixlysia/src/utils/sanitize.ts packages/logixlysia/src/logger/create-logger.ts packages/logixlysia/src/adapters/shared.ts packages/logixlysia/src/sentry.ts packages/logixlysia/src/enrichers.ts packages/logixlysia/__tests__/utils packages/logixlysia/__tests__/enrichers` If any in-scope file changed since this plan was written, compare the "Current state" excerpts against the live code before proceeding; on a mismatch, treat it as a STOP condition. Plan 026 edits `adapters/shared.ts` (the batch queue); this plan touches only the error-message line in `attemptPost` — rebase around it.
 
 ## Status
 
@@ -50,7 +39,8 @@ Files and roles:
 Regexes today (`redact.ts:1–8`):
 
 ```ts
-const EMAIL_REGEX = /[a-zA-Z0-9._%+-]{1,64}@[a-zA-Z0-9.-]{1,253}\.[a-zA-Z]{2,63}/g
+const EMAIL_REGEX =
+  /[a-zA-Z0-9._%+-]{1,64}@[a-zA-Z0-9.-]{1,253}\.[a-zA-Z]{2,63}/g
 const IPV4_REGEX = /\b(?:\d{1,3}\.){3}\d{1,3}\b/g
 const CREDIT_CARD_CANDIDATE_REGEX = /\b(?:\d[ -]*?){13,19}\b/g
 const JWT_REGEX = /eyJ[a-zA-Z0-9_-]+\.eyJ[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+/g
@@ -62,8 +52,12 @@ const JWT_REGEX = /eyJ[a-zA-Z0-9_-]+\.eyJ[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+/g
 const redactRequestUrl = (urlString: string): string => {
   try {
     const u = new URL(urlString)
-    if (u.username !== '') { u.username = redactUrlAuthoritySegment(u.username) }
-    if (u.password !== '') { u.password = redactUrlAuthoritySegment(u.password) }
+    if (u.username !== '') {
+      u.username = redactUrlAuthoritySegment(u.username)
+    }
+    if (u.password !== '') {
+      u.password = redactUrlAuthoritySegment(u.password)
+    }
     u.hostname = redactUrlAuthoritySegment(u.hostname)
     u.pathname = redactString(u.pathname)
     u.search = redactString(u.search)
@@ -80,20 +74,22 @@ const redactRequestUrl = (urlString: string): string => {
 Error clone today (`redact.ts:≈168–190`):
 
 ```ts
-  const proto = Object.getPrototypeOf(originalError) as object
-  const newError = Object.create(proto) as Error & Record<string, unknown>
-  newError.message = redactedMessage
-  newError.name = originalError.name
-  if (originalError.stack !== undefined) { newError.stack = redactString(originalError.stack) }
-  const errorRecord = originalError as unknown as Record<string, unknown>
-  for (const key of Object.keys(errorRecord)) {
-    if (key !== 'message' && key !== 'name' && key !== 'stack') {
-      newError[key] = isSensitiveKey(key, extraKeys)
-        ? REDACTED_TEXT
-        : redactInner(errorRecord[key], inProgress, extraKeys)
-    }
+const proto = Object.getPrototypeOf(originalError) as object
+const newError = Object.create(proto) as Error & Record<string, unknown>
+newError.message = redactedMessage
+newError.name = originalError.name
+if (originalError.stack !== undefined) {
+  newError.stack = redactString(originalError.stack)
+}
+const errorRecord = originalError as unknown as Record<string, unknown>
+for (const key of Object.keys(errorRecord)) {
+  if (key !== 'message' && key !== 'name' && key !== 'stack') {
+    newError[key] = isSensitiveKey(key, extraKeys)
+      ? REDACTED_TEXT
+      : redactInner(errorRecord[key], inProgress, extraKeys)
   }
-  return newError
+}
+return newError
 ```
 
 (`src/desertant.ts:192` does the same walk correctly with `Object.getOwnPropertyNames` — use it as the reference.)
@@ -101,8 +97,13 @@ Error clone today (`redact.ts:≈168–190`):
 `getMessageToken` today (`create-logger.ts:465–473`):
 
 ```ts
-const getMessageToken = (tokens: Set<string>, data: Record<string, unknown>): string => {
-  if (!tokens.has('{message}')) { return '' }
+const getMessageToken = (
+  tokens: Set<string>,
+  data: Record<string, unknown>
+): string => {
+  if (!tokens.has('{message}')) {
+    return ''
+  }
   return typeof data.message === 'string' ? data.message : ''
 }
 ```
@@ -114,7 +115,7 @@ Conventions: Biome via `ultracite`; regex literals at module top level (never in
 ## Commands you will need
 
 | Purpose | Command | Expected on success |
-|---|---|---|
+| --- | --- | --- |
 | Typecheck | `bun run typecheck` | exit 0 |
 | Lint / Format | `bun run lint` / `bun run format` | exit 0 |
 | Redaction tests | `cd packages/logixlysia && bun test __tests__/utils` | all pass |
@@ -171,12 +172,12 @@ In `redact.ts`:
 1. Change `redactRequestUrl(urlString)` to `redactRequestUrl(urlString, extraKeys?: readonly string[])` and, before `u.search = redactString(u.search)`, iterate `u.searchParams`:
 
    ```ts
-       const keys = [...u.searchParams.keys()]
-       for (const key of keys) {
-         if (isSensitiveKey(key, extraKeys)) {
-           u.searchParams.set(key, REDACTED_TEXT)
-         }
-       }
+   const keys = [...u.searchParams.keys()]
+   for (const key of keys) {
+     if (isSensitiveKey(key, extraKeys)) {
+       u.searchParams.set(key, REDACTED_TEXT)
+     }
+   }
    ```
 
    Use a copy of the keys (mutating while iterating is undefined). `URLSearchParams.set` collapses duplicates to one value, which is acceptable.
@@ -199,13 +200,17 @@ Replace `IPV4_REGEX` with an octet-validated pattern that is not preceded by `/`
 
 ```ts
 const IPV4_OCTET = String.raw`(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)`
-const IPV4_REGEX = new RegExp(String.raw`(?<![\w/.])(?:${IPV4_OCTET}\.){3}${IPV4_OCTET}(?![\w.])`, 'g')
+const IPV4_REGEX = new RegExp(
+  String.raw`(?<![\w/.])(?:${IPV4_OCTET}\.){3}${IPV4_OCTET}(?![\w.])`,
+  'g'
+)
 ```
 
 Add a bounded IPv6 pattern (full and `::`-compressed forms, hex groups of 1–4, at most 8 groups; a lookbehind-free approximation is acceptable if it does not match plain hex words):
 
 ```ts
-const IPV6_REGEX = /(?<![\w:])(?:[0-9a-f]{1,4}:){2,7}(?::?[0-9a-f]{1,4}){1,6}(?![\w:])/gi
+const IPV6_REGEX =
+  /(?<![\w:])(?:[0-9a-f]{1,4}:){2,7}(?::?[0-9a-f]{1,4}){1,6}(?![\w:])/gi
 ```
 
 Wire `IPV6_REGEX` into `redactString` after IPv4. Keep both at module top level. Biome's `useTopLevelRegex` is satisfied by top-level `new RegExp` too, but if it complains, write the IPv4 pattern as a literal.
@@ -230,10 +235,10 @@ In `adapters/shared.ts` `attemptPost`: `const detail = sanitizeLogText((await re
 In `sentry.ts` `parseDsn`, replace the message with one that names the missing component and echoes at most `url?.protocol` and `url?.host`:
 
 ```ts
-    throw transportError(
-      'Sentry',
-      `invalid DSN (expected https://<public-key>@<host>/<project-id>; ${describeDsnProblem(url, projectId)})`
-    )
+throw transportError(
+  'Sentry',
+  `invalid DSN (expected https://<public-key>@<host>/<project-id>; ${describeDsnProblem(url, projectId)})`
+)
 ```
 
 where `describeDsnProblem` returns `'could not be parsed as a URL'`, `'missing public key'`, or `'missing project id'`.
@@ -288,4 +293,4 @@ In `enrichers.ts`:
 - `isSensitiveKey` is now applied to query parameter names; adding a key to `DEFAULT_REDACT_KEYS` widens URL masking too.
 - The desertant wrapper walks `meta.request.url` as well, so users with a model get both passes; that is intended.
 - Reviewer focus: enumerability preserved on the cloned error (a `cause` that becomes enumerable would start appearing in JSON responses from `HttpError.toJSON()` — verify `HttpError`'s `internal` stays non-enumerable after redaction).
-- Deferred: an allow-list for query params users *want* logged (e.g. `page`), and rendering redacted values as the key-preserving `token=[REDACTED]` in the console pathname when `logQueryParams` is on (it already does, since `pathname+search` is derived from the redacted request).
+- Deferred: an allow-list for query params users _want_ logged (e.g. `page`), and rendering redacted values as the key-preserving `token=[REDACTED]` in the console pathname when `logQueryParams` is on (it already does, since `pathname+search` is derived from the redacted request).

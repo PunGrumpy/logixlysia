@@ -1,17 +1,8 @@
 # Plan 024: Export `HttpError`, add the promised named export, and lock the published API surface
 
-> **Executor instructions**: Follow this plan step by step. Run every
-> verification command and confirm the expected result before moving to the
-> next step. If anything in the "STOP conditions" section occurs, stop and
-> report — do not improvise. When done, update the status row for this plan
-> in `plans/README.md` — unless a reviewer dispatched you and told you they
-> maintain the index.
+> **Executor instructions**: Follow this plan step by step. Run every verification command and confirm the expected result before moving to the next step. If anything in the "STOP conditions" section occurs, stop and report — do not improvise. When done, update the status row for this plan in `plans/README.md` — unless a reviewer dispatched you and told you they maintain the index.
 >
-> **Drift check (run first)**:
-> `git diff --stat 478f40d..HEAD -- packages/logixlysia/src/index.ts packages/logixlysia/package.json packages/logixlysia/bunfig.toml packages/logixlysia/__tests__ .github/workflows/release.yml turbo.json apps/docs/content/api-reference.mdx`
-> If any in-scope file changed since this plan was written, compare the
-> "Current state" excerpts against the live code before proceeding; on a
-> mismatch, treat it as a STOP condition.
+> **Drift check (run first)**: `git diff --stat 478f40d..HEAD -- packages/logixlysia/src/index.ts packages/logixlysia/package.json packages/logixlysia/bunfig.toml packages/logixlysia/__tests__ .github/workflows/release.yml turbo.json apps/docs/content/api-reference.mdx` If any in-scope file changed since this plan was written, compare the "Current state" excerpts against the live code before proceeding; on a mismatch, treat it as a STOP condition.
 
 ## Status
 
@@ -35,7 +26,7 @@ Both slipped because nothing pins the published surface. The package now has 14 
 Files and roles:
 
 - `packages/logixlysia/src/index.ts` — plugin factory and the package's root barrel. Lines 281–320 are the export block.
-- `packages/logixlysia/src/interfaces.ts` — compatibility barrel; line 2 re-exports `HttpError` as a value, but the root barrel only re-exports *types* from it.
+- `packages/logixlysia/src/interfaces.ts` — compatibility barrel; line 2 re-exports `HttpError` as a value, but the root barrel only re-exports _types_ from it.
 - `packages/logixlysia/src/errors.ts` — defines `HttpError`, `HttpErrorInit`, `HttpErrorPayload` (all exported from that module).
 - `packages/logixlysia/package.json` — `exports` map (14 subpaths), `files: ["dist", "README.md"]`.
 - `packages/logixlysia/bunup.config.ts` — 14 build entries matching the exports map.
@@ -128,7 +119,7 @@ Conventions:
 ## Commands you will need
 
 | Purpose | Command | Expected on success |
-|---|---|---|
+| --- | --- | --- |
 | Install | `bun install` (repo root) | exit 0 |
 | Build package | `cd packages/logixlysia && bun run build` | `✓ Build completed`, `dist/*.js` for 14 entries |
 | Typecheck | `bun run typecheck` (repo root) | `Tasks: 5 successful` |
@@ -235,28 +226,39 @@ import packageJson from '../../package.json'
 const packageRoot = join(import.meta.dir, '..', '..')
 const distReady = existsSync(join(packageRoot, 'dist', 'index.js'))
 
-type ExportEntry = string | { import?: string; types?: string; default?: string }
+type ExportEntry =
+  string | { import?: string; types?: string; default?: string }
 
 const subpaths = Object.entries(
   packageJson.exports as Record<string, ExportEntry>
-).filter(([key, value]) => key !== './package.json' && typeof value !== 'string')
+).filter(
+  ([key, value]) => key !== './package.json' && typeof value !== 'string'
+)
 
 describe('published API surface', () => {
-  test.skipIf(!distReady)('every exports subpath resolves and its named exports match the snapshot', async () => {
-    const surface: Record<string, string[]> = {}
-    for (const [subpath, entry] of subpaths) {
-      const target = typeof entry === 'string' ? entry : entry.import
-      if (!target) {
-        throw new Error(`exports["${subpath}"] has no import target`)
+  test.skipIf(!distReady)(
+    'every exports subpath resolves and its named exports match the snapshot',
+    async () => {
+      const surface: Record<string, string[]> = {}
+      for (const [subpath, entry] of subpaths) {
+        const target = typeof entry === 'string' ? entry : entry.import
+        if (!target) {
+          throw new Error(`exports["${subpath}"] has no import target`)
+        }
+        const mod = (await import(join(packageRoot, target))) as Record<
+          string,
+          unknown
+        >
+        surface[subpath] = Object.keys(mod).sort()
       }
-      const mod = (await import(join(packageRoot, target))) as Record<string, unknown>
-      surface[subpath] = Object.keys(mod).sort()
+      expect(surface).toMatchSnapshot()
     }
-    expect(surface).toMatchSnapshot()
-  })
+  )
 
   test('every bunup entry has an exports subpath and vice versa', async () => {
-    const bunupConfig = (await import('../../bunup.config')).default as { entry: string[] }
+    const bunupConfig = (await import('../../bunup.config')).default as {
+      entry: string[]
+    }
     const built = bunupConfig.entry
       .map(file => file.replace(/^src\//, '').replace(/\.ts$/, ''))
       .map(name => (name === 'index' ? '.' : `./${name}`))
@@ -297,13 +299,13 @@ Copy the repo-root `LICENSE` to `packages/logixlysia/LICENSE` (a real copy, not 
 In `.github/workflows/release.yml`, insert a step between `🔽 Install Dependencies` and `🦊 Build Logixlysia`:
 
 ```yaml
-      - name: 🔍 Lint, typecheck and test
-        env:
-          CI: true
-        run: |
-          bun run lint
-          bun run typecheck
-          bun run test
+- name: 🔍 Lint, typecheck and test
+  env:
+    CI: true
+  run: |
+    bun run lint
+    bun run typecheck
+    bun run test
 ```
 
 Keep the existing build step (the publish script rebuilds anyway; leaving it is harmless).

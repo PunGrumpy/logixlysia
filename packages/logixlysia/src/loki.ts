@@ -1,13 +1,15 @@
 import {
-  type AdapterTransport,
-  type BatchTransportOptions,
   createHttpTransport,
   defaultBody,
   envString,
-  type LogEntry,
   stripTrailingSlashes,
   toUnixNanos,
   transportError
+} from './adapters/shared'
+import type {
+  AdapterTransport,
+  BatchTransportOptions,
+  LogEntry
 } from './adapters/shared'
 import type { LogLevel } from './interfaces'
 
@@ -51,7 +53,7 @@ export interface LokiTransportOptions extends BatchTransportOptions {
  * with `service_name` and `level` (plus your static labels); the log line is
  * the message and full meta object as JSON, ready for LogQL's `| json`.
  *
- * @throws When no URL is configured.
+ * @throws {Error} When no URL is configured.
  */
 export const createLokiTransport = (
   options: LokiTransportOptions = {}

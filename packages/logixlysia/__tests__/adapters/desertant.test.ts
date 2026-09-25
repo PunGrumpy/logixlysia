@@ -1,5 +1,4 @@
 import { describe, expect, test } from 'bun:test'
-
 import type { NeuralCallOptions, NeuralRedactor } from '../../src/desertant'
 import { withRedaction } from '../../src/desertant'
 import type { LogLevel, Transport } from '../../src/interfaces'
@@ -30,7 +29,7 @@ const metaOf = (records: Recorded[], index = 0): Record<string, unknown> => {
   return meta
 }
 
-const NAME_PATTERN = /Anna Müller/g
+const NAME_PATTERN = /Anna Müller/gu
 
 /**
  * Stands in for `@desert-ant-labs/redact`: masks one known name so a test can
@@ -211,9 +210,11 @@ describe('logixlysia/desertant', () => {
       redaction: (text: string) => {
         const ms = delay
         delay = 0
-        return new Promise(resolve => {
-          setTimeout(() => resolve({ redactedText: text }), ms)
-        })
+        const { promise, resolve } = Promise.withResolvers<{
+          redactedText: string
+        }>()
+        setTimeout(() => resolve({ redactedText: text }), ms)
+        return promise
       }
     }
     const transport = withRedaction(sink, slowFirst)

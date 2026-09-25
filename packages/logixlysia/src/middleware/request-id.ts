@@ -1,7 +1,7 @@
 import type { RequestIdConfig } from '../interfaces'
 
 const DEFAULT_HEADER = 'X-Request-Id'
-const VALID_REQUEST_ID = /^[A-Za-z0-9._-]{1,128}$/
+const VALID_REQUEST_ID = /^[A-Za-z0-9._-]{1,128}$/u
 
 export interface ResolvedRequestIdConfig {
   enabled: boolean

@@ -27,7 +27,7 @@ afterAll(() => {
 
 type ConsoleMethod = 'debug' | 'error' | 'info' | 'log' | 'warn'
 
-const DATE_PATTERN_REGEX = /\d{4}-\d{2}-\d{2}/
+const DATE_PATTERN_REGEX = /\d{4}-\d{2}-\d{2}/u
 
 /** Creates a logger with `config`, runs `act` against it, and returns the string
  * logged to `console[method]` (as an internal-console-sink test always emits
@@ -52,7 +52,7 @@ describe('colorized console output', () => {
       logger.info(request, 'hi')
     })
 
-    expect(output).toContain('\u001b[')
+    expect(output).toContain('\u001B[')
   })
 
   test('colors GET method green and bold', () => {
@@ -63,7 +63,7 @@ describe('colorized console output', () => {
       logger.info(request, 'hi')
     })
 
-    expect(output).toContain('\u001b[32m\u001b[1mGET')
+    expect(output).toContain('\u001B[32m\u001B[1mGET')
   })
 
   test('colors POST method blue and bold', () => {
@@ -74,7 +74,7 @@ describe('colorized console output', () => {
       logger.info(request, 'hi')
     })
 
-    expect(output).toContain('\u001b[34m\u001b[1mPOST')
+    expect(output).toContain('\u001B[34m\u001B[1mPOST')
   })
 
   test('colors DELETE method red and bold', () => {
@@ -85,7 +85,7 @@ describe('colorized console output', () => {
       logger.info(request, 'hi')
     })
 
-    expect(output).toContain('\u001b[31m\u001b[1mDELETE')
+    expect(output).toContain('\u001B[31m\u001B[1mDELETE')
   })
 
   test('colors a 7-letter method (OPTIONS) with its dedicated cyan.bold', () => {
@@ -96,7 +96,7 @@ describe('colorized console output', () => {
       logger.info(request, 'hi')
     })
 
-    expect(output).toContain('\u001b[36m\u001b[1mOPTIONS')
+    expect(output).toContain('\u001B[36m\u001B[1mOPTIONS')
   })
 
   test('colors a 7-letter method (CONNECT) with its dedicated cyanBright.bold', () => {
@@ -107,7 +107,7 @@ describe('colorized console output', () => {
       logger.info(request, 'hi')
     })
 
-    expect(output).toContain('\u001b[96m\u001b[1mCONNECT')
+    expect(output).toContain('\u001B[96m\u001B[1mCONNECT')
   })
 
   test('useColors false keeps the {method} token byte-identical to plain padEnd', () => {
@@ -132,67 +132,67 @@ describe('colorized console output', () => {
   test('colors 200 status green', () => {
     const request = createMockRequest('http://localhost/hello')
     const output = capture({ disableFileLogging: true }, 'info', logger => {
-      logger.log('INFO', request, { status: 200 }, { beforeTime: BigInt(0) })
+      logger.log('INFO', request, { status: 200 }, { beforeTime: 0n })
     })
 
-    expect(output).toContain('\u001b[32m')
+    expect(output).toContain('\u001B[32m')
   })
 
   test('colors 404 status yellow', () => {
     const request = createMockRequest('http://localhost/hello')
     const output = capture({ disableFileLogging: true }, 'info', logger => {
-      logger.log('INFO', request, { status: 404 }, { beforeTime: BigInt(0) })
+      logger.log('INFO', request, { status: 404 }, { beforeTime: 0n })
     })
 
-    expect(output).toContain('\u001b[33m')
+    expect(output).toContain('\u001B[33m')
   })
 
   test('colors 500 status red', () => {
     const request = createMockRequest('http://localhost/hello')
     const output = capture({ disableFileLogging: true }, 'info', logger => {
-      logger.log('INFO', request, { status: 500 }, { beforeTime: BigInt(0) })
+      logger.log('INFO', request, { status: 500 }, { beforeTime: 0n })
     })
 
-    expect(output).toContain('\u001b[31m')
+    expect(output).toContain('\u001B[31m')
   })
 
   test('colors 301 status cyan', () => {
     const request = createMockRequest('http://localhost/hello')
     const output = capture({ disableFileLogging: true }, 'info', logger => {
-      logger.log('INFO', request, { status: 301 }, { beforeTime: BigInt(0) })
+      logger.log('INFO', request, { status: 301 }, { beforeTime: 0n })
     })
 
-    expect(output).toContain('\u001b[36m')
+    expect(output).toContain('\u001B[36m')
   })
 
   test('status below 200 is colored gray', () => {
     const request = createMockRequest('http://localhost/hello')
     const output = capture({ disableFileLogging: true }, 'info', logger => {
-      logger.log('INFO', request, { status: 100 }, { beforeTime: BigInt(0) })
+      logger.log('INFO', request, { status: 100 }, { beforeTime: 0n })
     })
 
-    expect(output).toContain('\u001b[90m100')
+    expect(output).toContain('\u001B[90m100')
   })
 
   test('level chip is red-background with fox for a 500 error', () => {
     const request = createMockRequest('http://localhost/hello')
-    const store = { beforeTime: BigInt(0) }
+    const store = { beforeTime: 0n }
     const output = capture({ disableFileLogging: true }, 'error', logger => {
       logger.handleHttpError(request, { message: 'boom', status: 500 }, store)
     })
 
-    expect(output).toContain('\u001b[41m')
+    expect(output).toContain('\u001B[41m')
     expect(output).toContain('🦊')
   })
 
   test('level chip is yellow-background for a 404 error', () => {
     const request = createMockRequest('http://localhost/hello')
-    const store = { beforeTime: BigInt(0) }
+    const store = { beforeTime: 0n }
     const output = capture({ disableFileLogging: true }, 'warn', logger => {
       logger.handleHttpError(request, { message: 'nope', status: 404 }, store)
     })
 
-    expect(output).toContain('\u001b[43m')
+    expect(output).toContain('\u001B[43m')
   })
 
   test('{level} token colors DEBUG bgBlue and WARNING bgYellow', () => {
@@ -209,8 +209,8 @@ describe('colorized console output', () => {
       logger.warn(request, 'w')
     })
 
-    expect(debugOutput).toContain('\u001b[44m')
-    expect(warnOutput).toContain('\u001b[43m')
+    expect(debugOutput).toContain('\u001B[44m')
+    expect(warnOutput).toContain('\u001B[43m')
   })
 
   test('debug level icon uses bgBlue', () => {
@@ -219,7 +219,7 @@ describe('colorized console output', () => {
       logger.debug(request, 'd')
     })
 
-    expect(output).toContain('\u001b[44m')
+    expect(output).toContain('\u001B[44m')
     expect(output).toContain('🦊')
   })
 
@@ -234,7 +234,7 @@ describe('colorized console output', () => {
       }
     )
 
-    expect(output).toContain('\u001b[31m')
+    expect(output).toContain('\u001B[31m')
     expect(output).toContain('⚡ slow')
   })
 
@@ -249,7 +249,7 @@ describe('colorized console output', () => {
       }
     )
 
-    expect(output).toContain('\u001b[33m')
+    expect(output).toContain('\u001B[33m')
     expect(output).not.toContain('⚡ slow')
   })
 
@@ -272,7 +272,7 @@ describe('colorized console output', () => {
       }
     )
 
-    expect(output).toContain('\u001b[32m')
+    expect(output).toContain('\u001B[32m')
     expect(output).not.toContain('⚡ slow')
   })
 
@@ -286,7 +286,7 @@ describe('colorized console output', () => {
       }
     )
 
-    expect(output).toContain('\u001b[90m')
+    expect(output).toContain('\u001B[90m')
     expect(output).toMatch(DATE_PATTERN_REGEX)
   })
 
@@ -300,7 +300,7 @@ describe('colorized console output', () => {
       }
     )
 
-    expect(output).toContain('\u001b[36muserId')
+    expect(output).toContain('\u001B[36muserId')
   })
 
   test('context tree stringifies null, undefined, and Error values', () => {
@@ -338,7 +338,7 @@ describe('colorized console output', () => {
 
     // The tree already renders userId, so the inline {context} token is empty.
     expect(output).not.toContain('{"userId"')
-    expect(output).toContain('\u001b[36muserId')
+    expect(output).toContain('\u001B[36muserId')
   })
 
   test('useColors false suppresses ANSI codes even on a TTY', () => {
@@ -351,7 +351,7 @@ describe('colorized console output', () => {
       }
     )
 
-    expect(output).not.toContain('\u001b[')
+    expect(output).not.toContain('\u001B[')
   })
 
   test('service token uses customLogFormat with the service name', () => {
@@ -369,7 +369,7 @@ describe('colorized console output', () => {
     )
 
     expect(output).toContain('[auth-api]')
-    expect(output).toContain('\u001b[')
+    expect(output).toContain('\u001B[')
   })
 
   test('ip token resolves from x-forwarded-for when config.ip is true', () => {

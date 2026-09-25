@@ -1,12 +1,11 @@
 import {
-  type AdapterTransport,
-  type BatchTransportOptions,
   createHttpTransport,
   defaultBody,
   envString,
   stripTrailingSlashes,
   transportError
 } from './adapters/shared'
+import type { AdapterTransport, BatchTransportOptions } from './adapters/shared'
 
 const DEFAULT_ENDPOINT = 'https://in.logs.betterstack.com'
 
@@ -30,7 +29,7 @@ export interface BetterStackTransportOptions extends BatchTransportOptions {
  * Each log posts as JSON with a `dt` timestamp, `level`, `message`, and the
  * full meta object — all queryable in Live tail and SQL.
  *
- * @throws When no source token is configured.
+ * @throws {Error} When no source token is configured.
  */
 export const createBetterStackTransport = (
   options: BetterStackTransportOptions = {}

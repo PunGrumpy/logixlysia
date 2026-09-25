@@ -1,4 +1,3 @@
-// biome-ignore lint/performance/noBarrelFile: compatibility barrel
 export { HttpError } from './errors'
 export type {
   FormattingConfig,

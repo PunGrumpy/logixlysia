@@ -1,17 +1,8 @@
 # Plan 032: Make gzip failures non-fatal to retention, honour `SYS:`/`UTC:` timestamp prefixes, and validate thresholds and `maxFiles`
 
-> **Executor instructions**: Follow this plan step by step. Run every
-> verification command and confirm the expected result before moving to the
-> next step. If anything in the "STOP conditions" section occurs, stop and
-> report — do not improvise. When done, update the status row for this plan
-> in `plans/README.md` — unless a reviewer dispatched you and told you they
-> maintain the index.
+> **Executor instructions**: Follow this plan step by step. Run every verification command and confirm the expected result before moving to the next step. If anything in the "STOP conditions" section occurs, stop and report — do not improvise. When done, update the status row for this plan in `plans/README.md` — unless a reviewer dispatched you and told you they maintain the index.
 >
-> **Drift check (run first)**:
-> `git diff --stat 5522d31..HEAD -- packages/logixlysia/src/output/rotation-manager.ts packages/logixlysia/src/logger/create-logger.ts packages/logixlysia/src/config/resolve-options.ts packages/logixlysia/src/utils/rotation.ts packages/logixlysia/__tests__/output packages/logixlysia/__tests__/logger packages/logixlysia/__tests__/config packages/logixlysia/__tests__/utils/rotation.test.ts`
-> If any in-scope file changed since this plan was written, compare the
-> "Current state" excerpts against the live code before proceeding; on a
-> mismatch, treat it as a STOP condition.
+> **Drift check (run first)**: `git diff --stat 5522d31..HEAD -- packages/logixlysia/src/output/rotation-manager.ts packages/logixlysia/src/logger/create-logger.ts packages/logixlysia/src/config/resolve-options.ts packages/logixlysia/src/utils/rotation.ts packages/logixlysia/__tests__/output packages/logixlysia/__tests__/logger packages/logixlysia/__tests__/config packages/logixlysia/__tests__/utils/rotation.test.ts` If any in-scope file changed since this plan was written, compare the "Current state" excerpts against the live code before proceeding; on a mismatch, treat it as a STOP condition.
 
 ## Status
 
@@ -65,7 +56,9 @@ Three small, verified defects:
 `utils/rotation.ts:65–72`:
 
 ```ts
-export const parseRetention = (value: number | string): { type: 'count' | 'time'; value: number } => {
+export const parseRetention = (
+  value: number | string
+): { type: 'count' | 'time'; value: number } => {
   if (typeof value === 'number') {
     return { type: 'count', value }
   }
@@ -80,7 +73,7 @@ Tests to model after: `__tests__/output/rotation-manager.test.ts`, `__tests__/lo
 ## Commands you will need
 
 | Purpose | Command | Expected |
-|---|---|---|
+| --- | --- | --- |
 | Install | `bun install --frozen-lockfile` | exit 0 |
 | Typecheck / Lint / Format | `bun run typecheck` / `bun run lint` / `bun run format` | exit 0 |
 | Targeted | `cd packages/logixlysia && bun test __tests__/output __tests__/logger __tests__/config __tests__/utils/rotation.test.ts` | all pass |
@@ -114,7 +107,7 @@ Tests to model after: `__tests__/output/rotation-manager.test.ts`, `__tests__/lo
 
 In `performRotation`, wrap the `compressFile` call: `try { await compressFile(rotated, onError) } catch { /* already reported inside compressFile */ }`, so cleanup always runs. Keep `compressFile`'s own report and rethrow (other callers may rely on the throw), but make sure the rotation path reports once: since `performRotation` now swallows, the file sink's catch no longer sees it. Add a comment explaining the single-report contract.
 
-**Verify**: `rotation-manager.test.ts` new test `'retention cleanup still runs when compression fails'`: create a temp log dir with 3 rotated files, make compression fail (e.g. `mock.module('node:zlib')`? simpler: create the rotated file's `.gz` target as a *directory* so `writeFile` fails with EISDIR), call `performRotation(path, { compress: true, maxFiles: 1 }, onError)`; assert `onError` called exactly once and only one rotated file remains.
+**Verify**: `rotation-manager.test.ts` new test `'retention cleanup still runs when compression fails'`: create a temp log dir with 3 rotated files, make compression fail (e.g. `mock.module('node:zlib')`? simpler: create the rotated file's `.gz` target as a _directory_ so `writeFile` fails with EISDIR), call `performRotation(path, { compress: true, maxFiles: 1 }, onError)`; assert `onError` called exactly once and only one rotated file remains.
 
 ### Step 2: Timestamp prefixes
 
@@ -124,7 +117,7 @@ In `formatTimestamp`: detect a `SYS:` or `UTC:` prefix (case-insensitive). `SYS:
 
 ### Step 3: Validation
 
-- `parseRetention`: for numbers, require `Number.isInteger(value) && value > 0`, else throw `new Error(\`maxFiles must be a positive integer, got ${value}\`)` (it is wrapped by `validateLogRotation` into the standard message).
+- `parseRetention`: for numbers, require `Number.isInteger(value) && value > 0`, else throw `new Error(\`maxFiles must be a positive integer, got ${value}\`)`(it is wrapped by`validateLogRotation` into the standard message).
 - `resolve-options.ts`: add `validateFormatting(config)`: if either threshold is defined it must be a finite non-negative number; if both are defined, `slowThreshold <= verySlowThreshold`, else throw `` `logixlysia: invalid formatting config — slowThreshold (${slow}) must not exceed verySlowThreshold (${verySlow})` ``. Call it from `resolveOptions` after `validateSampling`.
 - Update the `@default`/doc comments in `types/config.ts` for `slowThreshold`, `verySlowThreshold`, `maxFiles`, `translateTime`.
 

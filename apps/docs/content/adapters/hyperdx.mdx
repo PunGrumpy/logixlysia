@@ -38,7 +38,7 @@ const app = new Elysia()
 ## Environment Variables
 
 | Variable | Required | Description |
-|----------|----------|-------------|
+| --- | --- | --- |
 | `HYPERDX_API_KEY` | Yes | Ingestion key, sent as the `authorization` header |
 | `HYPERDX_OTLP_ENDPOINT` | No | OTLP HTTP base URL (default `https://in-otel.hyperdx.io`) |
 | `HYPERDX_SERVICE_NAME` | No | Value of the `service.name` resource attribute |
@@ -54,7 +54,7 @@ const hyperdx = createHyperDXTransport({
 ```
 
 | Option | Type | Default | Description |
-|--------|------|---------|-------------|
+| --- | --- | --- | --- |
 | `apiKey` | `string` | `HYPERDX_API_KEY` | Ingestion API key |
 | `endpoint` | `string` | `https://in-otel.hyperdx.io` | OTLP HTTP base URL — `/v1/logs` is appended |
 | `serviceName` | `string` | `logixlysia` | `service.name` resource attribute |
@@ -66,13 +66,13 @@ Plus the shared batching options: `maxBatchSize`, `flushIntervalMs`, `timeout`, 
 
 Logs post to `{endpoint}/v1/logs` as OTLP JSON. Levels map to OpenTelemetry severity numbers (`DEBUG` → 5, `INFO` → 9, `WARNING` → 13, `ERROR` → 17), and meta fields flatten into dot-notation attributes:
 
-| Attribute | Example |
-|-----------|---------|
-| `request.method` | `GET` |
-| `request.url` | `http://localhost:3000/users` |
-| `status` | `200` |
-| `durationMs` | `12.4` |
-| `context.requestId` | `0d5e…` |
+| Attribute           | Example                       |
+| ------------------- | ----------------------------- |
+| `request.method`    | `GET`                         |
+| `request.url`       | `http://localhost:3000/users` |
+| `status`            | `200`                         |
+| `durationMs`        | `12.4`                        |
+| `context.requestId` | `0d5e…`                       |
 
 Pair this with [`logixlysia/otel`](/docs/integrations/otel) to include `context.trace_id` / `context.span_id` and correlate logs with traces.
 
@@ -89,5 +89,5 @@ createHyperDXTransport({
 
 ## Troubleshooting
 
-- **`401`** — the API key is wrong; use the *ingestion* key, not a personal API key.
+- **`401`** — the API key is wrong; use the _ingestion_ key, not a personal API key.
 - **Nothing arrives** — logs flush in batches (2 s by default); call `flush()` before short-lived processes exit.

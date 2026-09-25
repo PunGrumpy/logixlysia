@@ -371,7 +371,10 @@ const interactiveRoutes = [
 </section>
 
 <script>
-  const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
+  const sleep = (ms: number): Promise<void> =>
+    new Promise(resolve => {
+      setTimeout(resolve, ms)
+    })
 
   const terminal = document.querySelector('[data-term]')
   const body = terminal?.querySelector<HTMLElement>('[data-term-body]')
@@ -505,12 +508,11 @@ const interactiveRoutes = [
       await sleep(3200)
     }
 
-    const play = () => {
-      playRound().then(() => {
-        if (!interactive) {
-          play()
-        }
-      })
+    const play = async () => {
+      await playRound()
+      if (!interactive) {
+        play()
+      }
     }
     play()
   }

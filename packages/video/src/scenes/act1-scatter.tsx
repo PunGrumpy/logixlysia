@@ -33,7 +33,7 @@ const WORDS: Word[] = [
   { at: 2.4, text: 'log', x: 8, y: 11 },
   { at: 2.6, text: 'lines', x: 11, y: 10 },
   { at: 2.8, text: 'come', x: 16, y: 12 },
-  { at: 3.0, text: 'out.', x: 21, y: 11 },
+  { at: 3, text: 'out.', x: 21, y: 11 },
   { at: 4.4, size: CLOSER_SIZE, text: 'Which', x: 5, y: 14 },
   { at: 4.6, size: CLOSER_SIZE, text: 'one', x: 12, y: 15 },
   { at: 4.8, size: CLOSER_SIZE, text: 'failed?', x: 17, y: 14 }
@@ -54,7 +54,7 @@ const CHIPS: Chip[] = [
   { at: 2.5, rot: -2, text: 'Validating…', x: 23, y: 13 },
   { at: 3.1, rot: -5, text: 'Charging card', x: 2, y: 12 },
   { at: 3.6, rot: 3, text: 'Something went wrong', x: 12, y: 2 },
-  { at: 4.0, rot: 5, text: 'Retrying', x: 27, y: 16 },
+  { at: 4, rot: 5, text: 'Retrying', x: 27, y: 16 },
   { at: 4.3, rot: -4, text: 'Done', x: 8, y: 17 }
 ]
 

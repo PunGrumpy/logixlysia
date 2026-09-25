@@ -18,10 +18,8 @@ export const createKeyedMutex = (): KeyedMutex => {
   const acquire = async (key: string): Promise<() => void> => {
     const prior = locks.get(key) ?? Promise.resolve()
 
-    let release: () => void
-    const current = new Promise<void>(resolve => {
-      release = resolve
-    })
+    const { promise: current, resolve: release }: PromiseWithResolvers<void> =
+      Promise.withResolvers()
 
     // Register before awaiting: same-tick callers must chain onto THIS lock,
     // not the one that was current when they called acquire().
@@ -30,7 +28,7 @@ export const createKeyedMutex = (): KeyedMutex => {
     await prior
 
     return () => {
-      release?.()
+      release()
       if (locks.get(key) === current) {
         locks.delete(key)
       }

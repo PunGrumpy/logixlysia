@@ -17,7 +17,7 @@ jobs:
       - name: 😵 Check Conflicts
         uses: mschilde/auto-label-merge-conflicts@3fdaf1c8b3f8e5b0f88753d9cb3c9c779370b3ef # master
         with:
-          CONFLICT_LABEL_NAME: "conflict"
+          CONFLICT_LABEL_NAME: 'conflict'
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           MAX_RETRIES: 5
           WAIT_MS: 5000

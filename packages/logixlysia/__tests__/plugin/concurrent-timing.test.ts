@@ -1,11 +1,8 @@
 import { describe, expect, test } from 'bun:test'
 import { Elysia } from 'elysia'
-
-import logixlysia from '../../src'
+import { logixlysia } from '../../src'
 import type { Options } from '../../src/interfaces'
-
-const sleep = (ms: number): Promise<void> =>
-  new Promise(resolve => setTimeout(resolve, ms))
+import { sleep } from '../_helpers/sleep'
 
 describe('logixlysia plugin - per-request timing under concurrency', () => {
   test('overlapping requests report independent, correct durations', async () => {

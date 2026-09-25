@@ -21,12 +21,15 @@ Access Pino through the store in your route handlers:
 ```ts
 app.get('/users/:id', ({ store, params }) => {
   const { pino } = store
-  
-  pino.info({
-    userId: params.id,
-    action: 'view_profile'
-  }, 'User profile accessed')
-  
+
+  pino.info(
+    {
+      userId: params.id,
+      action: 'view_profile'
+    },
+    'User profile accessed'
+  )
+
   return { user: 'data' }
 })
 ```
@@ -44,7 +47,7 @@ export const logixlysiaIns = logixlysia({
     logFilePath: './logs/app.log',
     pino: {
       level: 'info',
-      base: { 
+      base: {
         service: 'my-api',
         version: '1.0.0'
       }
@@ -63,7 +66,7 @@ import { logger } from '../logger'
 export class OrderService {
   async processOrder(orderId: string) {
     logger.info({ orderId }, 'Processing order')
-    
+
     try {
       // ... business logic
       logger.info({ orderId }, 'Order processed successfully')
@@ -225,13 +228,14 @@ logixlysia({
 app.get('/example', ({ store }) => {
   // This log goes to pino/file transport
   store.pino.info({ feature: 'pino' }, 'pino log example')
-  
+
   // HTTP request logs go to Logixlysia transports (if configured)
   // or to console/file based on logixlysia config
 })
 ```
 
 This separation allows you to:
+
 - Use Pino transports for structured application logs (`store.pino.*`)
 - Use Logixlysia transports for HTTP request/response logs
 - Configure different destinations for different log types
@@ -243,13 +247,16 @@ This separation allows you to:
 ```ts
 app.get('/users/:id', ({ store, params }) => {
   const { pino } = store
-  
-  pino.info({
-    userId: params.id,
-    action: 'view_profile',
-    timestamp: Date.now()
-  }, 'User profile viewed')
-  
+
+  pino.info(
+    {
+      userId: params.id,
+      action: 'view_profile',
+      timestamp: Date.now()
+    },
+    'User profile viewed'
+  )
+
   return user
 })
 ```
@@ -261,15 +268,15 @@ Create child loggers with context:
 ```ts
 app.get('/api/orders/:id', ({ store, params }) => {
   const { pino } = store
-  
-  const orderLogger = pino.child({ 
+
+  const orderLogger = pino.child({
     orderId: params.id,
-    module: 'order-service' 
+    module: 'order-service'
   })
-  
+
   orderLogger.info('Fetching order details')
   orderLogger.debug({ query: 'SELECT * FROM orders WHERE id = ?' })
-  
+
   return order
 })
 ```
@@ -280,16 +287,19 @@ app.get('/api/orders/:id', ({ store, params }) => {
 app.post('/api/process', async ({ store, body }) => {
   const { pino } = store
   const startTime = Date.now()
-  
+
   const result = await processData(body)
-  
-  pino.info({
-    operation: 'process_data',
-    duration: Date.now() - startTime,
-    itemsProcessed: result.count,
-    success: true
-  }, 'Data processing completed')
-  
+
+  pino.info(
+    {
+      operation: 'process_data',
+      duration: Date.now() - startTime,
+      itemsProcessed: result.count,
+      success: true
+    },
+    'Data processing completed'
+  )
+
   return result
 })
 ```
@@ -299,15 +309,18 @@ app.post('/api/process', async ({ store, body }) => {
 ```ts
 app.get('/api/risky', ({ store }) => {
   const { pino } = store
-  
+
   try {
     performRiskyOperation()
   } catch (error) {
-    pino.error({
-      err: error,
-      operation: 'risky_operation'
-    }, 'Operation failed')
-    
+    pino.error(
+      {
+        err: error,
+        operation: 'risky_operation'
+      },
+      'Operation failed'
+    )
+
     throw error
   }
 })
@@ -336,25 +349,29 @@ logixlysia({
 ## Best Practices
 
 1. **Use Structured Logging** - Pass objects instead of string interpolation
+
    ```ts
    // ✅ Good
    pino.info({ userId: 123, action: 'login' }, 'User logged in')
-   
+
    // ❌ Avoid
    pino.info(`User ${userId} logged in`)
    ```
 
 2. **Create Child Loggers** - For scoped logging with context
+
    ```ts
    const requestLogger = pino.child({ requestId: generateId() })
    ```
 
 3. **Log Performance Metrics** - Track important metrics
+
    ```ts
    pino.info({ duration: 150, operation: 'db_query' }, 'Query completed')
    ```
 
 4. **Redact Sensitive Data** - Always redact sensitive information
+
    ```ts
    logixlysia({
      config: {
@@ -374,9 +391,10 @@ logixlysia({
    - `trace` - Very detailed debugging
 
 6. **Environment-based Configuration** - Configure differently per environment
+
    ```ts
    const isDev = process.env.NODE_ENV === 'development'
-   
+
    logixlysia({
      config: {
        pino: {
@@ -388,10 +406,11 @@ logixlysia({
    ```
 
 7. **Export Pino for Standalone Use** - Use in services, jobs, and utilities
+
    ```ts
    // logger.ts
    export const logger = logixlysiaIns.store.pino
-   
+
    // services/user.service.ts
    import { logger } from '../logger'
    logger.info({ userId }, 'User updated')

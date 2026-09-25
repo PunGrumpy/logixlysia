@@ -1,6 +1,6 @@
 import { describe, expect, mock, test } from 'bun:test'
 import { promises as fs } from 'node:fs'
-import { dirname, join } from 'node:path'
+import path from 'node:path'
 import type { Options, SinkErrorContext } from '../../src/interfaces'
 import { logToFile } from '../../src/output/file'
 import { createMockRequest } from '../_helpers/request'
@@ -9,13 +9,13 @@ import { createTempDir, removeTempDir } from '../_helpers/tmp'
 /** Owner/group/other permission bits as a 3-digit octal string, e.g. '600'. */
 const permBits = (mode: number): string => mode.toString(8).slice(-3)
 
-const MESSAGE_ID_REGEX = /msg-(\d+)$/
+const MESSAGE_ID_REGEX = /msg-(?<id>\d+)$/u
 
 describe('logToFile', () => {
   test('writes to file and creates directories', async () => {
     const dir = await createTempDir()
     try {
-      const filePath = join(dir, 'logs', 'app.log')
+      const filePath = path.join(dir, 'logs', 'app.log')
       const options: Options = { config: {} }
 
       await logToFile({
@@ -24,7 +24,7 @@ describe('logToFile', () => {
         level: 'INFO',
         options,
         request: createMockRequest('http://localhost/test'),
-        store: { beforeTime: BigInt(0) }
+        store: { beforeTime: 0n }
       })
 
       const content = await fs.readFile(filePath, 'utf-8')
@@ -37,7 +37,7 @@ describe('logToFile', () => {
   test('rotates and compresses when configured', async () => {
     const dir = await createTempDir()
     try {
-      const filePath = join(dir, 'logs', 'rotate.log')
+      const filePath = path.join(dir, 'logs', 'rotate.log')
       const options: Options = {
         config: {
           logRotation: { compress: true, compression: 'gzip', maxSize: 1 }
@@ -50,10 +50,10 @@ describe('logToFile', () => {
         level: 'INFO',
         options,
         request: createMockRequest('http://localhost/test'),
-        store: { beforeTime: BigInt(0) }
+        store: { beforeTime: 0n }
       })
 
-      const files = await fs.readdir(join(dir, 'logs'))
+      const files = await fs.readdir(path.join(dir, 'logs'))
       const hasGz = files.some(
         name => name.startsWith('rotate.log.') && name.endsWith('.gz')
       )
@@ -66,7 +66,7 @@ describe('logToFile', () => {
   test('includes query parameters when enabled', async () => {
     const dir = await createTempDir()
     try {
-      const filePath = join(dir, 'logs', 'query.log')
+      const filePath = path.join(dir, 'logs', 'query.log')
       const options: Options = {
         config: { logQueryParams: true }
       }
@@ -77,7 +77,7 @@ describe('logToFile', () => {
         level: 'INFO',
         options,
         request: createMockRequest('http://localhost/api/test?user=123'),
-        store: { beforeTime: BigInt(0) }
+        store: { beforeTime: 0n }
       })
 
       const content = await fs.readFile(filePath, 'utf-8')
@@ -90,7 +90,7 @@ describe('logToFile', () => {
   test('sanitizes newlines in message to prevent log-line injection', async () => {
     const dir = await createTempDir()
     try {
-      const filePath = join(dir, 'logs', 'inject.log')
+      const filePath = path.join(dir, 'logs', 'inject.log')
       const options: Options = { config: {} }
 
       await logToFile({
@@ -99,7 +99,7 @@ describe('logToFile', () => {
         level: 'INFO',
         options,
         request: createMockRequest('http://localhost/test'),
-        store: { beforeTime: BigInt(0) }
+        store: { beforeTime: 0n }
       })
 
       const content = await fs.readFile(filePath, 'utf-8')
@@ -114,7 +114,7 @@ describe('logToFile', () => {
   test('creates log files with 0600 mode and directories with 0700 mode by default', async () => {
     const dir = await createTempDir()
     try {
-      const filePath = join(dir, 'logs', 'perms.log')
+      const filePath = path.join(dir, 'logs', 'perms.log')
       const options: Options = { config: {} }
 
       await logToFile({
@@ -123,11 +123,11 @@ describe('logToFile', () => {
         level: 'INFO',
         options,
         request: createMockRequest('http://localhost/test'),
-        store: { beforeTime: BigInt(0) }
+        store: { beforeTime: 0n }
       })
 
       const fileStat = await fs.stat(filePath)
-      const dirStat = await fs.stat(dirname(filePath))
+      const dirStat = await fs.stat(path.dirname(filePath))
       expect(permBits(fileStat.mode)).toBe('600')
       expect(permBits(dirStat.mode)).toBe('700')
     } finally {
@@ -138,7 +138,7 @@ describe('logToFile', () => {
   test('honors a configured logFileMode', async () => {
     const dir = await createTempDir()
     try {
-      const filePath = join(dir, 'logs', 'custom-mode.log')
+      const filePath = path.join(dir, 'logs', 'custom-mode.log')
       const options: Options = { config: { logFileMode: 0o644 } }
 
       await logToFile({
@@ -147,7 +147,7 @@ describe('logToFile', () => {
         level: 'INFO',
         options,
         request: createMockRequest('http://localhost/test'),
-        store: { beforeTime: BigInt(0) }
+        store: { beforeTime: 0n }
       })
 
       const fileStat = await fs.stat(filePath)
@@ -160,7 +160,7 @@ describe('logToFile', () => {
   test('coalesces same-tick writes into one file with all lines intact', async () => {
     const dir = await createTempDir()
     try {
-      const filePath = join(dir, 'logs', 'batch.log')
+      const filePath = path.join(dir, 'logs', 'batch.log')
       const options: Options = { config: {} }
       const total = 50
 
@@ -172,7 +172,7 @@ describe('logToFile', () => {
           level: 'INFO',
           options,
           request: createMockRequest(`http://localhost/test${i}`),
-          store: { beforeTime: BigInt(0) }
+          store: { beforeTime: 0n }
         })
       )
 
@@ -201,7 +201,7 @@ describe('logToFile', () => {
   test('rotates on size and resumes writing into a fresh live file', async () => {
     const dir = await createTempDir()
     try {
-      const filePath = join(dir, 'logs', 'reopen.log')
+      const filePath = path.join(dir, 'logs', 'reopen.log')
       const options: Options = {
         config: { logRotation: { maxSize: 100 } }
       }
@@ -213,7 +213,7 @@ describe('logToFile', () => {
         level: 'INFO',
         options,
         request: createMockRequest('http://localhost/first'),
-        store: { beforeTime: BigInt(0) }
+        store: { beforeTime: 0n }
       })
 
       // Small enough to stay under maxSize: proves the live file was
@@ -224,15 +224,15 @@ describe('logToFile', () => {
         level: 'INFO',
         options,
         request: createMockRequest('http://localhost/second'),
-        store: { beforeTime: BigInt(0) }
+        store: { beforeTime: 0n }
       })
 
-      const entries = await fs.readdir(join(dir, 'logs'))
+      const entries = await fs.readdir(path.join(dir, 'logs'))
       const rotated = entries.filter(name => name.startsWith('reopen.log.'))
       expect(rotated.length).toBe(1)
 
       const rotatedContent = await fs.readFile(
-        join(dir, 'logs', rotated[0]),
+        path.join(dir, 'logs', rotated[0]),
         'utf-8'
       )
       expect(rotatedContent).toContain('x'.repeat(90))
@@ -248,7 +248,7 @@ describe('logToFile', () => {
   test('does not re-rotate immediately after the byte counter resets', async () => {
     const dir = await createTempDir()
     try {
-      const filePath = join(dir, 'logs', 'no-leak.log')
+      const filePath = path.join(dir, 'logs', 'no-leak.log')
       const options: Options = {
         config: { logRotation: { maxSize: 100 } }
       }
@@ -260,7 +260,7 @@ describe('logToFile', () => {
         level: 'INFO',
         options,
         request: createMockRequest('http://localhost/first'),
-        store: { beforeTime: BigInt(0) }
+        store: { beforeTime: 0n }
       })
 
       // Two small writes after the reset: if bytesWritten leaked across the
@@ -272,7 +272,7 @@ describe('logToFile', () => {
         level: 'INFO',
         options,
         request: createMockRequest('http://localhost/second'),
-        store: { beforeTime: BigInt(0) }
+        store: { beforeTime: 0n }
       })
       await logToFile({
         data: { message: 'b' },
@@ -280,10 +280,10 @@ describe('logToFile', () => {
         level: 'INFO',
         options,
         request: createMockRequest('http://localhost/third'),
-        store: { beforeTime: BigInt(0) }
+        store: { beforeTime: 0n }
       })
 
-      const entries = await fs.readdir(join(dir, 'logs'))
+      const entries = await fs.readdir(path.join(dir, 'logs'))
       const rotated = entries.filter(name => name.startsWith('no-leak.log.'))
       expect(rotated.length).toBe(1)
 
@@ -298,7 +298,7 @@ describe('logToFile', () => {
   test('reopened file after rotation keeps the configured mode', async () => {
     const dir = await createTempDir()
     try {
-      const filePath = join(dir, 'logs', 'mode-after-rotate.log')
+      const filePath = path.join(dir, 'logs', 'mode-after-rotate.log')
       const options: Options = {
         config: { logRotation: { maxSize: 50 } }
       }
@@ -309,7 +309,7 @@ describe('logToFile', () => {
         level: 'INFO',
         options,
         request: createMockRequest('http://localhost/first'),
-        store: { beforeTime: BigInt(0) }
+        store: { beforeTime: 0n }
       })
       await logToFile({
         data: { message: 'hello' },
@@ -317,7 +317,7 @@ describe('logToFile', () => {
         level: 'INFO',
         options,
         request: createMockRequest('http://localhost/second'),
-        store: { beforeTime: BigInt(0) }
+        store: { beforeTime: 0n }
       })
 
       const fileStat = await fs.stat(filePath)
@@ -333,9 +333,9 @@ describe('logToFile', () => {
       // A regular file where a directory is expected: mkdir(..., {recursive:
       // true}) fails with ENOTDIR, giving a deterministic, permission-model-
       // independent write failure.
-      const blocker = join(dir, 'not-a-directory')
+      const blocker = path.join(dir, 'not-a-directory')
       await fs.writeFile(blocker, 'x')
-      const filePath = join(blocker, 'nested', 'app.log')
+      const filePath = path.join(blocker, 'nested', 'app.log')
 
       const onError = mock((_context: SinkErrorContext) => {
         throw new Error('hook boom')
@@ -351,7 +351,7 @@ describe('logToFile', () => {
           level: 'INFO',
           options,
           request: createMockRequest('http://localhost/test'),
-          store: { beforeTime: BigInt(0) }
+          store: { beforeTime: 0n }
         })
       ).rejects.toBeDefined()
 

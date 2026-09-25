@@ -1,5 +1,4 @@
 import { describe, expect, test } from 'bun:test'
-
 import { createLokiTransport } from '../../src/loki'
 import { stubEnv, stubFetch } from './helpers'
 
@@ -12,13 +11,13 @@ const CLEAR_ENV = {
   OTEL_SERVICE_NAME: undefined
 }
 
-const NANO_TIMESTAMP = /^\d+$/
+const NANO_TIMESTAMP = /^\d+$/u
 
 interface LokiPayload {
-  streams: Array<{
+  streams: {
     stream: Record<string, string>
     values: [string, string][]
-  }>
+  }[]
 }
 
 describe('logixlysia/loki', () => {

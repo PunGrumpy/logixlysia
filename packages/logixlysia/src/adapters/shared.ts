@@ -1,5 +1,6 @@
 import type { LogLevel, Transport } from '../interfaces'
 import { sanitizeLogText } from '../utils/sanitize'
+import { settle } from '../utils/settle'
 
 /** OpenTelemetry severity numbers for each Logixlysia log level. */
 export const OTEL_SEVERITY: Record<LogLevel, number> = {
@@ -101,8 +102,10 @@ export const resolveEndpoint = (name: string, url: string): string => {
   let parsed: URL
   try {
     parsed = new URL(url)
-  } catch (cause) {
-    throw transportError(name, `invalid endpoint URL '${url}'`, { cause })
+  } catch (error) {
+    throw transportError(name, `invalid endpoint URL '${url}'`, {
+      cause: error
+    })
   }
   if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
     throw transportError(
@@ -119,10 +122,12 @@ const NANOS_PER_MILLI = 1_000_000n
 export const toUnixNanos = (date: Date): string =>
   String(BigInt(date.getTime()) * NANOS_PER_MILLI)
 
-const sleep = (ms: number): Promise<void> =>
-  new Promise(resolve => {
-    setTimeout(resolve, ms)
-  })
+const sleep = (ms: number): Promise<void> => {
+  const { promise, resolve }: PromiseWithResolvers<void> =
+    Promise.withResolvers()
+  setTimeout(resolve, ms)
+  return promise
+}
 
 export interface PostWithRetryInput {
   body: string
@@ -134,13 +139,27 @@ export interface PostWithRetryInput {
   url: string
 }
 
+/**
+ * RFC 9110 `delta-seconds`: digits and nothing else. Reading the value the
+ * way `parseInt` does would take `"1e3"` as 1 s and `"+5"` as 5 s, values the
+ * spec does not allow; those fall through to the date branch instead.
+ */
+const DELTA_SECONDS_REGEX = /^\d+$/u
+
 const parseRetryAfterMs = (value: string): number | undefined => {
-  const seconds = Number.parseInt(value, 10)
-  if (Number.isFinite(seconds) && seconds >= 0) {
-    return seconds * MILLIS_PER_SECOND
+  const trimmed = value.trim()
+  if (DELTA_SECONDS_REGEX.test(trimmed)) {
+    return Number(trimmed) * MILLIS_PER_SECOND
   }
-  const at = Date.parse(value)
-  return Number.isNaN(at) ? undefined : at - Date.now()
+  // `Date.parse` is lenient enough to read `"+5"` and `"5.5"` as dates in
+  // 2001, so a date already in the past is no hint at all rather than a delay
+  // of zero, which would retry with no backoff.
+  const at = Date.parse(trimmed)
+  if (Number.isNaN(at)) {
+    return
+  }
+  const delta = at - Date.now()
+  return delta > 0 ? delta : undefined
 }
 
 /**
@@ -204,9 +223,13 @@ const attemptPost = async (
     }
     return
   }
-  const detail = sanitizeLogText(
-    (await response.text().catch(() => '')).slice(0, ERROR_BODY_PREVIEW_LENGTH)
-  )
+  let body = ''
+  try {
+    body = await response.text()
+  } catch {
+    // An unreadable body only costs the error message its detail.
+  }
+  const detail = sanitizeLogText(body.slice(0, ERROR_BODY_PREVIEW_LENGTH))
   const httpError = new Error(
     `[logixlysia] ${input.name} transport: HTTP ${response.status}${
       detail ? ` — ${detail}` : ''
@@ -291,6 +314,21 @@ export const createBatchQueue = (input: {
   const maxPendingBatches =
     input.maxPendingBatches ?? DEFAULT_MAX_PENDING_BATCHES
 
+  const sendAfter = async (
+    prior: Promise<void>,
+    entries: LogEntry[]
+  ): Promise<void> => {
+    await prior
+    await input.send(entries)
+  }
+
+  // Swallow the failure on the chain itself so one bad batch cannot poison
+  // the batches after it; the caller of enqueueSend still sees the rejection.
+  const settleSend = async (send: Promise<void>): Promise<void> => {
+    await settle(send)
+    pending -= 1
+  }
+
   const enqueueSend = (entries: LogEntry[]): Promise<void> => {
     if (pending >= maxPendingBatches) {
       report(
@@ -301,32 +339,30 @@ export const createBatchQueue = (input: {
       return tail
     }
     pending += 1
-    const send = tail.then(() => input.send(entries))
-    // Swallow the failure on the chain itself so one bad batch cannot poison
-    // the batches after it; the caller of enqueueSend still sees the rejection.
-    tail = send
-      .catch(() => undefined)
-      .then(() => {
-        pending -= 1
-      })
+    const send = sendAfter(tail, entries)
+    tail = settleSend(send)
     return send
   }
 
-  const flush = (): Promise<void> => {
+  const flush = async (): Promise<void> => {
     if (timer) {
       clearTimeout(timer)
       timer = undefined
     }
-    if (buffer.length === 0) {
-      return tail
-    }
     const entries = buffer
     buffer = []
-    return enqueueSend(entries).then(() => tail)
+    if (entries.length > 0) {
+      await enqueueSend(entries)
+    }
+    await tail
   }
 
-  const flushFromTimer = (): void => {
-    flush().catch(report)
+  const flushFromTimer = async (): Promise<void> => {
+    try {
+      await flush()
+    } catch (error) {
+      report(error)
+    }
   }
 
   const push = (entry: LogEntry): Promise<void> | undefined => {

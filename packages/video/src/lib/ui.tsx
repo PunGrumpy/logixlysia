@@ -175,7 +175,7 @@ export const BlockWipe = ({
       )}
       <AbsoluteFill
         style={
-          full ? undefined : { mask: `url(#${id})`, WebkitMask: `url(#${id})` }
+          full ? undefined : { WebkitMask: `url(#${id})`, mask: `url(#${id})` }
         }
       >
         {children}
@@ -198,12 +198,12 @@ export const Glass = ({
 }) => (
   <div
     style={{
+      WebkitBackdropFilter: 'blur(28px) saturate(1.2)',
       backdropFilter: 'blur(28px) saturate(1.2)',
       background: tint,
       borderRadius: radius,
       // A shadow ring reads on any backdrop; a solid border only suits one.
       boxShadow: `${ringDark}, 0 20px 60px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.18)`,
-      WebkitBackdropFilter: 'blur(28px) saturate(1.2)',
       ...style
     }}
   >

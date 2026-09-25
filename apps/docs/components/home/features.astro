@@ -681,7 +681,10 @@ const files = [
 </section>
 
 <script>
-  const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
+  const sleep = (ms: number): Promise<void> =>
+    new Promise(resolve => {
+      setTimeout(resolve, ms)
+    })
 
   const reduceMotion = window.matchMedia(
     '(prefers-reduced-motion: reduce)'
@@ -742,13 +745,12 @@ const files = [
     // Bounded replay (WCAG 2.2.2): stop after a few rounds instead of looping
     // forever; the resting state matches the static markup.
     let rounds = 0
-    const loop = () => {
-      round().then(() => {
-        rounds += 1
-        if (rounds < 3) {
-          loop()
-        }
-      })
+    const loop = async () => {
+      await round()
+      rounds += 1
+      if (rounds < 3) {
+        loop()
+      }
     }
     loop()
   }
@@ -795,13 +797,12 @@ const files = [
       await sleep(2800)
     }
     let rounds = 0
-    const loop = () => {
-      round().then(() => {
-        rounds += 1
-        if (rounds < 3) {
-          loop()
-        }
-      })
+    const loop = async () => {
+      await round()
+      rounds += 1
+      if (rounds < 3) {
+        loop()
+      }
     }
     loop()
   }
@@ -834,13 +835,12 @@ const files = [
       await sleep(2400)
     }
     let rounds = 0
-    const loop = () => {
-      round().then(() => {
-        rounds += 1
-        if (rounds < 3) {
-          loop()
-        }
-      })
+    const loop = async () => {
+      await round()
+      rounds += 1
+      if (rounds < 3) {
+        loop()
+      }
     }
     loop()
   }
@@ -881,16 +881,15 @@ const files = [
       const initialSize = size.textContent
       const initialWidth = bar.style.width
       let rounds = 0
-      const loop = () => {
-        round().then(() => {
-          rounds += 1
-          if (rounds < 3) {
-            loop()
-            return
-          }
-          size.textContent = initialSize
-          bar.style.width = initialWidth
-        })
+      const loop = async () => {
+        await round()
+        rounds += 1
+        if (rounds < 3) {
+          loop()
+          return
+        }
+        size.textContent = initialSize
+        bar.style.width = initialWidth
       }
       loop()
     }

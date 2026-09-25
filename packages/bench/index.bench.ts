@@ -1,6 +1,6 @@
 import { mkdtempSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import path from 'node:path'
 import {
   logger as bogeychanLogger,
   createPinoLogger as createBogeychan
@@ -9,7 +9,7 @@ import { consola } from 'consola'
 import { Elysia } from 'elysia'
 import { createLogger as createEvlog, initLogger } from 'evlog'
 import { evlog } from 'evlog/elysia'
-import logixlysia, { createLogger } from 'logixlysia'
+import { createLogger, logixlysia } from 'logixlysia'
 import pino from 'pino'
 import { bench, describe } from 'vitest'
 import winston from 'winston'
@@ -248,14 +248,14 @@ describe('Elysia plugin request path — structured sink (noop consumer)', () =>
   })
 })
 
-const benchLogDir = mkdtempSync(join(tmpdir(), 'logixlysia-bench-'))
+const benchLogDir = mkdtempSync(path.join(tmpdir(), 'logixlysia-bench-'))
 
 const logixlysiaFileApp = new Elysia()
   .use(
     logixlysia({
       config: {
         disableInternalLogger: true,
-        logFilePath: join(benchLogDir, 'bench.log')
+        logFilePath: path.join(benchLogDir, 'bench.log')
       }
     })
   )

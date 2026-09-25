@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, describe, expect, spyOn, test } from 'bun:test'
 import { promises as fs } from 'node:fs'
-import { join } from 'node:path'
-
+import path from 'node:path'
 import {
   getRotatedFileName,
   performRotation,
@@ -32,19 +31,19 @@ describe('shouldRotate', () => {
   })
 
   test('returns false when maxSize is undefined', async () => {
-    const filePath = join(dir, 'app.log')
+    const filePath = path.join(dir, 'app.log')
     await fs.writeFile(filePath, 'x'.repeat(100))
     expect(await shouldRotate(filePath, {})).toBe(false)
   })
 
   test('returns true when the file exceeds maxSize', async () => {
-    const filePath = join(dir, 'app.log')
+    const filePath = path.join(dir, 'app.log')
     await fs.writeFile(filePath, 'x'.repeat(100))
     expect(await shouldRotate(filePath, { maxSize: 10 })).toBe(true)
   })
 
   test('returns false when the file is smaller than maxSize', async () => {
-    const filePath = join(dir, 'app.log')
+    const filePath = path.join(dir, 'app.log')
     await fs.writeFile(filePath, 'x'.repeat(10))
     expect(await shouldRotate(filePath, { maxSize: 1000 })).toBe(false)
   })
@@ -62,7 +61,7 @@ describe('performRotation retention', () => {
   })
 
   test('count retention keeps only the newest maxFiles rotated files', async () => {
-    const filePath = join(dir, 'app.log')
+    const filePath = path.join(dir, 'app.log')
     await fs.writeFile(filePath, 'live content')
 
     const now = Date.now()
@@ -98,7 +97,7 @@ describe('performRotation retention', () => {
   })
 
   test('time retention deletes only files older than the retention window', async () => {
-    const filePath = join(dir, 'app.log')
+    const filePath = path.join(dir, 'app.log')
     await fs.writeFile(filePath, 'live content')
 
     const now = Date.now()
@@ -121,7 +120,7 @@ describe('performRotation retention', () => {
   })
 
   test('is a no-op for an empty live file', async () => {
-    const filePath = join(dir, 'app.log')
+    const filePath = path.join(dir, 'app.log')
     await fs.writeFile(filePath, '')
 
     await performRotation(filePath, { maxFiles: 2 })
@@ -133,7 +132,7 @@ describe('performRotation retention', () => {
   })
 
   test('retention cleanup still runs when compression fails', async () => {
-    const filePath = join(dir, 'app.log')
+    const filePath = path.join(dir, 'app.log')
     await fs.writeFile(filePath, 'live content')
 
     const now = Date.now()
@@ -158,11 +157,11 @@ describe('performRotation retention', () => {
     // reproduces the same EISDIR-class failure compressFile would hit.
     const originalWriteFile = fs.writeFile.bind(fs)
     const writeFileSpy = spyOn(fs, 'writeFile').mockImplementation(
-      async (path, ...args) => {
-        if (String(path).endsWith('.gz')) {
+      async (target, ...args) => {
+        if (String(target).endsWith('.gz')) {
           throw new Error('EISDIR: illegal operation on a directory')
         }
-        return await originalWriteFile(path, ...args)
+        return await originalWriteFile(target, ...args)
       }
     )
 

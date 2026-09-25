@@ -40,9 +40,9 @@ const app = new Elysia()
 The adapter honors the standard OpenTelemetry exporter variables:
 
 | Variable | Required | Description |
-|----------|----------|-------------|
-| `OTEL_EXPORTER_OTLP_ENDPOINT` | Yes* | OTLP HTTP base URL — `/v1/logs` is appended |
-| `OTEL_EXPORTER_OTLP_LOGS_ENDPOINT` | Yes* | Signal-specific logs URL, used **as-is**; takes precedence over the generic endpoint |
+| --- | --- | --- |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | Yes\* | OTLP HTTP base URL — `/v1/logs` is appended |
+| `OTEL_EXPORTER_OTLP_LOGS_ENDPOINT` | Yes\* | Signal-specific logs URL, used **as-is**; takes precedence over the generic endpoint |
 | `OTEL_EXPORTER_OTLP_HEADERS` | No | Extra headers in `k=v,k2=v2` format (vendor auth); values may be percent-encoded |
 | `OTEL_EXPORTER_OTLP_LOGS_HEADERS` | No | Signal-specific headers; take precedence over the generic headers |
 | `OTEL_SERVICE_NAME` | No | Value of the `service.name` resource attribute |
@@ -61,7 +61,7 @@ const otlp = createOtlpTransport({
 ```
 
 | Option | Type | Default | Description |
-|--------|------|---------|-------------|
+| --- | --- | --- | --- |
 | `endpoint` | `string` | `OTEL_EXPORTER_OTLP_ENDPOINT` | OTLP HTTP base URL |
 | `headers` | `Record<string, string>` | parsed from env | Extra request headers; overrides env headers per key |
 | `serviceName` | `string` | `logixlysia` | `service.name` resource attribute |

@@ -96,7 +96,26 @@ export type LogixlysiaPlugin<TFields extends object = LogFields> =
 const DEFAULT_FLUSH_TIMEOUT_MS = 5000
 
 /**
- * @typeParam TFields - Field bag for the request-scoped `log`. Supply your own
+ * The response headers an enricher gets to read. `set.headers` alone misses
+ * anything a handler put on a returned `Response` (a `content-length`, say),
+ * so the two are merged — with `set.headers` winning, since Elysia applies
+ * it last. Only built when an enricher will actually read it.
+ */
+const readableResponseHeaders = (
+  setHeaders: Record<string, string | number>,
+  responseHeaders?: Headers
+): Record<string, unknown> => {
+  const merged: Record<string, unknown> = {}
+  if (responseHeaders) {
+    for (const [key, value] of responseHeaders) {
+      merged[key] = value
+    }
+  }
+  return Object.assign(merged, setHeaders)
+}
+
+/**
+ * @template TFields - Field bag for the request-scoped `log`. Supply your own
  * interface to have TypeScript reject misspelled context keys; the default
  * allows any key, so untyped usage is unchanged.
  */
@@ -189,23 +208,6 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
   })
 
   /**
-   * The response headers an enricher gets to read. `set.headers` alone misses
-   * anything a handler put on a returned `Response` (a `content-length`, say),
-   * so the two are merged — with `set.headers` winning, since Elysia applies
-   * it last. Only built when an enricher will actually read it.
-   */
-  const readableResponseHeaders = (
-    setHeaders: Record<string, string | number>,
-    responseHeaders?: Headers
-  ): Record<string, unknown> => {
-    const merged: Record<string, unknown> = {}
-    responseHeaders?.forEach((value, key) => {
-      merged[key] = value
-    })
-    return Object.assign(merged, setHeaders)
-  }
-
-  /**
    * Everything both exits share once the status is known: echo the request id,
    * run the response-phase enrichers, and resolve tail sampling — all before
    * the request's final log line, so it and any replayed records see the same
@@ -230,7 +232,7 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
     }
 
     const store: StoreData = {
-      beforeTime: requestStartTimes.get(request) ?? BigInt(0)
+      beforeTime: requestStartTimes.get(request) ?? 0n
     }
 
     if (enrichers) {
@@ -277,7 +279,7 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
     error: unknown
   ): StoreData => {
     if (closed.has(request)) {
-      return { beforeTime: requestStartTimes.get(request) ?? BigInt(0) }
+      return { beforeTime: requestStartTimes.get(request) ?? 0n }
     }
 
     const store = closeRequest(request, setHeaders, errorStatus(error))
@@ -298,7 +300,7 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
   const plugin = app
     .state('logger', logger)
     .state('pino', logger.pino)
-    .state('beforeTime', BigInt(0))
+    .state('beforeTime', 0n)
     .derive(({ request }) => ({ log: createRequestScopedLogger(request) }))
     .onStart(({ server }): void => {
       if (server) {
@@ -417,7 +419,6 @@ export const flushLogixlysia = async (
   }
 }
 
-// biome-ignore lint/performance/noBarrelFile: public package entry re-exports
 export { resolveOptions } from './config/resolve-options'
 export { useLogger } from './context/storage'
 export type { HttpErrorInit, HttpErrorPayload } from './errors'

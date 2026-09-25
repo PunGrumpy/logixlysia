@@ -1,5 +1,4 @@
 import { describe, expect, test } from 'bun:test'
-
 import { createSentryTransport } from '../../src/sentry'
 import { stubEnv, stubFetch } from './helpers'
 
@@ -10,7 +9,7 @@ const CLEAR_ENV = {
 }
 
 const DSN = 'https://publickey@o123.ingest.sentry.io/456'
-const TRACE_ID_HEX = /^[0-9a-f]{32}$/
+const TRACE_ID_HEX = /^[0-9a-f]{32}$/u
 
 interface SentryLogItem {
   attributes: Record<string, { type: string; value: unknown }>

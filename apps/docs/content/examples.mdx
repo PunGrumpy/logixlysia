@@ -46,7 +46,7 @@ const app = new Elysia()
       config: {
         // Disable startup message in production
         showStartupMessage: false,
-        
+
         // File logging with rotation
         logFilePath: './logs/production.log',
         logRotation: {
@@ -55,12 +55,12 @@ const app = new Elysia()
           maxFiles: '30d',
           compress: true
         },
-        
+
         // Filter to important logs only
         logFilter: {
           level: ['ERROR', 'WARNING']
         },
-        
+
         // Pino configuration
         pino: {
           level: 'info',
@@ -71,13 +71,10 @@ const app = new Elysia()
             environment: 'production'
           }
         },
-        
+
         // Use transports for external services
         useTransportsOnly: false,
-        transports: [
-          elasticsearchTransport,
-          slackTransport
-        ]
+        transports: [elasticsearchTransport, slackTransport]
       }
     })
   )
@@ -95,7 +92,7 @@ const app = new Elysia()
       config: {
         showStartupMessage: true,
         startupMessageFormat: 'banner',
-        
+
         // Pretty printing for development
         pino: {
           level: 'debug',
@@ -118,20 +115,23 @@ const app = new Elysia()
 ```ts
 app.get('/users/:id', ({ store, params, request }) => {
   const { logger, pino } = store
-  
+
   // Using logger helper
   logger.info(request, 'User profile accessed', {
     userId: params.id,
     timestamp: Date.now()
   })
-  
+
   // Or using Pino directly
-  pino.info({
-    userId: params.id,
-    action: 'view_profile',
-    timestamp: Date.now()
-  }, 'User profile accessed')
-  
+  pino.info(
+    {
+      userId: params.id,
+      action: 'view_profile',
+      timestamp: Date.now()
+    },
+    'User profile accessed'
+  )
+
   return getUserById(params.id)
 })
 ```
@@ -141,16 +141,16 @@ app.get('/users/:id', ({ store, params, request }) => {
 ```ts
 app.get('/api/orders/:id', ({ store, params }) => {
   const { pino } = store
-  
+
   // Create scoped logger
   const orderLogger = pino.child({
     orderId: params.id,
     module: 'order-service'
   })
-  
+
   orderLogger.debug('Fetching order details')
   orderLogger.info({ status: 'processing' }, 'Order retrieved')
-  
+
   return getOrder(params.id)
 })
 ```
@@ -161,17 +161,20 @@ app.get('/api/orders/:id', ({ store, params }) => {
 app.post('/api/process', async ({ store, body }) => {
   const { pino } = store
   const startTime = Date.now()
-  
+
   const result = await processData(body)
-  
-  pino.info({
-    operation: 'process_data',
-    duration: Date.now() - startTime,
-    itemsProcessed: result.count,
-    memory: process.memoryUsage().heapUsed / 1024 / 1024,
-    success: true
-  }, 'Data processing completed')
-  
+
+  pino.info(
+    {
+      operation: 'process_data',
+      duration: Date.now() - startTime,
+      itemsProcessed: result.count,
+      memory: process.memoryUsage().heapUsed / 1024 / 1024,
+      success: true
+    },
+    'Data processing completed'
+  )
+
   return result
 })
 ```
@@ -183,19 +186,22 @@ app.post('/api/process', async ({ store, body }) => {
 ```ts
 app.get('/api/risky', ({ store }) => {
   const { pino } = store
-  
+
   try {
     performRiskyOperation()
   } catch (error) {
-    pino.error({
-      err: error,
-      operation: 'risky_operation',
-      context: {
-        attempted: true,
-        timestamp: Date.now()
-      }
-    }, 'Operation failed')
-    
+    pino.error(
+      {
+        err: error,
+        operation: 'risky_operation',
+        context: {
+          attempted: true,
+          timestamp: Date.now()
+        }
+      },
+      'Operation failed'
+    )
+
     throw error
   }
 })
@@ -206,13 +212,16 @@ app.get('/api/risky', ({ store }) => {
 ```ts
 app.onError(({ code, error, store }) => {
   const { pino } = store
-  
-  pino.error({
-    err: error,
-    status: code,
-    timestamp: Date.now()
-  }, 'Request failed')
-  
+
+  pino.error(
+    {
+      err: error,
+      status: code,
+      timestamp: Date.now()
+    },
+    'Request failed'
+  )
+
   return {
     error: error.message,
     status: code
@@ -223,11 +232,14 @@ app.onError(({ code, error, store }) => {
 ### JSON Format for Error Logs
 
 ```ts
-app.use(logixlysia({
-  config: {
-    customLogFormat: '{"level": "{level}", "message": "{message}", "method": "{method}", "pathname": "{pathname}", "status": "{status}"}'
-  }
-}))
+app.use(
+  logixlysia({
+    config: {
+      customLogFormat:
+        '{"level": "{level}", "message": "{message}", "method": "{method}", "pathname": "{pathname}", "status": "{status}"}'
+    }
+  })
+)
 
 app.get('/error', () => {
   throw new Error('Validation failed')
@@ -235,6 +247,7 @@ app.get('/error', () => {
 ```
 
 Output for both regular requests and errors will be in JSON format:
+
 ```json
 {"level": "INFO", "message": "", "method": "GET", "pathname": "/hello", "status": "200"}
 {"level": "ERROR", "message": "Validation failed", "method": "GET", "pathname": "/error", "status": "500"}
@@ -281,7 +294,7 @@ const slackTransport = {
     if (level === 'ERROR') {
       const webhook = process.env.SLACK_WEBHOOK_URL
       if (!webhook) return
-      
+
       try {
         await fetch(webhook, {
           method: 'POST',
@@ -336,15 +349,17 @@ app.use(
     config: {
       showStartupMessage: isDev,
       startupMessageFormat: isDev ? 'banner' : 'simple',
-      
+
       logFilePath: isProd ? './logs/production.log' : undefined,
-      logRotation: isProd ? {
-        maxSize: '100m',
-        interval: '1d',
-        maxFiles: '30d',
-        compress: true
-      } : undefined,
-      
+      logRotation: isProd
+        ? {
+            maxSize: '100m',
+            interval: '1d',
+            maxFiles: '30d',
+            compress: true
+          }
+        : undefined,
+
       pino: {
         level: isDev ? 'debug' : 'info',
         prettyPrint: isDev,
@@ -355,11 +370,8 @@ app.use(
           environment: process.env.NODE_ENV
         }
       },
-      
-      transports: isProd ? [
-        elasticsearchTransport,
-        slackTransport
-      ] : []
+
+      transports: isProd ? [elasticsearchTransport, slackTransport] : []
     }
   })
 )
@@ -374,14 +386,16 @@ import { Elysia } from 'elysia'
 import logixlysia from 'logixlysia'
 
 const app = new Elysia()
-  .use(logixlysia({
-    config: {
-      pino: {
-        level: 'info',
-        base: { service: 'user-api' }
+  .use(
+    logixlysia({
+      config: {
+        pino: {
+          level: 'info',
+          base: { service: 'user-api' }
+        }
       }
-    }
-  }))
+    })
+  )
   .get('/users', ({ store }) => {
     const { pino } = store
     pino.info({ action: 'list_users' }, 'Fetching users')
@@ -410,4 +424,3 @@ const app = new Elysia()
   })
   .listen(3000)
 ```
-

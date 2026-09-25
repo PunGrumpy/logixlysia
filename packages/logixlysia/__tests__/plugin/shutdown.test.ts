@@ -1,34 +1,37 @@
 import { describe, expect, mock, test } from 'bun:test'
 import { readFile } from 'node:fs/promises'
-import { join } from 'node:path'
+import path from 'node:path'
 import { Elysia } from 'elysia'
-
-import logixlysia, { flushLogixlysia } from '../../src'
+import { flushLogixlysia, logixlysia } from '../../src'
 import type { Options } from '../../src/interfaces'
 import { getFileSink } from '../../src/output/file-sink'
 import { spyConsole } from '../_helpers/console'
+import { sleep } from '../_helpers/sleep'
 import { createTempDir, removeTempDir } from '../_helpers/tmp'
 
 const POLL_TIMEOUT_MS = 200
 const POLL_INTERVAL_MS = 5
 const NO_WAIT_SETTLE_MS = 30
 
-const wait = (ms: number): Promise<void> =>
-  new Promise(resolve => {
-    setTimeout(resolve, ms)
-  })
-
 /** `app.stop()` does not await async hooks, so poll for the observable effect. */
-const waitFor = (predicate: () => boolean): Promise<void> =>
-  new Promise(resolve => {
-    const deadline = Date.now() + POLL_TIMEOUT_MS
-    const timer = setInterval(() => {
-      if (predicate() || Date.now() >= deadline) {
-        clearInterval(timer)
-        resolve()
-      }
-    }, POLL_INTERVAL_MS)
-  })
+const waitFor = (predicate: () => boolean): Promise<void> => {
+  const { promise, resolve }: PromiseWithResolvers<void> =
+    Promise.withResolvers()
+  const deadline = Date.now() + POLL_TIMEOUT_MS
+  const timer = setInterval(() => {
+    if (predicate() || Date.now() >= deadline) {
+      clearInterval(timer)
+      resolve()
+    }
+  }, POLL_INTERVAL_MS)
+  return promise
+}
+
+/** A flush that never settles, to exercise the shutdown timeout. */
+const neverSettles = (): Promise<void> => {
+  const { promise }: PromiseWithResolvers<void> = Promise.withResolvers()
+  return promise
+}
 
 const startApp = (options: Options) => {
   const app = new Elysia().use(logixlysia(options))
@@ -48,7 +51,7 @@ describe('plugin shutdown', () => {
     const app = startApp({
       config: {
         ...baseConfig,
-        transports: [{ flush, log: () => undefined }]
+        transports: [{ flush, log: () => {} }]
       }
     })
 
@@ -59,7 +62,7 @@ describe('plugin shutdown', () => {
   })
 
   test('onStop tolerates transports without flush', async () => {
-    const log = mock(() => undefined)
+    const log = mock(() => {})
     const app = startApp({
       config: { ...baseConfig, transports: [{ log }] }
     })
@@ -71,7 +74,7 @@ describe('plugin shutdown', () => {
   })
 
   test('onStop reports a timeout through onError with sink shutdown', async () => {
-    const onError = mock(() => undefined)
+    const onError = mock(() => {})
     const { restore, spies } = spyConsole(['error'])
 
     try {
@@ -82,8 +85,8 @@ describe('plugin shutdown', () => {
           onError,
           transports: [
             {
-              flush: () => new Promise<void>(() => undefined),
-              log: () => undefined
+              flush: neverSettles,
+              log: () => {}
             }
           ]
         }
@@ -102,7 +105,7 @@ describe('plugin shutdown', () => {
   })
 
   test('onStop with flushTimeoutMs 0 does not wait', async () => {
-    const onError = mock(() => undefined)
+    const onError = mock(() => {})
     const app = startApp({
       config: {
         ...baseConfig,
@@ -110,15 +113,15 @@ describe('plugin shutdown', () => {
         onError,
         transports: [
           {
-            flush: () => new Promise<void>(() => undefined),
-            log: () => undefined
+            flush: neverSettles,
+            log: () => {}
           }
         ]
       }
     })
 
     await app.stop()
-    await wait(NO_WAIT_SETTLE_MS)
+    await sleep(NO_WAIT_SETTLE_MS)
 
     expect(onError).not.toHaveBeenCalled()
   })
@@ -126,7 +129,7 @@ describe('plugin shutdown', () => {
   test('flushLogixlysia drains the file sink and closes on request', async () => {
     const dir = await createTempDir()
     try {
-      const logFilePath = join(dir, 'logs', 'shutdown.log')
+      const logFilePath = path.join(dir, 'logs', 'shutdown.log')
       const options: Options = {
         config: {
           disableInternalLogger: true,
@@ -140,7 +143,7 @@ describe('plugin shutdown', () => {
       await app.handle(new Request('http://localhost/flush-me'))
       await flushLogixlysia(options, { close: true })
 
-      expect(await readFile(logFilePath, 'utf8')).toContain('/flush-me')
+      expect(await readFile(logFilePath, 'utf-8')).toContain('/flush-me')
       expect(getFileSink(logFilePath)).not.toBe(sinkBefore)
     } finally {
       await removeTempDir(dir)

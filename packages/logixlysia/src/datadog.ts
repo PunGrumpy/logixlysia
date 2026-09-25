@@ -1,11 +1,13 @@
 import {
-  type AdapterTransport,
-  type BatchTransportOptions,
   createHttpTransport,
   defaultBody,
   envString,
-  type LogEntry,
   transportError
+} from './adapters/shared'
+import type {
+  AdapterTransport,
+  BatchTransportOptions,
+  LogEntry
 } from './adapters/shared'
 
 const DEFAULT_SITE = 'datadoghq.com'
@@ -46,7 +48,7 @@ export interface DatadogTransportOptions extends BatchTransportOptions {
  * The log level lands in the `status` attribute (Datadog's default status
  * remapper), and the full meta object rides along as searchable attributes.
  *
- * @throws When no API key is configured.
+ * @throws {Error} When no API key is configured.
  */
 export const createDatadogTransport = (
   options: DatadogTransportOptions = {}

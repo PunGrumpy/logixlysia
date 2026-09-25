@@ -3,21 +3,28 @@
   "version": "6.9.2",
   "description": "🦊 Logixlysia is a logger for Elysia",
   "keywords": [
-    "logixlysia",
     "elysiajs",
-    "logger"
+    "logger",
+    "logixlysia"
   ],
   "homepage": "https://logixlysia.vercel.app",
   "bugs": {
     "url": "https://github.com/PunGrumpy/logixlysia/issues"
   },
+  "license": "MIT",
+  "author": "Noppakorn Kaewsalabnil <hello@pungrumpy.com>",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/PunGrumpy/logixlysia.git"
   },
-  "license": "MIT",
-  "author": "Noppakorn Kaewsalabnil <hello@pungrumpy.com>",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
   "type": "module",
+  "main": "dist/index.js",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -91,13 +98,10 @@
     },
     "./package.json": "./package.json"
   },
-  "main": "dist/index.js",
-  "files": [
-    "dist",
-    "README.md",
-    "LICENSE",
-    "CHANGELOG.md"
-  ],
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
   "scripts": {
     "build": "bunup",
     "clean": "git clean -fdx .turbo dist node_modules coverage",
@@ -131,8 +135,7 @@
       "optional": true
     }
   },
-  "publishConfig": {
-    "access": "public",
-    "registry": "https://registry.npmjs.org/"
+  "engines": {
+    "node": ">=22"
   }
 }

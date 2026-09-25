@@ -1,7 +1,7 @@
-const REGEXP_SPECIALS = /[.*+?^${}()|[\]\\]/g
-const REPEATED_RECURSIVE_PATTERN = /\*\*.*\*\*/
-const RECURSIVE_WILDCARD_SPLIT = /\*\*/
-const ALPHANUMERIC_PATTERN = /[a-zA-Z0-9]/
+const REGEXP_SPECIALS = /[.*+?^${}()|[\]\\]/gu
+const REPEATED_RECURSIVE_PATTERN = /\*\*.*\*\*/u
+const RECURSIVE_WILDCARD_SPLIT = /\*\*/u
+const ALPHANUMERIC_PATTERN = /[a-zA-Z0-9]/u
 
 const escapeRegExp = (value: string): string =>
   value.replace(REGEXP_SPECIALS, '\\$&')
@@ -71,5 +71,5 @@ export const globToRegExp = (pattern: string): RegExp => {
     index += 1
   }
 
-  return new RegExp(`^${source}$`)
+  return new RegExp(`^${source}$`, 'u')
 }

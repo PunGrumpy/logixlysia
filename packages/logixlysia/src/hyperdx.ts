@@ -1,11 +1,10 @@
 import { createOtlpCore } from './adapters/otlp-core'
 import {
-  type AdapterTransport,
-  type BatchTransportOptions,
   envString,
   stripTrailingSlashes,
   transportError
 } from './adapters/shared'
+import type { AdapterTransport, BatchTransportOptions } from './adapters/shared'
 
 const DEFAULT_ENDPOINT = 'https://in-otel.hyperdx.io'
 
@@ -38,7 +37,7 @@ export interface HyperDXTransportOptions extends BatchTransportOptions {
  * attributes (`request.method`, `context.requestId`, …) so they are searchable
  * in the HyperDX UI.
  *
- * @throws When no API key is configured.
+ * @throws {Error} When no API key is configured.
  */
 export const createHyperDXTransport = (
   options: HyperDXTransportOptions = {}

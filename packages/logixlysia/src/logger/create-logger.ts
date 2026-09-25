@@ -17,7 +17,7 @@ const DEFAULT_LOG_FORMAT =
   '{now} {service}{icon} {method} {pathname} {status} {duration} {message}{speed}'
 
 const LOG_FORMAT_REGEX =
-  /\{(now|epoch|level|icon|duration|method|pathname|path|query|status|statusText|message|ip|context|service|speed|requestId)\}/g
+  /\{(?:now|epoch|level|icon|duration|method|pathname|path|query|status|statusText|message|ip|context|service|speed|requestId)\}/gu
 
 export interface FormattedLogOutput {
   contextLines: string[]
@@ -36,9 +36,8 @@ const shouldUseColors = (options: Options): boolean => {
 // pino-pretty's shorthand for `yyyy-mm-dd HH:MM:ss.SSS` (minus the `o`
 // timezone-offset token, which this formatter does not support).
 const STANDARD_TIMESTAMP_PATTERN = 'yyyy-mm-dd HH:MM:ss.SSS'
-
-const SYS_PREFIX_REGEX = /^sys:/i
-const UTC_PREFIX_REGEX = /^utc:/i
+// `SYS:` and `UTC:` are the same length.
+const TIMESTAMP_PREFIX_LENGTH = 'sys:'.length
 
 /**
  * Splits a `timestamp.translateTime` value into the literal pattern to
@@ -49,18 +48,14 @@ const UTC_PREFIX_REGEX = /^utc:/i
 const resolveTimestampPattern = (
   pattern: string
 ): { pattern: string; utc: boolean } => {
-  let rest = pattern
-  let utc = false
-
-  if (SYS_PREFIX_REGEX.test(rest)) {
-    rest = rest.slice('sys:'.length)
-  } else if (UTC_PREFIX_REGEX.test(rest)) {
-    rest = rest.slice('utc:'.length)
-    utc = true
+  const prefix = pattern.slice(0, TIMESTAMP_PREFIX_LENGTH).toLowerCase()
+  const utc = prefix === 'utc:'
+  const rest =
+    utc || prefix === 'sys:' ? pattern.slice(TIMESTAMP_PREFIX_LENGTH) : pattern
+  return {
+    pattern: rest === 'standard' ? STANDARD_TIMESTAMP_PATTERN : rest,
+    utc
   }
-
-  const resolved = rest === 'standard' ? STANDARD_TIMESTAMP_PATTERN : rest
-  return { pattern: resolved, utc }
 }
 
 const formatTimestamp = (date: Date, pattern?: string): string => {
@@ -241,26 +236,22 @@ const getColoredMethodToken = (method: string, useColors: boolean): string => {
   return getColoredMethod(upper, useColors) + padding
 }
 
-const getColoredStatus = (status: string, useColors: boolean): string => {
-  if (!useColors) {
+const getColoredStatus = (statusCode: number, useColors: boolean): string => {
+  const status = String(statusCode)
+  if (!(useColors && Number.isFinite(statusCode))) {
     return status
   }
 
-  const numeric = Number.parseInt(status, 10)
-  if (!Number.isFinite(numeric)) {
-    return status
-  }
-
-  if (numeric >= 500) {
+  if (statusCode >= 500) {
     return chalk.red(status)
   }
-  if (numeric >= 400) {
+  if (statusCode >= 400) {
     return chalk.yellow(status)
   }
-  if (numeric >= 300) {
+  if (statusCode >= 300) {
     return chalk.cyan(status)
   }
-  if (numeric >= 200) {
+  if (statusCode >= 200) {
     return chalk.green(status)
   }
   return chalk.gray(status)
@@ -321,7 +312,7 @@ export const createFormatContext = (options: Options): FormatContext => {
   const { config } = options
   const useColors = shouldUseColors(options)
   const format = config?.customLogFormat ?? DEFAULT_LOG_FORMAT
-  const tokens = new Set(format.match(LOG_FORMAT_REGEX) ?? [])
+  const tokens = new Set(format.match(LOG_FORMAT_REGEX))
   const { slow: slowThreshold, verySlow: verySlowThreshold } =
     getSlowThresholds(options)
   const serviceToken = getServiceToken(options, useColors)
@@ -569,9 +560,7 @@ const getStatusTokens = (
       ? 200
       : getStatusCode(statusValue)
   return {
-    coloredStatus: needsStatus
-      ? getColoredStatus(String(statusCode), useColors)
-      : '',
+    coloredStatus: needsStatus ? getColoredStatus(statusCode, useColors) : '',
     statusText: needsStatusText ? getStatusText(statusCode) : ''
   }
 }
@@ -722,14 +711,14 @@ export const formatLogOutput = ({
     '{message}': message,
     '{method}': coloredMethod,
     '{now}': timestamp,
-    '{path}': coloredPathname,
     '{pathname}': coloredPathname,
+    '{path}': coloredPathname,
     '{query}': query,
     '{requestId}': requestId,
     '{service}': serviceToken,
     '{speed}': speedToken,
-    '{status}': coloredStatus,
-    '{statusText}': statusText
+    '{statusText}': statusText,
+    '{status}': coloredStatus
   }
 
   const main = format.replace(

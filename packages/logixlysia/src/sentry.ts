@@ -1,20 +1,22 @@
 import {
-  type AdapterTransport,
-  type BatchTransportOptions,
   createHttpTransport,
   defaultBody,
   envString,
-  type FlatValue,
   flattenMeta,
   getPath,
-  type LogEntry,
   transportError
+} from './adapters/shared'
+import type {
+  AdapterTransport,
+  BatchTransportOptions,
+  FlatValue,
+  LogEntry
 } from './adapters/shared'
 import type { LogLevel } from './interfaces'
 
 const MILLIS_PER_SECOND = 1000
 const TRACE_ID_BYTES = 16
-const TRACE_ID_PATTERN = /^[0-9a-f]{32}$/i
+const TRACE_ID_PATTERN = /^[0-9a-fA-F]{32}$/u
 
 export interface SentryTransportOptions extends BatchTransportOptions {
   /**
@@ -134,7 +136,7 @@ const parseDsn = (dsn: string): ParsedDsn => {
  * typed, searchable attribute; `trace_id` from the request context (as set by
  * `logixlysia/otel`) links logs to traces.
  *
- * @throws When no DSN is configured or the DSN is malformed.
+ * @throws {Error} When no DSN is configured or the DSN is malformed.
  */
 export const createSentryTransport = (
   options: SentryTransportOptions = {}

@@ -1,5 +1,4 @@
 import { describe, expect, test } from 'bun:test'
-
 import { createPostHogTransport } from '../../src/posthog'
 import { stubEnv, stubFetch } from './helpers'
 
@@ -10,12 +9,12 @@ const CLEAR_ENV = {
 
 interface CaptureBatch {
   api_key: string
-  batch: Array<{
+  batch: {
     distinct_id: string
     event: string
     properties: Record<string, unknown>
     timestamp: string
-  }>
+  }[]
 }
 
 describe('logixlysia/posthog', () => {

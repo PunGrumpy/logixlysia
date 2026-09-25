@@ -1,5 +1,4 @@
 import { describe, expect, test } from 'bun:test'
-
 import { createClickHouseTransport } from '../../src/clickhouse'
 import { stubEnv, stubFetch } from './helpers'
 

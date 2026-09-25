@@ -1,17 +1,8 @@
 # Plan 026: Make the adapter batch queue ordered, flush-complete, and `onError`-aware
 
-> **Executor instructions**: Follow this plan step by step. Run every
-> verification command and confirm the expected result before moving to the
-> next step. If anything in the "STOP conditions" section occurs, stop and
-> report — do not improvise. When done, update the status row for this plan
-> in `plans/README.md` — unless a reviewer dispatched you and told you they
-> maintain the index.
+> **Executor instructions**: Follow this plan step by step. Run every verification command and confirm the expected result before moving to the next step. If anything in the "STOP conditions" section occurs, stop and report — do not improvise. When done, update the status row for this plan in `plans/README.md` — unless a reviewer dispatched you and told you they maintain the index.
 >
-> **Drift check (run first)**:
-> `git diff --stat 478f40d..HEAD -- packages/logixlysia/src/adapters/shared.ts packages/logixlysia/src/output/index.ts packages/logixlysia/src/types/config.ts packages/logixlysia/__tests__/adapters/shared.test.ts packages/logixlysia/__tests__/adapters/helpers.ts`
-> If any in-scope file changed since this plan was written, compare the
-> "Current state" excerpts against the live code before proceeding; on a
-> mismatch, treat it as a STOP condition.
+> **Drift check (run first)**: `git diff --stat 478f40d..HEAD -- packages/logixlysia/src/adapters/shared.ts packages/logixlysia/src/output/index.ts packages/logixlysia/src/types/config.ts packages/logixlysia/__tests__/adapters/shared.test.ts packages/logixlysia/__tests__/adapters/helpers.ts` If any in-scope file changed since this plan was written, compare the "Current state" excerpts against the live code before proceeding; on a mismatch, treat it as a STOP condition.
 
 ## Status
 
@@ -128,19 +119,21 @@ export const createBatchQueue = (input: {
 `logToTransports` today (`output/index.ts:38–52`):
 
 ```ts
-  for (const transport of transports) {
-    try {
-      const result = transport.log(level, message, meta)
-      if (result && typeof (result as { catch?: unknown }).catch === 'function') {
-        ;(result as Promise<void>).catch(error => reportTransportError(error, onError))
-      }
-    } catch (error) {
-      reportTransportError(error, onError)
+for (const transport of transports) {
+  try {
+    const result = transport.log(level, message, meta)
+    if (result && typeof (result as { catch?: unknown }).catch === 'function') {
+      ;(result as Promise<void>).catch(error =>
+        reportTransportError(error, onError)
+      )
     }
+  } catch (error) {
+    reportTransportError(error, onError)
   }
+}
 ```
 
-`reportTransportError` is `createErrorReporter('transport', 'transport failed')` (`output/index.ts:5–8`). The adapters are constructed by the user *before* the plugin sees `config.onError`, so the adapter cannot reach the plugin's hook unless it is handed one.
+`reportTransportError` is `createErrorReporter('transport', 'transport failed')` (`output/index.ts:5–8`). The adapters are constructed by the user _before_ the plugin sees `config.onError`, so the adapter cannot reach the plugin's hook unless it is handed one.
 
 Existing timer test (`__tests__/adapters/shared.test.ts:188–206`) uses a real 50 ms sleep:
 
@@ -162,7 +155,7 @@ Conventions: Biome via `ultracite` (single quotes, no semicolons, no trailing co
 ## Commands you will need
 
 | Purpose | Command | Expected on success |
-|---|---|---|
+| --- | --- | --- |
 | Install | `bun install` | exit 0 |
 | Typecheck | `bun run typecheck` | exit 0 |
 | Lint | `bun run lint` | exit 0 |
@@ -214,29 +207,29 @@ Conventions: Biome via `ultracite` (single quotes, no semicolons, no trailing co
 In `createBatchQueue`, add a promise tail so every send chains onto the previous one, and make `flush()` await the tail:
 
 ```ts
-  let tail: Promise<void> = Promise.resolve()
+let tail: Promise<void> = Promise.resolve()
 
-  const enqueueSend = (entries: LogEntry[]): Promise<void> => {
-    const send = tail.then(() => input.send(entries))
-    // Keep the chain alive after a failure; the caller of enqueueSend sees the rejection.
-    tail = send.catch(() => undefined)
-    return send
-  }
+const enqueueSend = (entries: LogEntry[]): Promise<void> => {
+  const send = tail.then(() => input.send(entries))
+  // Keep the chain alive after a failure; the caller of enqueueSend sees the rejection.
+  tail = send.catch(() => undefined)
+  return send
+}
 
-  const flush = (): Promise<void> => {
-    if (timer) {
-      clearTimeout(timer)
-      timer = undefined
-    }
-    if (buffer.length === 0) {
-      return tail
-    }
-    const entries = buffer
-    buffer = []
-    const send = enqueueSend(entries)
-    // flush() resolves only once this batch AND everything before it has settled.
-    return send.then(() => tail)
+const flush = (): Promise<void> => {
+  if (timer) {
+    clearTimeout(timer)
+    timer = undefined
   }
+  if (buffer.length === 0) {
+    return tail
+  }
+  const entries = buffer
+  buffer = []
+  const send = enqueueSend(entries)
+  // flush() resolves only once this batch AND everything before it has settled.
+  return send.then(() => tail)
+}
 ```
 
 Semantics to preserve: `push` still returns the send promise only when the batch fills (callers attach `.catch`); a rejected send must not poison later sends (hence `tail = send.catch(...)`); `flush()` on an empty buffer must still wait for in-flight work.

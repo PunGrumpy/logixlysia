@@ -1,5 +1,4 @@
 import { describe, expect, test } from 'bun:test'
-
 import { createHyperDXTransport } from '../../src/hyperdx'
 import { stubEnv, stubFetch } from './helpers'
 
@@ -16,18 +15,18 @@ interface OtlpAttribute {
 }
 
 interface OtlpPayload {
-  resourceLogs: Array<{
+  resourceLogs: {
     resource: { attributes: OtlpAttribute[] }
-    scopeLogs: Array<{
-      logRecords: Array<{
+    scopeLogs: {
+      logRecords: {
         attributes: OtlpAttribute[]
         body: { stringValue: string }
         severityNumber: number
         severityText: string
         timeUnixNano: string
-      }>
-    }>
-  }>
+      }[]
+    }[]
+  }[]
 }
 
 describe('logixlysia/hyperdx', () => {

@@ -1,5 +1,4 @@
 import { describe, expect, test } from 'bun:test'
-
 import { createOtlpTransport } from '../../src/otlp'
 import { stubEnv, stubFetch } from './helpers'
 
@@ -17,17 +16,17 @@ interface OtlpAttribute {
 }
 
 interface OtlpPayload {
-  resourceLogs: Array<{
+  resourceLogs: {
     resource: { attributes: OtlpAttribute[] }
-    scopeLogs: Array<{
-      logRecords: Array<{
+    scopeLogs: {
+      logRecords: {
         attributes: OtlpAttribute[]
         body: { stringValue: string }
         severityNumber: number
         severityText: string
-      }>
-    }>
-  }>
+      }[]
+    }[]
+  }[]
 }
 
 describe('logixlysia/otlp', () => {

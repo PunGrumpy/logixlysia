@@ -1,18 +1,8 @@
 # Plan 033: Test the colorized console path
 
-> **Executor instructions**: Follow this plan step by step. Run every
-> verification command and confirm the expected result before moving to the
-> next step. If anything in the "STOP conditions" section occurs, stop and
-> report — do not improvise. When done, update the status row for this plan
-> in `plans/README.md` — unless a reviewer dispatched you and told you they
-> maintain the index.
+> **Executor instructions**: Follow this plan step by step. Run every verification command and confirm the expected result before moving to the next step. If anything in the "STOP conditions" section occurs, stop and report — do not improvise. When done, update the status row for this plan in `plans/README.md` — unless a reviewer dispatched you and told you they maintain the index.
 >
-> **Drift check (run first)**:
-> `git diff --stat 5522d31..HEAD -- packages/logixlysia/src/logger/create-logger.ts packages/logixlysia/__tests__/logger`
-> If any in-scope file changed since this plan was written, compare the
-> "Current state" excerpts against the live code before proceeding; on a
-> mismatch, treat it as a STOP condition. (Plan 032 edits `formatTimestamp`
-> in the same file; that hunk is not in this plan's path and is not a conflict.)
+> **Drift check (run first)**: `git diff --stat 5522d31..HEAD -- packages/logixlysia/src/logger/create-logger.ts packages/logixlysia/__tests__/logger` If any in-scope file changed since this plan was written, compare the "Current state" excerpts against the live code before proceeding; on a mismatch, treat it as a STOP condition. (Plan 032 edits `formatTimestamp` in the same file; that hunk is not in this plan's path and is not a conflict.)
 
 ## Status
 
@@ -50,7 +40,7 @@ Existing test style: `__tests__/logger/format-output.test.ts` and `create-logger
 ## Commands you will need
 
 | Purpose | Command | Expected |
-|---|---|---|
+| --- | --- | --- |
 | Install | `bun install --frozen-lockfile` | exit 0 |
 | Lint / Format / Typecheck | `bun run lint` / `bun run format` / `bun run typecheck` | exit 0 |
 | Targeted | `cd packages/logixlysia && bun test __tests__/logger/colors.test.ts` | all pass |
@@ -80,12 +70,16 @@ import chalk from 'chalk'
 const originalIsTTY = Object.getOwnPropertyDescriptor(process.stdout, 'isTTY')
 const originalLevel = chalk.level
 beforeAll(() => {
-  Object.defineProperty(process.stdout, 'isTTY', { configurable: true, value: true })
+  Object.defineProperty(process.stdout, 'isTTY', {
+    configurable: true,
+    value: true
+  })
   chalk.level = 3
 })
 afterAll(() => {
   chalk.level = originalLevel
-  if (originalIsTTY) Object.defineProperty(process.stdout, 'isTTY', originalIsTTY)
+  if (originalIsTTY)
+    Object.defineProperty(process.stdout, 'isTTY', originalIsTTY)
   else delete (process.stdout as { isTTY?: boolean }).isTTY
 })
 ```

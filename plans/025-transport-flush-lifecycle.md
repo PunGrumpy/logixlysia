@@ -1,19 +1,8 @@
 # Plan 025: Implement the transport `flush()`/`close()` lifecycle and flush on `onStop`
 
-> **Executor instructions**: Follow this plan step by step. Run every
-> verification command and confirm the expected result before moving to the
-> next step. If anything in the "STOP conditions" section occurs, stop and
-> report — do not improvise. When done, update the status row for this plan
-> in `plans/README.md` — unless a reviewer dispatched you and told you they
-> maintain the index.
+> **Executor instructions**: Follow this plan step by step. Run every verification command and confirm the expected result before moving to the next step. If anything in the "STOP conditions" section occurs, stop and report — do not improvise. When done, update the status row for this plan in `plans/README.md` — unless a reviewer dispatched you and told you they maintain the index.
 >
-> **Drift check (run first)**:
-> `git diff --stat 478f40d..HEAD -- packages/logixlysia/src/index.ts packages/logixlysia/src/types/config.ts packages/logixlysia/src/output/index.ts packages/logixlysia/src/output/file-sink.ts packages/logixlysia/src/adapters/shared.ts packages/logixlysia/src/desertant.ts apps/docs/content/adapters/overview.mdx`
-> If any in-scope file changed since this plan was written, compare the
-> "Current state" excerpts against the live code before proceeding; on a
-> mismatch, treat it as a STOP condition. Plan 026 is expected to have
-> changed `adapters/shared.ts`; confirm it landed (its `flush()` awaits the
-> full send tail) — if it has not, STOP.
+> **Drift check (run first)**: `git diff --stat 478f40d..HEAD -- packages/logixlysia/src/index.ts packages/logixlysia/src/types/config.ts packages/logixlysia/src/output/index.ts packages/logixlysia/src/output/file-sink.ts packages/logixlysia/src/adapters/shared.ts packages/logixlysia/src/desertant.ts apps/docs/content/adapters/overview.mdx` If any in-scope file changed since this plan was written, compare the "Current state" excerpts against the live code before proceeding; on a mismatch, treat it as a STOP condition. Plan 026 is expected to have changed `adapters/shared.ts`; confirm it landed (its `flush()` awaits the full send tail) — if it has not, STOP.
 
 ## Status
 
@@ -92,7 +81,7 @@ Conventions: Biome via `ultracite` (single quotes, no semicolons). Sink error re
 ## Commands you will need
 
 | Purpose | Command | Expected on success |
-|---|---|---|
+| --- | --- | --- |
 | Install | `bun install` | exit 0 |
 | Typecheck | `bun run typecheck` | exit 0 |
 | Lint / Format | `bun run lint` / `bun run format` | exit 0 |
@@ -213,7 +202,7 @@ In `src/output/file-sink.ts`:
 **Verify**: create `__tests__/output/file-sink-lifecycle.test.ts` (model after `__tests__/output/interval-rotation.test.ts` for temp-dir handling) with:
 
 - `'flush() resolves after a write issued in the same tick is on disk'`: `getFileSink(path).write(line, {})` without awaiting, then `await sink.flush()`, then `readFile` → contains the line.
-- `'close() releases the handle and a later write reopens the file'`: write, `await close()`, `getFileSink(path)` returns a *new* instance (`!==`), write again, flush, file contains both lines.
+- `'close() releases the handle and a later write reopens the file'`: write, `await close()`, `getFileSink(path)` returns a _new_ instance (`!==`), write again, flush, file contains both lines.
 - `'close() is idempotent'`: call twice; no throw.
 - `'flushAllFileSinks() drains every registered sink'`: two paths, one write each unawaited, `await flushAllFileSinks()`, both files contain their line.
 
@@ -235,7 +224,9 @@ const track = (promise: Promise<unknown>): void => {
     }
   }
   pendingTransportWork.add(promise)
-  promise.finally(() => pendingTransportWork.delete(promise)).catch(() => undefined)
+  promise
+    .finally(() => pendingTransportWork.delete(promise))
+    .catch(() => undefined)
 }
 ```
 

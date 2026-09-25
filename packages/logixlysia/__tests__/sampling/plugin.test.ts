@@ -1,8 +1,8 @@
 import { describe, expect, mock, test } from 'bun:test'
 import { Elysia } from 'elysia'
-
-import logixlysia from '../../src'
-import { HttpError, type Options } from '../../src/interfaces'
+import { logixlysia } from '../../src'
+import { HttpError } from '../../src/interfaces'
+import type { Options } from '../../src/interfaces'
 
 interface CapturedEvent {
   level: string
@@ -158,17 +158,17 @@ describe('sampling through the plugin', () => {
   })
 })
 
-const HEAD_RATE_ERROR = /head\.INFO must be a number between 0 and 100/
-const TAIL_STATUS_ERROR = /tail\.status must be a non-negative number/
-const TAIL_DURATION_ERROR = /tail\.durationMs must be a non-negative number/
-const TAIL_PATHS_ERROR = /tail\.paths must contain non-empty glob strings/
+const HEAD_RATE_ERROR = /head\.INFO must be a number between 0 and 100/u
+const TAIL_STATUS_ERROR = /tail\.status must be a non-negative number/u
+const TAIL_DURATION_ERROR = /tail\.durationMs must be a non-negative number/u
+const TAIL_PATHS_ERROR = /tail\.paths must contain non-empty glob strings/u
 const MAX_BUFFERED_ERROR =
-  /maxBufferedPerRequest must be a non-negative integer/
+  /maxBufferedPerRequest must be a non-negative integer/u
+
+const build = (config: NonNullable<Options['config']>) => () =>
+  logixlysia({ config })
 
 describe('sampling config validation', () => {
-  const build = (config: NonNullable<Options['config']>) => () =>
-    logixlysia({ config })
-
   test('rejects a rate outside 0-100', () => {
     expect(build({ sampling: { head: { INFO: 150 } } })).toThrow(
       HEAD_RATE_ERROR

@@ -39,7 +39,7 @@ const app = new Elysia()
 ## Environment Variables
 
 | Variable | Required | Description |
-|----------|----------|-------------|
+| --- | --- | --- |
 | `BETTER_STACK_SOURCE_TOKEN` | Yes | Source token, sent as a Bearer token |
 | `BETTER_STACK_INGESTING_HOST` | No | Dedicated ingesting URL (default `https://in.logs.betterstack.com`) |
 
@@ -51,10 +51,10 @@ const betterStack = createBetterStackTransport({
 })
 ```
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `sourceToken` | `string` | `BETTER_STACK_SOURCE_TOKEN` | Source token |
-| `endpoint` | `string` | `https://in.logs.betterstack.com` | Ingesting URL |
+| Option        | Type     | Default                           | Description   |
+| ------------- | -------- | --------------------------------- | ------------- |
+| `sourceToken` | `string` | `BETTER_STACK_SOURCE_TOKEN`       | Source token  |
+| `endpoint`    | `string` | `https://in.logs.betterstack.com` | Ingesting URL |
 
 Plus the shared batching options: `maxBatchSize`, `flushIntervalMs`, `timeout`, `retries` — see the [overview](/docs/adapters/overview#shared-behavior).
 

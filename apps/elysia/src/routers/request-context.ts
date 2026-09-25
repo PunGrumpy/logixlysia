@@ -1,8 +1,10 @@
 import type { Logixlysia } from 'logixlysia'
-import { useLogger } from 'logixlysia'
+// `useLogger` is logixlysia's AsyncLocalStorage lookup, not a React hook; the
+// alias keeps the React hook rules from treating this helper as a component.
+import { useLogger as currentRequestLogger } from 'logixlysia'
 
 const dbQueryHelper = async () => {
-  const log = useLogger()
+  const log = currentRequestLogger()
   log.mergeContext({ query: 'SELECT * FROM users' })
   await Promise.resolve()
   log.info('Running database query in nested service')

@@ -39,7 +39,7 @@ const app = new Elysia()
 ## Environment Variables
 
 | Variable | Required | Description |
-|----------|----------|-------------|
+| --- | --- | --- |
 | `POSTHOG_API_KEY` | Yes | Project API key (`phc_…`) |
 | `POSTHOG_HOST` | No | Instance URL — US cloud (default), EU cloud, or self-hosted |
 
@@ -53,7 +53,7 @@ const posthog = createPostHogTransport({
 ```
 
 | Option | Type | Default | Description |
-|--------|------|---------|-------------|
+| --- | --- | --- | --- |
 | `apiKey` | `string` | `POSTHOG_API_KEY` | Project API key |
 | `host` | `string` | `https://us.i.posthog.com` | PostHog instance URL |
 | `eventName` | `string` | `logixlysia_log` | Name of the captured event |
@@ -66,14 +66,14 @@ Plus the shared batching options: `maxBatchSize`, `flushIntervalMs`, `timeout`, 
 
 Logs post to `{host}/batch/`. Each event carries flat, chart-friendly properties:
 
-| Property | Example |
-|----------|---------|
-| `level` | `INFO` |
-| `message` | `GET /users` |
-| `request.method` | `GET` |
-| `status` | `200` |
-| `durationMs` | `12.4` |
-| `context.requestId` | `0d5e…` |
+| Property            | Example      |
+| ------------------- | ------------ |
+| `level`             | `INFO`       |
+| `message`           | `GET /users` |
+| `request.method`    | `GET`        |
+| `status`            | `200`        |
+| `durationMs`        | `12.4`       |
+| `context.requestId` | `0d5e…`      |
 
 PostHog processes events asynchronously — expect them to appear within about a minute.
 

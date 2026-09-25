@@ -6,6 +6,7 @@
     "apps/*",
     "packages/*"
   ],
+  "type": "module",
   "scripts": {
     "bench": "turbo run bench",
     "build": "turbo run build",
@@ -22,15 +23,12 @@
     "typecheck": "turbo run typecheck"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.5.11",
     "@changesets/cli": "^3.0.1",
+    "oxfmt": "^0.68.0",
+    "oxlint": "^1.83.0",
     "turbo": "^2.10.12",
     "typescript": "6.0.3",
     "ultracite": "7.10.7"
-  },
-  "packageManager": "bun@1.3.14",
-  "engines": {
-    "node": ">=24"
   },
   "devEngines": {
     "packageManager": [
@@ -44,5 +42,9 @@
         "onFail": "ignore"
       }
     ]
-  }
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "packageManager": "bun@1.3.14"
 }

@@ -48,11 +48,11 @@ Rules are OR-ed — a single match replays the whole request, including the acce
 
 ### Path globs
 
-| Pattern | Matches                                          |
-| ------- | ------------------------------------------------ |
-| `**`    | Any characters, including `/`                    |
-| `*`     | Any characters except `/` — one path segment     |
-| `?`     | A single character except `/`                    |
+| Pattern | Matches                                      |
+| ------- | -------------------------------------------- |
+| `**`    | Any characters, including `/`                |
+| `*`     | Any characters except `/` — one path segment |
+| `?`     | A single character except `/`                |
 
 Everything else is literal, and patterns are anchored, so `/v1/users` matches only `/v1/users`.
 

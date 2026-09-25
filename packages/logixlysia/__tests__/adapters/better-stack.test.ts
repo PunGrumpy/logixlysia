@@ -1,5 +1,4 @@
 import { describe, expect, test } from 'bun:test'
-
 import { createBetterStackTransport } from '../../src/better-stack'
 import { stubEnv, stubFetch } from './helpers'
 

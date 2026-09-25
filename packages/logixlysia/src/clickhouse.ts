@@ -1,19 +1,21 @@
 import {
-  type AdapterTransport,
-  type BatchTransportOptions,
   createHttpTransport,
   defaultBody,
   envString,
   flattenMeta,
-  type LogEntry,
   stripTrailingSlashes,
   transportError
+} from './adapters/shared'
+import type {
+  AdapterTransport,
+  BatchTransportOptions,
+  LogEntry
 } from './adapters/shared'
 
 const DEFAULT_URL = 'http://localhost:8123'
 const DEFAULT_DATABASE = 'default'
 const DEFAULT_TABLE = 'logs'
-const IDENTIFIER = /^[A-Za-z0-9_]+$/
+const IDENTIFIER = /^[A-Za-z0-9_]+$/u
 
 export interface ClickHouseTransportOptions extends BatchTransportOptions {
   /**
@@ -77,7 +79,7 @@ const toRow = (entry: LogEntry): string => {
  * and an `attributes` map of the flattened meta (`request.method`,
  * `context.requestId`, …) with values rendered as strings.
  *
- * @throws When the database or table name is not a plain identifier.
+ * @throws {Error} When the database or table name is not a plain identifier.
  */
 export const createClickHouseTransport = (
   options: ClickHouseTransportOptions = {}

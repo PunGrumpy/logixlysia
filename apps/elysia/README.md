@@ -44,7 +44,7 @@ logixlysia({
 ## Routes
 
 | Method | Path | What it shows |
-|--------|------|----------------|
+| --- | --- | --- |
 | GET | `/` | Welcome |
 | GET | `/checkout` | Request context on access log |
 | POST | `/chat` | `mergeAIMetrics` → `context.ai` |

@@ -26,7 +26,11 @@ Logixlysia supports three types of logging outputs:
 
 ```ts
 type Transport = {
-  log: (level: LogLevel, message: string, meta?: Record<string, unknown>) => void | Promise<void>
+  log: (
+    level: LogLevel,
+    message: string,
+    meta?: Record<string, unknown>
+  ) => void | Promise<void>
   flush?: () => void | Promise<void>
   close?: () => void | Promise<void>
 }
@@ -37,11 +41,13 @@ const consoleTransport: Transport = {
   }
 }
 
-app.use(logixlysia({
-  config: {
-    transports: [consoleTransport]
-  }
-}))
+app.use(
+  logixlysia({
+    config: {
+      transports: [consoleTransport]
+    }
+  })
+)
 ```
 
 `log` is the only required member. Implement `flush` when your transport batches or queues entries — the plugin calls it on [shutdown](/docs/adapters/overview) so the last lines before an exit still arrive. Implement `close` when you hold a socket, timer, or buffer that must be released; it is never called automatically, only through `flushLogixlysia(options, { close: true })`, and it must be idempotent.
@@ -98,7 +104,7 @@ const slackTransport = {
     if (level.toLowerCase() === 'error') {
       const webhook = process.env.SLACK_WEBHOOK_URL
       if (!webhook) return
-      
+
       try {
         await fetch(webhook, {
           method: 'POST',
@@ -118,28 +124,26 @@ const slackTransport = {
 ## Multiple Transports
 
 ```ts
-app.use(logixlysia({
-  config: {
-    transports: [
-      elasticsearchTransport,
-      slackTransport
-    ]
-  }
-}))
+app.use(
+  logixlysia({
+    config: {
+      transports: [elasticsearchTransport, slackTransport]
+    }
+  })
+)
 ```
 
 ## Transport-Only Logging
 
 ```ts
-app.use(logixlysia({
-  config: {
-    useTransportsOnly: true,
-    transports: [
-      elasticsearchTransport,
-      slackTransport
-    ]
-  }
-}))
+app.use(
+  logixlysia({
+    config: {
+      useTransportsOnly: true,
+      transports: [elasticsearchTransport, slackTransport]
+    }
+  })
+)
 ```
 
 ## Best Practices
