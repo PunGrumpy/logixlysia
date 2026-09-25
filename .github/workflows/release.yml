@@ -58,14 +58,14 @@ jobs:
       # fail with a 409 whenever npm still held the last version as staged.
       - name: 🎟️ Create or update the release PR
         if: ${{ !startsWith(github.event.head_commit.message, 'Version Packages') }}
-        uses: changesets/action@8488615a623b1b9c987934bb89eae8af6a946ac1 # v2.1.1
+        uses: changesets/action@ae32849d5ba541f9ae29e40e22a623bc13562f51 # v2.1.2
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           version-script: bun run changeset version
       - name: 🎟️ Publish to NPM
         id: changesets
         if: ${{ startsWith(github.event.head_commit.message, 'Version Packages') }}
-        uses: changesets/action@8488615a623b1b9c987934bb89eae8af6a946ac1 # v2.1.1
+        uses: changesets/action@ae32849d5ba541f9ae29e40e22a623bc13562f51 # v2.1.2
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           version-script: bun run changeset version
