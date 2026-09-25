@@ -15,7 +15,7 @@
     "@remotion/cli": "4.0.527",
     "react": "^19.3.0",
     "react-dom": "^19.2.0",
-    "remotion": "4.0.526"
+    "remotion": "4.0.527"
   },
   "devDependencies": {
     "@repo/typescript-config": "workspace:*",
