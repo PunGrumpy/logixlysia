@@ -34,7 +34,6 @@ jobs:
         with:
           path: |
             ~/.bun/install/cache
-            **/node_modules
             .turbo
           key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}-${{ github.sha }}
           restore-keys: |
