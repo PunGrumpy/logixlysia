@@ -145,8 +145,8 @@ describe('handleHttpError', () => {
   })
 
   // Class names (and thus `.name`/`.constructor.name`) are mangled under
-  // bundler minification (e.g. `bun build --minify`, esbuild). Elysia 1.4's
-  // `code === 'VALIDATION'` is the minification-safe discriminant; simulate
+  // bundler minification (e.g. `bun build --minify`, esbuild). Elysia's
+  // `code === 'validation'` is the minification-safe discriminant; simulate
   // a mangled class to prove detection still works: neither `.name` nor
   // `.constructor.name` is `'ValidationError'`, only `code` identifies it.
   test('detects a validation error by code when class names are minified', () => {
@@ -159,8 +159,8 @@ describe('handleHttpError', () => {
     const mangled = Object.assign(
       new MangledError('{"found":{"password":"leak-me"}}'),
       {
-        all: [{ path: '/password' }],
-        code: 'VALIDATION',
+        all: [{ path: 'root', schemaPath: '#/properties/password' }],
+        code: 'validation',
         type: 'body'
       }
     )
@@ -173,18 +173,6 @@ describe('handleHttpError', () => {
     expect(metaError.name).toBe('ValidationError')
     expect(JSON.stringify(metaError)).not.toContain('leak-me')
     expect(message).not.toContain('leak-me')
-  })
-
-  test('Elysia 2 minified validation errors are detected by the lowercase code', () => {
-    const mangled = Object.assign(new Error('must be string'), {
-      all: [{ path: 'root', schemaPath: '#/properties/password' }],
-      code: 'validation',
-      type: 'body'
-    })
-
-    const { message } = normalizeLoggedError(mangled, false)
-
-    expect(message).toBe('Validation failed (body): /password')
   })
 
   test('names every missing property of an Elysia 2 required-properties failure', async () => {

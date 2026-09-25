@@ -47,41 +47,33 @@ const isValidationErrorLike = (
   // `.constructor.name` both degrade to a mangled string under bundler
   // minification (e.g. `bun build --minify`, esbuild), so `code` must be
   // checked too or validation bodies silently re-leak in that build mode.
-  // Elysia 1.4 used `'VALIDATION'`; Elysia 2 uses `'validation'`.
   ((value as { code?: unknown }).code === 'validation' ||
-    (value as { code?: unknown }).code === 'VALIDATION' ||
     value.name === 'ValidationError' ||
     value.constructor?.name === 'ValidationError')
 
 const SCHEMA_PATH_FRAGMENT_PREFIX = /^#/u
 
 /**
- * The property paths one validation failure points at. Elysia 1.4 put the
- * path on `failure.path` (`'/password'`). Elysia 2 (TypeBox 1.x) reports
- * `path: 'root'` and keeps the useful pointer on `failure.schemaPath`
- * (`'#/properties/password'`), unwrapped here to the same `/password` shape;
- * a missing property is one failure on the parent object that names every
+ * The property paths one validation failure points at. TypeBox 1.x reports
+ * every failure at `path: 'root'` and keeps the useful pointer on
+ * `schemaPath` (`'#/properties/password'`), unwrapped here to `/password`; a
+ * missing property is one failure on the parent object that names every
  * absent key in `params.requiredProperties`.
  */
 const failurePaths = (failure: unknown): string[] => {
   if (typeof failure !== 'object' || failure === null) {
     return []
   }
-  const { params, path, schemaPath } = failure as {
+  const { params, schemaPath } = failure as {
     params?: { requiredProperties?: unknown }
-    path?: unknown
     schemaPath?: unknown
   }
-  let base = ''
-  if (typeof path === 'string' && path.startsWith('/')) {
-    base = path
-  } else if (typeof schemaPath === 'string') {
-    base = schemaPath
-      .replace(SCHEMA_PATH_FRAGMENT_PREFIX, '')
-      .replaceAll('/properties/', '/')
-  } else if (typeof path === 'string' && path !== 'root') {
-    base = path
+  if (typeof schemaPath !== 'string') {
+    return []
   }
+  const base = schemaPath
+    .replace(SCHEMA_PATH_FRAGMENT_PREFIX, '')
+    .replaceAll('/properties/', '/')
   const required = params?.requiredProperties
   if (Array.isArray(required) && required.length > 0) {
     return required.map(key => `${base}/${String(key)}`)
