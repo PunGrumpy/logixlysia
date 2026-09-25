@@ -12,7 +12,7 @@ This is the Elysia 2 beta line. Install it from the `next` dist-tag:
 bun add logixlysia@next elysia@next
 ```
 
-On Elysia 1.4, install from the `latest` tag (`bun add logixlysia`), which stays on Logixlysia 6.x. [Elysia 2 support](https://logixlysia.vercel.app/docs/elysia-2) lists which Logixlysia version goes with which Elysia release.
+On Elysia 1.4, install from the `latest` tag (`bun add logixlysia`), which stays on Logixlysia 6.x. [Use Logixlysia with Elysia 2](https://logixlysia.vercel.app/docs/elysia-2) lists which Logixlysia version goes with which Elysia release.
 
 ## `📝` Usage
 

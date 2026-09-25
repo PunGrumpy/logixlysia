@@ -1,9 +1,9 @@
 ---
-title: Elysia 2 support
+title: Use Logixlysia with Elysia 2
 description: Which Logixlysia version to install for Elysia 2, and what to change in your app
 ---
 
-[Elysia 2 "DayDream"](https://elysiajs.com/blog/elysia-20) is a rewrite of the framework. It renames every lifecycle hook, moves route hooks before the handler, replaces the error-code API, changes the `Elysia` type parameters, and moves WebSocket support behind an opt-in plugin. One Logixlysia build cannot support both Elysia 1.4 and Elysia 2, so each has its own release line.
+[Elysia 2 "DayDream"](https://elysiajs.com/blog/elysia-20) renames every lifecycle hook, so one Logixlysia build can't support both Elysia 1.4 and Elysia 2. This page shows which Logixlysia version to install and what to change in your app when you upgrade.
 
 ## Compatibility
 
@@ -12,11 +12,13 @@ description: Which Logixlysia version to install for Elysia 2, and what to chang
 | `1.4.x` | `6.x` | `latest` | `bun add logixlysia` |
 | `>= 2.0.0-beta.19` | `7.x-next` | `next` | `bun add logixlysia@next elysia@next` |
 
-The `next` line follows the Elysia 2 beta and may break again before Elysia 2 is stable. Each beta can change APIs, so pin `elysia` to the version this Logixlysia release was tested against.
+The `next` line follows the Elysia 2 beta and can break again before Elysia 2 is stable. Pin `elysia` to an exact beta version and upgrade it together with Logixlysia.
 
 Elysia's codemod rewrites most of an app for you: `bunx @elysia/codemod@latest`.
 
-## What changed in your app
+## What to change in your app
+
+Elysia 2 changes hook names, route arguments, error handlers, and WebSocket setup. Logixlysia's own API stays the same.
 
 ### Lifecycle hooks lost their `on` prefix
 
@@ -52,7 +54,7 @@ app.get('/', () => 'ok', { detail: { summary: 'Root' } })
 app.get('/', { detail: { summary: 'Root' } }, () => 'ok')
 ```
 
-Routes with two arguments (`.get('/', handler)`) do not change.
+Routes with two arguments (`.get('/', handler)`) don't change.
 
 ### `resolve` is gone, and `derive` runs later
 
@@ -60,7 +62,7 @@ Elysia 2 removed `resolve` and runs `derive` during `beforeHandle`, where `resol
 
 ### Error handlers have no `code`
 
-Elysia 2 removed the `code` string from the error context. Pass an `Error` class to `.error()` to handle one class, or pass only a function for a general handler and narrow with `instanceof`:
+Elysia 2 removed the `code` string from the error context. Pass an `Error` class to `.error()` to handle one class. For every other error, pass only a function and narrow with `instanceof`:
 
 ```ts
 import { NotFound } from 'elysia'
@@ -69,8 +71,7 @@ app
   .error(NotFound, ({ error }) => {
     /* handle 404s */
   })
-  .error(({ error, store }) => {
-    // general handler: narrow with instanceof
+  .error(({ error }) => {
     if (error instanceof MyError) {
       /* ... */
     }
@@ -107,12 +108,12 @@ const app = new Elysia()
 
 `trace` and automatic `HEAD` routes are opt-in too, from `elysia/trace` and `elysia/auto-head`. The Node adapter moved from `@elysiajs/node` to `@elysia/node`, which has a named `node()` export and WebSocket support in `@elysia/node/websocket`.
 
-### Other changes
+### Other Elysia 2 changes that affect plugins
 
 - Elysia 2 removed `aot: false` (dynamic mode) and always compiles ahead of time.
 - The OpenAPI plugin for Elysia 2 is `@elysia/openapi`. Official Elysia 2 plugins publish under the `@elysia` npm scope, and `@elysiajs` packages stay on 1.x.
 
-## What stays the same
+## What stays the same in Logixlysia
 
 These work the same way as on the 6.x line: `logixlysia(options)`, the `preset` and `config` options, `store.logger`, `ctx.log`, `useLogger()`, `createLogger()`, `plugin.wrapWs`, sampling, enrichers, the observability adapters, and the `logixlysia/otel` and `logixlysia/ai` subpaths.
 
