@@ -55,10 +55,10 @@ const SCHEMA_PATH_FRAGMENT_PREFIX = /^#/u
 
 /**
  * The property paths one validation failure points at. TypeBox 1.x reports
- * every failure at `path: 'root'` and keeps the useful pointer on
- * `schemaPath` (`'#/properties/password'`), unwrapped here to `/password`; a
- * missing property is one failure on the parent object that names every
- * absent key in `params.requiredProperties`.
+ * every failure at `path: 'root'` and puts the property on `schemaPath`
+ * (`'#/properties/password'`), which this turns into `/password`. A missing
+ * property is one failure on the parent object, and `params.requiredProperties`
+ * names every absent key.
  */
 const failurePaths = (failure: unknown): string[] => {
   if (typeof failure !== 'object' || failure === null) {

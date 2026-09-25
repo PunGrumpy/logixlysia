@@ -275,9 +275,9 @@ const logixlysiaApp = new Elysia()
   .get('/', () => 'ok')
 
 // `evlog/elysia` and `@bogeychan/elysia-logger` still declare an Elysia 1 peer
-// and register the pre-2.0 lifecycle names, so their plugin-path benchmarks
-// (overhead floor and structured sink) are parked until they ship Elysia 2
-// builds. Their raw-logger benchmarks above are unaffected.
+// and register the pre-2.0 lifecycle names. Their plugin-path benchmarks
+// (overhead floor and structured sink) are off until they ship Elysia 2
+// builds. Their raw-logger benchmarks above still run.
 suite('Elysia plugin request path — overhead floor (all sinks disabled)', [
   [
     'logixlysia',
@@ -290,9 +290,8 @@ suite('Elysia plugin request path — overhead floor (all sinks disabled)', [
 // A no-op transport still exercises data assembly, context merge, meta
 // construction, and dispatch — unlike the floor suite above, this is real
 // work, just with a sink that discards the result instead of writing it
-// anywhere. evlog's equivalent (a noop `drain` on its Elysia plugin) is
-// parked with the other plugin-path benchmarks until evlog ships an
-// Elysia 2 build.
+// anywhere. evlog's equivalent (a noop `drain` on its Elysia plugin) is off
+// with the other plugin-path benchmarks until evlog ships an Elysia 2 build.
 const noopTransport = {
   log: () => {
     /* consume */
