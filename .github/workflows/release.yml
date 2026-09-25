@@ -37,7 +37,6 @@ jobs:
         with:
           path: |
             ~/.bun/install/cache
-            **/node_modules
           key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}
           restore-keys: |
             ${{ runner.os }}-bun-
