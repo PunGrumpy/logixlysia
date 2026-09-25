@@ -4,13 +4,13 @@
 
 Target the Elysia 2 beta (`>= 2.0.0-beta.19`).
 
-Elysia 2 renamed every lifecycle method and left no aliases behind, so this release drops support for Elysia 1.4 — the 6.x line stays on the `latest` tag for that.
+Elysia 2 renamed every lifecycle method and kept no aliases, so this release drops support for Elysia 1.4. Elysia 1.4 users stay on the 6.x line from the `latest` tag.
 
-- Register `setup`/`cleanup`/`request`/`afterHandle`/`error` instead of `onStart`/`onStop`/`onRequest`/`onAfterHandle`/`onError`, and read the handler result from `context.responseValue` (the deprecated `context.response` was removed).
-- Promote the plugin with `.as('plugin')` instead of `.as('scoped')`.
-- `Logixlysia` now resolves to `Elysia<'', 'local', LogixlysiaSingleton>`; Elysia 2 inserts `Scope` as the second type parameter, and `LogixlysiaSingleton` drops the `resolve` slot that Elysia 2 removed from `SingletonBase` (`derive` now runs during `beforeHandle`, so `ctx.log` is no longer visible in `parse`/`transform`).
-- `plugin.wrapWs` follows the new WebSocket handler contract: the route context is merged into the socket itself, so `ws.data.store.logger` reads as `ws.store.logger`.
-- Validation errors are read in the TypeBox 1.x shape: failed paths come from `schemaPath` and from `params.requiredProperties` for missing keys, detection accepts Elysia 2's `code: 'validation'`, and with `logErrorPayload` the rejected value is logged as `error.value`, since Elysia 2 no longer embeds it in the message.
+- The plugin registers `setup`, `cleanup`, `request`, `afterHandle` and `error` instead of `onStart`, `onStop`, `onRequest`, `onAfterHandle` and `onError`. It reads the handler result from `context.responseValue`, because Elysia 2 removed `context.response`.
+- The plugin promotes its hooks with `.as('plugin')` instead of `.as('scoped')`.
+- `Logixlysia` is now `Elysia<'', 'local', LogixlysiaSingleton>`. Elysia 2 added `Scope` as the second type parameter and removed the `resolve` slot from `SingletonBase`, so `LogixlysiaSingleton` has no `resolve` slot either. `derive` now runs during `beforeHandle`, so `ctx.log` is not available in `parse` or `transform`.
+- `plugin.wrapWs` reads `ws.store.logger` instead of `ws.data.store.logger`, because Elysia 2 merges the route context into the socket.
+- Validation error logs read the TypeBox 1.x error shape. Failed paths come from `schemaPath`, and a missing field is listed by name from `params.requiredProperties`. The minification-safe check uses Elysia 2's `code: 'validation'`. With `logErrorPayload` on, the rejected value is logged as `error.value`, because Elysia 2 no longer puts it in the message.
 - Peer dependencies are now `elysia >= 2.0.0-beta.19` and `typescript >= 5.7.0`.
 
-The Logixlysia API is otherwise unchanged. Applications need to rename their own lifecycle hooks, move route hooks/schema before the handler (`.get(path, hook, handler)`), and register `elysia/websocket` before using `.ws()` with `plugin.wrapWs` — see the Elysia 2 support page in the docs.
+The rest of the Logixlysia API is unchanged. In your app, rename your own lifecycle hooks, move route hooks and schema before the handler (`.get(path, hook, handler)`), and register `elysia/websocket` before using `.ws()` with `plugin.wrapWs`. The Elysia 2 support page in the docs covers each step.
