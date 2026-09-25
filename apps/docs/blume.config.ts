@@ -1,4 +1,7 @@
 import { defineConfig } from 'blume'
+import { databuddy, script } from 'blume/analytics'
+import { vercel } from 'blume/deploy'
+import { filesystem, githubReleases } from 'blume/sources'
 
 // The pre-blume site (Next.js + Fumadocs) served every docs page from the
 // root, e.g. /introduction and /features/log-levels. Those URLs are indexed
@@ -53,11 +56,11 @@ if (mintlifyWidgetId && !/^[\w-]+$/u.test(mintlifyWidgetId)) {
 // regardless of how the array below is written.
 const mintlifyWidgetScripts = mintlifyWidgetId
   ? [
-      {
+      script({
         attributes: { type: 'module' },
         src: 'https://widget.mintlify.com/v1/embed.js'
-      },
-      {
+      }),
+      script({
         attributes: { type: 'module' },
         content: `await window.MintlifyAssistant.init(${JSON.stringify({
           appearance: {
@@ -76,46 +79,37 @@ const mintlifyWidgetScripts = mintlifyWidgetId
             'How do I filter which requests get logged?'
           ]
         })});`
-      }
+      })
     ]
   : []
 
 export default defineConfig({
-  analytics: {
-    scripts: [
-      ...mintlifyWidgetScripts,
-      {
-        attributes: {
-          'data-client-id': 'da244eb8-365e-4cc4-a869-8fdc146ea465',
-          'data-track-attributes': 'true',
-          'data-track-errors': 'true',
-          'data-track-hash-changes': 'true',
-          'data-track-interactions': 'true',
-          'data-track-outgoing-links': 'true',
-          'data-track-web-vitals': 'true'
-        },
-        src: 'https://cdn.databuddy.cc/databuddy.js',
-        strategy: 'async'
-      }
-    ]
-  },
+  analytics: [
+    ...mintlifyWidgetScripts,
+    databuddy({
+      clientId: 'da244eb8-365e-4cc4-a869-8fdc146ea465',
+      'track-attributes': 'true',
+      'track-errors': 'true',
+      'track-hash-changes': 'true',
+      'track-interactions': 'true',
+      'track-outgoing-links': 'true',
+      'track-web-vitals': 'true'
+    })
+  ],
   content: {
     sources: [
-      { prefix: 'docs', root: 'content', type: 'filesystem' },
+      filesystem({ prefix: 'docs', root: 'content' }),
       // Logixlysia's GitHub releases become the changelog timeline at /changelog
       // (each release is a type:changelog entry). Set GITHUB_TOKEN in CI to
       // avoid rate limits; a failed fetch degrades to an empty changelog.
-      {
+      githubReleases({
         owner: 'PunGrumpy',
         prefix: 'changelog',
-        repo: 'logixlysia',
-        type: 'github-releases'
-      }
+        repo: 'logixlysia'
+      })
     ]
   },
-  deployment: {
-    adapter: 'vercel'
-  },
+  deployment: vercel(),
   description:
     'The logger for Elysia.js — simple and easy to use, beautiful and powerful',
   github: {
@@ -127,14 +121,14 @@ export default defineConfig({
     owner: 'PunGrumpy',
     repo: 'logixlysia'
   },
-  lastModified: true,
+  lastModified: 'git',
   logo: {
     href: '/',
     image: '/icon.png',
     text: 'Logixlysia'
   },
   markdown: {
-    codeBlocks: {
+    code: {
       theme: {
         dark: 'vesper',
         light: 'github-light'
