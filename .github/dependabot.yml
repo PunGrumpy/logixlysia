@@ -6,6 +6,11 @@ updates:
     schedule:
       interval: 'monthly'
     labels: ['dependencies', 'github_actions']
+    groups:
+      # init, autobuild and analyze must run the same version; a lone bump
+      # fails with "Loaded a configuration file for version X, but running Y".
+      codeql-action:
+        patterns: ['github/codeql-action*']
 
   - package-ecosystem: 'bun'
     directory: '/'
