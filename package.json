@@ -28,7 +28,7 @@
     "oxlint": "^1.83.0",
     "turbo": "^2.11.2",
     "typescript": "6.0.3",
-    "ultracite": "7.10.7"
+    "ultracite": "7.12.0"
   },
   "devEngines": {
     "packageManager": [
