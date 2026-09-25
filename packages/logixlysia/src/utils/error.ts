@@ -36,15 +36,58 @@ export interface NormalizedLoggedError {
 
 const isValidationErrorLike = (
   value: unknown
-): value is Error & { all?: unknown[]; status?: number; type?: string } =>
+): value is Error & {
+  all?: unknown[]
+  status?: number
+  type?: string
+  value?: unknown
+} =>
   value instanceof Error &&
   // `code` is Elysia's minification-safe discriminant — `.name` and
   // `.constructor.name` both degrade to a mangled string under bundler
   // minification (e.g. `bun build --minify`, esbuild), so `code` must be
   // checked too or validation bodies silently re-leak in that build mode.
-  ((value as { code?: unknown }).code === 'VALIDATION' ||
+  // Elysia 1.4 used `'VALIDATION'`; Elysia 2 uses `'validation'`.
+  ((value as { code?: unknown }).code === 'validation' ||
+    (value as { code?: unknown }).code === 'VALIDATION' ||
     value.name === 'ValidationError' ||
     value.constructor?.name === 'ValidationError')
+
+const SCHEMA_PATH_FRAGMENT_PREFIX = /^#/u
+
+/**
+ * The property paths one validation failure points at. Elysia 1.4 put the
+ * path on `failure.path` (`'/password'`). Elysia 2 (TypeBox 1.x) reports
+ * `path: 'root'` and keeps the useful pointer on `failure.schemaPath`
+ * (`'#/properties/password'`), unwrapped here to the same `/password` shape;
+ * a missing property is one failure on the parent object that names every
+ * absent key in `params.requiredProperties`.
+ */
+const failurePaths = (failure: unknown): string[] => {
+  if (typeof failure !== 'object' || failure === null) {
+    return []
+  }
+  const { params, path, schemaPath } = failure as {
+    params?: { requiredProperties?: unknown }
+    path?: unknown
+    schemaPath?: unknown
+  }
+  let base = ''
+  if (typeof path === 'string' && path.startsWith('/')) {
+    base = path
+  } else if (typeof schemaPath === 'string') {
+    base = schemaPath
+      .replace(SCHEMA_PATH_FRAGMENT_PREFIX, '')
+      .replaceAll('/properties/', '/')
+  } else if (typeof path === 'string' && path !== 'root') {
+    base = path
+  }
+  const required = params?.requiredProperties
+  if (Array.isArray(required) && required.length > 0) {
+    return required.map(key => `${base}/${String(key)}`)
+  }
+  return base ? [base] : []
+}
 
 const STRUCTURED_ERROR_KEYS = [
   'code',
@@ -73,23 +116,31 @@ export const normalizeLoggedError = (
   error: unknown,
   logErrorPayload: boolean
 ): NormalizedLoggedError => {
-  if (isValidationErrorLike(error) && !logErrorPayload) {
+  if (isValidationErrorLike(error)) {
     const failures = Array.isArray(error.all) ? error.all : []
-    const paths = failures
-      .map(failure =>
-        typeof failure === 'object' && failure !== null && 'path' in failure
-          ? String((failure as { path: unknown }).path)
-          : ''
-      )
-      .filter(Boolean)
+    const paths = failures.flatMap(failurePaths)
     const scope = typeof error.type === 'string' ? error.type : 'request'
     const message =
       paths.length > 0
         ? `Validation failed (${scope}): ${paths.join(', ')}`
         : `Validation failed (${scope})`
+    const safe: Record<string, unknown> = {
+      failedPaths: paths,
+      name: 'ValidationError',
+      type: scope
+    }
+    if (!logErrorPayload) {
+      return { error: safe, message }
+    }
+    // Elysia 1.4 embedded the offending payload in the validation message;
+    // Elysia 2's message is just the TypeBox summary, so when the user opted
+    // in the rejected value is surfaced explicitly instead.
+    if (error.value !== undefined) {
+      safe.value = error.value
+    }
     return {
-      error: { failedPaths: paths, name: 'ValidationError', type: scope },
-      message
+      error: safe,
+      message: error.message ? `${message}: ${error.message}` : message
     }
   }
 

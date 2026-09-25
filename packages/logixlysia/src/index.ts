@@ -69,22 +69,28 @@ const resolveHandledStatus = (
 }
 
 /**
- * Explicit singleton without Elysia's `SingletonBase` `Record<string, unknown>` on decorator/derive/resolve so
- * merged `Context` and WebSocket `ws.data` keep precise keys after `.use(logixlysia())`.
+ * Explicit singleton without Elysia's `SingletonBase` `Record<string, unknown>` on decorator/derive so
+ * merged `Context` and WebSocket handler contexts keep precise keys after `.use(logixlysia())`.
+ *
+ * Elysia 2 dropped the `resolve` slot from `SingletonBase` along with the `resolve` lifecycle
+ * (`derive` now runs during `beforeHandle`, which is what `resolve` used to do).
  */
 export interface LogixlysiaSingleton<TFields extends object = LogFields> {
   decorator: EmptyElysiaSlot
   derive: {
     log: RequestScopedLogger<TFields>
   }
-  resolve: EmptyElysiaSlot
   store: LogixlysiaStore
 }
 
+// Elysia 2 inserts `Scope` as the second type parameter, between `BasePath` and `Singleton`. The
+// instance is built without `config.as`, so its scope stays the default `'local'`; `.as('plugin')`
+// promotes the hooks to the consumer without changing that parameter.
 // Elysia's `SingletonBase` slots are `Record<string, unknown>`; ours are intentionally closed (see #220).
 export type Logixlysia<TFields extends object = LogFields> = Elysia<
   '',
-  // @ts-expect-error — closed slots are correct at runtime and for merged `ws.data` inference.
+  'local',
+  // @ts-expect-error — closed slots are correct at runtime and for merged WS context inference.
   LogixlysiaSingleton<TFields>
 >
 
@@ -102,7 +108,7 @@ const DEFAULT_FLUSH_TIMEOUT_MS = 5000
  * it last. Only built when an enricher will actually read it.
  */
 const readableResponseHeaders = (
-  setHeaders: Record<string, string | number>,
+  setHeaders: Record<string, string | number | string[]>,
   responseHeaders?: Headers
 ): Record<string, unknown> => {
   const merged: Record<string, unknown> = {}
@@ -218,7 +224,7 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
    */
   const closeRequest = (
     request: Request,
-    setHeaders: Record<string, string | number>,
+    setHeaders: Record<string, string | number | string[]>,
     status: number,
     responseHeaders?: Headers
   ): StoreData => {
@@ -268,14 +274,14 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
 
   /**
    * The timing store for the error line. When a hook after the handler throws,
-   * onError runs for a request onAfterHandle already closed: its success line
+   * the `error` hook runs for a request `afterHandle` already closed: its success line
    * is on the wire and cannot be retracted, but the error line still has to
    * carry the request's real duration, and closing twice would resolve tail
    * sampling twice for the same request.
    */
   const errorStore = (
     request: Request,
-    setHeaders: Record<string, string | number>,
+    setHeaders: Record<string, string | number | string[]>,
     error: unknown
   ): StoreData => {
     if (closed.has(request)) {
@@ -302,7 +308,7 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
     .state('pino', logger.pino)
     .state('beforeTime', 0n)
     .derive(({ request }) => ({ log: createRequestScopedLogger(request) }))
-    .onStart(({ server }): void => {
+    .setup(({ server }): void => {
       if (server) {
         startServer(server, options)
       } else {
@@ -311,7 +317,7 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
         startServer({ hostname, port, protocol: 'http' }, options)
       }
     })
-    .onStop(async () => {
+    .cleanup(async () => {
       const timeoutMs =
         options.config?.flushTimeoutMs ?? DEFAULT_FLUSH_TIMEOUT_MS
       const timedOut = await raceWithTimeout(flushAll(options), timeoutMs)
@@ -321,7 +327,7 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
         reportShutdownTimeout(options.config?.onError, timeoutMs)
       }
     })
-    .onRequest(({ request, store }) => {
+    .request(({ request, store }) => {
       const beforeTime = process.hrtime.bigint()
       requestStartTimes.set(request, beforeTime)
       // Published for handlers that read `store.beforeTime`. The plugin's own
@@ -342,13 +348,13 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
         loggerStorage.enterWith(createRequestScopedLogger(request))
       }
     })
-    .onAfterHandle(({ request, set, response }) => {
+    .afterHandle(({ request, set, responseValue }) => {
       try {
         if (closed.has(request)) {
           return
         }
 
-        const status = resolveHandledStatus(set.status, response)
+        const status = resolveHandledStatus(set.status, responseValue)
 
         // Runs before the early return: a request that only emitted custom
         // logs still needs its buffered records replayed.
@@ -356,7 +362,7 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
           request,
           set.headers,
           status,
-          response instanceof Response ? response.headers : undefined
+          responseValue instanceof Response ? responseValue.headers : undefined
         )
         closed.add(request)
 
@@ -380,13 +386,13 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
         logger.log(level, request, data, store)
         // Nothing else is cleaned up here: the timings and the context bag
         // live in WeakMaps keyed by the request, and a hook running after this
-        // one may still throw, in which case onError needs both to stay
+        // one may still throw, in which case the `error` hook needs both to stay
         // truthful.
       } finally {
         exitRequestScope()
       }
     })
-    .onError(({ request, error, set }) => {
+    .error(({ request, error, set }) => {
       try {
         logger.handleHttpError(
           request,
@@ -399,14 +405,14 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
         exitRequestScope()
       }
     })
-    .as('scoped') as Logixlysia<TFields>
+    .as('plugin') as Logixlysia<TFields>
 
   return Object.assign(plugin, { wrapWs }) as LogixlysiaPlugin<TFields>
 }
 
 /**
  * Drains every transport and file sink; with `close: true` also releases
- * them. For processes that stop without Elysia's `onStop` (workers,
+ * them. For processes that stop without Elysia's `cleanup` (workers,
  * scripts, custom signal handlers). Safe to call more than once.
  */
 export const flushLogixlysia = async (

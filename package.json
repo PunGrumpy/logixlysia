@@ -24,6 +24,7 @@
   },
   "devDependencies": {
     "@changesets/cli": "^3.0.1",
+    "exact-mirror": "^1.2.6",
     "oxfmt": "^0.70.0",
     "oxlint": "^1.83.0",
     "turbo": "^2.11.2",

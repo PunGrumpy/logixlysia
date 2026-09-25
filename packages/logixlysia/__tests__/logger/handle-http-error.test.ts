@@ -27,12 +27,16 @@ const createCaptureTransport = () => {
 const SECRET_PASSWORD = 'hunter2-secret-value'
 
 const buildLoginApp = (options: Options) =>
-  new Elysia().use(logixlysia(options)).post('/login', () => 'ok', {
-    body: t.Object({
-      email: t.String(),
-      password: t.String({ minLength: 60 })
-    })
-  })
+  new Elysia().use(logixlysia(options)).post(
+    '/login',
+    {
+      body: t.Object({
+        email: t.String(),
+        password: t.String({ minLength: 60 })
+      })
+    },
+    () => 'ok'
+  )
 
 describe('handleHttpError', () => {
   test('does not leak the request body when a validation error occurs', async () => {
@@ -141,7 +145,7 @@ describe('handleHttpError', () => {
   })
 
   // Class names (and thus `.name`/`.constructor.name`) are mangled under
-  // bundler minification (e.g. `bun build --minify`, esbuild). Elysia's
+  // bundler minification (e.g. `bun build --minify`, esbuild). Elysia 1.4's
   // `code === 'VALIDATION'` is the minification-safe discriminant; simulate
   // a mangled class to prove detection still works: neither `.name` nor
   // `.constructor.name` is `'ValidationError'`, only `code` identifies it.
@@ -169,6 +173,55 @@ describe('handleHttpError', () => {
     expect(metaError.name).toBe('ValidationError')
     expect(JSON.stringify(metaError)).not.toContain('leak-me')
     expect(message).not.toContain('leak-me')
+  })
+
+  test('Elysia 2 minified validation errors are detected by the lowercase code', () => {
+    const mangled = Object.assign(new Error('must be string'), {
+      all: [{ path: 'root', schemaPath: '#/properties/password' }],
+      code: 'validation',
+      type: 'body'
+    })
+
+    const { message } = normalizeLoggedError(mangled, false)
+
+    expect(message).toBe('Validation failed (body): /password')
+  })
+
+  test('names every missing property of an Elysia 2 required-properties failure', async () => {
+    const { events, transport } = createCaptureTransport()
+    const app = buildLoginApp({
+      config: {
+        disableFileLogging: true,
+        disableInternalLogger: true,
+        transports: [{ log: transport }]
+      }
+    })
+
+    await app.handle(
+      new Request('http://localhost/login', {
+        body: JSON.stringify({}),
+        headers: { 'content-type': 'application/json' },
+        method: 'POST'
+      })
+    )
+
+    const errorEvent = events.find(event => event.meta.status === 422)
+    const metaError = errorEvent?.meta.error as Record<string, unknown>
+    expect(metaError.failedPaths).toEqual(['/email', '/password'])
+  })
+
+  test('surfaces the rejected value only when logErrorPayload is enabled', () => {
+    const failure = Object.assign(new Error('must be string'), {
+      all: [{ path: 'root', schemaPath: '#/properties/password' }],
+      code: 'validation',
+      type: 'body',
+      value: { password: SECRET_PASSWORD }
+    })
+
+    expect(normalizeLoggedError(failure, false).error.value).toBeUndefined()
+    expect(normalizeLoggedError(failure, true).error.value).toEqual({
+      password: SECRET_PASSWORD
+    })
   })
 
   // Pins decided drift #2 from plans/017: the error path now honors the same
