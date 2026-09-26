@@ -1,4 +1,5 @@
 import { Elysia } from 'elysia'
+import { websocket } from 'elysia/websocket'
 import { logixlysia } from 'logixlysia'
 import { aiMetricsRouter } from './ai-metrics'
 import { autoRedactRouter } from './auto-redact'
@@ -10,15 +11,13 @@ import { requestContextRouter } from './request-context'
 import { statusRouter } from './status'
 
 interface DemoWs {
-  data: {
-    store: {
-      logger: {
-        mergeContext: (key: unknown, partial: Record<string, unknown>) => void
-      }
-    }
-  }
   id?: string
   send: (payload: unknown) => void
+  store: {
+    logger: {
+      mergeContext: (key: unknown, partial: Record<string, unknown>) => void
+    }
+  }
 }
 
 export const logging = logixlysia({
@@ -38,18 +37,19 @@ export const logging = logixlysia({
 })
 
 export const routers = new Elysia()
+  .use(websocket())
   .use(logging)
   .get(
     '/',
-    () => ({
-      message: 'Welcome to Basic Elysia with Logixlysia'
-    }),
     {
       detail: {
         summary: 'Welcome to Basic Elysia with Logixlysia',
         tags: ['welcome']
       }
-    }
+    },
+    () => ({
+      message: 'Welcome to Basic Elysia with Logixlysia'
+    })
   )
   .use(customRouter)
   .use(requestContextRouter)
@@ -74,7 +74,7 @@ export const routers = new Elysia()
       },
       open(ws) {
         const socket = ws as unknown as DemoWs
-        socket.data.store.logger.mergeContext(ws, { room: 'lobby' })
+        socket.store.logger.mergeContext(ws, { room: 'lobby' })
       }
     })
   })

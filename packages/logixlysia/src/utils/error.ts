@@ -36,15 +36,45 @@ export interface NormalizedLoggedError {
 
 const isValidationErrorLike = (
   value: unknown
-): value is Error & { all?: unknown[]; status?: number; type?: string } =>
+): value is Error & {
+  all?: unknown[]
+  status?: number
+  type?: string
+  value?: unknown
+} =>
   value instanceof Error &&
   // `code` is Elysia's minification-safe discriminant — `.name` and
   // `.constructor.name` both degrade to a mangled string under bundler
   // minification (e.g. `bun build --minify`, esbuild), so `code` must be
   // checked too or validation bodies silently re-leak in that build mode.
-  ((value as { code?: unknown }).code === 'VALIDATION' ||
+  ((value as { code?: unknown }).code === 'validation' ||
     value.name === 'ValidationError' ||
     value.constructor?.name === 'ValidationError')
+
+const SCHEMA_PATH_FRAGMENT_PREFIX = /^#/u
+
+// TypeBox 1.x reports every failure at `path: 'root'`. The property is on
+// `schemaPath` (`#/properties/password` becomes `/password`).
+const failurePaths = (failure: unknown): string[] => {
+  if (typeof failure !== 'object' || failure === null) {
+    return []
+  }
+  const { params, schemaPath } = failure as {
+    params?: { requiredProperties?: unknown }
+    schemaPath?: unknown
+  }
+  if (typeof schemaPath !== 'string') {
+    return []
+  }
+  const base = schemaPath
+    .replace(SCHEMA_PATH_FRAGMENT_PREFIX, '')
+    .replaceAll('/properties/', '/')
+  const required = params?.requiredProperties
+  if (Array.isArray(required) && required.length > 0) {
+    return required.map(key => `${base}/${String(key)}`)
+  }
+  return base ? [base] : []
+}
 
 const STRUCTURED_ERROR_KEYS = [
   'code',
@@ -73,23 +103,29 @@ export const normalizeLoggedError = (
   error: unknown,
   logErrorPayload: boolean
 ): NormalizedLoggedError => {
-  if (isValidationErrorLike(error) && !logErrorPayload) {
+  if (isValidationErrorLike(error)) {
     const failures = Array.isArray(error.all) ? error.all : []
-    const paths = failures
-      .map(failure =>
-        typeof failure === 'object' && failure !== null && 'path' in failure
-          ? String((failure as { path: unknown }).path)
-          : ''
-      )
-      .filter(Boolean)
+    const paths = failures.flatMap(failurePaths)
     const scope = typeof error.type === 'string' ? error.type : 'request'
     const message =
       paths.length > 0
         ? `Validation failed (${scope}): ${paths.join(', ')}`
         : `Validation failed (${scope})`
+    const safe: Record<string, unknown> = {
+      failedPaths: paths,
+      name: 'ValidationError',
+      type: scope
+    }
+    if (!logErrorPayload) {
+      return { error: safe, message }
+    }
+    // Elysia 2 leaves the rejected value out of the message.
+    if (error.value !== undefined) {
+      safe.value = error.value
+    }
     return {
-      error: { failedPaths: paths, name: 'ValidationError', type: scope },
-      message
+      error: safe,
+      message: error.message ? `${message}: ${error.message}` : message
     }
   }
 

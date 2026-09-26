@@ -2,8 +2,8 @@ import type { RequestContextStore } from '../context/request-context'
 import type { Logger, Options, StoreData } from '../interfaces'
 
 export interface WebSocketLike {
-  readonly data?: { store?: { logger?: Logger } }
   readonly id?: string
+  readonly store?: { logger?: Logger }
 }
 
 export interface WsHandlerHooks<

@@ -1,14 +1,10 @@
 import { mkdtempSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
-import {
-  logger as bogeychanLogger,
-  createPinoLogger as createBogeychan
-} from '@bogeychan/elysia-logger'
+import { createPinoLogger as createBogeychan } from '@bogeychan/elysia-logger'
 import { consola } from 'consola'
 import { Elysia } from 'elysia'
 import { createLogger as createEvlog, initLogger } from 'evlog'
-import { evlog } from 'evlog/elysia'
 import { createLogger, logixlysia } from 'logixlysia'
 import pino from 'pino'
 import type { BenchFn, BenchRegistration } from 'vitest'
@@ -278,45 +274,12 @@ const logixlysiaApp = new Elysia()
   .use(logixlysia({ config: silentLogixConfig }))
   .get('/', () => 'ok')
 
-const evlogApp = new Elysia()
-  .use(
-    evlog({
-      drain: () => {
-        /* benchmark noop */
-      }
-    })
-  )
-  .get('/', () => 'ok')
-
-const bogeychanApp = new Elysia()
-  .use(
-    bogeychanLogger({
-      enabled: false
-    })
-  )
-  .get('/', () => 'ok')
-
-// evlog has no fully-disabled mode — its "floor" case (evlogApp, below)
-// still assembles and drains a wide event per request, so its number here
-// is not a pure dispatch floor. bogeychan (`enabled: false`) and
-// logixlysia (all sinks disabled) are true floors.
+// evlog and bogeychan have no Elysia 2 plugin yet, so only logixlysia runs here.
 suite('Elysia plugin request path — overhead floor (all sinks disabled)', [
   [
     'logixlysia',
     async () => {
       await logixlysiaApp.handle(new Request('http://localhost/'))
-    }
-  ],
-  [
-    'evlog',
-    async () => {
-      await evlogApp.handle(new Request('http://localhost/'))
-    }
-  ],
-  [
-    'bogeychan',
-    async () => {
-      await bogeychanApp.handle(new Request('http://localhost/'))
     }
   ]
 ])
@@ -324,10 +287,7 @@ suite('Elysia plugin request path — overhead floor (all sinks disabled)', [
 // A no-op transport still exercises data assembly, context merge, meta
 // construction, and dispatch — unlike the floor suite above, this is real
 // work, just with a sink that discards the result instead of writing it
-// anywhere. evlog's noop `drain` (reused from `evlogApp` above) is its
-// equivalent structured sink, so this comparison is apples-to-apples.
-// bogeychan has no comparable noop-sink mode (its `enabled: false` fully
-// short-circuits, same as the floor suite), so it's left out here.
+// anywhere.
 const noopTransport = {
   log: () => {
     /* consume */
@@ -350,12 +310,6 @@ suite('Elysia plugin request path — structured sink (noop consumer)', [
     'logixlysia (transport)',
     async () => {
       await logixlysiaTransportApp.handle(new Request('http://localhost/'))
-    }
-  ],
-  [
-    'evlog (drain)',
-    async () => {
-      await evlogApp.handle(new Request('http://localhost/'))
     }
   ]
 ])

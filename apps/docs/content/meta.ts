@@ -3,6 +3,7 @@ import { defineMeta } from 'blume'
 export default defineMeta({
   pages: [
     'introduction',
+    'use-with-elysia-2',
     'comparison',
     'migration-from-evlog',
     'examples',

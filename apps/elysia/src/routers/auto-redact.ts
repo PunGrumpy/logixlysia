@@ -26,6 +26,12 @@ const mockCreditCard = () =>
 export const autoRedactRouter = <App extends Logixlysia>(app: App) =>
   app.get(
     '/auto-redact',
+    {
+      detail: {
+        summary: 'Auto redact example',
+        tags: ['auto-redact']
+      }
+    },
     ({ request, store }) => {
       store.logger.info(request, 'Hello, world!', {
         creditCard: mockCreditCard(),
@@ -34,11 +40,5 @@ export const autoRedactRouter = <App extends Logixlysia>(app: App) =>
         jwt: mockJwt()
       })
       return { message: 'Hello, world!' }
-    },
-    {
-      detail: {
-        summary: 'Auto redact example',
-        tags: ['auto-redact']
-      }
     }
   )
