@@ -26,7 +26,7 @@
     "@changesets/cli": "^3.0.1",
     "oxfmt": "^0.70.0",
     "oxlint": "^1.83.0",
-    "turbo": "^2.11.2",
+    "turbo": "^2.11.5",
     "typescript": "6.0.3",
     "ultracite": "7.12.0"
   },
