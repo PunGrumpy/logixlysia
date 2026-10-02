@@ -16,7 +16,7 @@
   },
   "devDependencies": {
     "@repo/typescript-config": "workspace:*",
-    "@types/node": "^26.4.0",
+    "@types/node": "^26.6.3",
     "simple-icons": "^16.33.0",
     "typescript": "^6.0.3"
   }
