@@ -111,7 +111,7 @@
     "typecheck": "tsc --noEmit --emitDeclarationOnly false"
   },
   "dependencies": {
-    "chalk": "^6.0.0",
+    "chalk": "^6.0.1",
     "pino": "^10.3.1",
     "pino-pretty": "^13.1.3"
   },
