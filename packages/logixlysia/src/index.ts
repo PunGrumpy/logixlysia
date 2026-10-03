@@ -45,10 +45,10 @@ export interface EmptyElysiaSlot {
 const DEFAULT_STATUS = 200
 
 /**
- * The status the client actually sees. Elysia leaves `set.status` at 200
- * unless a handler assigned one, and on the wire a returned `Response` beats
- * that untouched default — so a streaming, redirecting or proxying handler's
- * own status is the one worth logging.
+ * The status the client actually sees. A `status()` result carries its own
+ * code. A returned `Response` keeps its own status unless that is 200, in
+ * which case `set.status` applies, as in Elysia's `mergeStatus`. Otherwise
+ * Elysia sends `set.status`, which stays 200 unless a handler assigned one.
  */
 const resolveHandledStatus = (
   setStatus: unknown,
@@ -58,18 +58,15 @@ const resolveHandledStatus = (
     return response.code
   }
 
-  if (setStatus !== undefined && setStatus !== null) {
-    const assigned = getStatusCode(setStatus)
-    if (assigned !== DEFAULT_STATUS) {
-      return assigned
-    }
-  }
-
-  if (response instanceof Response) {
+  if (response instanceof Response && response.status !== DEFAULT_STATUS) {
     return response.status
   }
 
-  return DEFAULT_STATUS
+  if (setStatus === undefined || setStatus === null) {
+    return DEFAULT_STATUS
+  }
+
+  return getStatusCode(setStatus)
 }
 
 /**

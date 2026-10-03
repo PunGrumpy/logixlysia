@@ -144,6 +144,21 @@ describe('logixlysia plugin - status resolution', () => {
     expect(transport.mock.calls[0]?.[1]).toBe('Unauthorized')
   })
 
+  test('a returned Response status beats a set.status of 201', async () => {
+    const { options, transport } = createCaptureTransport()
+    const app = new Elysia()
+      .use(logixlysia(options))
+      .get('/both', ({ set }) => {
+        set.status = 201
+        return Response.json({ ok: false }, { status: 409 })
+      })
+
+    await run(app, '/both')
+
+    expect(transport).toHaveBeenCalledTimes(1)
+    expect(recordAt(transport, 0).meta.status).toBe(409)
+  })
+
   test('tail sampling keeps a status() 404 that head sampling drops', async () => {
     const { options, transport } = createCaptureTransport({
       sampling: { head: { INFO: 0, WARNING: 0 }, tail: { status: 400 } }
