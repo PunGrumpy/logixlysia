@@ -21,7 +21,7 @@ const EMPTY_CONTEXT: Readonly<Record<string, unknown>> = Object.freeze({})
  * `raw` socket is the same across a connection's lifetime, so key by that.
  * A `Request` has no `raw`, so HTTP keys are unchanged.
  */
-const keyOf = (key: ContextKey): ContextKey => {
+export const keyOf = (key: ContextKey): ContextKey => {
   const raw = 'raw' in key ? key.raw : undefined
   return typeof raw === 'object' && raw !== null ? raw : key
 }

@@ -1,3 +1,4 @@
+import { keyOf } from '../context/request-context'
 import type { RequestContextStore } from '../context/request-context'
 import type { Logger, Options, StoreData } from '../interfaces'
 
@@ -29,9 +30,6 @@ const wsSyntheticRequest = (path: string): Request => {
   return request
 }
 
-// Elysia passes a new wrapper per event; only `raw` is the same for the whole connection.
-const connectionKey = (ws: WebSocketLike): object => ws.raw ?? ws
-
 const payloadTypeOf = (message: unknown): string => {
   if (message instanceof ArrayBuffer || ArrayBuffer.isView(message)) {
     return 'binary'
@@ -56,8 +54,7 @@ export const createWsHandlerWrapper = (
     message: string,
     extra?: Record<string, unknown>
   ): void => {
-    const beforeTime =
-      wsTimings.get(connectionKey(ws)) ?? process.hrtime.bigint()
+    const beforeTime = wsTimings.get(keyOf(ws)) ?? process.hrtime.bigint()
     const store: StoreData = { beforeTime }
     // Read-only: immediately spread below into a new object, never retained or mutated.
     const accumulated = contextStore.peekContext(ws)
@@ -109,8 +106,8 @@ export const createWsHandlerWrapper = (
               Object.keys(extra).length > 0 ? extra : undefined
             )
           }
-          contextStore.clearContext(ws as object)
-          wsTimings.delete(connectionKey(ws))
+          contextStore.clearContext(ws)
+          wsTimings.delete(keyOf(ws))
         }
       },
       message(ws, message) {
@@ -125,7 +122,7 @@ export const createWsHandlerWrapper = (
         }
       },
       open(ws) {
-        wsTimings.set(connectionKey(ws), process.hrtime.bigint())
+        wsTimings.set(keyOf(ws), process.hrtime.bigint())
         try {
           hooks.open?.(ws)
         } finally {
