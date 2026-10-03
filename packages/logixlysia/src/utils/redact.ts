@@ -147,6 +147,21 @@ const URL_SAFE_REDACT = 'redacted'
 const redactUrlAuthoritySegment = (value: string): string =>
   redactString(value).replaceAll(REDACTED_TEXT, URL_SAFE_REDACT)
 
+/** Always returns a new instance; `params` is left untouched. */
+const redactSearchParams = (
+  params: URLSearchParams,
+  extraKeys?: readonly string[]
+): URLSearchParams => {
+  const result = new URLSearchParams()
+  for (const [key, value] of params) {
+    result.append(
+      key,
+      isSensitiveKey(key, extraKeys) ? URL_SAFE_REDACT : redactString(value)
+    )
+  }
+  return result
+}
+
 /** Apply PII redaction to a request URL while keeping the result parseable by the URL/Request constructors. */
 const redactRequestUrl = (
   urlString: string,
@@ -184,6 +199,21 @@ const redactRequestUrl = (
   } catch {
     return redactString(urlString).replaceAll(REDACTED_TEXT, URL_SAFE_REDACT)
   }
+}
+
+/** Always returns a new instance; `headers` is left untouched. */
+const redactHeaders = (
+  headers: Headers,
+  extraKeys?: readonly string[]
+): Headers => {
+  const result = new Headers()
+  for (const [name, value] of headers) {
+    result.append(
+      name,
+      isSensitiveKey(name, extraKeys) ? REDACTED_TEXT : redactString(value)
+    )
+  }
+  return result
 }
 
 const withReentrancyGuard = <T>(
@@ -277,6 +307,23 @@ const walker = {
     return newError
   },
 
+  map: (
+    value: Map<unknown, unknown>,
+    inProgress: WeakSet<object>,
+    extraKeys?: readonly string[]
+  ): Map<unknown, unknown> => {
+    const result = new Map<unknown, unknown>()
+    for (const [key, entry] of value) {
+      const sensitive =
+        typeof key === 'string' && isSensitiveKey(key, extraKeys)
+      result.set(
+        key,
+        sensitive ? REDACTED_TEXT : walker.value(entry, inProgress, extraKeys)
+      )
+    }
+    return result
+  },
+
   /** Same lazy-materialization strategy as {@link walker.array}, for plain objects. */
   record: (
     recordValue: Record<string, unknown>,
@@ -307,6 +354,15 @@ const walker = {
     return result ?? recordValue
   },
 
+  set: (
+    value: Set<unknown>,
+    inProgress: WeakSet<object>,
+    extraKeys?: readonly string[]
+  ): Set<unknown> =>
+    new Set(
+      Array.from(value, item => walker.value(item, inProgress, extraKeys))
+    ),
+
   value: (
     value: unknown,
     inProgress: WeakSet<object>,
@@ -329,6 +385,36 @@ const walker = {
 
     if (inProgress.has(value)) {
       return CIRCULAR_REF
+    }
+
+    // These types expose their contents only through iteration or toJSON(),
+    // so the key walk below would return them unchanged.
+    if (value instanceof Headers) {
+      return redactHeaders(value, extraKeys)
+    }
+
+    if (value instanceof URLSearchParams) {
+      return redactSearchParams(value, extraKeys)
+    }
+
+    if (value instanceof URL) {
+      try {
+        return new URL(redactRequestUrl(value.href, extraKeys))
+      } catch {
+        return REDACTED_TEXT
+      }
+    }
+
+    if (value instanceof Map) {
+      return withReentrancyGuard(value, inProgress, () =>
+        walker.map(value, inProgress, extraKeys)
+      )
+    }
+
+    if (value instanceof Set) {
+      return withReentrancyGuard(value, inProgress, () =>
+        walker.set(value, inProgress, extraKeys)
+      )
     }
 
     if (value instanceof Error) {

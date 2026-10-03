@@ -49,6 +49,14 @@ describe('redactString', () => {
   })
 })
 
+const createHeaders = (): Headers =>
+  new Headers({
+    authorization: 'Bearer TEST_TOKEN',
+    cookie: 'sid=TEST_SESSION',
+    'x-trace': 'ok',
+    'x-user-email': 'a@b.co'
+  })
+
 describe('redact', () => {
   test('redacts deeply nested objects', () => {
     const original = {
@@ -188,6 +196,69 @@ describe('redact', () => {
     expect(result).not.toBe(original)
     expect(result.a).toBe(unrelated)
     expect(result.b).not.toBe(original.b)
+  })
+
+  describe('built-in non-plain objects', () => {
+    test('redacts Headers values and returns a new Headers', () => {
+      const out = redact({ headers: createHeaders() })
+      expect(out.headers).toBeInstanceOf(Headers)
+      expect(out.headers.get('authorization')).toBe('[REDACTED]')
+      expect(out.headers.get('cookie')).toBe('[REDACTED]')
+      expect(out.headers.get('x-trace')).toBe('ok')
+      expect(out.headers.get('x-user-email')).toBe('[REDACTED]')
+      const serialized = JSON.stringify([...out.headers])
+      expect(serialized).not.toContain('TEST_TOKEN')
+      expect(serialized).not.toContain('TEST_SESSION')
+    })
+
+    test('leaves the original Headers untouched', () => {
+      const original = createHeaders()
+      redact({ headers: original })
+      expect(original.get('authorization')).toBe('Bearer TEST_TOKEN')
+    })
+
+    test('redacts URL query values', () => {
+      const out = redact({
+        u: new URL('https://api.test/p?token=TEST_TOKEN&q=1')
+      })
+      expect(out.u).toBeInstanceOf(URL)
+      expect(out.u.searchParams.get('token')).toBe('redacted')
+      expect(out.u.searchParams.get('q')).toBe('1')
+      expect(out.u.href).not.toContain('TEST_TOKEN')
+    })
+
+    test('redacts URLSearchParams values', () => {
+      const out = redact({ p: new URLSearchParams('password=TEST_PW&x=1') })
+      expect(out.p).toBeInstanceOf(URLSearchParams)
+      expect(out.p.get('password')).toBe('redacted')
+      expect(out.p.get('x')).toBe('1')
+    })
+
+    test('redacts Map entries by key name and by value pattern', () => {
+      const out = redact({
+        m: new Map<unknown, unknown>([
+          ['password', 'TEST_PW'],
+          ['note', 'mail a@b.co'],
+          [1, 'keep']
+        ])
+      })
+      expect(out.m).toBeInstanceOf(Map)
+      expect(out.m.get('password')).toBe('[REDACTED]')
+      expect(out.m.get('note')).toBe('mail [REDACTED]')
+      expect(out.m.get(1)).toBe('keep')
+    })
+
+    test('redacts Set members', () => {
+      const out = redact({ s: new Set(['a@b.co', 'plain']) })
+      expect(out.s).toBeInstanceOf(Set)
+      expect([...out.s]).toEqual(['[REDACTED]', 'plain'])
+    })
+
+    test('replaces a Map that contains itself without stack overflow', () => {
+      const m = new Map<string, unknown>()
+      m.set('self', m)
+      expect(redact({ m }).m.get('self')).toBe('[Circular]')
+    })
   })
 })
 
