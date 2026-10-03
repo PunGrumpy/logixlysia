@@ -4,6 +4,8 @@ import { logixlysia } from '../../src'
 import type { SinkErrorContext } from '../../src/interfaces'
 import { spyConsole } from '../_helpers/console'
 
+const ESCAPE = '\u001B'
+
 const capturedText = (
   spies: ReturnType<typeof spyConsole>['spies']
 ): string[] =>
@@ -84,6 +86,27 @@ describe('logging never fails a request', () => {
       expect(
         capturedText(spies).some(line => line.includes('[Circular]'))
       ).toBe(true)
+    } finally {
+      restore()
+    }
+  })
+
+  test('control characters in a context key are escaped, not printed', async () => {
+    const { restore, spies } = spyConsole()
+    try {
+      const app = new Elysia()
+        .use(logixlysia({ config: { useColors: false } }))
+        .get('/x', ({ log }) => {
+          log.info('search', { [`${ESCAPE}[31mRED\nFAKE`]: 'x' })
+          return 'ok'
+        })
+
+      await app.handle(new Request('http://localhost/x'))
+
+      const lines = capturedText(spies)
+      expect(lines.some(line => line.includes(ESCAPE))).toBe(false)
+      const record = lines.find(line => line.includes('search'))
+      expect(record?.split('\n')).toHaveLength(2)
     } finally {
       restore()
     }
