@@ -172,7 +172,7 @@ Custom log message format using placeholders.
 - **Default:** `undefined`
 
 ```ts
-customLogFormat: '{now} {level} {duration}ms {method} {pathname} {status}'
+customLogFormat: '{now} {level} {duration} {method} {pathname} {status}'
 ```
 
 When `customLogFormat` is omitted, Logixlysia uses a built-in default that includes `{now}`, `{service}`, `{icon}`, `{method}`, `{pathname}`, `{status}`, `{duration}`, `{message}`, and `{speed}`.
@@ -594,7 +594,7 @@ logixlysia({
     timestamp: {
       translateTime: 'yyyy-mm-dd HH:MM:ss'
     },
-    customLogFormat: '{now} {level} {duration}ms {method} {pathname} {status}',
+    customLogFormat: '{now} {level} {duration} {method} {pathname} {status}',
 
     // File Logging
     logFilePath: './logs/app.log',

@@ -69,7 +69,7 @@ Customize log messages using placeholders:
 logixlysia({
   config: {
     customLogFormat:
-      '{now} {level} {duration}ms {method} {pathname}{query} {status}'
+      '{now} {level} {duration} {method} {pathname}{query} {status}'
   }
 })
 ```
@@ -96,19 +96,19 @@ Available placeholders:
 
 ### Log Filtering
 
-Filter logs by level, status, or method:
+Filter logs by level:
 
 ```ts
 logixlysia({
   config: {
     logFilter: {
-      level: ['ERROR', 'WARNING'],
-      status: [500, 404],
-      method: 'GET'
+      level: ['ERROR', 'WARNING']
     }
   }
 })
 ```
+
+Logixlysia keeps only the listed levels and drops the rest.
 
 ## Pino Integration
 
@@ -199,7 +199,7 @@ app.get('/error', () => {
 })
 ```
 
-Errors are automatically logged with stack traces and request details.
+Logixlysia logs the error automatically with the request method, path, status, and error message. For an `HttpError`, it also logs `code`, `why`, `fix`, and `link`. It does not log stack traces.
 
 ## Examples
 
