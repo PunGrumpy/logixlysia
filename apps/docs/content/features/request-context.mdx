@@ -44,7 +44,7 @@ logixlysia({
 })
 ```
 
-When enabled, a request-scoped logger `log` is derived automatically on the Elysia handler context. You can also retrieve the active logger globally in nested service layers or helper functions using the `useLogger()` hook.
+The request-scoped logger `log` is always available on the Elysia handler context. Enabling `useAsyncLocalStorage` also lets `useLogger()` return the current request's logger from nested service layers and helper functions.
 
 ### 1. Handler Context (`log`)
 

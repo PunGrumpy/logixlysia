@@ -252,7 +252,8 @@ export interface RequestTrackingConfig {
 
   /**
    * Enable request-scoped logger propagation via AsyncLocalStorage.
-   * When enabled, a request-scoped logger `log` is also derived on the Elysia context.
+   * When enabled, `useLogger()` returns the current request's logger anywhere in the request's async call chain.
+   * The handler context's `log` is available either way.
    * @default false
    */
   useAsyncLocalStorage?: boolean
