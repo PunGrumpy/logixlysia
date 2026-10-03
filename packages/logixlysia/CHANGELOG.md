@@ -1,5 +1,15 @@
 # Changelog
 
+## 6.9.4
+
+### Patch Changes
+
+- 83e771c: `autoRedact` now masks values inside `Headers`, `URL`, `URLSearchParams`, `Map`, and `Set` objects. Before, these passed through unchanged and serialized with their original values. Compound key names such as `newPassword`, `apiSecret`, `aws_secret_access_key`, `authToken`, and `X-CSRF-Token` now count as sensitive. Every value of a repeated query parameter and every percent-encoded path segment is checked.
+- d6e5b08: Correct the `useAsyncLocalStorage` documentation: the request-scoped `log` is always available on the handler context. The option only makes `useLogger()` return the current request's logger from anywhere in the request.
+- e5acc3a: A request answered with Elysia's `status()` helper is now logged with the status the client received, not 200 or 500. This covers a returned `status()`, a thrown one, and one returned from `beforeHandle`. The message is the string body, or the status text when the body is not a string. A returned `Response` keeps its own status over `set.status` unless it is 200, as in Elysia. Requests that reach neither `onAfterHandle` nor `onError` now get their log line instead of none. These are an auth `resolve` that returns `status(401)` and an error that an app-wide `onError` registered before the plugin answers.
+- a7ec6d2: Logging no longer fails a request. An error whose message is an object, such as `throw status(401, { error: 'unauthorized' })` in `onRequest`, no longer turns the response into a 500, and a BigInt or circular value in request context no longer crashes requests that print `{context}`. The Axiom, Better Stack, Datadog and Loki adapters write BigInts as strings and circular references as `"[Circular]"` instead of dropping the whole batch. Context-tree keys and structured error fields are sanitized like values. Any other failure while building a log record is reported to `onError` with the new `sink: 'format'`.
+- c197893: WebSocket logging tracks each connection by Elysia's underlying socket (`ws.raw`) instead of the wrapper Elysia creates for every event. Message and close lines report the time since the connection opened instead of about 0 ms, context merged with `mergeContext(ws, …)` in one event is still there in the next, and the connection's state is released on close. `wrapWs` throws a `TypeError` when its first argument is not the route path.
+
 ## 6.9.3
 
 ### Patch Changes
