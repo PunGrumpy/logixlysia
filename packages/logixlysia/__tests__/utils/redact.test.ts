@@ -273,6 +273,44 @@ describe('isSensitiveKey', () => {
     expect(isSensitiveKey('tokenizer')).toBe(false)
     expect(isSensitiveKey('sessions')).toBe(false)
   })
+
+  test('matches compound password, secret and token names', () => {
+    const keys = [
+      'newPassword',
+      'current_password',
+      'password_confirmation',
+      'userPassword',
+      'apiSecret',
+      'secretKey',
+      'aws_secret_access_key',
+      'authToken',
+      'sessionToken',
+      'bearerToken',
+      'X-CSRF-Token',
+      'x-access-token',
+      'nextPageToken'
+    ]
+    for (const key of keys) {
+      expect(isSensitiveKey(key)).toBe(true)
+    }
+  })
+
+  test('does not match token counters or other benign compounds', () => {
+    const keys = [
+      'tokenCount',
+      'token_limit',
+      'maxTokens',
+      'inputTokens',
+      'totalTokens',
+      'secretariat',
+      'passwordless',
+      'tokenizer',
+      'sessions'
+    ]
+    for (const key of keys) {
+      expect(isSensitiveKey(key)).toBe(false)
+    }
+  })
 })
 
 describe('buildPinoRedactPaths', () => {

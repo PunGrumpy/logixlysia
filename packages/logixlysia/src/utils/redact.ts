@@ -57,6 +57,21 @@ const normalizeKeyName = (key: string): string =>
     .replaceAll('_', '-')
     .toLowerCase()
 
+/** Words that make a key sensitive wherever they appear as a whole part. */
+const SENSITIVE_KEY_PARTS: ReadonlySet<string> = new Set([
+  'passwd',
+  'password',
+  'secret'
+])
+/** A key ending in this part names a credential (`auth-token`, `x-csrf-token`). */
+const SENSITIVE_LAST_KEY_PART = 'token'
+
+/**
+ * True for a default or extra key name, or for any key with a whole part
+ * `password`, `passwd` or `secret`, or ending in the part `token`. Parts are
+ * split on case changes, `_` and `-`, so `tokenizer` and `maxTokens` stay
+ * unmatched while `newPassword` and `X-CSRF-Token` match.
+ */
 export const isSensitiveKey = (
   key: string,
   extraKeys?: readonly string[]
@@ -65,9 +80,13 @@ export const isSensitiveKey = (
   if (DEFAULT_REDACT_KEYS.includes(normalized)) {
     return true
   }
+  if (extraKeys?.some(extraKey => normalizeKeyName(extraKey) === normalized)) {
+    return true
+  }
+  const parts = normalized.split('-')
   return (
-    extraKeys?.some(extraKey => normalizeKeyName(extraKey) === normalized) ??
-    false
+    parts.some(part => SENSITIVE_KEY_PARTS.has(part)) ||
+    parts.at(-1) === SENSITIVE_LAST_KEY_PART
   )
 }
 
