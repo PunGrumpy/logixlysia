@@ -1,3 +1,5 @@
+import { STATUS_CODES } from 'node:http'
+import { isStatusResponse } from '../helpers/status'
 import { toText } from './sanitize'
 
 // Elysia copies a `status(code, body)` body into `error.message`, so a message
@@ -77,6 +79,19 @@ export const normalizeLoggedError = (
   error: unknown,
   logErrorPayload: boolean
 ): NormalizedLoggedError => {
+  if (isStatusResponse(error)) {
+    // A string body becomes the message. Any other body is the app's response
+    // payload and may carry user data, so the status text stands in for it.
+    const message =
+      typeof error.response === 'string' && error.response !== ''
+        ? error.response
+        : (STATUS_CODES[error.code] ?? `HTTP ${error.code}`)
+    return {
+      error: { message, name: 'StatusResponse', status: error.code },
+      message
+    }
+  }
+
   if (isValidationErrorLike(error) && !logErrorPayload) {
     const failures = Array.isArray(error.all) ? error.all : []
     const paths = failures

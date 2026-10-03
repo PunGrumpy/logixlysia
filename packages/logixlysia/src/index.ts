@@ -8,7 +8,7 @@ import {
 import { createRequestContextStore } from './context/request-context'
 import { loggerStorage, noopRequestLogger } from './context/storage'
 import { startServer } from './extensions'
-import { getStatusCode } from './helpers/status'
+import { getStatusCode, isStatusResponse } from './helpers/status'
 import type {
   LogFields,
   LogixlysiaStore,
@@ -54,6 +54,10 @@ const resolveHandledStatus = (
   setStatus: unknown,
   response: unknown
 ): number => {
+  if (isStatusResponse(response)) {
+    return response.code
+  }
+
   if (setStatus !== undefined && setStatus !== null) {
     const assigned = getStatusCode(setStatus)
     if (assigned !== DEFAULT_STATUS) {
