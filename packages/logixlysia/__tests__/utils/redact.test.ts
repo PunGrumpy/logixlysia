@@ -49,6 +49,14 @@ describe('redactString', () => {
   })
 })
 
+const createHeaders = (): Headers =>
+  new Headers({
+    authorization: 'Bearer TEST_TOKEN',
+    cookie: 'sid=TEST_SESSION',
+    'x-trace': 'ok',
+    'x-user-email': 'a@b.co'
+  })
+
 describe('redact', () => {
   test('redacts deeply nested objects', () => {
     const original = {
@@ -189,6 +197,69 @@ describe('redact', () => {
     expect(result.a).toBe(unrelated)
     expect(result.b).not.toBe(original.b)
   })
+
+  describe('built-in non-plain objects', () => {
+    test('redacts Headers values and returns a new Headers', () => {
+      const out = redact({ headers: createHeaders() })
+      expect(out.headers).toBeInstanceOf(Headers)
+      expect(out.headers.get('authorization')).toBe('[REDACTED]')
+      expect(out.headers.get('cookie')).toBe('[REDACTED]')
+      expect(out.headers.get('x-trace')).toBe('ok')
+      expect(out.headers.get('x-user-email')).toBe('[REDACTED]')
+      const serialized = JSON.stringify([...out.headers])
+      expect(serialized).not.toContain('TEST_TOKEN')
+      expect(serialized).not.toContain('TEST_SESSION')
+    })
+
+    test('leaves the original Headers untouched', () => {
+      const original = createHeaders()
+      redact({ headers: original })
+      expect(original.get('authorization')).toBe('Bearer TEST_TOKEN')
+    })
+
+    test('redacts URL query values', () => {
+      const out = redact({
+        u: new URL('https://api.test/p?token=TEST_TOKEN&q=1')
+      })
+      expect(out.u).toBeInstanceOf(URL)
+      expect(out.u.searchParams.get('token')).toBe('redacted')
+      expect(out.u.searchParams.get('q')).toBe('1')
+      expect(out.u.href).not.toContain('TEST_TOKEN')
+    })
+
+    test('redacts URLSearchParams values', () => {
+      const out = redact({ p: new URLSearchParams('password=TEST_PW&x=1') })
+      expect(out.p).toBeInstanceOf(URLSearchParams)
+      expect(out.p.get('password')).toBe('redacted')
+      expect(out.p.get('x')).toBe('1')
+    })
+
+    test('redacts Map entries by key name and by value pattern', () => {
+      const out = redact({
+        m: new Map<unknown, unknown>([
+          ['password', 'TEST_PW'],
+          ['note', 'mail a@b.co'],
+          [1, 'keep']
+        ])
+      })
+      expect(out.m).toBeInstanceOf(Map)
+      expect(out.m.get('password')).toBe('[REDACTED]')
+      expect(out.m.get('note')).toBe('mail [REDACTED]')
+      expect(out.m.get(1)).toBe('keep')
+    })
+
+    test('redacts Set members', () => {
+      const out = redact({ s: new Set(['a@b.co', 'plain']) })
+      expect(out.s).toBeInstanceOf(Set)
+      expect([...out.s]).toEqual(['[REDACTED]', 'plain'])
+    })
+
+    test('replaces a Map that contains itself without stack overflow', () => {
+      const m = new Map<string, unknown>()
+      m.set('self', m)
+      expect(redact({ m }).m.get('self')).toBe('[Circular]')
+    })
+  })
 })
 
 describe('isSensitiveKey', () => {
@@ -201,6 +272,44 @@ describe('isSensitiveKey', () => {
   test('does not match on substring (no false positives)', () => {
     expect(isSensitiveKey('tokenizer')).toBe(false)
     expect(isSensitiveKey('sessions')).toBe(false)
+  })
+
+  test('matches compound password, secret and token names', () => {
+    const keys = [
+      'newPassword',
+      'current_password',
+      'password_confirmation',
+      'userPassword',
+      'apiSecret',
+      'secretKey',
+      'aws_secret_access_key',
+      'authToken',
+      'sessionToken',
+      'bearerToken',
+      'X-CSRF-Token',
+      'x-access-token',
+      'nextPageToken'
+    ]
+    for (const key of keys) {
+      expect(isSensitiveKey(key)).toBe(true)
+    }
+  })
+
+  test('does not match token counters or other benign compounds', () => {
+    const keys = [
+      'tokenCount',
+      'token_limit',
+      'maxTokens',
+      'inputTokens',
+      'totalTokens',
+      'secretariat',
+      'passwordless',
+      'tokenizer',
+      'sessions'
+    ]
+    for (const key of keys) {
+      expect(isSensitiveKey(key)).toBe(false)
+    }
   })
 })
 
@@ -300,6 +409,35 @@ describe('redactRequest', () => {
     const out = redactRequest(req, ['promo'])
     expect(out.url).not.toContain('SECRET')
     expect(out.url).toContain('promo=redacted')
+  })
+
+  test('masks every value of a repeated query parameter by pattern', () => {
+    const out = redactRequest(
+      new Request('http://h/p?to=ok&to=bob@example.com')
+    )
+    expect(new URL(out.url).searchParams.getAll('to')).toEqual([
+      'ok',
+      '[REDACTED]'
+    ])
+  })
+
+  test('masks every value of a repeated sensitive query parameter', () => {
+    const out = redactRequest(new Request('http://h/p?apiKey=one&apiKey=two'))
+    expect(new URL(out.url).searchParams.getAll('apiKey')).toEqual([
+      'redacted',
+      'redacted'
+    ])
+  })
+
+  test('redacts percent-encoded emails in path segments', () => {
+    const out = redactRequest(
+      new Request('http://h/users/alice%40example.com/orders')
+    )
+    expect(out.url).not.toContain('alice')
+    expect(out.url).not.toContain('example.com')
+    expect(out.url).toContain('/users/')
+    expect(out.url).toContain('/orders')
+    expect(() => new Request(out.url)).not.toThrow()
   })
 })
 

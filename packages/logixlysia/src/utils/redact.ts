@@ -57,6 +57,21 @@ const normalizeKeyName = (key: string): string =>
     .replaceAll('_', '-')
     .toLowerCase()
 
+/** Words that make a key sensitive wherever they appear as a whole part. */
+const SENSITIVE_KEY_PARTS: ReadonlySet<string> = new Set([
+  'passwd',
+  'password',
+  'secret'
+])
+/** A key ending in this part names a credential (`auth-token`, `x-csrf-token`). */
+const SENSITIVE_LAST_KEY_PART = 'token'
+
+/**
+ * True for a default or extra key name, or for any key with a whole part
+ * `password`, `passwd` or `secret`, or ending in the part `token`. Parts are
+ * split on case changes, `_` and `-`, so `tokenizer` and `maxTokens` stay
+ * unmatched while `newPassword` and `X-CSRF-Token` match.
+ */
 export const isSensitiveKey = (
   key: string,
   extraKeys?: readonly string[]
@@ -65,9 +80,13 @@ export const isSensitiveKey = (
   if (DEFAULT_REDACT_KEYS.includes(normalized)) {
     return true
   }
+  if (extraKeys?.some(extraKey => normalizeKeyName(extraKey) === normalized)) {
+    return true
+  }
+  const parts = normalized.split('-')
   return (
-    extraKeys?.some(extraKey => normalizeKeyName(extraKey) === normalized) ??
-    false
+    parts.some(part => SENSITIVE_KEY_PARTS.has(part)) ||
+    parts.at(-1) === SENSITIVE_LAST_KEY_PART
   )
 }
 
@@ -147,6 +166,39 @@ const URL_SAFE_REDACT = 'redacted'
 const redactUrlAuthoritySegment = (value: string): string =>
   redactString(value).replaceAll(REDACTED_TEXT, URL_SAFE_REDACT)
 
+/** Always returns a new instance; `params` is left untouched. */
+const redactSearchParams = (
+  params: URLSearchParams,
+  extraKeys?: readonly string[]
+): URLSearchParams => {
+  const result = new URLSearchParams()
+  for (const [key, value] of params) {
+    result.append(
+      key,
+      isSensitiveKey(key, extraKeys) ? URL_SAFE_REDACT : redactString(value)
+    )
+  }
+  return result
+}
+
+/**
+ * Redacts the decoded segment so `%40` cannot hide an email. Re-encodes only
+ * when redaction changed the text; other segments keep their spelling.
+ */
+const redactPathSegment = (segment: string): string => {
+  let decoded = segment
+  try {
+    decoded = decodeURIComponent(segment)
+  } catch {
+    // Malformed escape: redact the raw segment instead.
+  }
+  const redacted = redactString(decoded)
+  if (decoded === segment) {
+    return redacted
+  }
+  return redacted === decoded ? segment : encodeURIComponent(redacted)
+}
+
 /** Apply PII redaction to a request URL while keeping the result parseable by the URL/Request constructors. */
 const redactRequestUrl = (
   urlString: string,
@@ -161,29 +213,34 @@ const redactRequestUrl = (
       u.password = redactUrlAuthoritySegment(u.password)
     }
     u.hostname = redactUrlAuthoritySegment(u.hostname)
-    u.pathname = redactString(u.pathname)
-    // `searchParams.set` re-serializes the whole query string, so redact
-    // decoded values directly rather than re-running pattern redaction on
-    // `u.search` afterward (which would see already percent-encoded text).
-    // Iterate a copy: `set` below rewrites the live list.
-    for (const key of new URLSearchParams(u.searchParams).keys()) {
-      if (isSensitiveKey(key, extraKeys)) {
-        u.searchParams.set(key, URL_SAFE_REDACT)
-        continue
-      }
-      const value = u.searchParams.get(key)
-      if (value !== null) {
-        const redactedValue = redactString(value)
-        if (redactedValue !== value) {
-          u.searchParams.set(key, redactedValue)
-        }
-      }
+    u.pathname = u.pathname.split('/').map(redactPathSegment).join('/')
+    // Assigning `search` re-serializes the query, so do it only when a value
+    // changed. The values are decoded here, so patterns never run against
+    // percent-encoded text.
+    const query = redactSearchParams(u.searchParams, extraKeys).toString()
+    if (query !== u.searchParams.toString()) {
+      u.search = query
     }
     u.hash = redactString(u.hash)
     return u.toString()
   } catch {
     return redactString(urlString).replaceAll(REDACTED_TEXT, URL_SAFE_REDACT)
   }
+}
+
+/** Always returns a new instance; `headers` is left untouched. */
+const redactHeaders = (
+  headers: Headers,
+  extraKeys?: readonly string[]
+): Headers => {
+  const result = new Headers()
+  for (const [name, value] of headers) {
+    result.append(
+      name,
+      isSensitiveKey(name, extraKeys) ? REDACTED_TEXT : redactString(value)
+    )
+  }
+  return result
 }
 
 const withReentrancyGuard = <T>(
@@ -277,6 +334,23 @@ const walker = {
     return newError
   },
 
+  map: (
+    value: Map<unknown, unknown>,
+    inProgress: WeakSet<object>,
+    extraKeys?: readonly string[]
+  ): Map<unknown, unknown> => {
+    const result = new Map<unknown, unknown>()
+    for (const [key, entry] of value) {
+      const sensitive =
+        typeof key === 'string' && isSensitiveKey(key, extraKeys)
+      result.set(
+        key,
+        sensitive ? REDACTED_TEXT : walker.value(entry, inProgress, extraKeys)
+      )
+    }
+    return result
+  },
+
   /** Same lazy-materialization strategy as {@link walker.array}, for plain objects. */
   record: (
     recordValue: Record<string, unknown>,
@@ -307,6 +381,15 @@ const walker = {
     return result ?? recordValue
   },
 
+  set: (
+    value: Set<unknown>,
+    inProgress: WeakSet<object>,
+    extraKeys?: readonly string[]
+  ): Set<unknown> =>
+    new Set(
+      Array.from(value, item => walker.value(item, inProgress, extraKeys))
+    ),
+
   value: (
     value: unknown,
     inProgress: WeakSet<object>,
@@ -329,6 +412,36 @@ const walker = {
 
     if (inProgress.has(value)) {
       return CIRCULAR_REF
+    }
+
+    // These types expose their contents only through iteration or toJSON(),
+    // so the key walk below would return them unchanged.
+    if (value instanceof Headers) {
+      return redactHeaders(value, extraKeys)
+    }
+
+    if (value instanceof URLSearchParams) {
+      return redactSearchParams(value, extraKeys)
+    }
+
+    if (value instanceof URL) {
+      try {
+        return new URL(redactRequestUrl(value.href, extraKeys))
+      } catch {
+        return REDACTED_TEXT
+      }
+    }
+
+    if (value instanceof Map) {
+      return withReentrancyGuard(value, inProgress, () =>
+        walker.map(value, inProgress, extraKeys)
+      )
+    }
+
+    if (value instanceof Set) {
+      return withReentrancyGuard(value, inProgress, () =>
+        walker.set(value, inProgress, extraKeys)
+      )
     }
 
     if (value instanceof Error) {
