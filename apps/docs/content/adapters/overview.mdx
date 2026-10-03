@@ -107,7 +107,7 @@ app.use(
 
 ## Graceful Shutdown
 
-The plugin flushes every transport and the file sink when the Elysia app stops, so `await app.stop()` is enough in the common case. The wait is bounded by [`flushTimeoutMs`](/docs/configuration) (5000 ms by default; `0` starts the flush without waiting), and a flush that runs out of time is reported through `onError` with `sink: 'shutdown'`.
+When the app stops, the plugin starts flushing every transport and the file sink. Elysia's `app.stop()` does not wait for plugin stop hooks, so a process that exits right after `await app.stop()` can cut that flush short. Before you exit, await `flushLogixlysia` with the same `options` object you passed to the plugin. The stop hook's own wait is bounded by [`flushTimeoutMs`](/docs/configuration) (5000 ms by default; `0` starts the flush without waiting), and a flush that runs out of time is reported through `onError` with `sink: 'shutdown'`.
 
 What that does not cover:
 
@@ -115,11 +115,19 @@ What that does not cover:
 - A process that exits without calling `app.stop()`, including a bare `SIGINT` with no handler.
 - A serverless function frozen between invocations.
 
-Signals are yours to handle, because a library that installs its own handlers fights the rest of your process:
+Signals are yours to handle, because a library that installs its own handlers fights the rest of your process. This handler stops the app, waits for the flush, then exits:
 
 ```ts
+import { Elysia } from 'elysia'
+import logixlysia, { flushLogixlysia } from 'logixlysia'
+import { createAxiomTransport } from 'logixlysia/axiom'
+
+const options = { config: { transports: [createAxiomTransport()] } }
+const app = new Elysia().use(logixlysia(options)).listen(3000)
+
 process.on('SIGTERM', async () => {
   await app.stop()
+  await flushLogixlysia(options)
   process.exit(0)
 })
 ```
