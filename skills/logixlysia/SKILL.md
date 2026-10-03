@@ -25,6 +25,8 @@ const app = new Elysia()
   .listen(3000)
 ```
 
+Create the plugin once and `.use()` that same instance in every module. Calling `logixlysia()` again per module breaks durations, request IDs, and shutdown flushing for the later instances.
+
 ---
 
 ## 2. Request-Scoped Logging

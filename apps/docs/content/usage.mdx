@@ -21,6 +21,23 @@ const app = new Elysia()
   .listen(3000)
 ```
 
+### Using the plugin in several modules
+
+Create the plugin once and `.use()` that same instance in every module. If each module calls `logixlysia()` again, routes in the later modules log a 0 ms duration and no request ID, and `app.stop()` flushes only the first instance's transports.
+
+```ts
+// logging.ts
+import logixlysia from 'logixlysia'
+
+export const logging = logixlysia({ config: { requestId: true } })
+
+// users.ts
+import { Elysia } from 'elysia'
+import { logging } from './logging'
+
+export const users = new Elysia().use(logging).get('/users', () => [])
+```
+
 ## Request context
 
 Accumulate fields during a request; they are merged into the automatic access log:
