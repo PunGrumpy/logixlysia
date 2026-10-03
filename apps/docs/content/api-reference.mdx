@@ -98,7 +98,7 @@ type LogixlysiaStore = {
 
 - `logger`: Logger instance with helper methods
 - `pino`: Direct Pino logger instance
-- `beforeTime`: Request start time (bigint)
+- `beforeTime`: A `bigint` from `process.hrtime.bigint()`, taken at the start of the most recent request. Elysia shares the store between concurrent requests, so the value is accurate only while requests do not overlap. The plugin's own durations do not use it.
 
 Keep `LogixlysiaStore` a closed object type (no index signature). That helps merged handler and WebSocket types stay accurate.
 

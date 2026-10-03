@@ -25,6 +25,8 @@ const app = new Elysia()
   .listen(3000)
 ```
 
+Create the plugin once and `.use()` that same instance in every module. Calling `logixlysia()` again per module breaks durations, request IDs, and shutdown flushing for the later instances.
+
 ---
 
 ## 2. Request-Scoped Logging
@@ -299,5 +301,37 @@ logixlysia({
     autoRedact: true,
     transports: [withRedaction(axiom, Redact.load)]
   }
+})
+```
+
+---
+
+## 13. Tracing and AI usage
+
+`logixlysia/otel` merges the active OpenTelemetry span's `trace_id` and `span_id` into the request context. It needs `@opentelemetry/api` installed and an active span. Call it from `onRequest`, after the plugin:
+
+```typescript
+import { Elysia } from 'elysia'
+import { logixlysia } from 'logixlysia'
+import { injectTraceContext } from 'logixlysia/otel'
+
+const app = new Elysia().use(logixlysia()).onRequest(({ request, store }) => {
+  injectTraceContext(store.logger, request)
+})
+```
+
+`logixlysia/ai` merges LLM usage under `ai` in the request context, so it appears on the access log:
+
+```typescript
+import { mergeAIMetrics } from 'logixlysia/ai'
+
+app.post('/chat', ({ request, store }) => {
+  mergeAIMetrics(store.logger, request, {
+    model: 'claude-sonnet',
+    inputTokens: 1200,
+    outputTokens: 400,
+    totalTokens: 1600
+  })
+  return { ok: true }
 })
 ```

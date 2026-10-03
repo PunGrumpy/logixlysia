@@ -13,6 +13,7 @@ import { waitFor } from '../_helpers/wait-for'
 // `app.stop()` does not await async hooks, so the tests below poll with
 // `waitFor` for the hook's observable effect.
 const NO_WAIT_SETTLE_MS = 30
+const SLOW_TRANSPORT_MS = 40
 
 /** A flush that never settles, to exercise the shutdown timeout. */
 const neverSettles = (): Promise<void> => {
@@ -135,5 +136,34 @@ describe('plugin shutdown', () => {
     } finally {
       await removeTempDir(dir)
     }
+  })
+
+  test('flushLogixlysia waits for an in-flight log() and a slow flush()', async () => {
+    let delivered = false
+    let flushed = false
+    const options: Options = {
+      config: {
+        ...baseConfig,
+        transports: [
+          {
+            flush: async () => {
+              await sleep(SLOW_TRANSPORT_MS)
+              flushed = true
+            },
+            log: async () => {
+              await sleep(SLOW_TRANSPORT_MS)
+              delivered = true
+            }
+          }
+        ]
+      }
+    }
+    const app = new Elysia().use(logixlysia(options))
+
+    await app.handle(new Request('http://localhost/x'))
+    await flushLogixlysia(options)
+
+    expect(delivered).toBe(true)
+    expect(flushed).toBe(true)
   })
 })
