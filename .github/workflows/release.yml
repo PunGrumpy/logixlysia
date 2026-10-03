@@ -7,17 +7,20 @@ on:
 
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 
-permissions:
-  id-token: write
-  contents: write
-  pull-requests: write
-  issues: write
+permissions: {}
 
 jobs:
   release:
     name: 🏎️ Release
     if: ${{ !contains(github.event.head_commit.message, 'ci skip') && !contains(github.event.head_commit.message, 'skip ci') }}
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+      issues: write
+      pull-requests: write
+    outputs:
+      published: ${{ steps.changesets.outputs.published }}
     steps:
       - name: 🛫 Checkout Code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -41,7 +44,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-bun-
       - name: 🔽 Install Dependencies
-        run: bun install
+        run: bun install --frozen-lockfile
       - name: 🔍 Lint, typecheck and test
         env:
           CI: true
@@ -69,9 +72,32 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           version-script: bun run changeset version
           publish-script: bun run changeset publish
+
+  deploy-docs:
+    name: ▲ Deploy docs
+    needs: release
+    if: needs.release.outputs.published == 'true'
+    runs-on: ubuntu-latest
+    # Runs a third-party CLI, so no id-token and no write scopes.
+    permissions:
+      contents: read
+    steps:
+      - name: 🛫 Checkout Code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # The CLI has a node shebang, so bunx runs it on Node.
+      - name: 🟢 Setup Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24'
+      - name: 🍞 Setup Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: package.json
       - name: ▲ Deploy to Vercel
-        if: steps.changesets.outputs.published == 'true'
-        run: bunx vercel --prod --token=${{ secrets.VERCEL_TOKEN }}
+        run: bunx vercel@62.2.0 --prod --token="$VERCEL_TOKEN"
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
