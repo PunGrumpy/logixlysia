@@ -118,4 +118,31 @@ describe('logixlysia/loki', () => {
       restoreEnv()
     }
   })
+
+  test('serializes BigInts and circular references instead of dropping the batch', async () => {
+    const restoreEnv = stubEnv({ ...CLEAR_ENV, LOKI_URL: 'http://loki:3100/' })
+    const stub = stubFetch()
+    try {
+      const transport = createLokiTransport()
+      const node: Record<string, unknown> = { name: 'n' }
+      node.self = node
+      transport.log('INFO', 'a', { id: 1n })
+      transport.log('INFO', 'b', { ok: true })
+      transport.log('INFO', 'c', { node })
+      await transport.flush()
+
+      expect(stub.calls).toHaveLength(1)
+      const payload = JSON.parse(stub.calls[0]?.body ?? '{}') as LokiPayload
+      const lines = (payload.streams[0]?.values ?? []).map(
+        ([, line]) => JSON.parse(line) as Record<string, unknown>
+      )
+      expect(lines).toHaveLength(3)
+      expect(lines[0]?.id).toBe('1')
+      expect(lines[1]?.ok).toBe(true)
+      expect(lines[2]?.node).toMatchObject({ self: '[Circular]' })
+    } finally {
+      stub.restore()
+      restoreEnv()
+    }
+  })
 })
