@@ -9,7 +9,8 @@ import { stringifyForLog } from './json'
 const isControlCodePoint = (code: number): boolean =>
   code <= 8 || (code >= 11 && code <= 31) || (code >= 127 && code <= 159)
 
-const toText = (value: unknown): string => {
+/** Any value as plain text: strings as-is, objects as JSON, nothing as ''. */
+export const toText = (value: unknown): string => {
   if (typeof value === 'string') {
     return value
   }

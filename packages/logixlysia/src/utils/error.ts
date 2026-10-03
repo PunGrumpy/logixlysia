@@ -1,16 +1,13 @@
-import { stringifyForLog } from './json'
+import { toText } from './sanitize'
 
 // Elysia copies a `status(code, body)` body into `error.message`, so a message
 // is not always a string.
-const messageText = (message: unknown): string =>
-  typeof message === 'string' ? message : stringifyForLog(message)
-
 export const parseError = (error: unknown): string => {
   if (error instanceof Error) {
-    return messageText(error.message)
+    return toText(error.message)
   }
   if (error && typeof error === 'object' && 'message' in error) {
-    return messageText(error.message)
+    return toText(error.message)
   }
   return String(error)
 }
