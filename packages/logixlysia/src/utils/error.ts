@@ -1,9 +1,13 @@
+import { toText } from './sanitize'
+
+// Elysia copies a `status(code, body)` body into `error.message`, so a message
+// is not always a string.
 export const parseError = (error: unknown): string => {
   if (error instanceof Error) {
-    return error.message
+    return toText(error.message)
   }
   if (error && typeof error === 'object' && 'message' in error) {
-    return error.message as string
+    return toText(error.message)
   }
   return String(error)
 }

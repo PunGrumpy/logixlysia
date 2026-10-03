@@ -9,6 +9,7 @@ import type {
   BatchTransportOptions,
   LogEntry
 } from './adapters/shared'
+import { stringifyForLog } from './utils/json'
 
 const DEFAULT_SITE = 'datadoghq.com'
 const DEFAULT_SOURCE = 'logixlysia'
@@ -92,7 +93,7 @@ export const createDatadogTransport = (
   }
 
   return createHttpTransport({
-    body: entries => JSON.stringify(entries.map(toEvent)),
+    body: entries => stringifyForLog(entries.map(toEvent)),
     headers: {
       'Content-Type': 'application/json',
       'DD-API-KEY': apiKey

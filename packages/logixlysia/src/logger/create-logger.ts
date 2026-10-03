@@ -12,6 +12,7 @@ const pad3 = (value: number): string => String(value).padStart(3, '0')
 const DEFAULT_SLOW_MS = 500
 const DEFAULT_VERY_SLOW_MS = 1000
 const METHOD_PAD = 7
+const MAX_KEY_LENGTH = 256
 
 const DEFAULT_LOG_FORMAT =
   '{now} {service}{icon} {method} {pathname} {status} {duration} {message}{speed}'
@@ -337,17 +338,17 @@ const stringifyTreeValue = (value: unknown): string => {
   if (typeof value === 'string') {
     return sanitizeLogText(value)
   }
-  if (typeof value === 'number' || typeof value === 'boolean') {
+  if (
+    typeof value === 'number' ||
+    typeof value === 'bigint' ||
+    typeof value === 'boolean'
+  ) {
     return String(value)
   }
   if (value instanceof Error) {
     return sanitizeLogText(value.message)
   }
-  try {
-    return sanitizeLogText(JSON.stringify(value))
-  } catch {
-    return sanitizeLogText(String(value))
-  }
+  return sanitizeLogText(value)
 }
 
 /** Nested objects to expand in the context tree (excludes Arrays, Error, Date). */
@@ -365,7 +366,8 @@ const collectContextEntries = (
 ): [string, string][] => {
   const out: [string, string][] = []
   for (const [k, v] of Object.entries(obj)) {
-    const key = prefix ? `${prefix}.${k}` : k
+    const safeKey = sanitizeLogText(k, MAX_KEY_LENGTH)
+    const key = prefix ? `${prefix}.${safeKey}` : safeKey
     const expandable = isExpandableObject(v) && depthRemaining > 1
 
     if (expandable) {
@@ -409,16 +411,16 @@ const collectStructuredErrorEntries = (error: unknown): [string, string][] => {
   }
   if (isStructuredError(error)) {
     if (error.code !== undefined) {
-      entries.push(['error.code', String(error.code)])
+      entries.push(['error.code', sanitizeLogText(error.code)])
     }
     if (error.why !== undefined) {
-      entries.push(['error.why', String(error.why)])
+      entries.push(['error.why', sanitizeLogText(error.why)])
     }
     if (error.fix !== undefined) {
-      entries.push(['error.fix', String(error.fix)])
+      entries.push(['error.fix', sanitizeLogText(error.fix)])
     }
     if (error.link !== undefined) {
-      entries.push(['error.link', String(error.link)])
+      entries.push(['error.link', sanitizeLogText(error.link)])
     }
     if (error.internal !== undefined) {
       entries.push(['error.internal', stringifyTreeValue(error.internal)])
@@ -465,7 +467,9 @@ export const buildContextTreeLines = (
 
 const getContextString = (value: unknown): string => {
   if (typeof value === 'object' && value !== null) {
-    return JSON.stringify(value)
+    // No length cap, as before. This still strips the DEL and C1 characters
+    // that `JSON.stringify` leaves in place.
+    return sanitizeLogText(value, Number.POSITIVE_INFINITY)
   }
 
   return ''
