@@ -3,7 +3,7 @@ import type { LogLevel, Options, RequestInfo, StoreData } from '../interfaces'
 import type { SamplingRuntime } from '../sampling'
 import { normalizeLoggedError } from '../utils/error'
 import type { FormatContext } from './create-logger'
-import { emit, shouldLog } from './emit'
+import { emit, reportFormatError, shouldLog } from './emit'
 import type { Sinks } from './emit'
 
 const isErrorWithStatus = (
@@ -41,22 +41,27 @@ export const handleHttpError = (
     return
   }
 
-  const { error: safeError, message } = normalizeLoggedError(
-    error,
-    config?.logErrorPayload === true
-  )
+  // emit guards its own work; this covers normalizing the error before it.
+  try {
+    const { error: safeError, message } = normalizeLoggedError(
+      error,
+      config?.logErrorPayload === true
+    )
 
-  const data: Record<string, unknown> = { error: safeError, message, status }
+    const data: Record<string, unknown> = { error: safeError, message, status }
 
-  emit({
-    contextStore,
-    data,
-    formatContext,
-    level,
-    options,
-    request,
-    sampling,
-    sinks,
-    store
-  })
+    emit({
+      contextStore,
+      data,
+      formatContext,
+      level,
+      options,
+      request,
+      sampling,
+      sinks,
+      store
+    })
+  } catch (failure) {
+    reportFormatError(failure, config?.onError)
+  }
 }

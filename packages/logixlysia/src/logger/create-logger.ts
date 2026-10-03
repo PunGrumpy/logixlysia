@@ -337,17 +337,17 @@ const stringifyTreeValue = (value: unknown): string => {
   if (typeof value === 'string') {
     return sanitizeLogText(value)
   }
-  if (typeof value === 'number' || typeof value === 'boolean') {
+  if (
+    typeof value === 'number' ||
+    typeof value === 'bigint' ||
+    typeof value === 'boolean'
+  ) {
     return String(value)
   }
   if (value instanceof Error) {
     return sanitizeLogText(value.message)
   }
-  try {
-    return sanitizeLogText(JSON.stringify(value))
-  } catch {
-    return sanitizeLogText(String(value))
-  }
+  return sanitizeLogText(value)
 }
 
 /** Nested objects to expand in the context tree (excludes Arrays, Error, Date). */
@@ -465,7 +465,9 @@ export const buildContextTreeLines = (
 
 const getContextString = (value: unknown): string => {
   if (typeof value === 'object' && value !== null) {
-    return JSON.stringify(value)
+    // No length cap, as before. This still strips the DEL and C1 characters
+    // that `JSON.stringify` leaves in place.
+    return sanitizeLogText(value, Number.POSITIVE_INFINITY)
   }
 
   return ''

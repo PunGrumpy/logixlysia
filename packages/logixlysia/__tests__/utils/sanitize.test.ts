@@ -40,4 +40,17 @@ describe('sanitizeLogText', () => {
     const result = sanitizeLogText('abcdefghij', 5)
     expect(result).toBe('abcde…')
   })
+
+  test('serializes an object', () => {
+    expect(sanitizeLogText({ error: 'x' })).toBe('{"error":"x"}')
+  })
+
+  test('turns undefined into an empty string', () => {
+    const nothing: unknown = undefined
+    expect(sanitizeLogText(nothing)).toBe('')
+  })
+
+  test('stringifies a number', () => {
+    expect(sanitizeLogText(42)).toBe('42')
+  })
 })

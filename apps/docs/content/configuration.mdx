@@ -302,9 +302,9 @@ disableFileLogging: true
 
 ### `onError`
 
-Called when a sink (transport, file, or rotation) or an [enricher](/docs/features/enrichers) fails, and when a shutdown flush runs out of time (`sink: 'shutdown'`). Errors thrown by the hook itself are swallowed. When absent, failures go to stderr (rate-limited for transports and enrichers).
+Called when a sink (transport, file, or rotation) or an [enricher](/docs/features/enrichers) fails, and when a shutdown flush runs out of time (`sink: 'shutdown'`). `sink: 'format'` means building or printing a log record failed. The request itself is unaffected. Errors thrown by the hook itself are swallowed. When absent, failures go to stderr (rate-limited for transports, enrichers, and formatting).
 
-- **Type:** `(context: { sink: 'transport' | 'file' | 'rotation' | 'shutdown' | 'enricher'; error: unknown }) => void`
+- **Type:** `(context: { sink: 'transport' | 'file' | 'rotation' | 'shutdown' | 'enricher' | 'format'; error: unknown }) => void`
 - **Default:** `undefined`
 
 ```ts

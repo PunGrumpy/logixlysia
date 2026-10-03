@@ -12,6 +12,7 @@ import { logToFile } from '../output/file'
 import type { SamplingRuntime } from '../sampling'
 import { elapsedMs } from '../utils/duration'
 import { redact, redactRequest } from '../utils/redact'
+import { createErrorReporter } from '../utils/report'
 import { settle } from '../utils/settle'
 import { formatLogOutput } from './create-logger'
 import type { FormatContext, PrecomputedLogParts } from './create-logger'
@@ -135,13 +136,13 @@ export interface EmitInput {
   store: StoreData
 }
 
-/**
- * The single log-emission pipeline shared by the success path (`log()`) and
- * the error path (`handleHttpError()`): filter check -> context merge ->
- * redact -> transports -> file -> console, all gated by the same `sinks`.
- */
-export const emit = ({
-  bypassSampling,
+/** Shared by `emit` and `handleHttpError` so formatting failures share one rate limit. */
+export const reportFormatError = createErrorReporter(
+  'format',
+  'failed to build a log record'
+)
+
+const writeRecord = ({
   contextStore,
   data,
   durationOverride,
@@ -149,32 +150,10 @@ export const emit = ({
   level,
   options,
   request,
-  sampling,
   sinks,
   store
 }: EmitInput): void => {
   const { config } = options
-
-  if (sinks.isEffectivelyDisabled || !shouldLog(level, config?.logFilter)) {
-    return
-  }
-
-  if (sampling && !bypassSampling) {
-    const decision = sampling.decide(level, request)
-    if (decision === 'drop') {
-      return
-    }
-    if (decision === 'buffer') {
-      // Buffered raw: context merge, redaction and formatting are deferred to
-      // replay, so a request that never gets rescued pays almost nothing.
-      sampling.buffer(request, {
-        data,
-        durationMs: elapsedMs(store.beforeTime),
-        level
-      })
-      return
-    }
-  }
 
   const dataWithContext = mergeLogDataContext(
     data,
@@ -244,4 +223,51 @@ export const emit = ({
     contextLines.length > 0 ? `${main}\n${contextLines.join('\n')}` : main
 
   consoleForLevel(level)(message)
+}
+
+/**
+ * The single log-emission pipeline shared by the success path (`log()`) and
+ * the error path (`handleHttpError()`): filter check -> context merge ->
+ * redact -> transports -> file -> console, all gated by the same `sinks`.
+ */
+export const emit = (input: EmitInput): void => {
+  const {
+    bypassSampling,
+    data,
+    level,
+    options,
+    request,
+    sampling,
+    sinks,
+    store
+  } = input
+  const { config } = options
+
+  if (sinks.isEffectivelyDisabled || !shouldLog(level, config?.logFilter)) {
+    return
+  }
+
+  if (sampling && !bypassSampling) {
+    const decision = sampling.decide(level, request)
+    if (decision === 'drop') {
+      return
+    }
+    if (decision === 'buffer') {
+      // Buffered raw: context merge, redaction and formatting are deferred to
+      // replay, so a request that never gets rescued pays almost nothing.
+      sampling.buffer(request, {
+        data,
+        durationMs: elapsedMs(store.beforeTime),
+        level
+      })
+      return
+    }
+  }
+
+  // Logging must never fail the request it describes.
+  try {
+    writeRecord(input)
+  } catch (error) {
+    reportFormatError(error, config?.onError)
+  }
 }

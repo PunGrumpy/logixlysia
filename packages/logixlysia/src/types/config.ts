@@ -112,7 +112,7 @@ export type LogPreset = 'dev' | 'prod' | 'json'
 /** Context passed to {@link Options.config.onError} when a sink fails. */
 export interface SinkErrorContext {
   error: unknown
-  sink: 'enricher' | 'file' | 'rotation' | 'shutdown' | 'transport'
+  sink: 'enricher' | 'file' | 'format' | 'rotation' | 'shutdown' | 'transport'
 }
 
 export interface RequestIdConfig {
@@ -185,9 +185,10 @@ export interface OutputConfig {
   logFilePath?: string
   logRotation?: LogRotationConfig
   /**
-   * Called when a sink (transport, file, rotation) or an enricher fails.
-   * Errors thrown by the hook itself are swallowed. When absent, failures go
-   * to stderr (rate-limited for transports and enrichers).
+   * Called when a sink (transport, file, rotation) or an enricher fails, or
+   * when building or printing a log record fails (`sink: 'format'`). Errors
+   * thrown by the hook itself are swallowed. When absent, failures go to
+   * stderr (rate-limited for transports, enrichers and formatting).
    */
   onError?: (context: SinkErrorContext) => void
   transports?: Transport[]

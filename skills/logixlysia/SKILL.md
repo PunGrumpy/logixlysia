@@ -154,7 +154,7 @@ When writing or modifying code relating to Logixlysia:
 
 ## 7. Destinations
 
-Each built-in destination is a factory imported from its own subpath, e.g. `logixlysia/axiom`. Pass the result to `config.transports`. Set `useTransportsOnly: true` to skip console output and ship only to transports. `config.onError` receives sink failures (`transport`, `file`, `rotation`, `enricher`) instead of the rate-limited stderr fallback.
+Each built-in destination is a factory imported from its own subpath, e.g. `logixlysia/axiom`. Pass the result to `config.transports`. Set `useTransportsOnly: true` to skip console output and ship only to transports. `config.onError` receives sink failures (`transport`, `file`, `rotation`, `enricher`, `shutdown`, `format`) instead of the rate-limited stderr fallback.
 
 ```typescript
 import { logixlysia } from 'logixlysia'
