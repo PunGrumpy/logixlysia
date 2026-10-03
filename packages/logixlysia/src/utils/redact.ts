@@ -181,6 +181,24 @@ const redactSearchParams = (
   return result
 }
 
+/**
+ * Redacts the decoded segment so `%40` cannot hide an email. Re-encodes only
+ * when redaction changed the text; other segments keep their spelling.
+ */
+const redactPathSegment = (segment: string): string => {
+  let decoded = segment
+  try {
+    decoded = decodeURIComponent(segment)
+  } catch {
+    // Malformed escape: redact the raw segment instead.
+  }
+  const redacted = redactString(decoded)
+  if (decoded === segment) {
+    return redacted
+  }
+  return redacted === decoded ? segment : encodeURIComponent(redacted)
+}
+
 /** Apply PII redaction to a request URL while keeping the result parseable by the URL/Request constructors. */
 const redactRequestUrl = (
   urlString: string,
@@ -195,23 +213,13 @@ const redactRequestUrl = (
       u.password = redactUrlAuthoritySegment(u.password)
     }
     u.hostname = redactUrlAuthoritySegment(u.hostname)
-    u.pathname = redactString(u.pathname)
-    // `searchParams.set` re-serializes the whole query string, so redact
-    // decoded values directly rather than re-running pattern redaction on
-    // `u.search` afterward (which would see already percent-encoded text).
-    // Iterate a copy: `set` below rewrites the live list.
-    for (const key of new URLSearchParams(u.searchParams).keys()) {
-      if (isSensitiveKey(key, extraKeys)) {
-        u.searchParams.set(key, URL_SAFE_REDACT)
-        continue
-      }
-      const value = u.searchParams.get(key)
-      if (value !== null) {
-        const redactedValue = redactString(value)
-        if (redactedValue !== value) {
-          u.searchParams.set(key, redactedValue)
-        }
-      }
+    u.pathname = u.pathname.split('/').map(redactPathSegment).join('/')
+    // Assigning `search` re-serializes the query, so do it only when a value
+    // changed. The values are decoded here, so patterns never run against
+    // percent-encoded text.
+    const query = redactSearchParams(u.searchParams, extraKeys).toString()
+    if (query !== u.searchParams.toString()) {
+      u.search = query
     }
     u.hash = redactString(u.hash)
     return u.toString()

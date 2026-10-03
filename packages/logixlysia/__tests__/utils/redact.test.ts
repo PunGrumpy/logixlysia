@@ -410,6 +410,35 @@ describe('redactRequest', () => {
     expect(out.url).not.toContain('SECRET')
     expect(out.url).toContain('promo=redacted')
   })
+
+  test('masks every value of a repeated query parameter by pattern', () => {
+    const out = redactRequest(
+      new Request('http://h/p?to=ok&to=bob@example.com')
+    )
+    expect(new URL(out.url).searchParams.getAll('to')).toEqual([
+      'ok',
+      '[REDACTED]'
+    ])
+  })
+
+  test('masks every value of a repeated sensitive query parameter', () => {
+    const out = redactRequest(new Request('http://h/p?apiKey=one&apiKey=two'))
+    expect(new URL(out.url).searchParams.getAll('apiKey')).toEqual([
+      'redacted',
+      'redacted'
+    ])
+  })
+
+  test('redacts percent-encoded emails in path segments', () => {
+    const out = redactRequest(
+      new Request('http://h/users/alice%40example.com/orders')
+    )
+    expect(out.url).not.toContain('alice')
+    expect(out.url).not.toContain('example.com')
+    expect(out.url).toContain('/users/')
+    expect(out.url).toContain('/orders')
+    expect(() => new Request(out.url)).not.toThrow()
+  })
 })
 
 describe('error.cause redaction', () => {
