@@ -8,24 +8,11 @@ import { getFileSink } from '../../src/output/file-sink'
 import { spyConsole } from '../_helpers/console'
 import { sleep } from '../_helpers/sleep'
 import { createTempDir, removeTempDir } from '../_helpers/tmp'
+import { waitFor } from '../_helpers/wait-for'
 
-const POLL_TIMEOUT_MS = 200
-const POLL_INTERVAL_MS = 5
+// `app.stop()` does not await async hooks, so the tests below poll with
+// `waitFor` for the hook's observable effect.
 const NO_WAIT_SETTLE_MS = 30
-
-/** `app.stop()` does not await async hooks, so poll for the observable effect. */
-const waitFor = (predicate: () => boolean): Promise<void> => {
-  const { promise, resolve }: PromiseWithResolvers<void> =
-    Promise.withResolvers()
-  const deadline = Date.now() + POLL_TIMEOUT_MS
-  const timer = setInterval(() => {
-    if (predicate() || Date.now() >= deadline) {
-      clearInterval(timer)
-      resolve()
-    }
-  }, POLL_INTERVAL_MS)
-  return promise
-}
 
 /** A flush that never settles, to exercise the shutdown timeout. */
 const neverSettles = (): Promise<void> => {

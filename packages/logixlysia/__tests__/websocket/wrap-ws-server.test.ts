@@ -2,28 +2,13 @@ import { expect, mock, test } from 'bun:test'
 import { Elysia } from 'elysia'
 import { logixlysia } from '../../src'
 import { sleep } from '../_helpers/sleep'
+import { waitFor } from '../_helpers/wait-for'
 
-const POLL_INTERVAL_MS = 10
-const POLL_TIMEOUT_MS = 1000
 const IDLE_MS = 30
 
 interface LogRecord {
   context?: Record<string, unknown>
   durationMs?: number
-}
-
-/** Resolves once the predicate holds, or after the timeout. */
-const waitFor = (predicate: () => boolean): Promise<void> => {
-  const { promise, resolve }: PromiseWithResolvers<void> =
-    Promise.withResolvers()
-  const deadline = Date.now() + POLL_TIMEOUT_MS
-  const timer = setInterval(() => {
-    if (predicate() || Date.now() >= deadline) {
-      clearInterval(timer)
-      resolve()
-    }
-  }, POLL_INTERVAL_MS)
-  return promise
 }
 
 test('logs the connection duration and merged context on a real socket', async () => {
