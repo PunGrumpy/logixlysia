@@ -15,9 +15,8 @@ const plugin = logixlysia({
   }
 })
 
-const app = new Elysia().use(plugin).ws(
-  '/chat',
-  plugin.wrapWs({
+const app = new Elysia().use(plugin).ws('/chat', {
+  ...plugin.wrapWs('/chat', {
     open(ws) {
       ws.send('connected')
     },
@@ -28,7 +27,7 @@ const app = new Elysia().use(plugin).ws(
       console.log('bye', ws.id)
     }
   })
-)
+})
 ```
 
 Each lifecycle event logs with HTTP method `WS`, the route path, duration, and optional `wsId` in context. Your `close` hook receives the WebSocket's close `code` and `reason`, and the "WebSocket closed" line logs them too.
@@ -38,15 +37,16 @@ Each lifecycle event logs with HTTP method `WS`, the route path, duration, and o
 Accumulate context with the WebSocket instance as the key:
 
 ```ts
-.ws(
-  '/chat',
-  plugin.wrapWs({
+.ws('/chat', {
+  ...plugin.wrapWs('/chat', {
     message(ws, payload) {
       ws.data.store.logger.mergeContext(ws, { lastPayloadType: typeof payload })
     }
   })
-)
+})
 ```
+
+The plugin stores context per connection, so a value merged in `open` is still there on later message and close lines.
 
 ## Disable WebSocket logs
 

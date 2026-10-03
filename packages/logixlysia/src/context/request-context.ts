@@ -16,24 +16,35 @@ export interface RequestContextStore {
 
 const EMPTY_CONTEXT: Readonly<Record<string, unknown>> = Object.freeze({})
 
+/**
+ * Elysia hands WebSocket hooks a fresh wrapper object per event; only its
+ * `raw` socket is the same across a connection's lifetime, so key by that.
+ * A `Request` has no `raw`, so HTTP keys are unchanged.
+ */
+export const keyOf = (key: ContextKey): ContextKey => {
+  const raw = 'raw' in key ? key.raw : undefined
+  return typeof raw === 'object' && raw !== null ? raw : key
+}
+
 export const createRequestContextStore = (): RequestContextStore => {
   const bags = new WeakMap<ContextKey, Record<string, unknown>>()
 
   const getOrCreate = (key: ContextKey): Record<string, unknown> => {
-    let bag = bags.get(key)
+    const bagKey = keyOf(key)
+    let bag = bags.get(bagKey)
     if (!bag) {
       bag = {}
-      bags.set(key, bag)
+      bags.set(bagKey, bag)
     }
     return bag
   }
 
   return {
     clearContext(key) {
-      bags.delete(key)
+      bags.delete(keyOf(key))
     },
     getContext(key) {
-      const bag = bags.get(key)
+      const bag = bags.get(keyOf(key))
       return bag ? { ...bag } : {}
     },
     mergeContext(key, partial) {
@@ -44,7 +55,7 @@ export const createRequestContextStore = (): RequestContextStore => {
       Object.assign(bag, partial)
     },
     peekContext(key) {
-      return bags.get(key) ?? EMPTY_CONTEXT
+      return bags.get(keyOf(key)) ?? EMPTY_CONTEXT
     }
   }
 }
