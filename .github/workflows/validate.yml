@@ -55,7 +55,7 @@ jobs:
             ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}-
             ${{ runner.os }}-bun-
       - name: 🔽 Install Dependencies
-        run: bun install
+        run: bun install --frozen-lockfile
       - name: 🔍 Run ${{ matrix.name }}
         env:
           CI: true
@@ -86,7 +86,7 @@ jobs:
             ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}-
             ${{ runner.os }}-bun-
       - name: 🔽 Install Dependencies
-        run: bun install
+        run: bun install --frozen-lockfile
       - name: 🦊 Build Logixlysia
         run: bun run build --filter logixlysia
       - name: 🚀 Start playground
