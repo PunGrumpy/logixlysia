@@ -43,9 +43,20 @@ test('logs the connection duration and merged context on a real socket', async (
     }
 
     const socket = new WebSocket(`ws://localhost:${port}/chat`)
-    const { promise: opened, resolve: onOpen }: PromiseWithResolvers<void> =
-      Promise.withResolvers()
+    const {
+      promise: opened,
+      reject: onOpenFailure,
+      resolve: onOpen
+    }: PromiseWithResolvers<void> = Promise.withResolvers()
     socket.addEventListener('open', () => onOpen())
+    // Without these, a socket that never opens leaves the test waiting here
+    // instead of failing and stopping the server in `finally`.
+    socket.addEventListener('error', () =>
+      onOpenFailure(new Error('WebSocket connection failed'))
+    )
+    socket.addEventListener('close', () =>
+      onOpenFailure(new Error('WebSocket closed before opening'))
+    )
     await opened
 
     await sleep(IDLE_MS)
