@@ -4,6 +4,7 @@ import type { Logger, Options, StoreData } from '../interfaces'
 export interface WebSocketLike {
   readonly data?: { store?: { logger?: Logger } }
   readonly id?: string
+  readonly raw?: object
 }
 
 export interface WsHandlerHooks<
@@ -27,6 +28,9 @@ const wsSyntheticRequest = (path: string): Request => {
   }
   return request
 }
+
+// Elysia passes a new wrapper per event; only `raw` is the same for the whole connection.
+const connectionKey = (ws: WebSocketLike): object => ws.raw ?? ws
 
 const payloadTypeOf = (message: unknown): string => {
   if (message instanceof ArrayBuffer || ArrayBuffer.isView(message)) {
@@ -52,11 +56,11 @@ export const createWsHandlerWrapper = (
     message: string,
     extra?: Record<string, unknown>
   ): void => {
-    const key = ws as object
-    const beforeTime = wsTimings.get(key) ?? process.hrtime.bigint()
+    const beforeTime =
+      wsTimings.get(connectionKey(ws)) ?? process.hrtime.bigint()
     const store: StoreData = { beforeTime }
     // Read-only: immediately spread below into a new object, never retained or mutated.
-    const accumulated = contextStore.peekContext(key)
+    const accumulated = contextStore.peekContext(ws)
     const context =
       Object.keys(accumulated).length > 0 || extra
         ? { ...accumulated, ...extra, wsId: ws.id }
@@ -77,8 +81,13 @@ export const createWsHandlerWrapper = (
   >(
     path: string,
     hooks: THooks
-  ): THooks =>
-    ({
+  ): THooks => {
+    if (typeof path !== 'string') {
+      throw new TypeError(
+        "logixlysia: wrapWs(path, hooks) expects the route path first, e.g. plugin.wrapWs('/chat', { open(ws) {} })"
+      )
+    }
+    return {
       ...hooks,
       close(ws, code, reason) {
         try {
@@ -101,7 +110,7 @@ export const createWsHandlerWrapper = (
             )
           }
           contextStore.clearContext(ws as object)
-          wsTimings.delete(ws as object)
+          wsTimings.delete(connectionKey(ws))
         }
       },
       message(ws, message) {
@@ -116,7 +125,7 @@ export const createWsHandlerWrapper = (
         }
       },
       open(ws) {
-        wsTimings.set(ws as object, process.hrtime.bigint())
+        wsTimings.set(connectionKey(ws), process.hrtime.bigint())
         try {
           hooks.open?.(ws)
         } finally {
@@ -125,5 +134,6 @@ export const createWsHandlerWrapper = (
           }
         }
       }
-    }) as THooks
+    } as THooks
+  }
 }
