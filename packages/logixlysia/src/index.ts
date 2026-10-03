@@ -69,6 +69,16 @@ const resolveHandledStatus = (
   return getStatusCode(setStatus)
 }
 
+const levelForStatus = (status: number): 'INFO' | 'WARNING' | 'ERROR' => {
+  if (status >= 500) {
+    return 'ERROR'
+  }
+  if (status >= 400) {
+    return 'WARNING'
+  }
+  return 'INFO'
+}
+
 /**
  * Explicit singleton without Elysia's `SingletonBase` `Record<string, unknown>` on decorator/derive/resolve so
  * merged `Context` and WebSocket `ws.data` keep precise keys after `.use(logixlysia())`.
@@ -209,7 +219,7 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
   })
 
   /**
-   * Everything both exits share once the status is known: echo the request id,
+   * Everything the exits share once the status is known: echo the request id,
    * run the response-phase enrichers, and resolve tail sampling — all before
    * the request's final log line, so it and any replayed records see the same
    * context. Returns the timing store for that final line.
@@ -286,6 +296,20 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
     const store = closeRequest(request, setHeaders, errorStatus(error))
     closed.add(request)
     return store
+  }
+
+  const emitAccessLine = (
+    request: Request,
+    status: number,
+    store: StoreData
+  ): void => {
+    const accumulated = contextStore.getContext(request)
+    const data: Record<string, unknown> = { status }
+    if (Object.keys(accumulated).length > 0) {
+      data.context = { ...accumulated }
+    }
+
+    logger.log(levelForStatus(status), request, data, store)
   }
 
   const app = new Elysia({
@@ -365,20 +389,7 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
           return
         }
 
-        let level: 'INFO' | 'WARNING' | 'ERROR' = 'INFO'
-        if (status >= 500) {
-          level = 'ERROR'
-        } else if (status >= 400) {
-          level = 'WARNING'
-        }
-
-        const accumulated = contextStore.getContext(request)
-        const data: Record<string, unknown> = { status }
-        if (Object.keys(accumulated).length > 0) {
-          data.context = { ...accumulated }
-        }
-
-        logger.log(level, request, data, store)
+        emitAccessLine(request, status, store)
         // Nothing else is cleaned up here: the timings and the context bag
         // live in WeakMaps keyed by the request, and a hook running after this
         // one may still throw, in which case onError needs both to stay
@@ -394,6 +405,35 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
           error,
           errorStore(request, set.headers, error)
         )
+      } finally {
+        requestStartTimes.delete(request)
+        contextStore.clearContext(request)
+        exitRequestScope()
+      }
+    })
+    // Some exits reach neither onAfterHandle nor onError: a resolve or derive
+    // that returns status(), or an error that an app-wide onError registered
+    // before this plugin answers. onAfterResponse still runs for them with the
+    // final status in set.status, so it closes any request left open.
+    .onAfterResponse(context => {
+      const { request, set } = context
+      if (closed.has(request)) {
+        return
+      }
+
+      try {
+        const status = getStatusCode(set.status)
+        const store = closeRequest(request, set.headers, status)
+        closed.add(request)
+
+        // Elysia's AfterResponseHandler type omits `error`, but at runtime it
+        // holds the thrown value on error exits.
+        const error = 'error' in context ? context.error : undefined
+        if (error !== undefined && status >= 400) {
+          logger.handleHttpError(request, error, store)
+        } else if (!didCustomLog.has(request)) {
+          emitAccessLine(request, status, store)
+        }
       } finally {
         requestStartTimes.delete(request)
         contextStore.clearContext(request)

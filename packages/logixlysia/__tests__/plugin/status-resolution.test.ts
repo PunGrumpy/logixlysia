@@ -159,6 +159,45 @@ describe('logixlysia plugin - status resolution', () => {
     expect(recordAt(transport, 0).meta.status).toBe(409)
   })
 
+  test('logs a request that an auth macro resolve answers with status()', async () => {
+    const { options, transport } = createCaptureTransport()
+    const app = new Elysia()
+      .use(logixlysia(options))
+      .macro({ auth: { resolve: ({ status }) => status(401, 'no') } })
+      .get('/private', () => 'secret', { auth: true })
+
+    const response = await run(app, '/private')
+
+    expect(response.status).toBe(401)
+    expect(transport).toHaveBeenCalledTimes(1)
+    const { level, meta } = recordAt(transport, 0)
+    expect(level).toBe('WARNING')
+    expect(meta.status).toBe(401)
+  })
+
+  test('logs errors an earlier app-wide onError already answered', async () => {
+    const { options, transport } = createCaptureTransport()
+    const app = new Elysia()
+      .onError({ as: 'global' }, () => ({ formatted: true }))
+      .use(logixlysia(options))
+      .get('/boom', () => {
+        throw new Error('db down')
+      })
+
+    await run(app, '/boom')
+
+    expect(transport).toHaveBeenCalledTimes(1)
+    const { level, meta } = recordAt(transport, 0)
+    expect(level).toBe('ERROR')
+    expect(meta.status).toBe(500)
+    expect(transport.mock.calls[0]?.[1]).toBe('db down')
+
+    await run(app, '/missing')
+
+    expect(transport).toHaveBeenCalledTimes(2)
+    expect(recordAt(transport, 1).meta.status).toBe(404)
+  })
+
   test('tail sampling keeps a status() 404 that head sampling drops', async () => {
     const { options, transport } = createCaptureTransport({
       sampling: { head: { INFO: 0, WARNING: 0 }, tail: { status: 400 } }
@@ -171,5 +210,27 @@ describe('logixlysia plugin - status resolution', () => {
 
     expect(transport).toHaveBeenCalledTimes(1)
     expect(recordAt(transport, 0).meta.status).toBe(404)
+  })
+
+  test('writes one line for a plain route and one for a throwing route', async () => {
+    const { options, transport } = createCaptureTransport()
+    const app = new Elysia()
+      .use(logixlysia(options))
+      .get('/ok', () => 'ok')
+      .get('/throws', () => {
+        throw new Error('x')
+      })
+
+    await run(app, '/ok')
+
+    expect(transport).toHaveBeenCalledTimes(1)
+    expect(recordAt(transport, 0).level).toBe('INFO')
+    expect(recordAt(transport, 0).meta.status).toBe(200)
+
+    await run(app, '/throws')
+
+    expect(transport).toHaveBeenCalledTimes(2)
+    expect(recordAt(transport, 1).level).toBe('ERROR')
+    expect(recordAt(transport, 1).meta.status).toBe(500)
   })
 })
