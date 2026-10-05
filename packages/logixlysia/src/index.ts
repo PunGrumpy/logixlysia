@@ -140,7 +140,10 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
   const contextStore = createRequestContextStore()
   const baseLogger = createPluginLogger(options, contextStore)
   const wrapWs = createWsHandlerWrapper(options, baseLogger, contextStore)
-  const requestIdConfig = resolveRequestIdConfig(options.config?.requestId)
+  const requestIdConfig = resolveRequestIdConfig(
+    options.config?.requestId,
+    options.config?.onError
+  )
   const enrichers = resolveEnrichers(options.config?.enrichers)
   const onSinkError = options.config?.onError
   const logFilter = options.config?.logFilter
