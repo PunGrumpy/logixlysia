@@ -363,4 +363,36 @@ describe('logToFile', () => {
       await removeTempDir(dir)
     }
   })
+
+  test('creates the compressed archive with the configured logFileMode', async () => {
+    const dir = await createTempDir()
+    try {
+      const filePath = path.join(dir, 'logs', 'archive-mode.log')
+      const options: Options = {
+        config: {
+          logFileMode: 0o640,
+          logRotation: { compress: true, compression: 'gzip', maxSize: 1 }
+        }
+      }
+
+      await logToFile({
+        data: { message: 'x'.repeat(50) },
+        filePath,
+        level: 'INFO',
+        options,
+        request: createMockRequest('http://localhost/test'),
+        store: { beforeTime: 0n }
+      })
+
+      const files = await fs.readdir(path.join(dir, 'logs'))
+      const archives = files.filter(
+        name => name.startsWith('archive-mode.log.') && name.endsWith('.gz')
+      )
+      expect(archives).toHaveLength(1)
+      const { mode } = await fs.stat(path.join(dir, 'logs', archives[0]))
+      expect(permBits(mode)).toBe('640')
+    } finally {
+      await removeTempDir(dir)
+    }
+  })
 })

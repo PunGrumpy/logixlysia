@@ -177,7 +177,12 @@ class FileSinkImpl implements FileSink {
       this.bytesWritten = 0
       this.openedAt = Date.now()
       await handle?.close()
-      await performRotation(this.filePath, rotation, options.onRotationError)
+      await performRotation(
+        this.filePath,
+        rotation,
+        options.onRotationError,
+        options.logFileMode
+      )
     } catch (error) {
       // Log entries were already durably written and resolved above;
       // rotation failures must not fail the caller's write.
