@@ -3,6 +3,7 @@ import { promises as fs } from 'node:fs'
 import path from 'node:path'
 import type { Options, SinkErrorContext } from '../../src/interfaces'
 import { logToFile } from '../../src/output/file'
+import { spyConsole } from '../_helpers/console'
 import { createMockRequest } from '../_helpers/request'
 import { createTempDir, removeTempDir } from '../_helpers/tmp'
 
@@ -360,6 +361,43 @@ describe('logToFile', () => {
       expect(context?.sink).toBe('file')
       expect(context?.error).toBeDefined()
     } finally {
+      await removeTempDir(dir)
+    }
+  })
+
+  test('reports repeated write failures on stderr at most once per interval', async () => {
+    const dir = await createTempDir()
+    const console = spyConsole(['error'])
+    try {
+      const blocker = path.join(dir, 'blocker')
+      await fs.writeFile(blocker, 'x')
+      const options: Options = { config: {} }
+
+      const writeAndFail = async (): Promise<void> => {
+        try {
+          await logToFile({
+            data: { message: 'hello' },
+            filePath: path.join(blocker, 'app.log'),
+            level: 'INFO',
+            options,
+            request: createMockRequest('http://localhost/test'),
+            store: { beforeTime: 0n }
+          })
+        } catch {
+          // Expected: the log directory is a regular file.
+        }
+      }
+
+      await writeAndFail()
+      await writeAndFail()
+      await writeAndFail()
+
+      expect(console.spies.error).toHaveBeenCalledTimes(1)
+      expect(console.spies.error.mock.calls[0]?.[0]).toBe(
+        '[logixlysia] failed to write to log file:'
+      )
+    } finally {
+      console.restore()
       await removeTempDir(dir)
     }
   })

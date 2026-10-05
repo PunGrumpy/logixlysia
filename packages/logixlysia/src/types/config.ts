@@ -188,7 +188,8 @@ export interface OutputConfig {
    * Called when a sink (transport, file, rotation) or an enricher fails, or
    * when building or printing a log record fails (`sink: 'format'`). Errors
    * thrown by the hook itself are swallowed. When absent, failures go to
-   * stderr (rate-limited for transports, enrichers and formatting).
+   * stderr (rate-limited for transports, file writes, rotation, enrichers
+   * and formatting).
    */
   onError?: (context: SinkErrorContext) => void
   transports?: Transport[]
