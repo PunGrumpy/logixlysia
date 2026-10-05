@@ -97,15 +97,28 @@ export const transportError = (
   options?: ErrorOptions
 ): Error => new Error(`[logixlysia] ${adapter} transport: ${detail}`, options)
 
+/** `scheme://user:pass@host` with everything between `://` and the last `@` replaced. */
+const URL_USERINFO = /^(?<scheme>[a-z][a-z0-9+.-]*:\/\/).*@/iu
+
+const withoutCredentials = (url: string): string =>
+  url.replace(URL_USERINFO, '$<scheme><redacted>@')
+
+const tryParseUrl = (value: string): URL | undefined => {
+  try {
+    return new URL(value)
+  } catch {
+    // Reported by the caller, without the input: it may carry credentials.
+  }
+}
+
 /** Parses a fully built endpoint once, at construction, so a bad env var fails here rather than on the first flush. */
 export const resolveEndpoint = (name: string, url: string): string => {
-  let parsed: URL
-  try {
-    parsed = new URL(url)
-  } catch (error) {
-    throw transportError(name, `invalid endpoint URL '${url}'`, {
-      cause: error
-    })
+  const parsed = tryParseUrl(url)
+  if (!parsed) {
+    throw transportError(
+      name,
+      `invalid endpoint URL '${withoutCredentials(url)}'`
+    )
   }
   if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
     throw transportError(
