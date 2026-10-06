@@ -14,6 +14,26 @@ const IPV6_REGEX =
 /** Digit runs that may be formatted PANs (spaces/dashes); validated with Luhn before redacting. */
 const CREDIT_CARD_CANDIDATE_REGEX = /\b(?:\d[ -]*?){13,19}\b/gu
 const JWT_REGEX = /eyJ[a-zA-Z0-9_-]+\.eyJ[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+/gu
+/**
+ * `://user:password@` in free text (the user part may be empty, as in a Redis
+ * URL); a password is a secret whatever it looks like. The scheme in front is
+ * checked by `endsWithUrlScheme` instead of matched here: a pattern that
+ * starts with `[a-z][a-z0-9+.-]*` retries from every letter of a long word,
+ * which is quadratic in the word's length.
+ */
+const URL_PASSWORD_REGEX = /(?<prefix>:\/\/[^\s/?#@:]*:)[^\s/?#@]+@/gu
+const URL_SCHEME_LETTER_REGEX = /[a-z]/iu
+const URL_SCHEME_MARK_REGEX = /[\d+.-]/u
+/**
+ * An HTTP credential after its scheme word. Only a token with a digit, a
+ * URL-safe punctuation mark or an uppercase letter after a word character is
+ * masked, so prose such as "Basic authentication failed" is left alone.
+ */
+const HTTP_CREDENTIAL_REGEX =
+  /\b(?<scheme>[Bb]earer|[Bb]asic)\s+(?<token>[\w\-.~+/]{8,}=*)/gu
+const CREDENTIAL_MARK_REGEX = /[\d\-.~+/]/u
+/** No `i` flag, under which `[A-Z]` would match every lowercase letter too. */
+const INNER_CAPITAL_REGEX = /\w[A-Z]/u
 
 const PAN_MIN_LEN = 13
 const PAN_MAX_LEN = 19
@@ -28,6 +48,7 @@ export const DEFAULT_REDACT_KEYS: readonly string[] = [
   'proxy-authorization',
   'cookie',
   'set-cookie',
+  'cookies',
   'x-api-key',
   'api-key',
   'apikey',
@@ -146,15 +167,42 @@ const redactCreditCardCandidates = (text: string): string =>
     return match
   })
 
+/** True when `text` has a URL scheme (a letter, then letters, digits, `+`, `.` or `-`) ending at `end`. */
+const endsWithUrlScheme = (text: string, end: number): boolean => {
+  for (let i = end - 1; i >= 0; i -= 1) {
+    const char = text.charAt(i)
+    if (URL_SCHEME_LETTER_REGEX.test(char)) {
+      return true
+    }
+    if (!URL_SCHEME_MARK_REGEX.test(char)) {
+      return false
+    }
+  }
+  return false
+}
+
 /** Returns `text` unchanged (same value) when nothing matched — callers can compare `=== input`. */
 export const redactString = (text: string): string => {
   let result = text
 
+  // Before the email pass, which would otherwise eat `password@host.tld`.
+  result = result.replace(
+    URL_PASSWORD_REGEX,
+    (match: string, prefix: string, offset: number, whole: string) =>
+      endsWithUrlScheme(whole, offset) ? `${prefix}${REDACTED_TEXT}@` : match
+  )
   result = result.replace(EMAIL_REGEX, REDACTED_TEXT)
   result = result.replace(IPV4_REGEX, REDACTED_TEXT)
   result = result.replace(IPV6_REGEX, REDACTED_TEXT)
   result = redactCreditCardCandidates(result)
   result = result.replace(JWT_REGEX, REDACTED_TEXT)
+  result = result.replace(
+    HTTP_CREDENTIAL_REGEX,
+    (match: string, scheme: string, token: string) =>
+      CREDENTIAL_MARK_REGEX.test(token) || INNER_CAPITAL_REGEX.test(token)
+        ? `${scheme} ${REDACTED_TEXT}`
+        : match
+  )
 
   return result
 }
@@ -211,7 +259,7 @@ const redactRequestUrl = (
       u.username = redactUrlAuthoritySegment(u.username)
     }
     if (u.password !== '') {
-      u.password = redactUrlAuthoritySegment(u.password)
+      u.password = URL_SAFE_REDACT
     }
     u.hostname = redactUrlAuthoritySegment(u.hostname)
     u.pathname = u.pathname.split('/').map(redactPathSegment).join('/')
@@ -229,6 +277,40 @@ const redactRequestUrl = (
   }
 }
 
+/** Headers whose value is an absolute URL and may carry a sensitive query key. */
+const URL_VALUED_HEADERS: ReadonlySet<string> = new Set([
+  'content-location',
+  'location',
+  'referer'
+])
+
+/** The URL's own serialisation, so a masked copy can be told from a merely normalised one. */
+const normalizedHref = (value: string): string => {
+  try {
+    return new URL(value).href
+  } catch {
+    return value
+  }
+}
+
+/** One header value: whole when the name is sensitive, by URL rules for a URL-valued header, by pattern otherwise. */
+const redactHeaderValue = (
+  name: string,
+  value: string,
+  extraKeys?: readonly string[]
+): string => {
+  if (isSensitiveKey(name, extraKeys)) {
+    return REDACTED_TEXT
+  }
+  if (!URL_VALUED_HEADERS.has(name.toLowerCase())) {
+    return redactString(value)
+  }
+  const redacted = redactRequestUrl(value, extraKeys)
+  // Keep the client's spelling when nothing was masked: serialising a URL
+  // alone adds a trailing slash, and a changed header clones the request.
+  return redacted === normalizedHref(value) ? value : redacted
+}
+
 /** Always returns a new instance; `headers` is left untouched. */
 const redactHeaders = (
   headers: Headers,
@@ -236,10 +318,7 @@ const redactHeaders = (
 ): Headers => {
   const result = new Headers()
   for (const [name, value] of headers) {
-    result.append(
-      name,
-      isSensitiveKey(name, extraKeys) ? REDACTED_TEXT : redactString(value)
-    )
+    result.append(name, redactHeaderValue(name, value, extraKeys))
   }
   return result
 }
@@ -539,9 +618,7 @@ export const redactRequest = (
   let headersChanged = false
 
   for (const [name, value] of request.headers.entries()) {
-    const redacted = isSensitiveKey(name, extraKeys)
-      ? REDACTED_TEXT
-      : redactString(value)
+    const redacted = redactHeaderValue(name, value, extraKeys)
     if (redacted !== value) {
       headersChanged = true
     }

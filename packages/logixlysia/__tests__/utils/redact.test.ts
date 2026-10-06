@@ -47,6 +47,56 @@ describe('redactString', () => {
       )
     ).toBe('Token: [REDACTED]')
   })
+
+  test('masks the password of a URL in free text', () => {
+    expect(redactString('dsn postgres://app:hunter2@db:5432/main')).toBe(
+      'dsn postgres://app:[REDACTED]@db:5432/main'
+    )
+  })
+
+  test('masks Bearer and Basic credentials', () => {
+    expect(redactString('got Bearer abcdefghijklmnop.qrs')).toBe(
+      'got Bearer [REDACTED]'
+    )
+    expect(redactString('Authorization: basic dXNlcjpwYXNz')).toBe(
+      'Authorization: basic [REDACTED]'
+    )
+  })
+
+  test('leaves prose after Bearer and Basic alone', () => {
+    const prose = [
+      'the bearer of this ring',
+      'Basic authentication failed for user',
+      'Bearer authentication required',
+      'Basic subscription renewed'
+    ]
+    for (const text of prose) {
+      expect(redactString(text)).toBe(text)
+    }
+  })
+
+  test('leaves a long word after Bearer alone without hanging', () => {
+    const input = `Bearer ${'a'.repeat(65_536)}`
+    const start = performance.now()
+    const result = redactString(input)
+    expect(performance.now() - start).toBeLessThan(500)
+    expect(result).toBe(input)
+  })
+
+  test('masks a long Bearer token without hanging', () => {
+    const start = performance.now()
+    const result = redactString(`Bearer ${'a'.repeat(65_536)}1`)
+    expect(performance.now() - start).toBeLessThan(500)
+    expect(result).toBe('Bearer [REDACTED]')
+  })
+
+  test('masks a URL password after a long word without hanging', () => {
+    const word = 'a'.repeat(65_536)
+    const start = performance.now()
+    const result = redactString(`${word} postgres://app:hunter2@db/main`)
+    expect(performance.now() - start).toBeLessThan(500)
+    expect(result).toBe(`${word} postgres://app:[REDACTED]@db/main`)
+  })
 })
 
 const createHeaders = (): Headers =>
@@ -260,6 +310,10 @@ describe('redact', () => {
     expect(redact({ bytes }).bytes).toBe(bytes)
   })
 
+  test('masks a cookies field by name', () => {
+    expect(redact({ cookies: 'a=b' })).toEqual({ cookies: '[REDACTED]' })
+  })
+
   describe('built-in non-plain objects', () => {
     test('redacts Headers values and returns a new Headers', () => {
       const out = redact({ headers: createHeaders() })
@@ -320,6 +374,12 @@ describe('redact', () => {
       const m = new Map<string, unknown>()
       m.set('self', m)
       expect(redact({ m }).m.get('self')).toBe('[Circular]')
+    })
+
+    test('masks a URL password whatever its shape', () => {
+      const { href } = redact(new URL('https://user:hunter2@db.internal/x'))
+      expect(href).not.toContain('hunter2')
+      expect(href).toContain('redacted')
     })
   })
 })
@@ -500,6 +560,15 @@ describe('redactRequest', () => {
     expect(out.url).toContain('/users/')
     expect(out.url).toContain('/orders')
     expect(() => new Request(out.url)).not.toThrow()
+  })
+
+  test('masks sensitive query keys inside a referer header', () => {
+    const req = new Request('http://h/', {
+      headers: { referer: 'https://app.example/cb?token=abc&x=1' }
+    })
+    expect(redactRequest(req).headers.get('referer')).toBe(
+      'https://app.example/cb?token=redacted&x=1'
+    )
   })
 })
 
