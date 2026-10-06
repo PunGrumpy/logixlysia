@@ -79,12 +79,15 @@ These headers are typically set by reverse proxies (nginx, Caddy, Cloudflare, et
 
 ### `autoRedact`
 
-Automatically redacts sensitive data from log messages, context objects, errors, and request headers before they are outputted. Redaction runs in two ways:
+Automatically redacts sensitive data from log messages, context objects, errors, and request headers before they are outputted. Redaction runs in three ways:
 
 1. **By key/header name** — a built-in, case-insensitive denylist (`authorization`, `cookie`, `x-api-key`, `password`, `secret`, `token`, `session`, and more) wholly redacts the value of any matching object key or request header, regardless of what the value looks like. `-`, `_`, and camelCase variants (`x-api-key`, `x_api_key`, `xApiKey`) all match.
-2. **By value pattern** — emails, IP addresses, Luhn-valid payment card numbers, and JWTs are redacted wherever they appear in strings, even in fields not covered by the key denylist.
+2. **By value pattern** — emails, IP addresses, Luhn-valid payment card numbers, JWTs, the password part of a URL, and `Bearer`/`Basic` credentials are redacted wherever they appear in strings, even in fields not covered by the key denylist.
+3. **Through `toJSON`** — a value with a `toJSON` method (Bun's `CookieMap`, your own classes) is redacted as what it serializes to. Errors keep their class.
 
 Redaction also applies inside `Headers`, `URL`, `URLSearchParams`, `Map`, and `Set` values, not only plain objects and arrays.
+
+The query of an absolute URL in a `referer`, `location` or `content-location` header is checked by key like a request URL. Values nested deeper than 64 levels are replaced by `"[Depth]"`, and a value whose `toJSON` throws by `"[Unserializable]"`.
 
 Value-pattern redaction is best-effort — it only catches values matching those specific shapes. Always prefer key-based redaction (`redactKeys`) for known sensitive fields instead of relying on their value happening to match a pattern. For free-text PII that has no fixed shape — names, street addresses, phone numbers, national IDs — see [neural PII redaction](/docs/integrations/desertant), which runs an on-device model over records on their way to a transport.
 
