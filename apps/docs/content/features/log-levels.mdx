@@ -15,6 +15,32 @@ DEBUG > INFO > WARNING > ERROR
 
 `logFilter.level` is the list of levels to keep. It is not a minimum level, so `['WARNING']` keeps `WARNING` lines and drops `ERROR` lines. List every level you want.
 
+## Levels for request logs
+
+Logixlysia picks the level of each request log from the status the client received:
+
+| Status | Level |
+| --- | --- |
+| `500` and above | `ERROR` |
+| `400` to `499` | `WARNING` |
+| Below `400` | `INFO` |
+
+This includes responses from Elysia's `status()` helper, whether a handler returns it, throws it, or returns it from `beforeHandle`:
+
+```ts
+app
+  .get('/missing', ({ status }) => status(404, 'Item not found'))
+  .post('/items', ({ status }) => {
+    throw status(409, { reason: 'duplicate' })
+  })
+```
+
+The first route logs a `WARNING` with status `404` and the message `Item not found`. A string body becomes the log message. Any other body is replaced by the status text, so the second route logs `Conflict` and keeps the response payload out of the log.
+
+If a handler returns a `Response`, Logixlysia logs the `Response` status. When that status is `200`, `set.status` applies instead.
+
+The same status drives the `{status}` format token, the `status` field sent to transports, and [tail sampling](/docs/features/sampling).
+
 ## Configuration
 
 ### Single Level

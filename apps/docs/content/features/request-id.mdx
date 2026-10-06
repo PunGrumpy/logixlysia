@@ -81,3 +81,5 @@ If Request ID is disabled or not present, the token will render as an empty stri
 ## Error Responses
 
 If a request fails (e.g. throws an exception), the request ID is still propagated in the response headers (like `X-Request-Id`) and is correctly logged in the HTTP error telemetry context, allowing trace correlation for failed requests.
+
+Some requests end before the plugin's response hooks run. For example, an auth `resolve` returns `status(401)`, or an app-wide `onError` registered before Logixlysia answers the error. Logixlysia still logs these requests after the response is sent, and the log line carries the request ID. The response does not include the `X-Request-Id` header, because the response has already been sent.
