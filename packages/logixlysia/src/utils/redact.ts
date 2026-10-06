@@ -297,11 +297,26 @@ const walker = {
     const proto = Object.getPrototypeOf(originalError) as object
     const newError = Object.create(proto) as Error & Record<string, unknown>
 
-    newError.message = redactedMessage
-    newError.name = originalError.name
-
+    // Defined, not assigned: `DOMException` and getter-only subclasses have
+    // accessor `name`/`message` on the prototype, and assigning through
+    // them throws in strict mode. Native errors keep all three non-enumerable.
+    const defineOwn = (key: string, value: unknown): void => {
+      Object.defineProperty(newError, key, {
+        configurable: true,
+        enumerable: false,
+        value,
+        writable: true
+      })
+    }
+    defineOwn('message', redactedMessage)
+    defineOwn('name', originalError.name)
     if (originalError.stack !== undefined) {
-      newError.stack = redactString(originalError.stack)
+      defineOwn('stack', redactString(originalError.stack))
+    }
+    if (originalError instanceof DOMException) {
+      // The copy has no DOMException internal slot, so the prototype's `code`
+      // getter would throw on it; the console tree reads `.code` on errors.
+      defineOwn('code', originalError.code)
     }
 
     const errorRecord = originalError as unknown as Record<string, unknown>

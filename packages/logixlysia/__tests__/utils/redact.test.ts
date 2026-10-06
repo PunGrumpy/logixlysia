@@ -198,6 +198,35 @@ describe('redact', () => {
     expect(result.b).not.toBe(original.b)
   })
 
+  test('redacts an error whose name and message are inherited accessors', () => {
+    const out = redact(
+      new DOMException('timed out', 'TimeoutError')
+    ) as DOMException
+    expect(out).toBeInstanceOf(DOMException)
+    expect(out.name).toBe('TimeoutError')
+    expect(out.message).toBe('timed out')
+    expect(out.code).toBe(23)
+  })
+
+  test('redacts an error with a getter-only name', () => {
+    const err = new Error('x@y.com')
+    Object.setPrototypeOf(
+      err,
+      Object.create(Error.prototype, {
+        name: { configurable: true, get: () => 'Named' }
+      })
+    )
+    const out = redact(err)
+    expect(out.name).toBe('Named')
+    expect(out.message).toBe('[REDACTED]')
+  })
+
+  test('keeps message, name and stack non-enumerable', () => {
+    const out = redact(new Error('x'))
+    expect(Object.keys(out)).toEqual([])
+    expect(JSON.stringify(out)).toBe('{}')
+  })
+
   describe('built-in non-plain objects', () => {
     test('redacts Headers values and returns a new Headers', () => {
       const out = redact({ headers: createHeaders() })
