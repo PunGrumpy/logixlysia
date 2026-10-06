@@ -227,6 +227,39 @@ describe('redact', () => {
     expect(JSON.stringify(out)).toBe('{}')
   })
 
+  test('walks the output of toJSON', () => {
+    const vault = {
+      held: 'k-1',
+      toJSON() {
+        return { apiKey: this.held }
+      }
+    }
+    const out: unknown = redact({ vault })
+    expect(out).toEqual({ vault: { apiKey: '[REDACTED]' } })
+  })
+
+  test('walks a CookieMap through toJSON', () => {
+    const out: unknown = redact({
+      jar: new Bun.CookieMap('token=abc; theme=dark')
+    })
+    expect(out).toEqual({ jar: { theme: 'dark', token: '[REDACTED]' } })
+  })
+
+  test('replaces a throwing toJSON with [Unserializable]', () => {
+    const bad = {
+      toJSON: () => {
+        throw new Error('x')
+      }
+    }
+    const out: unknown = redact({ bad })
+    expect(out).toEqual({ bad: '[Unserializable]' })
+  })
+
+  test('passes byte buffers through by reference', () => {
+    const bytes = Buffer.from('abc')
+    expect(redact({ bytes }).bytes).toBe(bytes)
+  })
+
   describe('built-in non-plain objects', () => {
     test('redacts Headers values and returns a new Headers', () => {
       const out = redact({ headers: createHeaders() })

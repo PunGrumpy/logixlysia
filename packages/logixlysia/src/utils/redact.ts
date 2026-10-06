@@ -20,6 +20,7 @@ const PAN_MAX_LEN = 19
 
 const REDACTED_TEXT = '[REDACTED]'
 const CIRCULAR_REF = '[Circular]'
+const UNSERIALIZABLE_TEXT = '[Unserializable]'
 
 /** Case-insensitive key/header names whose VALUES are always redacted. */
 export const DEFAULT_REDACT_KEYS: readonly string[] = [
@@ -405,6 +406,30 @@ const walker = {
       Array.from(value, item => walker.value(item, inProgress, extraKeys))
     ),
 
+  /** What the sinks will serialize is the toJSON output, so that is what the key and pattern checks must see. */
+  toJson: (
+    value: { toJSON: () => unknown },
+    inProgress: WeakSet<object>,
+    extraKeys?: readonly string[]
+  ): unknown => {
+    let plain: unknown
+    try {
+      plain = value.toJSON()
+    } catch {
+      return UNSERIALIZABLE_TEXT
+    }
+    if (plain === value) {
+      // A toJSON that returns its own object: the guard already holds it,
+      // so walk its keys directly instead of answering "[Circular]".
+      return walker.record(
+        value as unknown as Record<string, unknown>,
+        inProgress,
+        extraKeys
+      )
+    }
+    return walker.value(plain, inProgress, extraKeys)
+  },
+
   value: (
     value: unknown,
     inProgress: WeakSet<object>,
@@ -465,6 +490,18 @@ const walker = {
       )
     }
 
+    if (ArrayBuffer.isView(value) || value instanceof ArrayBuffer) {
+      // Bytes carry no keys to match; walking a buffer costs one key check per byte.
+      return value
+    }
+
+    const { toJSON } = value as { toJSON?: unknown }
+    if (typeof toJSON === 'function') {
+      return withReentrancyGuard(value, inProgress, () =>
+        walker.toJson(value as { toJSON: () => unknown }, inProgress, extraKeys)
+      )
+    }
+
     if (Array.isArray(value)) {
       return withReentrancyGuard(value, inProgress, () =>
         walker.array(value, inProgress, extraKeys)
@@ -480,7 +517,9 @@ const walker = {
 /**
  * Apart from a circular reference, which becomes the marker string, the walk
  * keeps each value's shape: a string stays a string, an array an array, an
- * Error an Error. The input type therefore still describes the output.
+ * Error an Error. The exception is a non-error value with `toJSON`, which
+ * becomes what it serializes to, since that is what the sinks write. For
+ * everything else the input type still describes the output.
  */
 export const redact = <T>(value: T, extraKeys?: readonly string[]): T =>
   walker.value(value, new WeakSet(), extraKeys) as T
