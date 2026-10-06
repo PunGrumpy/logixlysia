@@ -36,4 +36,15 @@ describe('stringifyForLog', () => {
     const nothing: unknown = undefined
     expect(stringifyForLog(nothing)).toBe('')
   })
+
+  test('bounds the depth and stays fast on deep input', () => {
+    let deep: unknown = 'leaf'
+    for (let i = 0; i < 40_000; i += 1) {
+      deep = [deep]
+    }
+    const start = performance.now()
+    const json = stringifyForLog(deep)
+    expect(performance.now() - start).toBeLessThan(500)
+    expect(json).toContain('[Depth]')
+  })
 })

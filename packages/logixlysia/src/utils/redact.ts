@@ -323,15 +323,22 @@ const redactHeaders = (
   return result
 }
 
+const MAX_DEPTH = 64
+const DEPTH_TEXT = '[Depth]'
+/** Containers open on the walk. `redact` is synchronous, so one counter serves nested calls too. */
+let depth = 0
+
 const withReentrancyGuard = <T>(
   obj: object,
   inProgress: WeakSet<object>,
   run: () => T
 ): T => {
   inProgress.add(obj)
+  depth += 1
   try {
     return run()
   } finally {
+    depth -= 1
     inProgress.delete(obj)
   }
 }
@@ -533,6 +540,10 @@ const walker = {
       return CIRCULAR_REF
     }
 
+    if (depth >= MAX_DEPTH) {
+      return DEPTH_TEXT
+    }
+
     // These types expose their contents only through iteration or toJSON(),
     // so the key walk below would return them unchanged.
     if (value instanceof Headers) {
@@ -594,11 +605,12 @@ const walker = {
 }
 
 /**
- * Apart from a circular reference, which becomes the marker string, the walk
- * keeps each value's shape: a string stays a string, an array an array, an
- * Error an Error. The exception is a non-error value with `toJSON`, which
- * becomes what it serializes to, since that is what the sinks write. For
- * everything else the input type still describes the output.
+ * Apart from a circular reference and a value nested deeper than 64 levels,
+ * which become marker strings, the walk keeps each value's shape: a string
+ * stays a string, an array an array, an Error an Error. The exception is a
+ * non-error value with `toJSON`, which becomes what it serializes to, since
+ * that is what the sinks write. For everything else the input type still
+ * describes the output.
  */
 export const redact = <T>(value: T, extraKeys?: readonly string[]): T =>
   walker.value(value, new WeakSet(), extraKeys) as T

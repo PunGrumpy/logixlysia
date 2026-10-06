@@ -1,16 +1,20 @@
 const CIRCULAR_REF = '[Circular]'
+const DEPTH_TEXT = '[Depth]'
+const MAX_DEPTH = 64
 const UNSERIALIZABLE = '"[Unserializable]"'
 
 /**
  * `JSON.stringify` for log output that never throws. A BigInt becomes its
  * decimal string and a reference back to one of the value's own ancestors
  * becomes "[Circular]". A value shared by two siblings is written twice, as
- * JSON would. Anything else that fails, such as a throwing `toJSON`, becomes
- * "[Unserializable]". Returns '' when there is nothing to write (`undefined`,
- * a function, a symbol).
+ * JSON would. A value nested deeper than 64 levels becomes "[Depth]".
+ * Anything else that fails, such as a throwing `toJSON`, becomes
+ * "[Unserializable]". Returns '' when there is nothing to write
+ * (`undefined`, a function, a symbol).
  */
 export const stringifyForLog = (value: unknown): string => {
   const ancestors: unknown[] = []
+  const seen = new Set<unknown>()
   try {
     return (
       JSON.stringify(
@@ -28,12 +32,16 @@ export const stringifyForLog = (value: unknown): string => {
             return current
           }
           while (ancestors.length > 0 && ancestors.at(-1) !== this) {
-            ancestors.pop()
+            seen.delete(ancestors.pop())
           }
-          if (ancestors.includes(current)) {
+          if (seen.has(current)) {
             return CIRCULAR_REF
           }
+          if (ancestors.length >= MAX_DEPTH) {
+            return DEPTH_TEXT
+          }
           ancestors.push(current)
+          seen.add(current)
           return current
         }
       ) ?? ''

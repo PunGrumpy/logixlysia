@@ -314,6 +314,17 @@ describe('redact', () => {
     expect(redact({ cookies: 'a=b' })).toEqual({ cookies: '[REDACTED]' })
   })
 
+  test('bounds the walk depth', () => {
+    let deep: unknown = 'leaf'
+    for (let i = 0; i < 20_000; i += 1) {
+      deep = [deep]
+    }
+    const start = performance.now()
+    const out = redact({ deep })
+    expect(performance.now() - start).toBeLessThan(500)
+    expect(JSON.stringify(out)).toContain('[Depth]')
+  })
+
   describe('built-in non-plain objects', () => {
     test('redacts Headers values and returns a new Headers', () => {
       const out = redact({ headers: createHeaders() })
