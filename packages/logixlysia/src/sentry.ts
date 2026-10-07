@@ -197,7 +197,10 @@ export const createSentryTransport = (
       'X-Sentry-Auth': `Sentry sentry_version=7, sentry_client=logixlysia, sentry_key=${publicKey}`
     },
     name: 'Sentry',
-    options,
+    options: {
+      ...options,
+      maxEntriesPerRequest: options.maxEntriesPerRequest ?? 100
+    },
     url: envelopeUrl
   })
 }

@@ -135,4 +135,28 @@ describe('logixlysia/sentry', () => {
       restoreEnv()
     }
   })
+
+  test.each([{}, { maxEntriesPerRequest: undefined }])(
+    'sends at most 100 logs per envelope with the options %p',
+    async options => {
+      const restoreEnv = stubEnv(CLEAR_ENV)
+      const stub = stubFetch()
+      try {
+        const transport = createSentryTransport({ dsn: DSN, ...options })
+        for (let index = 0; index < 121; index += 1) {
+          transport.log('INFO', `log ${index}`)
+        }
+        await transport.flush()
+
+        // The 20th log fills the first batch; the 101 logged while it is in
+        // flight go out in envelopes of at most 100.
+        expect(
+          stub.calls.map(call => parseEnvelope(call.body).items.length)
+        ).toEqual([20, 100, 1])
+      } finally {
+        stub.restore()
+        restoreEnv()
+      }
+    }
+  )
 })

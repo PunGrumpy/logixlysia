@@ -12,6 +12,7 @@ export const OTEL_SEVERITY: Record<LogLevel, number> = {
 
 const DEFAULT_FLUSH_INTERVAL_MS = 2000
 const DEFAULT_MAX_BATCH_SIZE = 20
+const DEFAULT_MAX_ENTRIES_PER_REQUEST = 500
 const DEFAULT_MAX_PENDING_BATCHES = 32
 const DEFAULT_RETRIES = 2
 const REPORT_INTERVAL_MS = 5000
@@ -37,17 +38,26 @@ export interface BatchTransportOptions {
    */
   maxBatchSize?: number
   /**
-   * Batches allowed to be waiting on the backend at once. Once the limit is
-   * reached, new batches are dropped and reported instead of buffered, so an
-   * unreachable backend cannot grow memory without bound.
+   * The most entries one request carries. Lower it for a backend with a
+   * per-request item limit. The Sentry adapter defaults to 100.
+   * @default 500
+   */
+  maxEntriesPerRequest?: number
+  /**
+   * Bound on the entries that wait behind the request in flight, as a
+   * multiple of `maxBatchSize`: at most `maxPendingBatches × maxBatchSize`
+   * entries wait, and entries beyond that are dropped and reported.
    * @default 32
    */
   maxPendingBatches?: number
   /**
-   * Called when a batch fails after retries, or is dropped because too
-   * many batches are pending. When omitted, failures go to stderr, rate
-   * limited to once every 5 seconds. Pass the same function you give
-   * `config.onError` to see transport failures in one place.
+   * Called when a request fails after retries, or when entries are dropped
+   * because too many were already waiting. Failures of a request that a
+   * `log()` or `flush()` call started are rejected to that caller instead.
+   * When omitted, failures go to stderr, rate limited to once every 5
+   * seconds. To see every transport failure in one place, forward them to
+   * the function you give `config.onError`, as
+   * `error => handle({ error, sink: 'transport' })`.
    */
   onError?: (error: unknown) => void
   /**
@@ -64,6 +74,8 @@ export interface BatchTransportOptions {
 
 /** A {@link Transport} that batches entries and can be flushed on demand. */
 export interface AdapterTransport extends Transport {
+  /** Stops accepting entries, then flushes the ones already accepted. Idempotent. */
+  close: () => Promise<void>
   /** Sends any buffered entries immediately. Call before process exit. */
   flush: () => Promise<void>
 }
@@ -478,9 +490,29 @@ export const createHttpTransport = (
   const timeout = input.options.timeout ?? DEFAULT_TIMEOUT_MS
   const url = resolveEndpoint(input.name, input.url)
 
+  const positiveInteger = (name: string, value: number): number => {
+    if (!Number.isInteger(value) || value < 1) {
+      throw transportError(
+        input.name,
+        `${name} must be a positive integer, got ${value}`
+      )
+    }
+    return value
+  }
+
+  const maxBatchSize = positiveInteger(
+    'maxBatchSize',
+    input.options.maxBatchSize ?? DEFAULT_MAX_BATCH_SIZE
+  )
+  const maxEntriesPerRequest = positiveInteger(
+    'maxEntriesPerRequest',
+    input.options.maxEntriesPerRequest ?? DEFAULT_MAX_ENTRIES_PER_REQUEST
+  )
+
   const queue = createBatchQueue({
     flushIntervalMs: input.options.flushIntervalMs ?? DEFAULT_FLUSH_INTERVAL_MS,
-    maxBatchSize: input.options.maxBatchSize ?? DEFAULT_MAX_BATCH_SIZE,
+    maxBatchSize,
+    maxEntriesPerRequest,
     maxPendingBatches: input.options.maxPendingBatches,
     name: input.name,
     onError: input.options.onError,
@@ -495,10 +527,23 @@ export const createHttpTransport = (
       })
   })
 
+  let closed = false
+
   return {
+    close: async () => {
+      closed = true
+      await queue.flush()
+    },
     flush: queue.flush,
     log: (level, message, meta) =>
-      queue.push({ level, message, meta: meta ?? {}, timestamp: new Date() })
+      closed
+        ? undefined
+        : queue.push({
+            level,
+            message,
+            meta: meta ?? {},
+            timestamp: new Date()
+          })
   }
 }
 

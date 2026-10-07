@@ -1,6 +1,7 @@
 import { describe, expect, mock, test } from 'bun:test'
 import {
   createBatchQueue,
+  createHttpTransport,
   defaultBody,
   flattenMeta,
   getPath,
@@ -909,5 +910,62 @@ describe('createBatchQueue', () => {
 
     expect(batches).toEqual([['a', 'b'], ['c', 'd'], ['failure logged']])
     expect(failures).toBe(1)
+  })
+})
+
+describe('createHttpTransport', () => {
+  test('close() flushes and then drops later entries', async () => {
+    const stub = stubFetch([{ status: 200 }])
+    try {
+      const transport = createHttpTransport({
+        body: entries => JSON.stringify(entries),
+        headers: {},
+        name: 'Test',
+        options: { maxBatchSize: 10 },
+        url: 'https://ingest.example/v1'
+      })
+      transport.log('INFO', 'a')
+      transport.log('INFO', 'b')
+      const closing = transport.close()
+      transport.log('INFO', 'c')
+      await closing
+      await transport.flush()
+
+      expect(stub.calls).toHaveLength(1)
+      const sent = JSON.parse(stub.calls[0]?.body ?? '[]') as {
+        message: string
+      }[]
+      expect(sent.map(item => item.message)).toEqual(['a', 'b'])
+
+      transport.log('INFO', 'd')
+      await transport.flush()
+      expect(stub.calls).toHaveLength(1)
+
+      await expect(transport.close()).resolves.toBeUndefined()
+      expect(stub.calls).toHaveLength(1)
+    } finally {
+      stub.restore()
+    }
+  })
+
+  test('rejects a maxBatchSize or maxEntriesPerRequest that is not a positive integer', () => {
+    const stub = stubFetch([{ status: 200 }])
+    try {
+      for (const name of ['maxBatchSize', 'maxEntriesPerRequest']) {
+        for (const value of [0, -1, 1.5, Number.NaN]) {
+          expect(() =>
+            createHttpTransport({
+              body: entries => JSON.stringify(entries),
+              headers: {},
+              name: 'Test',
+              options: { [name]: value },
+              url: 'https://ingest.example/v1'
+            })
+          ).toThrow(name)
+        }
+      }
+    } finally {
+      stub.restore()
+    }
   })
 })
