@@ -1,4 +1,5 @@
 import type { LogLevel, Transport } from '../interfaces'
+import { stringifyForLog } from '../utils/json'
 import { sanitizeLogText } from '../utils/sanitize'
 import { settle } from '../utils/settle'
 
@@ -85,6 +86,44 @@ export interface LogEntry {
   message: string
   meta: Record<string, unknown>
   timestamp: Date
+}
+
+const UNSERIALIZABLE_TEXT = '[Unserializable]'
+
+/** A plain copy of one meta value, as JSON would carry it; `undefined` when JSON would drop it. */
+const snapshotValue = (value: unknown): unknown => {
+  const json = stringifyForLog(value)
+  if (json === '') {
+    return
+  }
+  try {
+    return JSON.parse(json) as unknown
+  } catch {
+    // stringifyForLog only ever returns valid JSON; this is belt and braces.
+    return UNSERIALIZABLE_TEXT
+  }
+}
+
+/**
+ * A JSON-safe copy of a record's meta, taken when the record is logged.
+ * Later mutations of the logged objects are not shipped, a BigInt is its
+ * decimal string, a cycle is "[Circular]", and a field that cannot be
+ * serialized becomes "[Unserializable]" on its own, so one bad value never
+ * takes the rest of the record or the batch with it.
+ */
+export const snapshotMeta = (
+  meta: Record<string, unknown>
+): Record<string, unknown> => {
+  const entries: [string, unknown][] = []
+  for (const [key, value] of Object.entries(meta)) {
+    const copy = snapshotValue(value)
+    if (copy !== undefined) {
+      entries.push([key, copy])
+    }
+  }
+  // fromEntries defines own properties, so an own `__proto__` key in the
+  // logged data stays a key instead of reaching the setter.
+  return Object.fromEntries(entries)
 }
 
 /** Normalizes a base URL by dropping trailing slashes. */
@@ -554,7 +593,7 @@ export const createHttpTransport = (
         : queue.push({
             level,
             message,
-            meta: meta ?? {},
+            meta: snapshotMeta(meta ?? {}),
             timestamp: new Date()
           })
   }
