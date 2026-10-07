@@ -625,19 +625,31 @@ const flattenInto = (
     return
   }
   if (value instanceof Date) {
-    out[prefix] = value.toISOString()
+    out[prefix] = Number.isNaN(value.getTime())
+      ? UNSERIALIZABLE_TEXT
+      : value.toISOString()
+    return
+  }
+  if (typeof value === 'bigint') {
+    out[prefix] = value.toString()
     return
   }
   if (isPlainObject(value) && depth < FLATTEN_MAX_DEPTH) {
-    for (const [key, child] of Object.entries(value)) {
+    let entries: [string, unknown][]
+    try {
+      entries = Object.entries(value)
+    } catch {
+      out[prefix] = UNSERIALIZABLE_TEXT
+      return
+    }
+    for (const [key, child] of entries) {
       flattenInto(out, child, prefix ? `${prefix}.${key}` : key, depth + 1)
     }
     return
   }
-  try {
-    out[prefix] = JSON.stringify(value)
-  } catch {
-    out[prefix] = String(value)
+  const json = stringifyForLog(value)
+  if (json !== '') {
+    out[prefix] = json
   }
 }
 

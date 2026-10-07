@@ -127,6 +127,17 @@ describe('flattenMeta', () => {
   test('skips null and undefined values', () => {
     expect(flattenMeta({ a: null, b: undefined, c: 0 })).toEqual({ c: 0 })
   })
+
+  test('serializes a nested BigInt and a nested cycle instead of [object Object]', () => {
+    expect(flattenMeta({ rows: [{ id: 1n }] })).toEqual({
+      rows: '[{"id":"1"}]'
+    })
+    const node: Record<string, unknown> = {}
+    node.self = node
+    expect(flattenMeta({ deep: { a: { b: [node] } } })['deep.a.b']).toBe(
+      '[{"self":"[Circular]"}]'
+    )
+  })
 })
 
 describe('getPath', () => {
