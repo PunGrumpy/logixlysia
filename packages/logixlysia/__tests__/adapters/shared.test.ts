@@ -426,6 +426,145 @@ describe('createBatchQueue', () => {
     ])
   })
 
+  test('sends entries that arrive during a slow send together in the next request', async () => {
+    const batches: LogEntry[][] = []
+    const slow = deferred()
+    const queue = createBatchQueue({
+      flushIntervalMs: 60_000,
+      maxBatchSize: 2,
+      name: 'Test',
+      send: entries => {
+        batches.push(entries)
+        return batches.length === 1 ? slow.promise : Promise.resolve()
+      }
+    })
+
+    for (const message of ['a', 'b', 'c', 'd', 'e', 'f']) {
+      queue.push(entry({ message }))
+    }
+
+    await Promise.resolve()
+    expect(batches).toHaveLength(1)
+
+    slow.resolve()
+    await queue.flush()
+
+    expect(batches.map(batch => batch.map(item => item.message))).toEqual([
+      ['a', 'b'],
+      ['c', 'd', 'e', 'f']
+    ])
+  })
+
+  test('caps a coalesced request at maxEntriesPerRequest and keeps order', async () => {
+    const batches: LogEntry[][] = []
+    const slow = deferred()
+    const queue = createBatchQueue({
+      flushIntervalMs: 60_000,
+      maxBatchSize: 2,
+      maxEntriesPerRequest: 3,
+      name: 'Test',
+      send: entries => {
+        batches.push(entries)
+        return batches.length === 1 ? slow.promise : Promise.resolve()
+      }
+    })
+
+    for (const message of ['a', 'b', 'c', 'd', 'e', 'f']) {
+      queue.push(entry({ message }))
+    }
+
+    await Promise.resolve()
+    expect(batches).toHaveLength(1)
+
+    slow.resolve()
+    await queue.flush()
+
+    expect(batches.map(batch => batch.map(item => item.message))).toEqual([
+      ['a', 'b'],
+      ['c', 'd', 'e'],
+      ['f']
+    ])
+  })
+
+  test('starts the next request on its own only for a full batch', async () => {
+    const batches: LogEntry[][] = []
+    const sends: Deferred[] = []
+    const queue = createBatchQueue({
+      flushIntervalMs: 60_000,
+      maxBatchSize: 2,
+      name: 'Test',
+      send: entries => {
+        batches.push(entries)
+        const next = deferred()
+        sends.push(next)
+        return next.promise
+      }
+    })
+
+    queue.push(entry({ message: 'a' }))
+    const first = queue.push(entry({ message: 'b' }))
+    queue.push(entry({ message: 'c' }))
+    await Promise.resolve()
+    sends[0]?.resolve()
+    await first
+
+    expect(batches).toHaveLength(1)
+
+    const second = queue.flush()
+    await Promise.resolve()
+    queue.push(entry({ message: 'd' }))
+    queue.push(entry({ message: 'e' }))
+    sends[1]?.resolve()
+    await second
+
+    expect(batches.map(batch => batch.map(item => item.message))).toEqual([
+      ['a', 'b'],
+      ['c'],
+      ['d', 'e']
+    ])
+
+    sends[2]?.resolve()
+    await queue.flush()
+  })
+
+  test('an entry left over after a capped request goes out on the timer', async () => {
+    const batches: LogEntry[][] = []
+    const slow = deferred()
+    const queue = createBatchQueue({
+      flushIntervalMs: 5,
+      maxBatchSize: 2,
+      maxEntriesPerRequest: 2,
+      name: 'Test',
+      send: entries => {
+        batches.push(entries)
+        return batches.length === 1 ? slow.promise : Promise.resolve()
+      }
+    })
+
+    for (const message of ['a', 'b', 'c', 'd']) {
+      queue.push(entry({ message }))
+    }
+    // Clears the timer, as the timer firing would, so `e` lands in a full
+    // batch with no timer armed.
+    const flushing = queue.flush()
+    queue.push(entry({ message: 'e' }))
+    slow.resolve()
+    await flushing
+
+    expect(batches.map(batch => batch.map(item => item.message))).toEqual([
+      ['a', 'b'],
+      ['c', 'd']
+    ])
+
+    await settle()
+
+    expect(batches.map(batch => batch.map(item => item.message))).toEqual([
+      ['a', 'b'],
+      ['c', 'd'],
+      ['e']
+    ])
+  })
+
   test('flush() waits for a send that was already in flight', async () => {
     const slow = deferred()
     const queue = createBatchQueue({
@@ -449,28 +588,143 @@ describe('createBatchQueue', () => {
     expect(flushed).toBe(true)
   })
 
-  test('drops batches beyond maxPendingBatches and reports them', async () => {
+  test('flush() resolves once the entries pushed before it have settled, even while more arrive', async () => {
+    const batches: LogEntry[][] = []
+    const sends: Deferred[] = []
+    const queue = createBatchQueue({
+      flushIntervalMs: 60_000,
+      maxBatchSize: 1,
+      name: 'Test',
+      send: entries => {
+        batches.push(entries)
+        const next = deferred()
+        sends.push(next)
+        return next.promise
+      }
+    })
+
+    queue.push(entry({ message: 'a' }))
+    await Promise.resolve()
+    let flushed = false
+    const flushing = queue.flush().then(() => {
+      flushed = true
+    })
+    queue.push(entry({ message: 'b' }))
+    sends[0]?.resolve()
+    await settle()
+
+    expect(flushed).toBe(true)
+    expect(batches.map(batch => batch.map(item => item.message))).toEqual([
+      ['a'],
+      ['b']
+    ])
+    expect(sends).toHaveLength(2)
+
+    sends[1]?.resolve()
+    await flushing
+    await queue.flush()
+  })
+
+  test('drops entries beyond the waiting bound and reports once per send', async () => {
+    const batches: LogEntry[][] = []
     const stuck = deferred()
     const onError = mock((_error: unknown) => {})
     const queue = createBatchQueue({
       flushIntervalMs: 60_000,
       maxBatchSize: 1,
-      maxPendingBatches: 1,
+      maxPendingBatches: 2,
       name: 'Test',
       onError,
-      send: () => stuck.promise
+      send: entries => {
+        batches.push(entries)
+        return stuck.promise
+      }
     })
 
-    for (const message of ['a', 'dropped-1', 'dropped-2']) {
+    for (const message of ['a', 'b', 'c', 'd', 'e']) {
       queue.push(entry({ message }))
     }
 
-    expect(onError).toHaveBeenCalledTimes(2)
-    const [reported] = onError.mock.calls[0] ?? []
-    expect(String(reported)).toContain('dropped')
+    expect(onError).not.toHaveBeenCalled()
 
     stuck.resolve()
     await queue.flush()
+
+    expect(onError).toHaveBeenCalledTimes(1)
+    const [reported] = onError.mock.calls[0] ?? []
+    expect(String(reported)).toContain('2 entries dropped')
+    expect(batches.map(batch => batch.map(item => item.message))).toEqual([
+      ['a'],
+      ['b', 'c']
+    ])
+  })
+
+  test('reports entries dropped while onError handles an earlier drop', async () => {
+    const reports: string[] = []
+    const slow = deferred()
+    let sends = 0
+    const queue = createBatchQueue({
+      flushIntervalMs: 60_000,
+      maxBatchSize: 1,
+      maxEntriesPerRequest: 1,
+      maxPendingBatches: 2,
+      name: 'Test',
+      onError: error => {
+        reports.push(String(error))
+        if (reports.length === 1) {
+          for (const message of ['x', 'y', 'z']) {
+            queue.push(entry({ message }))
+          }
+        }
+      },
+      send: () => {
+        sends += 1
+        return sends === 1 ? slow.promise : Promise.resolve()
+      }
+    })
+
+    for (const message of ['a', 'b', 'c', 'd', 'e']) {
+      queue.push(entry({ message }))
+    }
+    slow.resolve()
+    await queue.flush()
+    await queue.flush()
+
+    expect(reports).toEqual([
+      'Error: [logixlysia] Test transport: 2 entries dropped while 2 were already waiting',
+      'Error: [logixlysia] Test transport: 2 entries dropped while 2 were already waiting'
+    ])
+  })
+
+  test('an onError that logs a drop through the queue never overlaps requests', async () => {
+    let active = 0
+    let maxActive = 0
+    const sent: string[] = []
+    const queue = createBatchQueue({
+      flushIntervalMs: 60_000,
+      maxBatchSize: 1,
+      maxPendingBatches: 1,
+      name: 'Test',
+      onError: () => {
+        queue.push(entry({ message: 'drop reported' }))
+      },
+      send: async entries => {
+        active += 1
+        maxActive = Math.max(maxActive, active)
+        sent.push(...entries.map(item => item.message))
+        await Promise.resolve()
+        active -= 1
+      }
+    })
+
+    for (const message of ['a', 'b', 'c', 'd']) {
+      queue.push(entry({ message }))
+    }
+    await queue.flush()
+    await queue.flush()
+
+    expect(maxActive).toBe(1)
+    expect(sent).toEqual(['a', 'b', 'drop reported'])
   })
 
   test('timer flush failure calls onError', async () => {
@@ -535,5 +789,125 @@ describe('createBatchQueue', () => {
     await queue.flush()
 
     expect(batches.map(batch => batch[0]?.message)).toEqual(['a', 'b'])
+  })
+
+  test('sends the entries waiting behind a failed request without a flush', async () => {
+    const batches: LogEntry[][] = []
+    const queue = createBatchQueue({
+      flushIntervalMs: 60_000,
+      maxBatchSize: 1,
+      name: 'Test',
+      send: entries => {
+        batches.push(entries)
+        return batches.length === 1
+          ? Promise.reject(new Error('boom'))
+          : Promise.resolve()
+      }
+    })
+
+    const pushA = queue.push(entry({ message: 'a' }))
+    queue.push(entry({ message: 'b' }))
+    queue.push(entry({ message: 'c' }))
+    await expect(pushA).rejects.toThrow('boom')
+
+    expect(batches.map(batch => batch.map(item => item.message))).toEqual([
+      ['a'],
+      ['b', 'c']
+    ])
+  })
+
+  test('a send that throws synchronously rejects its push and the queue keeps sending', async () => {
+    let calls = 0
+    const sent: string[] = []
+    const queue = createBatchQueue({
+      flushIntervalMs: 60_000,
+      maxBatchSize: 1,
+      name: 'Test',
+      send: entries => {
+        calls += 1
+        if (calls === 1) {
+          throw new Error('body failed')
+        }
+        sent.push(...entries.map(item => item.message))
+        return Promise.resolve()
+      }
+    })
+
+    await expect(queue.push(entry({ message: 'a' }))).rejects.toThrow(
+      'body failed'
+    )
+    await queue.push(entry({ message: 'b' }))
+
+    expect(sent).toEqual(['b'])
+  })
+
+  test('reports the failure of a request the queue started on its own', async () => {
+    const batches: LogEntry[][] = []
+    const slow = deferred()
+    const onError = mock((_error: unknown) => {})
+    const queue = createBatchQueue({
+      flushIntervalMs: 60_000,
+      maxBatchSize: 1,
+      name: 'Test',
+      onError,
+      send: entries => {
+        batches.push(entries)
+        return batches.length === 1
+          ? slow.promise
+          : Promise.reject(new Error('boom'))
+      }
+    })
+
+    queue.push(entry({ message: 'a' }))
+    queue.push(entry({ message: 'b' }))
+    slow.resolve()
+    await queue.flush()
+
+    expect(onError).toHaveBeenCalledTimes(1)
+    const [reported] = onError.mock.calls[0] ?? []
+    expect(String(reported)).toContain('boom')
+    expect(batches.map(batch => batch.map(item => item.message))).toEqual([
+      ['a'],
+      ['b']
+    ])
+  })
+
+  test('an entry that onError logs after a failed request waits for a full batch or a flush', async () => {
+    const batches: string[][] = []
+    let failures = 0
+    const queue = createBatchQueue({
+      flushIntervalMs: 60_000,
+      maxBatchSize: 2,
+      name: 'Test',
+      onError: () => {
+        failures += 1
+        // Logs only the first failure, so that a queue which starts a
+        // request per failure fails this test instead of looping forever.
+        if (failures === 1) {
+          queue.push(entry({ message: 'failure logged' }))
+        }
+      },
+      send: entries => {
+        batches.push(entries.map(item => item.message))
+        return Promise.reject(new Error('down'))
+      }
+    })
+
+    queue.push(entry({ message: 'a' }))
+    const first = queue.push(entry({ message: 'b' }))
+    queue.push(entry({ message: 'c' }))
+    queue.push(entry({ message: 'd' }))
+    await expect(first).rejects.toThrow('down')
+
+    expect(batches).toEqual([
+      ['a', 'b'],
+      ['c', 'd']
+    ])
+    expect(failures).toBe(1)
+
+    await expect(queue.flush()).rejects.toThrow('down')
+
+    expect(batches).toEqual([['a', 'b'], ['c', 'd'], ['failure logged']])
+    expect(failures).toBe(1)
   })
 })
