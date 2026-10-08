@@ -81,7 +81,7 @@ interface RequestRecord {
   error?: unknown
   /** `open` until the final line is written; `streaming` while a generator body still runs. */
   phase: 'open' | 'streaming' | 'closed'
-  /** Elysia pulled the stream wrapper at least once, so the wrapper finishes the request. */
+  /** Elysia pulled the stream wrapper at least once. */
   pulled: boolean
   /** The live `set.headers` of the request, for the response enrichers. */
   setHeaders?: Record<string, string | number>
@@ -112,6 +112,115 @@ const openRecord = (request: Request): RequestRecord => {
 
 const responseStatus = (response: unknown): number =>
   response instanceof Response ? response.status : DEFAULT_STATUS
+
+const isGeneratorObject = (
+  value: unknown
+): value is AsyncIterable<unknown> | Iterable<unknown> =>
+  typeof value === 'object' &&
+  value !== null &&
+  typeof (value as { next?: unknown }).next === 'function' &&
+  (Symbol.asyncIterator in value || Symbol.iterator in value)
+
+/**
+ * Elysia uses a `ReadableStream` yielded first as the whole body and never
+ * pulls the generator again. A `Response` yielded anywhere, or a stream
+ * yielded later, is encoded like any other chunk. Only the first value can
+ * take the response over.
+ */
+const takesOverResponse = (first: unknown): boolean =>
+  first instanceof ReadableStream
+
+/**
+ * Pulls a handler's generator, inside the request's logger scope when
+ * `useAsyncLocalStorage` is on. Elysia pulls every value after the first
+ * from a ReadableStream `pull`, which Bun 1.3.14 runs in the context of
+ * whoever reads the body rather than the one the wrap entered, so the
+ * body would otherwise lose `useLogger()` after its first `yield`.
+ */
+type RunInScope = <T>(pull: () => T) => T
+
+const runUnscoped: RunInScope = pull => pull()
+
+const runInLoggerScope =
+  (logger: RequestScopedLogger): RunInScope =>
+  pull =>
+    loggerStorage.run(logger, pull)
+
+const wrapAsyncStream = async function* wrapAsyncStream(
+  record: RequestRecord,
+  source: AsyncIterable<unknown>,
+  runInScope: RunInScope,
+  onSettled: () => void
+): AsyncGenerator<unknown, unknown> {
+  record.pulled = true
+  const iterator = source[Symbol.asyncIterator]()
+  const scoped: AsyncIterator<unknown> = {
+    next: (...args) => runInScope(() => iterator.next(...args)),
+    return: iterator.return?.bind(iterator),
+    throw: iterator.throw?.bind(iterator)
+  }
+  try {
+    const first = await scoped.next()
+    if (first.done) {
+      return first.value
+    }
+    if (takesOverResponse(first.value)) {
+      record.phase = 'open'
+    }
+    yield first.value
+    // Delegation forwards every later value, the return value, and the
+    // `return()` of a cancelled body to the source.
+    return yield* { [Symbol.asyncIterator]: () => scoped }
+  } catch (error) {
+    record.error = error
+    throw error
+  } finally {
+    // A body cancelled before its first read parks this generator at the
+    // `yield` above, outside the delegation, so forward the cancel by hand
+    // (a no-op on a source that already finished). The request settles even
+    // when the source's own cleanup throws.
+    try {
+      await iterator.return?.()
+    } finally {
+      onSettled()
+    }
+  }
+}
+
+const wrapSyncStream = function* wrapSyncStream(
+  record: RequestRecord,
+  source: Iterable<unknown>,
+  runInScope: RunInScope,
+  onSettled: () => void
+): Generator<unknown, unknown> {
+  record.pulled = true
+  const iterator = source[Symbol.iterator]()
+  const scoped: Iterator<unknown> = {
+    next: (...args) => runInScope(() => iterator.next(...args)),
+    return: iterator.return?.bind(iterator),
+    throw: iterator.throw?.bind(iterator)
+  }
+  try {
+    const first = scoped.next()
+    if (first.done) {
+      return first.value
+    }
+    if (takesOverResponse(first.value)) {
+      record.phase = 'open'
+    }
+    yield first.value
+    return yield* { [Symbol.iterator]: () => scoped }
+  } catch (error) {
+    record.error = error
+    throw error
+  } finally {
+    try {
+      iterator.return?.()
+    } finally {
+      onSettled()
+    }
+  }
+}
 
 /**
  * Explicit singleton without Elysia's `SingletonBase` `Record<string, unknown>` on decorator/derive/resolve so
@@ -363,6 +472,45 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
   }
 
   /**
+   * Called from a stream wrapper's `finally`. A body the wrap already saw the
+   * response for is finished here with that status. A body that ended,
+   * failed or handed Elysia a whole response before the response existed
+   * goes back to `open`, so the wrap writes the line with the real status.
+   */
+  const settleStream = (request: Request, record: RequestRecord): void => {
+    if (record.phase !== 'streaming') {
+      return
+    }
+    if (record.status === undefined) {
+      record.phase = 'open'
+      return
+    }
+    finishRequest(request, record, record.status)
+  }
+
+  const wrapStream = (
+    request: Request,
+    record: RequestRecord,
+    response: unknown
+  ): unknown => {
+    if (!isGeneratorObject(response)) {
+      return
+    }
+    record.phase = 'streaming'
+    const onSettled = (): void => settleStream(request, record)
+    const runInScope = useAsyncLocalStorage
+      ? runInLoggerScope(createRequestScopedLogger(request))
+      : runUnscoped
+    const wrapper =
+      Symbol.asyncIterator in response
+        ? wrapAsyncStream(record, response, runInScope, onSettled)
+        : wrapSyncStream(record, response, runInScope, onSettled)
+    // Elysia reads markers off the generator object itself: `sse(generator)`
+    // sets the one that selects event-stream framing.
+    return Object.assign(wrapper, response)
+  }
+
+  /**
    * Closes a request the wrap did not see: Elysia skips higher-order
    * functions with `aot: false`, and `group()` and `guard()` do not merge
    * them into the parent. The hooks then write the line, as before.
@@ -393,8 +541,14 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
           finishRequest(request, record, SERVER_ERROR_STATUS)
           throw error
         }
-        if (record.phase === 'streaming' && record.pulled) {
+        if (
+          record.phase === 'streaming' &&
+          record.pulled &&
+          record.error === undefined
+        ) {
           // The body is still being produced; the stream wrapper finishes it.
+          // A recorded error means Elysia failed to build the stream after
+          // its first pull and answered with an error response instead.
           record.status = responseStatus(response)
           return response
         }
@@ -477,6 +631,11 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
           resolveHandledStatus(set.status, response),
           response instanceof Response ? response.headers : undefined
         )
+        return
+      }
+      const wrapped = wrapStream(request, record, response)
+      if (wrapped !== undefined) {
+        return wrapped
       }
     })
     .onError(({ request, error }) => {

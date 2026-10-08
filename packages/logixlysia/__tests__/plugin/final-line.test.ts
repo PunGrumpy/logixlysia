@@ -1,5 +1,5 @@
 import { describe, expect, mock, test } from 'bun:test'
-import { Elysia, status } from 'elysia'
+import { Elysia, sse, status } from 'elysia'
 import { logixlysia, useLogger } from '../../src'
 import type { Options } from '../../src/interfaces'
 import { sleep } from '../_helpers/sleep'
@@ -7,6 +7,7 @@ import { sleep } from '../_helpers/sleep'
 interface CapturedMeta {
   context?: Record<string, unknown>
   durationMs: number
+  error?: { message?: string }
   request?: { url: string }
   status?: number
 }
@@ -60,6 +61,16 @@ const run = async (
 
 // Elysia's own test for whether a hook makes the compiled handler async.
 const ELYSIA_IS_ASYNC = /(?:return|=>)\s?\S+\(|a(?:sync|wait)/u
+
+const slowStream = async function* slowStream() {
+  yield 'a'
+  await sleep(40)
+  yield 'b'
+}
+
+const failCleanup = (): never => {
+  throw new Error('cleanup failed')
+}
 
 describe('logixlysia plugin - final line', () => {
   test('logs the status a handler set before throwing a plain Error', async () => {
@@ -238,6 +249,124 @@ describe('logixlysia plugin - final line', () => {
     expect(meta.status).toBe(302)
   })
 
+  test('times a streamed response until its body ends', async () => {
+    const { options, transport } = createCaptureTransport()
+    const app = new Elysia().use(logixlysia(options)).get('/s', slowStream)
+
+    const { body } = await run(app, '/s')
+
+    expect(body).toBe('ab')
+    expect(transport).toHaveBeenCalledTimes(1)
+    const { level, meta } = recordAt(transport, 0)
+    expect(level).toBe('INFO')
+    expect(meta.status).toBe(200)
+    expect(meta.durationMs).toBeGreaterThanOrEqual(35)
+  })
+
+  test('logs an error line when a streamed body throws', async () => {
+    const { options, transport } = createCaptureTransport()
+    const app = new Elysia()
+      .use(logixlysia(options))
+      .get('/s', async function* failingStream() {
+        yield 'a'
+        await sleep(5)
+        throw new Error('mid')
+      })
+
+    await run(app, '/s')
+
+    expect(transport).toHaveBeenCalledTimes(1)
+    const { level, meta } = recordAt(transport, 0)
+    expect(level).toBe('ERROR')
+    expect(meta.status).toBe(200)
+    expect(transport.mock.calls[0]?.[1]).toBe('mid')
+    expect(meta.error?.message).toBe('mid')
+  })
+
+  test('logs an error line when a sync generator body throws', async () => {
+    const { options, transport } = createCaptureTransport()
+    const app = new Elysia()
+      .use(logixlysia(options))
+      .get('/s', function* failingSyncStream() {
+        yield 'a'
+        throw new Error('sync mid')
+      })
+
+    await run(app, '/s')
+
+    expect(transport).toHaveBeenCalledTimes(1)
+    const { level, meta } = recordAt(transport, 0)
+    expect(level).toBe('ERROR')
+    expect(meta.status).toBe(200)
+    expect(transport.mock.calls[0]?.[1]).toBe('sync mid')
+    expect(meta.error?.message).toBe('sync mid')
+  })
+
+  test('times a sync generator until it finishes', async () => {
+    const { options, transport } = createCaptureTransport()
+    const app = new Elysia()
+      .use(logixlysia(options))
+      .get('/s', function* spinStream() {
+        yield 'a'
+        const until = performance.now() + 20
+        while (performance.now() < until) {
+          // A sync generator cannot sleep, so it spins.
+        }
+        yield 'b'
+      })
+
+    await run(app, '/s')
+
+    expect(transport).toHaveBeenCalledTimes(1)
+    expect(recordAt(transport, 0).meta.durationMs).toBeGreaterThanOrEqual(15)
+  })
+
+  test('rescues a slow stream through tail sampling', async () => {
+    const { options, transport } = createCaptureTransport({
+      sampling: { head: { INFO: 0 }, tail: { durationMs: 30 } }
+    })
+    const app = new Elysia().use(logixlysia(options)).get('/s', slowStream)
+
+    await run(app, '/s')
+
+    expect(transport).toHaveBeenCalledTimes(1)
+    expect(recordAt(transport, 0).meta.status).toBe(200)
+  })
+
+  test('keeps the event-stream framing of a generator wrapped in sse()', async () => {
+    const { options, transport } = createCaptureTransport()
+    const app = new Elysia()
+      .use(logixlysia(options))
+      .get('/events', () => sse(slowStream()))
+
+    const { body, response } = await run(app, '/events')
+
+    expect(response.headers.get('content-type')).toBe('text/event-stream')
+    expect(body).toBe('data: a\n\ndata: b\n\n')
+    expect(transport).toHaveBeenCalledTimes(1)
+    const { level, meta } = recordAt(transport, 0)
+    expect(level).toBe('INFO')
+    expect(meta.status).toBe(200)
+    expect(meta.durationMs).toBeGreaterThanOrEqual(35)
+  })
+
+  test('logs the status a mapResponse hook sends in place of a generator', async () => {
+    const { options, transport } = createCaptureTransport()
+    const app = new Elysia()
+      .use(logixlysia(options))
+      .mapResponse(() => new Response('replaced', { status: 203 }))
+      .get('/s', slowStream)
+
+    const { body, response } = await run(app, '/s')
+
+    expect(response.status).toBe(203)
+    expect(body).toBe('replaced')
+    expect(transport).toHaveBeenCalledTimes(1)
+    const { level, meta } = recordAt(transport, 0)
+    expect(level).toBe('INFO')
+    expect(meta.status).toBe(203)
+  })
+
   test('a user onAfterHandle registered after the plugin can log through useLogger()', async () => {
     const { options, transport } = createCaptureTransport({
       useAsyncLocalStorage: true
@@ -253,6 +382,45 @@ describe('logixlysia plugin - final line', () => {
 
     expect(transport).toHaveBeenCalledTimes(1)
     expect(transport.mock.calls[0]?.[1]).toBe('from hook')
+  })
+
+  test('a generator body can log through useLogger() after a yield', async () => {
+    const { options, transport } = createCaptureTransport({
+      useAsyncLocalStorage: true
+    })
+    const app = new Elysia()
+      .use(logixlysia(options))
+      .get('/s', async function* loggingStream() {
+        yield 'a'
+        await sleep(5)
+        // oxlint-disable-next-line react-hooks/rules-of-hooks -- useLogger() is not a React hook
+        useLogger().info('from stream')
+        yield 'b'
+      })
+
+    await run(app, '/s')
+
+    expect(transport).toHaveBeenCalledTimes(1)
+    expect(transport.mock.calls[0]?.[1]).toBe('from stream')
+  })
+
+  test('a sync generator body can log through useLogger() after a yield', async () => {
+    const { options, transport } = createCaptureTransport({
+      useAsyncLocalStorage: true
+    })
+    const app = new Elysia()
+      .use(logixlysia(options))
+      .get('/s', function* syncLoggingStream() {
+        yield 'a'
+        // oxlint-disable-next-line react-hooks/rules-of-hooks -- useLogger() is not a React hook
+        useLogger().info('from sync stream')
+        yield 'b'
+      })
+
+    await run(app, '/s')
+
+    expect(transport).toHaveBeenCalledTimes(1)
+    expect(transport.mock.calls[0]?.[1]).toBe('from sync stream')
   })
 
   test('a handler that awaits app.handle() for another route keeps its own logger', async () => {
@@ -424,6 +592,29 @@ describe('logixlysia plugin - final line', () => {
     expect(transport.mock.calls[0]?.[1]).toBe('early')
   })
 
+  test('logs one 500 line when Elysia fails to start a generator stream', async () => {
+    const { options, transport } = createCaptureTransport()
+    const app = new Elysia()
+      .use(logixlysia(options))
+      .get('/g', async function* numericContentType({ set }) {
+        // Elysia reads the content type as a string after the first value,
+        // so a number from untyped code makes it answer with an error
+        // instead of the stream.
+        const headers: Record<string, unknown> = set.headers
+        headers['content-type'] = 42
+        yield 'a'
+        yield 'b'
+      })
+
+    const { response } = await run(app, '/g')
+
+    expect(response.status).toBe(500)
+    expect(transport).toHaveBeenCalledTimes(1)
+    const { level, meta } = recordAt(transport, 0)
+    expect(level).toBe('ERROR')
+    expect(meta.status).toBe(500)
+  })
+
   test('a generator whose first value is a ReadableStream is logged once, when the response is created', async () => {
     const { options, transport } = createCaptureTransport()
     const app = new Elysia()
@@ -574,6 +765,78 @@ describe('logixlysia plugin - final line', () => {
     const { level, meta } = recordAt(transport, 0)
     expect(level).toBe('INFO')
     expect(meta.status).toBe(200)
+  })
+
+  test("a sync generator's body cancelled before its first read still runs its cleanup", async () => {
+    const { options, transport } = createCaptureTransport()
+    let cleaned = false
+    const app = new Elysia()
+      .use(logixlysia(options))
+      .get('/c', function* syncCleanupStream() {
+        try {
+          yield 'a'
+          yield 'b'
+        } finally {
+          cleaned = true
+        }
+      })
+
+    const response = await app.handle(new Request('http://localhost/c'))
+    await response.body?.cancel()
+    await sleep(30)
+
+    expect(cleaned).toBe(true)
+    expect(transport).toHaveBeenCalledTimes(1)
+    const { level, meta } = recordAt(transport, 0)
+    expect(level).toBe('INFO')
+    expect(meta.status).toBe(200)
+  })
+
+  test('settles a body cancelled before its first read even when the cleanup throws', async () => {
+    const { options, transport } = createCaptureTransport()
+    let stream: AsyncGenerator<unknown, void> | undefined
+    const app = new Elysia()
+      .use(logixlysia(options))
+      .mapResponse(({ responseValue }) => {
+        stream = responseValue as AsyncGenerator<unknown, void>
+      })
+      .get('/c', async function* failingCleanup() {
+        try {
+          yield 'a'
+          yield 'b'
+        } finally {
+          failCleanup()
+        }
+      })
+
+    await app.handle(new Request('http://localhost/c'))
+    // A cancelled body is Elysia calling return() on the generator. Elysia
+    // drops the promise, which bun:test would report as unhandled, so the
+    // test makes that call itself and awaits the rejection.
+    await expect(stream?.return()).rejects.toThrow('cleanup failed')
+
+    expect(transport).toHaveBeenCalledTimes(1)
+    expect(recordAt(transport, 0).meta.status).toBe(200)
+  })
+
+  test("settles a sync generator's body cancelled before its first read even when the cleanup throws", async () => {
+    const { options, transport } = createCaptureTransport()
+    const app = new Elysia()
+      .use(logixlysia(options))
+      .get('/c', function* failingSyncCleanup() {
+        try {
+          yield 'a'
+          yield 'b'
+        } finally {
+          failCleanup()
+        }
+      })
+
+    const response = await app.handle(new Request('http://localhost/c'))
+    await expect(response.body?.cancel()).rejects.toThrow('cleanup failed')
+
+    expect(transport).toHaveBeenCalledTimes(1)
+    expect(recordAt(transport, 0).meta.status).toBe(200)
   })
 
   test('logs an error a later onError maps to a redirect as an error line with the final status', async () => {
