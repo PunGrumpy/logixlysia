@@ -203,6 +203,26 @@ describe('logixlysia plugin - final line', () => {
     expect(recordAt(transport, 1).meta.status).toBe(200)
   })
 
+  test('does not mistake an object body for a status() result on the hook path too', async () => {
+    const { options, transport } = createCaptureTransport()
+    const app = new Elysia({ aot: false })
+      .use(logixlysia(options))
+      .get('/envelope', () => ({ code: 0, response: { ok: true } }))
+      .get('/business-error', () => ({ code: 40_001, response: null }))
+
+    await run(app, '/envelope')
+
+    expect(transport).toHaveBeenCalledTimes(1)
+    expect(recordAt(transport, 0).level).toBe('INFO')
+    expect(recordAt(transport, 0).meta.status).toBe(200)
+
+    await run(app, '/business-error')
+
+    expect(transport).toHaveBeenCalledTimes(2)
+    expect(recordAt(transport, 1).level).toBe('INFO')
+    expect(recordAt(transport, 1).meta.status).toBe(200)
+  })
+
   test('logs a thrown 3xx status() at INFO', async () => {
     const { options, transport } = createCaptureTransport()
     const app = new Elysia().use(logixlysia(options)).get('/x', () => {
@@ -474,6 +494,24 @@ describe('logixlysia plugin - final line', () => {
     const { level, meta } = recordAt(transport, 0)
     expect(level).toBe('INFO')
     expect(meta.status).toBe(200)
+  })
+
+  test('a thrown plain object with code and response is a 500 on the hook path too', async () => {
+    const { options, transport } = createCaptureTransport()
+    const app = new Elysia({ aot: false })
+      .use(logixlysia(options))
+      .get('/t', () => {
+        const payload = { code: 40_001, response: 'x' }
+        throw payload
+      })
+
+    const { response } = await run(app, '/t')
+
+    expect(response.status).toBe(500)
+    expect(transport).toHaveBeenCalledTimes(1)
+    const { level, meta } = recordAt(transport, 0)
+    expect(level).toBe('ERROR')
+    expect(meta.status).toBe(500)
   })
 
   test('no plugin hook reads as async to Elysia', () => {

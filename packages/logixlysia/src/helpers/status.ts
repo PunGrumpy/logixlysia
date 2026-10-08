@@ -41,9 +41,10 @@ const STATUS_BY_NORMALIZED_NAME = (() => {
 
 /**
  * What Elysia's `status(code, body)` returns or throws: a numeric `code` and
- * the `response` body. Matched by shape instead of `instanceof`, so it still
- * works when the app resolves a second copy of Elysia. Elysia's own error
- * classes are `Error`s with string codes, so they never match.
+ * the `response` body. Matched by the class name Elysia's own `mapResponse`
+ * checks rather than by `instanceof`, so it still works when the app
+ * resolves a second copy of Elysia, and a plain object with the same keys
+ * (an API envelope, say) never matches.
  */
 export interface StatusResponseLike {
   code: number
@@ -54,6 +55,8 @@ export const isStatusResponse = (value: unknown): value is StatusResponseLike =>
   typeof value === 'object' &&
   value !== null &&
   !(value instanceof Error) &&
+  (value as { constructor?: { name?: string } }).constructor?.name ===
+    'ElysiaCustomStatusResponse' &&
   'code' in value &&
   typeof value.code === 'number' &&
   'response' in value
