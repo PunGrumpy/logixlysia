@@ -37,6 +37,8 @@ logixlysia({
 | `{ip}` | Client IP address (from `x-forwarded-for` or `x-real-ip`; empty when testing locally without these headers) |
 | `{epoch}` | Unix timestamp |
 
+The line is written once Elysia has produced the response, so it carries the status the client received, even when a `mapResponse`, `onError` or `onRequest` hook decided it. For a generator (streaming) handler the line is written when the body finishes, so `{duration}` covers the whole stream, and a throw inside the body produces an error line with the status the headers carried. A long-lived stream such as server-sent events is logged when it ends, which the plugin notices at the generator's next `yield` after the client disconnects. A `Response` with a streaming body, or a generator whose first value is a `ReadableStream`, is logged when the response is created. With `aot: false`, or with the plugin mounted inside `group()` or `guard()`, the plugin's hooks write the line instead, when the handler returns or throws.
+
 ## Examples
 
 ### Minimal Format

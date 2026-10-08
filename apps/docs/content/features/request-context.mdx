@@ -46,6 +46,8 @@ logixlysia({
 
 The request-scoped logger `log` is always available on the Elysia handler context. Enabling `useAsyncLocalStorage` also lets `useLogger()` return the current request's logger from nested service layers and helper functions.
 
+`useLogger()` stays scoped to its request for the request's whole life: in hooks registered after the plugin, inside a generator (streaming) handler's body, in a handler that awaits `app.handle()` for another route, and in work that outlives the response. Outside a request it is a no-op. With `aot: false`, or with the plugin mounted inside `group()` or `guard()`, the plugin's hooks keep the previous behaviour instead: the scope ends when they write the line, so hooks registered after the plugin get the no-op logger.
+
 ### 1. Handler Context (`log`)
 
 Destructure `log` directly in your route handlers:
