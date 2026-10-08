@@ -62,6 +62,23 @@ const run = async (
 const ELYSIA_IS_ASYNC = /(?:return|=>)\s?\S+\(|a(?:sync|wait)/u
 
 describe('logixlysia plugin - final line', () => {
+  test('logs the status a handler set before throwing a plain Error', async () => {
+    const { options, transport } = createCaptureTransport()
+    const app = new Elysia().use(logixlysia(options)).get('/x', ({ set }) => {
+      set.status = 404
+      throw new Error('nope')
+    })
+
+    const { response } = await run(app, '/x')
+
+    expect(response.status).toBe(404)
+    expect(transport).toHaveBeenCalledTimes(1)
+    const { level, meta } = recordAt(transport, 0)
+    expect(level).toBe('WARNING')
+    expect(meta.status).toBe(404)
+    expect(transport.mock.calls[0]?.[1]).toBe('nope')
+  })
+
   test('keeps 500 for a thrown Error when set.status was not set', async () => {
     const { options, transport } = createCaptureTransport()
     const app = new Elysia().use(logixlysia(options)).get('/x', () => {
@@ -92,6 +109,25 @@ describe('logixlysia plugin - final line', () => {
     expect(level).toBe('WARNING')
     expect(meta.status).toBe(409)
     expect(transport.mock.calls[0]?.[1]).toBe('conflict')
+  })
+
+  test('logs the status an onError registered after the plugin answers with', async () => {
+    const { options, transport } = createCaptureTransport()
+    const app = new Elysia()
+      .use(logixlysia(options))
+      .onError(() => status(404, 'gone'))
+      .get('/x', () => {
+        throw new Error('m')
+      })
+
+    const { response } = await run(app, '/x')
+
+    expect(response.status).toBe(404)
+    expect(transport).toHaveBeenCalledTimes(1)
+    const { level, meta } = recordAt(transport, 0)
+    expect(level).toBe('WARNING')
+    expect(meta.status).toBe(404)
+    expect(transport.mock.calls[0]?.[1]).toBe('m')
   })
 
   test('logs the status an app-wide onError registered before the plugin answers with', async () => {
@@ -500,5 +536,28 @@ describe('logixlysia plugin - final line', () => {
     const { level, meta } = recordAt(transport, 0)
     expect(level).toBe('INFO')
     expect(meta.status).toBe(200)
+  })
+
+  test('logs an error a later onError maps to a redirect as an error line with the final status', async () => {
+    const { options, transport } = createCaptureTransport()
+    const app = new Elysia()
+      .use(logixlysia(options))
+      .onError(({ set }) => {
+        set.status = 302
+        set.headers.location = '/login'
+        return 'moved'
+      })
+      .get('/x', () => {
+        throw new Error('session expired')
+      })
+
+    const { response } = await run(app, '/x')
+
+    expect(response.status).toBe(302)
+    expect(transport).toHaveBeenCalledTimes(1)
+    const { level, meta } = recordAt(transport, 0)
+    expect(level).toBe('ERROR')
+    expect(meta.status).toBe(302)
+    expect(transport.mock.calls[0]?.[1]).toBe('session expired')
   })
 })

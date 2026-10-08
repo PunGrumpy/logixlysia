@@ -75,3 +75,15 @@ export const getStatusCode = (value: unknown): number => {
 
   return 500
 }
+
+export const levelForStatus = (
+  status: number
+): 'INFO' | 'WARNING' | 'ERROR' => {
+  if (status >= 500) {
+    return 'ERROR'
+  }
+  if (status >= 400) {
+    return 'WARNING'
+  }
+  return 'INFO'
+}

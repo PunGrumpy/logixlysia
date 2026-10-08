@@ -8,7 +8,11 @@ import {
 import { createRequestContextStore } from './context/request-context'
 import { loggerStorage, noopRequestLogger } from './context/storage'
 import { startServer } from './extensions'
-import { getStatusCode, isStatusResponse } from './helpers/status'
+import {
+  getStatusCode,
+  isStatusResponse,
+  levelForStatus
+} from './helpers/status'
 import type {
   LogFields,
   LogixlysiaStore,
@@ -108,16 +112,6 @@ const openRecord = (request: Request): RequestRecord => {
 
 const responseStatus = (response: unknown): number =>
   response instanceof Response ? response.status : DEFAULT_STATUS
-
-const levelForStatus = (status: number): 'INFO' | 'WARNING' | 'ERROR' => {
-  if (status >= 500) {
-    return 'ERROR'
-  }
-  if (status >= 400) {
-    return 'WARNING'
-  }
-  return 'INFO'
-}
 
 /**
  * Explicit singleton without Elysia's `SingletonBase` `Record<string, unknown>` on decorator/derive/resolve so
@@ -359,7 +353,7 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
         record.error !== undefined &&
         (status >= 400 || !isStatusResponse(record.error))
       ) {
-        logger.handleHttpError(request, record.error, store)
+        logger.handleHttpError(request, record.error, { ...store, status })
       } else if (!record.customLogged) {
         emitAccessLine(request, status, store)
       }

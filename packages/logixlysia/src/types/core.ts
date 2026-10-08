@@ -9,6 +9,8 @@ export type LogLevel = 'DEBUG' | 'INFO' | 'WARNING' | 'ERROR'
 
 export interface StoreData {
   beforeTime: bigint
+  /** The status the client received, when the caller resolved it. `handleHttpError` prefers it over the thrown value. */
+  status?: number
 }
 
 export interface LogixlysiaStore {
