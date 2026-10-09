@@ -224,26 +224,24 @@ app.onError(({ code, error, store }) => {
 
 ### JSON Format for Error Logs
 
-```ts
-app.use(
-  logixlysia({
-    config: {
-      customLogFormat:
-        '{"level": "{level}", "message": "{message}", "method": "{method}", "pathname": "{pathname}", "status": "{status}"}'
-    }
-  })
-)
+`customLogFormat` produces a text line, not JSON (the method is padded, quotes are not escaped, error rows follow the line, and colors apply on a TTY), so for JSON output write each record from a transport and turn off the console line:
 
-app.get('/error', () => {
-  throw new Error('Validation failed')
+```ts
+logixlysia({
+  config: {
+    disableInternalLogger: true,
+    transports: [
+      {
+        log: (level, message, meta) =>
+          console.log(JSON.stringify({ level, message, ...meta }))
+      }
+    ]
+  }
 })
 ```
 
-Output for both regular requests and errors will be in JSON format:
-
-```json
-{"level": "INFO", "message": "", "method": "GET", "pathname": "/hello", "status": "200"}
-{"level": "ERROR", "message": "Validation failed", "method": "GET", "pathname": "/error", "status": "500"}
+```
+{"level":"INFO","message":"","request":{"method":"GET","url":"http://localhost:3000/hello"},"status":200,"durationMs":0.42}
 ```
 
 ## Custom Transports

@@ -67,7 +67,7 @@ const otlp = createOtlpTransport({
 | `serviceName` | `string` | `logixlysia` | `service.name` resource attribute |
 | `resourceAttributes` | `Record<string, string>` | — | Extra OTLP resource attributes |
 
-Plus the shared batching options: `maxBatchSize`, `flushIntervalMs`, `timeout`, `retries` — see the [overview](/docs/adapters/overview#shared-behavior).
+Plus the shared options in the [overview table](/docs/adapters/overview#shared-behavior).
 
 ## Payload
 
@@ -100,5 +100,5 @@ createOtlpTransport({ endpoint: 'http://localhost:4318' })
 ## Troubleshooting
 
 - **`404`** — the endpoint should be the **base URL only**; the adapter appends `/v1/logs` itself.
-- **`401` / `403`** — check the header format in `OTEL_EXPORTER_OTLP_HEADERS`; values must not be URL-encoded.
+- **`401` / `403`** — check the header format in `OTEL_EXPORTER_OTLP_HEADERS`; values may be percent-encoded; encode a comma inside a value as `%2C`.
 - **Nothing arrives** — logs flush in batches (2 s by default); call `flush()` before short-lived processes exit.

@@ -97,7 +97,7 @@ Available placeholders:
 
 | Placeholder | Description | Example |
 | --- | --- | --- |
-| `{now}` | Current timestamp | `2025-12-21 10:00:00` |
+| `{now}` | Current timestamp | `2025-12-21T10:00:00.000Z` |
 | `{level}` | Log level (`DEBUG`, `INFO`, `WARNING`, `ERROR`) | `INFO` |
 | `{duration}` | Request duration (formatted) | `12ms`, `1.5s` |
 | `{method}` | HTTP method | `GET` |
@@ -111,7 +111,8 @@ Available placeholders:
 | `{service}` | Service prefix from `config.service` | `[my-api] ` |
 | `{context}` | Context JSON on main line when tree is off / empty | `{"id":1}` |
 | `{ip}` | Client IP address | `127.0.0.1` |
-| `{epoch}` | Unix timestamp | `1734729600` |
+| `{epoch}` | Unix time in milliseconds | `1766311200000` |
+| `{requestId}` | Request ID when `requestId` is on | `9f1c…` |
 
 ### Log Filtering
 

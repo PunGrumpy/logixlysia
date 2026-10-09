@@ -121,3 +121,5 @@ const chargeCard = async (amount: number) => {
 ```
 
 This is type-only: there is no runtime cost, and leaving the parameter off keeps every key allowed, exactly as before.
+
+`useLogger()` returns a request-scoped logger only with `useAsyncLocalStorage: true`; without it, it returns a logger that writes nothing.

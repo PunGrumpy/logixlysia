@@ -41,7 +41,7 @@ npm install logixlysia
 ### What are the requirements?
 
 - Node.js 22+ or Bun
-- Elysia.js
+- Elysia 1.4.30 or later (the `^1.4.30` peer range)
 
 ### How do I install a preview build for an unreleased fix?
 
@@ -330,17 +330,7 @@ Ensure you're using Logixlysia v6.0.2 or later. Earlier versions had a bug where
 ERROR POST /api/users Validation failed
 ```
 
-**After (v6.0.2+ with customLogFormat):**
-
-```json
-{
-  "level": "ERROR",
-  "message": "Validation failed",
-  "method": "POST",
-  "pathname": "/api/users",
-  "status": "400"
-}
-```
+**After (v6.0.2+):** `customLogFormat` applies to error lines too. For JSON output use a transport, as shown in [examples](/docs/examples).
 
 ## Migration
 

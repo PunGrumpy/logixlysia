@@ -25,20 +25,13 @@ new Elysia().use(logixlysia({ preset: 'prod' }))
 
 ## Context accumulation
 
-With `useAsyncLocalStorage: true`, prefer the derived `log` on the handler context:
+`log` is always on the handler context; outside a handler, `store.logger` takes the `request` explicitly, and `useLogger()` needs `useAsyncLocalStorage: true` (it is a no-op without it).
 
-| evlog | Logixlysia |
-| --- | --- |
-| `log.set({ userId: 'x' })` | `({ log }) => log.mergeContext({ userId: 'x' })` |
-| `log.set({ cart: { total: 99 } })` | `({ log }) => log.mergeContext({ cart: { total: 99 } })` |
-| `useLogger()` | `useLogger()` from `logixlysia` |
-
-Without `useAsyncLocalStorage`, use `store.logger` and pass `request` explicitly:
-
-| evlog | Logixlysia |
-| --- | --- |
-| `log.set({ userId: 'x' })` | `store.logger.mergeContext(request, { userId: 'x' })` |
-| `log.set({ cart: { total: 99 } })` | `store.logger.mergeContext(request, { cart: { total: 99 } })` |
+| evlog | Logixlysia, in a handler | Logixlysia, with a `request` in hand |
+| --- | --- | --- |
+| `log.set({ userId: 'x' })` | `({ log }) => log.mergeContext({ userId: 'x' })` | `store.logger.mergeContext(request, { userId: 'x' })` |
+| `log.set({ cart: { total: 99 } })` | `({ log }) => log.mergeContext({ cart: { total: 99 } })` | `store.logger.mergeContext(request, { cart: { total: 99 } })` |
+| `useLogger()` | `useLogger()` from `logixlysia` | `useLogger()` from `logixlysia` |
 
 ## Emitting the request log
 
