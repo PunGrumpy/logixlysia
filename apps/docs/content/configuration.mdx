@@ -419,7 +419,9 @@ Maximum file size before rotation.
 - **Format:** `'1k'`, `'1m'`, `'1g'` or bytes
 
 ```ts
-maxSize: '10m'
+logRotation: {
+  maxSize: '10m'
+}
 ```
 
 #### `logRotation.interval`
@@ -437,7 +439,9 @@ Maximum number of files or retention period.
 - **Format:** Number or `'7d'`, `'30d'`
 
 ```ts
-maxFiles: '7d' // or 10
+logRotation: {
+  maxFiles: '7d' // or 10
+}
 ```
 
 #### `logRotation.compress`
@@ -448,7 +452,9 @@ Enable compression for rotated logs.
 - **Default:** `false`
 
 ```ts
-compress: true
+logRotation: {
+  compress: true
+}
 ```
 
 #### `logRotation.compression`
@@ -459,7 +465,9 @@ Compression algorithm.
 - **Default:** `'gzip'`
 
 ```ts
-compression: 'gzip'
+logRotation: {
+  compression: 'gzip'
+}
 ```
 
 ## Pino Options

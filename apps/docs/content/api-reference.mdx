@@ -24,6 +24,7 @@ function logixlysia(options?: Options): Logixlysia
 **Example:**
 
 ```ts
+import { Elysia } from 'elysia'
 import logixlysia from 'logixlysia'
 
 const app = new Elysia().use(
@@ -288,15 +289,19 @@ app.get('/users/:id', ({ store, params, request }) => {
 ### Custom Logging
 
 ```ts
-app.post('/users', ({ store, body, request }) => {
-  const { logger } = store
+app.post(
+  '/users',
+  ({ store, body, request }) => {
+    const { logger } = store
 
-  logger.debug(request, 'Creating user', { email: body.email })
+    logger.debug(request, 'Creating user', { email: body.email })
 
-  // ... create user logic
+    // ... create user logic
 
-  logger.info(request, 'User created', { userId: newUser.id })
+    logger.info(request, 'User created', { userId: newUser.id })
 
-  return newUser
-})
+    return newUser
+  },
+  { body: t.Object({ email: t.String() }) }
+)
 ```

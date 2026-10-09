@@ -6,6 +6,7 @@ description: Add context to every request once, and have it reach every sink
 An enricher is a small function that contributes fields to the request context. Set it up once and the fields show up in the console tree, in file logs, and in every transport — Datadog, PostHog, Sentry, OTLP — without touching a single route.
 
 ```ts
+import { Elysia } from 'elysia'
 import logixlysia from 'logixlysia'
 import { geoEnricher, traceparentEnricher } from 'logixlysia/enrichers'
 

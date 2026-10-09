@@ -78,6 +78,7 @@ Batches are sent one at a time, so they arrive in the order they were logged and
 Adapters compose — fan the same logs out to several platforms:
 
 ```ts
+import logixlysia from 'logixlysia'
 import { createAxiomTransport } from 'logixlysia/axiom'
 import { createSentryTransport } from 'logixlysia/sentry'
 
