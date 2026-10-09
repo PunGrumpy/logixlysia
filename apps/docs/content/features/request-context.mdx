@@ -79,7 +79,7 @@ async function findUser(id: string) {
 
 `userId` on one route and `user_id` on the next is the kind of drift that makes a dashboard query quietly incomplete. Pass a field type to the plugin and TypeScript catches it at compile time:
 
-```ts
+```ts check=expect-errors
 import { Elysia } from 'elysia'
 import logixlysia from 'logixlysia'
 
@@ -105,7 +105,7 @@ Every field stays optional — you declare the vocabulary, not a requirement to 
 
 `useLogger()` takes the same parameter, so context stays typed outside the handler too:
 
-```ts
+```ts check=skip
 import { useLogger } from 'logixlysia'
 
 const chargeCard = async (amount: number) => {

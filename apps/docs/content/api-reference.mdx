@@ -9,7 +9,7 @@ description: Complete API reference for Logixlysia
 
 Main plugin function that adds logging capabilities to your Elysia application.
 
-```ts
+```ts check=skip
 function logixlysia(options?: Options): Logixlysia
 ```
 
@@ -42,7 +42,7 @@ const app = new Elysia().use(
 
 Elysia instance type with Logixlysia store.
 
-```ts
+```ts check=skip
 import type { LogixlysiaSingleton } from 'logixlysia'
 
 type Logixlysia = Elysia<'', LogixlysiaSingleton>
@@ -54,7 +54,7 @@ The plugin uses an explicit `LogixlysiaSingleton`: a closed `store` plus empty `
 
 Configuration options for Logixlysia.
 
-```ts
+```ts check=skip
 type Options = {
   config?: {
     showStartupMessage?: boolean
@@ -87,7 +87,7 @@ type Options = {
 
 Store type available in Elysia context.
 
-```ts
+```ts check=skip
 type LogixlysiaStore = {
   logger: Logger
   pino: Pino
@@ -107,7 +107,7 @@ Keep `LogixlysiaStore` a closed object type (no index signature). That helps mer
 
 Logger interface with logging methods.
 
-```ts
+```ts check=skip
 type Logger = {
   pino: Pino
   log: (
@@ -148,7 +148,7 @@ type Logger = {
 
 Log level type.
 
-```ts
+```ts check=skip
 type LogLevel = 'DEBUG' | 'INFO' | 'WARNING' | 'ERROR'
 ```
 
@@ -156,7 +156,7 @@ type LogLevel = 'DEBUG' | 'INFO' | 'WARNING' | 'ERROR'
 
 Custom transport interface.
 
-```ts
+```ts check=skip
 type Transport = {
   log: (
     level: LogLevel,
@@ -184,7 +184,7 @@ type LogRotationConfig = {
 
 Pino logger type.
 
-```ts
+```ts check=skip
 type Pino = PinoLogger<never, boolean>
 ```
 
@@ -192,7 +192,7 @@ type Pino = PinoLogger<never, boolean>
 
 Context type for request handlers.
 
-```ts
+```ts check=skip
 type LogixlysiaContext = {
   request: Request
   store: LogixlysiaStore
@@ -205,7 +205,7 @@ type LogixlysiaContext = {
 
 An HTTP error carrying the context that makes a failure actionable.
 
-```ts
+```ts check=skip
 class HttpError extends Error {
   readonly code?: string
   readonly fix?: string
@@ -239,7 +239,7 @@ interface HttpErrorInit {
 
 **Example:**
 
-```ts
+```ts check=skip
 import { HttpError } from 'logixlysia'
 
 throw new HttpError(402, 'Card declined', {
