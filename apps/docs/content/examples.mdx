@@ -61,16 +61,9 @@ const app = new Elysia()
           level: ['ERROR', 'WARNING']
         },
 
-        // Pino configuration
-        pino: {
-          level: 'info',
-          redact: ['password', 'token', 'apiKey', 'creditCard'],
-          base: {
-            service: 'my-api',
-            version: process.env.APP_VERSION,
-            environment: 'production'
-          }
-        },
+        // Mask secrets in console, file and transport output
+        autoRedact: true,
+        redactKeys: ['customerSsn'],
 
         // Use transports for external services
         useTransportsOnly: false,
@@ -360,16 +353,8 @@ app.use(
           }
         : undefined,
 
-      pino: {
-        level: isDev ? 'debug' : 'info',
-        prettyPrint: isDev,
-        redact: isProd ? ['password', 'token', 'apiKey'] : [],
-        base: {
-          service: 'my-api',
-          version: process.env.APP_VERSION,
-          environment: process.env.NODE_ENV
-        }
-      },
+      autoRedact: isProd,
+      redactKeys: ['customerSsn'],
 
       transports: isProd ? [elasticsearchTransport, slackTransport] : []
     }

@@ -105,7 +105,7 @@ Return `undefined` to add nothing.
 | `request` | At request start | The `Request` |
 | `response` | Once the outcome is known | `{ request, status, durationMs, headers }` |
 
-The response phase runs before the request's final log line on both the success and the error path, so its fields are on the access log and on the error log alike. Request-phase fields, being merged at the start, also reach any `log.info()` you make inside the handler.
+The response phase runs before the request's final log line on both the success and the error path, so its fields are on the access log and on the error log alike. Request-phase fields, being merged at the start, also reach any `log.info()` you make inside the handler. When a custom log replaces the access line, the response-phase fields reach no sink.
 
 ## Failure Handling
 
