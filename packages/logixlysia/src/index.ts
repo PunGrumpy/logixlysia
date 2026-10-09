@@ -474,16 +474,20 @@ export type {
   EnricherResponseInput,
   HeadSamplingConfig,
   LogFields,
+  LogFilter,
   Logger,
+  LogixlysiaConfig,
   LogixlysiaContext,
   LogixlysiaStore,
   LogLevel,
   LogPreset,
+  LogRotationConfig,
   Options,
   Pino,
   RequestIdConfig,
   RequestScopedLogger,
   SamplingConfig,
+  SinkErrorContext,
   StoreData,
   TailSamplingConfig,
   Transport
@@ -500,6 +504,7 @@ export type {
   SamplingRuntime
 } from './sampling'
 export { resolveSampling } from './sampling'
+export type { WebSocketLike } from './websocket/wrap-ws'
 export type { WsHandlerHooks } from './websocket/wrap-ws'
 export { createWsHandlerWrapper } from './websocket/wrap-ws'
 
