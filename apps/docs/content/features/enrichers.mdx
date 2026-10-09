@@ -60,6 +60,8 @@ geoEnricher()
 
 Nothing is derived from the IP address itself, and no lookup is performed. On a platform that does not set these headers, the enricher adds nothing. Vercel percent-encodes city names, which the enricher decodes for you.
 
+These headers are set by the client unless the platform's edge overwrites them, so read them as a hint, not a fact.
+
 ### `sizeEnricher()`
 
 Records payload sizes.

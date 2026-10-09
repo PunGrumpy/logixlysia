@@ -24,7 +24,7 @@ logixlysia({
 | `{now}` | Current date and time |
 | `{level}` | Log level (`DEBUG`, `INFO`, `WARNING`, `ERROR`); with colors, level-colored background chip |
 | `{duration}` | Request duration (e.g. `12ms`, `1.5s`); with colors, green / yellow / red based on `slowThreshold` and `verySlowThreshold` |
-| `{method}` | HTTP method (padded in the default format) |
+| `{method}` | HTTP method, padded to seven characters in every format |
 | `{pathname}` | Request path (alias: `{path}`); includes query string if `logQueryParams` is enabled |
 | `{query}` | Raw query string (e.g. `?id=123`) |
 | `{status}` | Response status code |
@@ -35,7 +35,8 @@ logixlysia({
 | `{service}` | From `config.service`, rendered as `[name] ` (dim with colors); empty if unset |
 | `{context}` | JSON string of `data.context` when the context tree is off or context is empty; omitted on the main line when the context tree is shown (see below) |
 | `{ip}` | Client IP address (from `x-forwarded-for` or `x-real-ip`; empty when testing locally without these headers) |
-| `{epoch}` | Unix timestamp |
+| `{epoch}` | Unix time in milliseconds |
+| `{requestId}` | Request ID when `requestId` is on; empty otherwise |
 
 ## Examples
 
@@ -48,7 +49,7 @@ customLogFormat: '{method} {pathname} {status}'
 Output:
 
 ```
-GET /api/users 200
+GET     /api/users 200
 ```
 
 ### Branded line with `{icon}` and `{service}`
@@ -101,7 +102,7 @@ logixlysia({
 When `showContextTree` is `true` (default), object `context` passed to `logger.info` / `warn` / `error` / `debug` is printed **under** the main line as tree branches, instead of being inlined into `{context}` on that line.
 
 - Each row is two spaces, `├─` or `└─`, the key (cyan when colors are on), two spaces, then the value.
-- For `ERROR` logs, an `error` row is appended when an error object is present (parsed message).
+- For `ERROR` and `WARNING` logs, an `error` row is appended when an error object is present (parsed message).
 - Set `contextDepth` (default `1`) to flatten nested objects into dotted keys (e.g. `user.id`) up to that depth.
 
 ```ts
@@ -124,12 +125,13 @@ Example (no ANSI colors), after a main line like `… GET /orders 500 3ms Checko
 
 Logixlysia natively supports structured errors (similar to the `evlog` pattern) when thrown exceptions contain specific troubleshooting fields:
 
+- `code`: A stable, machine-readable identifier for the failure (e.g. `PAYMENT_DECLINED`).
 - `why`: Explains the root cause of the error.
 - `fix`: Suggests actionable remediation.
 - `link`: Provides a URL to documentation or troubleshooting help.
 - `internal`: Log-safe diagnostic metadata (e.g. error codes, non-sensitive context).
 
-If a caught error contains any of these fields, they are automatically extracted and rendered under the `error.` namespace (`error.why`, `error.fix`, `error.link`, and `error.internal`) as individual tree branches.
+If a caught error contains any of these fields, they are automatically extracted and rendered under the `error.` namespace (`error.code`, `error.why`, `error.fix`, `error.link`, and `error.internal`) as individual tree branches.
 
 > [!WARNING] Because `error.internal` is emitted verbatim to logs, it should contain only log-safe diagnostic metadata. Do not place sensitive secrets, credentials, or PII (Personally Identifiable Information) in this field.
 

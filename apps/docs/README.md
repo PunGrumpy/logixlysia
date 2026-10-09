@@ -46,7 +46,7 @@ Search, `llms.txt`, per-page raw Markdown (append `.md` to any URL), Open Graph 
 
 ## Mintlify assistant
 
-Blume renders the documentation; Mintlify supplies the "Ask AI" assistant on top of it, under the Mintlify OSS program. The two read the same `content/` tree, so there is one copy of every page — Blume orders it with `meta.ts`, Mintlify with `content/docs.json`, and each ignores the other's file.
+Blume renders the documentation; Mintlify supplies the "Ask AI" assistant on top of it, under the Mintlify OSS program. The two read the same `content/` tree, so there is one copy of every page — Blume orders it with `meta.ts`, Mintlify with `content/docs.json`, and each ignores the other's file. The Mintlify agent also opens pull requests against `content/` from code changes; those PRs are checked against the source like any other docs change before merging.
 
 The Mintlify deployment is a mirror, not a second docs site: it is marked `noindex, nofollow` and carries a banner pointing back to `logixlysia.vercel.app`, so it never competes with the canonical site in search results.
 

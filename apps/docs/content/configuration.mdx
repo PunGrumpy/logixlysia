@@ -200,7 +200,7 @@ Available placeholders:
 - `{service}` - Service label from the `service` config option, shown as `[name] ` (dim when colors are on); empty if unset
 - `{context}` - Request context as JSON when `showContextTree` is off; empty while the context tree shows it
 - `{ip}` - Client IP (from `x-forwarded-for` or `x-real-ip`; see `ip` option)
-- `{epoch}` - Unix timestamp
+- `{epoch}` - Unix time in milliseconds
 - `{requestId}` - Request ID when `requestId` is on; empty otherwise
 
 ### `service`

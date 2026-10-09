@@ -58,7 +58,7 @@ const app = new Elysia().use(
 | Option | Type | Default | Description |
 | --- | --- | --- | --- |
 | `enabled` | `boolean` | `true` | Turn request ID generation on or off when using object configuration. |
-| `header` | `string` | `'X-Request-Id'` | The header key to check on incoming requests (honoring upstream proxies) and to set on responses. |
+| `header` | `string` | `'X-Request-Id'` | The header key to check on incoming requests (honoring upstream proxies) and to set on responses. An inbound value is used only when it matches `^[A-Za-z0-9._-]{1,128}$`; otherwise a new id is generated. |
 | `generator` | `() => string` | `crypto.randomUUID` | A function that returns a unique string to use as the request ID. |
 
 ## Log Formatting
