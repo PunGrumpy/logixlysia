@@ -370,7 +370,7 @@ logixlysia({
    pino.info({ duration: 150, operation: 'db_query' }, 'Query completed')
    ```
 
-4. **Redact Sensitive Data** - Always redact sensitive information
+4. **Redact sensitive data** - `pino.redact` masks `store.pino` records only; the plugin's own lines are masked by `autoRedact` (see [configuration](/docs/configuration#autoredact))
 
    ```ts
    logixlysia({

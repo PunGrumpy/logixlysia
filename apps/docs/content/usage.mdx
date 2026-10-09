@@ -40,7 +40,7 @@ export const users = new Elysia().use(logging).get('/users', () => [])
 
 ## Request context
 
-Accumulate fields during a request; they are merged into the automatic access log:
+Accumulate fields during a request; they are merged into the automatic access log, or into the custom log line that replaces the access line:
 
 ```ts
 .get('/users/:id', ({ request, store, params }) => {
@@ -129,7 +129,7 @@ Logixlysia keeps only the listed levels and drops the rest.
 
 ## Pino Integration
 
-Logixlysia is powered by Pino. Access the Pino instance directly:
+Logixlysia writes its own lines and exposes a pino instance as `store.pino` for your application's structured logging:
 
 ```ts
 app.get('/users/:id', ({ store, params }) => {
@@ -237,10 +237,8 @@ const app = new Elysia()
         logFilter: {
           level: ['ERROR', 'WARNING']
         },
-        pino: {
-          level: 'info',
-          redact: ['password', 'token', 'apiKey']
-        }
+        autoRedact: true,
+        redactKeys: ['customerSsn']
       }
     })
   )

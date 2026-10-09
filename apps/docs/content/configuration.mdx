@@ -485,9 +485,11 @@ pino: {
 
 ### Common Pino Options
 
+Every `pino.*` option configures the pino instance exposed as `store.pino`; none of them changes what the plugin logs for a request.
+
 #### `pino.level`
 
-Minimum log level.
+Minimum level for `store.pino` only. The plugin's own lines are filtered by `logFilter`.
 
 - **Type:** `'fatal' | 'error' | 'warn' | 'info' | 'debug' | 'trace'`
 - **Default:** `'info'`
@@ -540,7 +542,7 @@ See [pino-pretty documentation](https://github.com/pinojs/pino-pretty#options) f
 
 #### `pino.redact`
 
-Redact sensitive fields from logs.
+Redact paths for `store.pino` only. The plugin's own console, file and transport output is masked by `autoRedact` and `redactKeys`; setting `pino.redact` also replaces the automatic paths `autoRedact` would give `store.pino`.
 
 - **Type:** `string[] | object`
 - **Default:** `undefined`
@@ -564,7 +566,7 @@ pino: {
 
 #### `pino.base`
 
-Base fields added to all logs.
+Base fields added to every `store.pino` record. They do not appear on the plugin's own lines.
 
 - **Type:** `object`
 - **Default:** `undefined`
