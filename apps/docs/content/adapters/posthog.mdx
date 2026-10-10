@@ -82,7 +82,8 @@ PostHog processes events asynchronously — expect them to appear within about a
 Merge a user ID into the request context and the log's `distinct_id` resolves to it:
 
 ```ts
-app.get('/profile', ({ log, userId }) => {
+app.get('/profile', ({ log, headers }) => {
+  const userId = headers['x-user-id'] ?? 'anonymous'
   log.mergeContext({ userId })
   return getProfile(userId)
 })

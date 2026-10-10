@@ -9,6 +9,7 @@ export default defineConfig({
   ignorePatterns: [
     ...(ultracite.ignorePatterns ?? []),
     '**/.blume',
+    '**/.snippets',
     // Vendored skills are pinned by hash in skills-lock.json, and changesets
     // writes CHANGELOG.md on every release; neither is ours to reformat.
     '.agents/**',

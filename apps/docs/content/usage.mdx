@@ -25,7 +25,7 @@ const app = new Elysia()
 
 Create the plugin once and `.use()` that same instance in every module. If each module calls `logixlysia()` again, routes in the later modules log a 0 ms duration and no request ID, and `app.stop()` flushes only the first instance's transports.
 
-```ts
+```ts check=skip
 // logging.ts
 import logixlysia from 'logixlysia'
 

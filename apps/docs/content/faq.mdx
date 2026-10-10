@@ -125,15 +125,19 @@ app.get('/users/:id', ({ store, request }) => {
 ### How do I log custom messages?
 
 ```ts
-app.post('/users', ({ store, body, request }) => {
-  const { logger } = store
+app.post(
+  '/users',
+  ({ store, body, request }) => {
+    const { logger } = store
 
-  logger.info(request, 'Creating user', {
-    email: body.email
-  })
+    logger.info(request, 'Creating user', {
+      email: body.email
+    })
 
-  return createUser(body)
-})
+    return createUser(body)
+  },
+  { body: t.Object({ email: t.String() }) }
+)
 ```
 
 ### How do I create child loggers?
@@ -157,7 +161,7 @@ app.get('/orders/:id', ({ store, params }) => {
 
 **Use `store.pino` directly** for logging outside of HTTP request context:
 
-```ts
+```ts check=skip
 // logger.ts
 import logixlysia from 'logixlysia'
 

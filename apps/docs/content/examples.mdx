@@ -223,7 +223,7 @@ app.onError(({ code, error, store }) => {
   )
 
   return {
-    error: error.message,
+    error: error instanceof Error ? error.message : String(error),
     status: code
   }
 })
@@ -313,7 +313,7 @@ const slackTransport = {
 
 ### MongoDB Transport
 
-```ts
+```ts check=skip
 import { MongoClient } from 'mongodb'
 
 const client = new MongoClient(process.env.MONGODB_URI)
@@ -382,7 +382,7 @@ app.use(
 ### Complete REST API with Logging
 
 ```ts
-import { Elysia } from 'elysia'
+import { Elysia, t } from 'elysia'
 import logixlysia from 'logixlysia'
 
 const app = new Elysia()
@@ -412,11 +412,15 @@ const app = new Elysia()
     pino.info({ action: 'create_user' }, 'Creating user')
     return { user: body }
   })
-  .put('/users/:id', ({ store, params, body }) => {
-    const { pino } = store
-    pino.info({ userId: params.id, action: 'update_user' }, 'Updating user')
-    return { user: { id: params.id, ...body } }
-  })
+  .put(
+    '/users/:id',
+    ({ store, params, body }) => {
+      const { pino } = store
+      pino.info({ userId: params.id, action: 'update_user' }, 'Updating user')
+      return { user: { id: params.id, ...body } }
+    },
+    { body: t.Object({ name: t.String() }, { additionalProperties: true }) }
+  )
   .delete('/users/:id', ({ store, params }) => {
     const { pino } = store
     pino.info({ userId: params.id, action: 'delete_user' }, 'Deleting user')

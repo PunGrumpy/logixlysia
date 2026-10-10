@@ -5,7 +5,7 @@ import react from 'ultracite/oxlint/react'
 
 export default defineConfig({
   extends: [core, react, astro],
-  ignorePatterns: [...(core.ignorePatterns ?? []), '**/.blume'],
+  ignorePatterns: [...(core.ignorePatterns ?? []), '**/.blume', '**/.snippets'],
   overrides: [
     {
       // Scripts in .astro files run in the visitor's browser, where

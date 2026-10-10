@@ -15,13 +15,17 @@ const plugin = logixlysia({
   }
 })
 
+interface ChatWs {
+  send(data: unknown): void
+}
+
 const app = new Elysia().use(plugin).ws('/chat', {
   ...plugin.wrapWs('/chat', {
     open(ws) {
-      ws.send('connected')
+      ;(ws as unknown as ChatWs).send('connected')
     },
     message(ws, message) {
-      ws.send(message)
+      ;(ws as unknown as ChatWs).send(message)
     },
     close(ws) {
       console.log('bye', ws.id)
@@ -29,6 +33,8 @@ const app = new Elysia().use(plugin).ws('/chat', {
   })
 })
 ```
+
+The hooks type the socket as the plugin's `WebSocketLike`, which does not declare `send`, so the example casts it to a local `ChatWs`; a typed default is a planned library improvement.
 
 Each lifecycle event logs with HTTP method `WS`, the route path, duration, and optional `wsId` in context. Your `close` hook receives the WebSocket's close `code` and `reason`, and the "WebSocket closed" line logs them too.
 
@@ -40,7 +46,7 @@ Accumulate context with the WebSocket instance as the key:
 .ws('/chat', {
   ...plugin.wrapWs('/chat', {
     message(ws, payload) {
-      ws.data.store.logger.mergeContext(ws, { lastPayloadType: typeof payload })
+      plugin.store.logger.mergeContext(ws, { lastPayloadType: typeof payload })
     }
   })
 })

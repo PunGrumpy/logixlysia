@@ -61,6 +61,10 @@ src/
 └── otel.ts        # OpenTelemetry integration
 ```
 
+## Code blocks are typechecked
+
+Every ` ```ts ` block in `apps/docs/content` is compiled against `packages/logixlysia/src`, so CI fails when an example drifts from the package. Mark a sketch that is not meant to compile with ` ```ts check=skip ` and a block that shows a compile error on purpose with ` ```ts check=expect-errors `. A block of bare config keys, like `logFilePath: './logs/app.log'`, is checked inside a `config` object, and ` ```ts check=config ` forces that wrapper when the block's first line is not a key. Run `bun run typecheck` in `apps/docs` to check locally.
+
 ## Running Tests
 
 ```bash

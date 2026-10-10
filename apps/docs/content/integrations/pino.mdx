@@ -59,7 +59,7 @@ export const logixlysiaIns = logixlysia({
 export const logger = logixlysiaIns.store.pino
 ```
 
-```ts
+```ts check=skip
 // services/order.service.ts
 import { logger } from '../logger'
 
@@ -78,7 +78,7 @@ export class OrderService {
 }
 ```
 
-```ts
+```ts check=skip
 // index.ts
 import { Elysia } from 'elysia'
 import { logixlysiaIns } from './logger'
@@ -407,7 +407,7 @@ logixlysia({
 
 7. **Export Pino for Standalone Use** - Use in services, jobs, and utilities
 
-   ```ts
+   ```ts check=skip
    // logger.ts
    export const logger = logixlysiaIns.store.pino
 

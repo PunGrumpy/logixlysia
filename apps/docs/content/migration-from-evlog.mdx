@@ -8,6 +8,7 @@ description: Map evlog wide events to Logixlysia request context and access logs
 **evlog**
 
 ```ts
+import { Elysia } from 'elysia'
 import { evlog } from 'evlog/elysia'
 
 new Elysia().use(evlog({ drain: myDrain }))
@@ -16,6 +17,7 @@ new Elysia().use(evlog({ drain: myDrain }))
 **Logixlysia**
 
 ```ts
+import { Elysia } from 'elysia'
 import logixlysia from 'logixlysia'
 
 new Elysia().use(logixlysia({ preset: 'prod' }))
@@ -42,7 +44,7 @@ Without `useAsyncLocalStorage`, use `store.logger` and pass `request` explicitly
 
 evlog:
 
-```ts
+```ts check=skip
 log.emit({ status: 200 })
 ```
 
@@ -90,6 +92,7 @@ evlog **drains** map to Logixlysia **adapters**, which are transports:
 | `evlog/sentry` | `createSentryTransport()` from `logixlysia/sentry` |
 
 ```ts
+import logixlysia from 'logixlysia'
 import { createAxiomTransport } from 'logixlysia/axiom'
 
 logixlysia({
@@ -139,6 +142,7 @@ See [Sampling](/docs/features/sampling).
 `config.enrichers` runs contributors on every request and merges their output into the request context. `logixlysia/enrichers` ships `traceparentEnricher`, `userAgentEnricher`, `geoEnricher`, and `sizeEnricher`.
 
 ```ts
+import logixlysia from 'logixlysia'
 import { geoEnricher, traceparentEnricher } from 'logixlysia/enrichers'
 
 logixlysia({
