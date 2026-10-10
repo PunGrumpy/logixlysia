@@ -1,5 +1,0 @@
----
-'logixlysia': patch
----
-
-`autoRedact` no longer throws, and therefore no longer drops the record, when an error's `name` or `message` is an inherited accessor (a `DOMException`, an app error class with `get name()`); redacted errors keep `message`, `name` and `stack` non-enumerable, as native errors do. A value with a `toJSON` method (Bun's `CookieMap`, app classes) is redacted as what it serializes to; errors keep their class even when they define `toJSON`, so an `HttpError` stays an `HttpError`. The password of a URL, `Bearer` and `Basic` credentials in any string, sensitive query keys inside an absolute URL in a `referer`, `location` or `content-location` header, and a field named `cookies` are now masked. Redaction and log serialization stop at a depth of 64 with `"[Depth]"`, so a deeply nested client payload no longer costs quadratic time or overflows the stack. Rotation sizes, intervals and retention given with units are rejected when they are zero, as the numeric zero already was.
