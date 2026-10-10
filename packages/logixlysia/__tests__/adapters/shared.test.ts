@@ -121,6 +121,27 @@ describe('resolveEndpoint', () => {
     )
   })
 
+  test('does not echo credentials from an unparsable URL', () => {
+    const cases = [
+      { input: 'http://user:hunter2@bad host/ingest', secret: 'hunter2' },
+      // The `/` ends the authority early, so the parser fails on port `abc`.
+      { input: 'https://user:abc/def@host/ingest', secret: 'abc/def' },
+      { input: 'http://user:p@ss@bad host/x', secret: 'p@ss' }
+    ]
+    for (const { input, secret } of cases) {
+      let thrown: Error | undefined
+      try {
+        resolveEndpoint('Axiom', input)
+      } catch (error) {
+        thrown = error as Error
+      }
+      expect(thrown).toBeDefined()
+      expect(thrown?.message).not.toContain(secret)
+      expect(thrown?.message).toContain('<redacted>@')
+      expect(Bun.inspect(thrown)).not.toContain(secret)
+    }
+  })
+
   test('throws for a non-http(s) protocol', () => {
     expect(() => resolveEndpoint('Test', 'ftp://a.example/x')).toThrow(
       'http or https'

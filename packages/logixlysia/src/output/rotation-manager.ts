@@ -13,6 +13,8 @@ import { createKeyedMutex } from './keyed-mutex'
 
 const gzipAsync = promisify(gzip)
 
+const DEFAULT_FILE_MODE = 0o600
+
 // Prevents concurrent compression of the same file (keyed by filePath).
 const compressionLock = createKeyedMutex()
 
@@ -62,7 +64,8 @@ export const rotateFile = async (filePath: string): Promise<string> => {
 
 export const compressFile = async (
   filePath: string,
-  onError?: RotationErrorReporter
+  onError?: RotationErrorReporter,
+  fileMode = DEFAULT_FILE_MODE
 ): Promise<void> => {
   const release = await compressionLock.acquire(filePath)
   try {
@@ -76,7 +79,7 @@ export const compressFile = async (
 
     const content = await fs.readFile(filePath)
     const compressed = await gzipAsync(content)
-    await fs.writeFile(`${filePath}.gz`, compressed)
+    await fs.writeFile(`${filePath}.gz`, compressed, { mode: fileMode })
     await fs.rm(filePath, { force: true })
   } catch (error) {
     reportRotationError(
@@ -169,7 +172,8 @@ const cleanupRotated = async (
 export const performRotation = async (
   filePath: string,
   config: LogRotationConfig,
-  onError?: RotationErrorReporter
+  onError?: RotationErrorReporter,
+  fileMode = DEFAULT_FILE_MODE
 ): Promise<void> => {
   const rotated = await rotateFile(filePath)
   if (!rotated) {
@@ -181,7 +185,7 @@ export const performRotation = async (
     const algo = config.compression ?? 'gzip'
     if (algo === 'gzip') {
       try {
-        await compressFile(rotated, onError)
+        await compressFile(rotated, onError, fileMode)
       } catch {
         // compressFile already reported this error via onError/console.error;
         // swallow the rethrow here so retention cleanup below still runs and
