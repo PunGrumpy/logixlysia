@@ -8,6 +8,7 @@ import {
   postWithRetry,
   resolveEndpoint,
   resolveRetryDelay,
+  snapshotMeta,
   stripTrailingSlashes
 } from '../../src/adapters/shared'
 import type { LogEntry } from '../../src/adapters/shared'
@@ -36,6 +37,64 @@ const entry = (overrides: Partial<LogEntry> = {}): LogEntry => ({
   meta: {},
   timestamp: new Date('2026-01-01T00:00:00.000Z'),
   ...overrides
+})
+
+describe('snapshotMeta', () => {
+  test('copies the values and leaves the original untouched', () => {
+    const cart = { total: 1 }
+    const copy = snapshotMeta({ context: { cart } })
+    cart.total = 2
+    expect(copy).toEqual({ context: { cart: { total: 1 } } })
+    expect(getPath(copy, 'context.cart')).not.toBe(cart)
+  })
+
+  test('writes BigInts as strings and ancestors as [Circular]', () => {
+    const node: Record<string, unknown> = { id: 1n }
+    node.self = node
+    expect(snapshotMeta({ node })).toEqual({
+      node: { id: '1', self: '[Circular]' }
+    })
+  })
+
+  test('replaces only the field whose toJSON throws', () => {
+    const meta = {
+      bad: {
+        toJSON: () => {
+          throw new Error('x')
+        }
+      },
+      ok: 1
+    }
+    expect(snapshotMeta(meta)).toEqual({ bad: '[Unserializable]', ok: 1 })
+  })
+
+  test('replaces only the field whose getter throws', () => {
+    const meta = {
+      a: {
+        get b() {
+          throw new Error('g')
+        }
+      },
+      c: true
+    }
+    expect(snapshotMeta(meta)).toEqual({ a: '[Unserializable]', c: true })
+  })
+
+  test('omits fields JSON cannot carry', () => {
+    const meta = {
+      fn: () => {},
+      kept: 'x',
+      missing: undefined,
+      sym: Symbol('s')
+    }
+    expect(snapshotMeta(meta)).toStrictEqual({ kept: 'x' })
+  })
+
+  test('turns a Date into its ISO string', () => {
+    expect(snapshotMeta({ at: new Date('2026-01-01T00:00:00.000Z') })).toEqual({
+      at: '2026-01-01T00:00:00.000Z'
+    })
+  })
 })
 
 describe('flattenMeta', () => {
@@ -67,6 +126,17 @@ describe('flattenMeta', () => {
 
   test('skips null and undefined values', () => {
     expect(flattenMeta({ a: null, b: undefined, c: 0 })).toEqual({ c: 0 })
+  })
+
+  test('serializes a nested BigInt and a nested cycle instead of [object Object]', () => {
+    expect(flattenMeta({ rows: [{ id: 1n }] })).toEqual({
+      rows: '[{"id":"1"}]'
+    })
+    const node: Record<string, unknown> = {}
+    node.self = node
+    expect(flattenMeta({ deep: { a: { b: [node] } } })['deep.a.b']).toBe(
+      '[{"self":"[Circular]"}]'
+    )
   })
 })
 

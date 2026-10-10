@@ -136,6 +136,32 @@ describe('logixlysia/sentry', () => {
     }
   })
 
+  test('a throwing getter in the meta does not reject the flush', async () => {
+    const restoreEnv = stubEnv(CLEAR_ENV)
+    const stub = stubFetch()
+    try {
+      const transport = createSentryTransport({ dsn: DSN })
+      transport.log('INFO', 'x', {
+        a: {
+          get b() {
+            throw new Error('g')
+          }
+        }
+      })
+      await expect(transport.flush()).resolves.toBeUndefined()
+
+      expect(stub.calls).toHaveLength(1)
+      const { items } = parseEnvelope(stub.calls[0]?.body ?? '')
+      expect(items[0]?.attributes.a).toEqual({
+        type: 'string',
+        value: '[Unserializable]'
+      })
+    } finally {
+      stub.restore()
+      restoreEnv()
+    }
+  })
+
   test.each([{}, { maxEntriesPerRequest: undefined }])(
     'sends at most 100 logs per envelope with the options %p',
     async options => {
