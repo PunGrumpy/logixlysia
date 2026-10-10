@@ -40,7 +40,11 @@ export const parseSize = (value: number | string): number => {
     base = 1024 * 1024 * 1024
   }
 
-  return Math.floor(amount * base)
+  const bytes = Math.floor(amount * base)
+  if (bytes < 1) {
+    throw new Error(`Invalid size format: ${value}`)
+  }
+  return bytes
 }
 
 export const parseInterval = (value: string): number => {
@@ -50,6 +54,9 @@ export const parseInterval = (value: string): number => {
   }
 
   const amount = Number(match[1])
+  if (!(amount > 0)) {
+    throw new Error(`Invalid interval format: ${value}`)
+  }
   const unit = match[2].toLowerCase()
 
   let ms = 60 * 60 * 1000

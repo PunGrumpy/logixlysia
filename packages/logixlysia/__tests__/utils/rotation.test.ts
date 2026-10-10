@@ -59,6 +59,11 @@ describe('parseSize', () => {
     expect(() => parseSize(-1)).toThrow('Invalid size')
     expect(() => parseSize(Number.NaN)).toThrow('Invalid size')
   })
+
+  test('rejects a zero size given with a unit', () => {
+    expect(() => parseSize('0k')).toThrow('Invalid size')
+    expect(() => parseSize('0.0001k')).toThrow('Invalid size')
+  })
 })
 
 describe('parseInterval', () => {
@@ -78,6 +83,10 @@ describe('parseInterval', () => {
     expect(() => parseInterval('1x')).toThrow('Invalid interval format')
     expect(() => parseInterval('')).toThrow('Invalid interval format')
     expect(() => parseInterval('h')).toThrow('Invalid interval format')
+  })
+
+  test('rejects a zero interval', () => {
+    expect(() => parseInterval('0h')).toThrow('Invalid interval format')
   })
 })
 
@@ -106,6 +115,10 @@ describe('parseRetention', () => {
     expect(() => parseRetention(-1)).toThrow(
       'maxFiles must be a positive integer, got -1'
     )
+  })
+
+  test('rejects a zero retention interval', () => {
+    expect(() => parseRetention('0d')).toThrow('Invalid interval format')
   })
 })
 
