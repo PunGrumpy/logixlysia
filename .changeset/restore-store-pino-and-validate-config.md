@@ -1,5 +1,0 @@
----
-'logixlysia': patch
----
-
-`store.pino` is defined again. Since 6.7.0 the lazy pino Proxy was dropped by Elysia's `state()` because its target had no keys, so every handler that read `store.pino` threw. Assignments such as `store.pino.level = 'debug'` now reach pino. The plugin rejects at construction a `logFilter.level` that is not an array of `DEBUG`, `INFO`, `WARNING` or `ERROR`, `useTransportsOnly: true` without a transport, and a `flushTimeoutMs` that is not a finite number of milliseconds at or above 0; each of these used to turn logging off or misreport shutdown silently. `useTransportsOnly: true` with an empty `transports` list was previously accepted as an effectively disabled logger; use `disableInternalLogger` and `disableFileLogging` for that. `geoEnricher` ignores non-string fields in a Netlify `x-nf-geo` header instead of throwing. A `requestId.generator` that throws or returns an invalid id no longer produces an error line on every request; the plugin falls back to a generated UUID and reports the failure through `onError`, or on stderr at most once per interval when no hook is set.
