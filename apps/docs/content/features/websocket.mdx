@@ -36,6 +36,8 @@ const app = new Elysia().use(plugin).ws('/chat', {
 
 The hooks type the socket as the plugin's `WebSocketLike`, which does not declare `send`, so the example casts it to a local `ChatWs`; a typed default is a planned library improvement.
 
+A hook may reply by returning a value, a promise or a generator; `wrapWs` passes whatever Elysia accepts from a hook on to Elysia unchanged, so a wrapped hook replies exactly as an unwrapped one does.
+
 Each lifecycle event logs with HTTP method `WS`, the route path, duration, and optional `wsId` in context. Your `close` hook receives the WebSocket's close `code` and `reason`, and the "WebSocket closed" line logs them too.
 
 ## Request context on WebSockets
