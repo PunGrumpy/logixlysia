@@ -23,7 +23,7 @@ const app = new Elysia()
 
 ### Using the plugin in several modules
 
-Create the plugin once and `.use()` that same instance in every module. If each module calls `logixlysia()` again, routes in the later modules log a 0 ms duration and no request ID, and `app.stop()` flushes only the first instance's transports.
+Create the plugin once and `.use()` that same instance in every module. If each module calls `logixlysia()` again, the access lines of every module go through the first instance's sinks. A custom log made through a later instance's `log` still reaches that instance's transports, without a request ID, and replaces the access line for that request. `app.stop()` flushes only the first instance's transports.
 
 ```ts check=skip
 // logging.ts
@@ -37,6 +37,8 @@ import { logging } from './logging'
 
 export const users = new Elysia().use(logging).get('/users', () => [])
 ```
+
+The request boundary is app-wide: once the plugin is mounted anywhere, every request of the application gets an access line, routes on parent apps included.
 
 ## Request context
 
