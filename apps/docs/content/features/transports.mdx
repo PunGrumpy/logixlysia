@@ -52,6 +52,8 @@ app.use(
 
 `log` is the only required member. Implement `flush` when your transport batches or queues entries — the plugin calls it on [shutdown](/docs/adapters/overview) so the last lines before an exit still arrive. Implement `close` when you hold a socket, timer, or buffer that must be released; it is never called automatically, only through `flushLogixlysia(options, { close: true })`, and it must be idempotent.
 
+`meta` always carries `request.method`, `request.url` and `durationMs`, plus the merged `context` when there is one. An access line adds `status`, and its `message` argument is the empty string. An error line adds `status`, `message` and `error`, a plain object with `message`, `name`, `status`, `code`, `why`, `fix`, `link` and `internal` when the error carried them.
+
 ## External Services
 
 ### Elasticsearch

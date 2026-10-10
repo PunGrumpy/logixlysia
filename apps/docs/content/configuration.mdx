@@ -75,6 +75,8 @@ ip: true
 1. `x-forwarded-for` — uses the first (leftmost) IP in the comma-separated list (the original client when behind proxies)
 2. `x-real-ip` — fallback when `x-forwarded-for` is not present
 
+Both headers are set by whoever sends the request unless a proxy in front of the app overwrites them, so treat the value as a hint for dashboards, not as an identity.
+
 These headers are typically set by reverse proxies (nginx, Caddy, Cloudflare, etc.) and load balancers. When testing locally (localhost or LAN) without a proxy, these headers are usually absent, so the `{ip}` placeholder will be empty. To test IP logging locally, you can pass a header manually, e.g. `curl -H 'x-real-ip: 1.2.3.4' http://localhost:3000/`.
 
 ### `autoRedact`
@@ -191,14 +193,18 @@ Available placeholders:
 - `{duration}` - Request duration (formatted, e.g. `12ms`, `1.5s`)
 - `{method}` - HTTP method
 - `{pathname}` - Request path
+- `{path}` - Alias of `{pathname}`
+- `{query}` - Raw query string (e.g. `?id=123`)
 - `{status}` - Response status code
 - `{statusText}` - HTTP status text from Node’s `http.STATUS_CODES` (e.g. `Not Found` for 404)
 - `{message}` - Custom message
 - `{icon}` - Logixlysia fox (`🦊`); with colors enabled, a level-colored background chip around the emoji
 - `{speed}` - When duration is at or above `verySlowThreshold`, appends `⚡ slow` (yellow when colors are on)
 - `{service}` - Service label from the `service` config option, shown as `[name] ` (dim when colors are on); empty if unset
+- `{context}` - Request context as JSON when `showContextTree` is off; empty while the context tree shows it
 - `{ip}` - Client IP (from `x-forwarded-for` or `x-real-ip`; see `ip` option)
-- `{epoch}` - Unix timestamp
+- `{epoch}` - Unix time in milliseconds
+- `{requestId}` - Request ID when `requestId` is on; empty otherwise
 
 ### `service`
 
@@ -348,6 +354,39 @@ enrichers: [
 ]
 ```
 
+### `requestId`
+
+Reads the request id from the configured header or generates one, and echoes it on the response; see [request IDs](/docs/features/request-id).
+
+- **Type:** `boolean | RequestIdConfig`
+- **Default:** `undefined`
+
+```ts
+requestId: true
+```
+
+### `useAsyncLocalStorage`
+
+Makes `useLogger()` return the current request's logger from anywhere in the call stack; without it `useLogger()` is a no-op. See [request context](/docs/features/request-context).
+
+- **Type:** `boolean`
+- **Default:** `false`
+
+```ts
+useAsyncLocalStorage: true
+```
+
+### `disableWebSocketLogging`
+
+Turns off the open, message and close lines that `wrapWs` writes; see [WebSocket logging](/docs/features/websocket).
+
+- **Type:** `boolean`
+- **Default:** `false`
+
+```ts
+disableWebSocketLogging: true
+```
+
 ## Filtering Options
 
 ### `logFilter`
@@ -397,6 +436,28 @@ Path to the log file.
 
 ```ts
 logFilePath: './logs/app.log'
+```
+
+### `logDirMode`
+
+Mode for the directories the file sink creates.
+
+- **Type:** `number`
+- **Default:** `0o700`
+
+```ts
+logDirMode: 0o750
+```
+
+### `logFileMode`
+
+Mode for the log files the sink creates. Compressed rotation archives use it too.
+
+- **Type:** `number`
+- **Default:** `0o600`
+
+```ts
+logFileMode: 0o640
 ```
 
 ### `logRotation`
@@ -496,9 +557,11 @@ pino: {
 
 ### Common Pino Options
 
+Every `pino.*` option configures the pino instance exposed as `store.pino`; none of them changes what the plugin logs for a request.
+
 #### `pino.level`
 
-Minimum log level.
+Minimum level for `store.pino` only. The plugin's own lines are filtered by `logFilter`.
 
 - **Type:** `'fatal' | 'error' | 'warn' | 'info' | 'debug' | 'trace'`
 - **Default:** `'info'`
@@ -551,7 +614,7 @@ See [pino-pretty documentation](https://github.com/pinojs/pino-pretty#options) f
 
 #### `pino.redact`
 
-Redact sensitive fields from logs.
+Redact paths for `store.pino` only. The plugin's own console, file and transport output is masked by `autoRedact` and `redactKeys`; setting `pino.redact` also replaces the automatic paths `autoRedact` would give `store.pino`.
 
 - **Type:** `string[] | object`
 - **Default:** `undefined`
@@ -575,7 +638,7 @@ pino: {
 
 #### `pino.base`
 
-Base fields added to all logs.
+Base fields added to every `store.pino` record. They do not appear on the plugin's own lines.
 
 - **Type:** `object`
 - **Default:** `undefined`

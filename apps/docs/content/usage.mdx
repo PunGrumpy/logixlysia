@@ -42,7 +42,7 @@ The request boundary is app-wide: once the plugin is mounted anywhere, every req
 
 ## Request context
 
-Accumulate fields during a request; they are merged into the automatic access log:
+Accumulate fields during a request; they are merged into the automatic access log, or into the custom log line that replaces the access line:
 
 ```ts
 .get('/users/:id', ({ request, store, params }) => {
@@ -97,7 +97,7 @@ Available placeholders:
 
 | Placeholder | Description | Example |
 | --- | --- | --- |
-| `{now}` | Current timestamp | `2025-12-21 10:00:00` |
+| `{now}` | Current timestamp | `2025-12-21T10:00:00.000Z` |
 | `{level}` | Log level (`DEBUG`, `INFO`, `WARNING`, `ERROR`) | `INFO` |
 | `{duration}` | Request duration (formatted) | `12ms`, `1.5s` |
 | `{method}` | HTTP method | `GET` |
@@ -111,7 +111,8 @@ Available placeholders:
 | `{service}` | Service prefix from `config.service` | `[my-api] ` |
 | `{context}` | Context JSON on main line when tree is off / empty | `{"id":1}` |
 | `{ip}` | Client IP address | `127.0.0.1` |
-| `{epoch}` | Unix timestamp | `1734729600` |
+| `{epoch}` | Unix time in milliseconds | `1766311200000` |
+| `{requestId}` | Request ID when `requestId` is on | `9f1c…` |
 
 ### Log Filtering
 
@@ -131,7 +132,7 @@ Logixlysia keeps only the listed levels and drops the rest.
 
 ## Pino Integration
 
-Logixlysia is powered by Pino. Access the Pino instance directly:
+Logixlysia writes its own lines and exposes a pino instance as `store.pino` for your application's structured logging:
 
 ```ts
 app.get('/users/:id', ({ store, params }) => {
@@ -239,10 +240,8 @@ const app = new Elysia()
         logFilter: {
           level: ['ERROR', 'WARNING']
         },
-        pino: {
-          level: 'info',
-          redact: ['password', 'token', 'apiKey']
-        }
+        autoRedact: true,
+        redactKeys: ['customerSsn']
       }
     })
   )

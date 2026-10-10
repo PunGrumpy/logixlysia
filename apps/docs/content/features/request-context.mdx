@@ -22,6 +22,8 @@ const app = new Elysia()
 
 The final `INFO` access log includes a `context` object with `userId` and `cartTotal` (and renders as a context tree when `showContextTree` is enabled).
 
+A custom log that passes `logFilter` (`log.info`, `store.logger.info(request, …)`, `useLogger().info`) replaces that request's access line, so the request's status, its `durationMs` and the response-phase enricher fields are not logged on a separate line.
+
 ## Precedence
 
 When you call `logger.info(request, message, { ...explicit })`, keys in the explicit context **override** accumulated values. Non-colliding keys from both sources are kept.
@@ -59,6 +61,8 @@ app.get('/user/:id', ({ log, params }) => {
   return { success: true }
 })
 ```
+
+This handler logs one line, the custom one; it replaces the access line, so the console shows `200` for it even when the handler returns a 404.
 
 ### 2. Global Hook (`useLogger()`)
 
@@ -117,3 +121,5 @@ const chargeCard = async (amount: number) => {
 ```
 
 This is type-only: there is no runtime cost, and leaving the parameter off keeps every key allowed, exactly as before.
+
+`useLogger()` returns a request-scoped logger only with `useAsyncLocalStorage: true`; without it, it returns a logger that writes nothing.

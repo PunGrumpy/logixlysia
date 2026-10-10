@@ -10,7 +10,7 @@ Thank you for your interest in contributing to Logixlysia! This guide will help 
 1. Fork the repository
 2. Clone your fork:
    ```bash
-   git clone https://github.com/PunGrumpy/logixlysia.git
+   git clone https://github.com/<your-user>/logixlysia.git
    cd logixlysia
    ```
 3. Install dependencies:
@@ -37,6 +37,7 @@ apps/
 packages/
 ├── logixlysia/    # The main Logixlysia package
 ├── bench/         # Benchmarks
+├── video/         # Promo video (Remotion)
 └── typescript-config/
 ```
 
@@ -45,12 +46,14 @@ Inside `packages/logixlysia/src/`:
 ```
 src/
 ├── config/        # Configuration resolution and presets
+├── adapters/      # Shared HTTP batch queue and OTLP core
 ├── context/       # Request context handling
 ├── extensions/    # Additional features and extensions
 ├── helpers/       # Utility functions
 ├── logger/        # Core logging functionality
 ├── middleware/    # Elysia middleware/plugin hooks
 ├── output/        # Output handlers and formatters (console, file, rotation)
+├── sampling/      # Head and tail sampling
 ├── types/         # TypeScript types
 ├── utils/         # Shared utilities
 ├── websocket/     # WebSocket support
@@ -58,7 +61,8 @@ src/
 ├── errors.ts      # Structured error handling
 ├── index.ts       # Main entry point
 ├── interfaces.ts  # TypeScript interfaces
-└── otel.ts        # OpenTelemetry integration
+├── otel.ts        # OpenTelemetry integration
+└── axiom.ts …     # One entry file per adapter (axiom, better-stack, clickhouse, datadog, hyperdx, loki, otlp, posthog, sentry)
 ```
 
 ## Code blocks are typechecked

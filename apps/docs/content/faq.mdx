@@ -7,7 +7,7 @@ description: Frequently asked questions about Logixlysia
 
 ### What is Logixlysia?
 
-Logixlysia is a high-performance logging plugin for [Elysia.js](https://elysiajs.com/) that provides structured logging powered by [Pino](https://github.com/pinojs/pino). It offers flexible configuration, file logging, and seamless integration with Elysia applications.
+Logixlysia is a high-performance logging plugin for [Elysia.js](https://elysiajs.com/) that writes its own request logs and exposes a [pino](https://github.com/pinojs/pino) instance as `store.pino` for your application's structured logging. It offers flexible configuration, file logging, and seamless integration with Elysia applications.
 
 ### Why use Logixlysia instead of plain Pino?
 
@@ -22,7 +22,7 @@ Logixlysia provides:
 
 ### Is Logixlysia production-ready?
 
-Yes, Logixlysia is built for production environments. It's powered by Pino, which is battle-tested in production, and includes features like log rotation, filtering, and transport support.
+Yes, Logixlysia is built for production environments. It includes log rotation, filtering, transport support and, for your own structured logging, a pino instance exposed as `store.pino`.
 
 ## Installation
 
@@ -41,7 +41,7 @@ npm install logixlysia
 ### What are the requirements?
 
 - Node.js 22+ or Bun
-- Elysia.js
+- Elysia 1.4.30 or later (the `^1.4.30` peer range)
 
 ### How do I install a preview build for an unreleased fix?
 
@@ -258,7 +258,7 @@ logixlysia({
 
 ### What is the performance impact?
 
-Logixlysia is built on Pino, one of the fastest Node.js loggers. The performance impact is minimal, especially when using async transports.
+The plugin writes its own lines; on the request path that is one formatted line per request and, with `autoRedact`, one walk of the record. The impact is small, and transports send in the background.
 
 ### Should I use file logging in production?
 
@@ -330,17 +330,7 @@ Ensure you're using Logixlysia v6.0.2 or later. Earlier versions had a bug where
 ERROR POST /api/users Validation failed
 ```
 
-**After (v6.0.2+ with customLogFormat):**
-
-```json
-{
-  "level": "ERROR",
-  "message": "Validation failed",
-  "method": "POST",
-  "pathname": "/api/users",
-  "status": "400"
-}
-```
+**After (v6.0.2+):** `customLogFormat` applies to error lines too. For JSON output use a transport, as shown in [examples](/docs/examples).
 
 ## Migration
 
