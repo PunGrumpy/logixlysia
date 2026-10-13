@@ -12,9 +12,9 @@ export interface WsHandlerHooks<
   TMessage = unknown,
   TWs extends WebSocketLike = WebSocketLike
 > {
-  close?: (ws: TWs, code?: number, reason?: string) => void
-  message?: (ws: TWs, message: TMessage) => void
-  open?: (ws: TWs) => void
+  close?: (ws: TWs, code?: number, reason?: string) => unknown
+  message?: (ws: TWs, message: TMessage) => unknown
+  open?: (ws: TWs) => unknown
 }
 
 // Synthetic requests are only read (method/url) by the log pipeline, never mutated, so caching
@@ -38,6 +38,36 @@ const payloadTypeOf = (message: unknown): string => {
     return 'string'
   }
   return typeof message
+}
+
+/** Runs `done` once `pending` settles, then hands the value or the failure on untouched. */
+const settleHook = async (
+  pending: Promise<unknown>,
+  done: () => void
+): Promise<unknown> => {
+  let value: unknown
+  try {
+    value = await pending
+  } catch (error) {
+    done()
+    throw error
+  }
+  done()
+  return value
+}
+
+/**
+ * Hands the hook's result back to Elysia untouched, so a returned value is
+ * sent, a generator is iterated and a rejection reaches Elysia's catch. The
+ * lifecycle line is written once the result has settled. The `instanceof
+ * Promise` test is the one Elysia itself uses (`ws/index.mjs:116`).
+ */
+const afterHook = (result: unknown, done: () => void): unknown => {
+  if (result instanceof Promise) {
+    return settleHook(result, done)
+  }
+  done()
+  return result
 }
 
 export const createWsHandlerWrapper = (
@@ -87,9 +117,7 @@ export const createWsHandlerWrapper = (
     return {
       ...hooks,
       close(ws, code, reason) {
-        try {
-          hooks.close?.(ws, code, reason)
-        } finally {
+        const done = (): void => {
           if (options.config?.disableWebSocketLogging !== true) {
             const extra: Record<string, unknown> = {}
             if (code !== undefined) {
@@ -109,27 +137,47 @@ export const createWsHandlerWrapper = (
           contextStore.clearContext(ws)
           wsTimings.delete(keyOf(ws))
         }
+        let result: unknown
+        try {
+          result = hooks.close?.(ws, code, reason)
+        } catch (error) {
+          done()
+          throw error
+        }
+        return afterHook(result, done)
       },
       message(ws, message) {
-        try {
-          hooks.message?.(ws, message)
-        } finally {
+        const done = (): void => {
           if (options.config?.disableWebSocketLogging !== true) {
             logWs('INFO', ws, path, 'WebSocket message', {
               payloadType: payloadTypeOf(message)
             })
           }
         }
+        let result: unknown
+        try {
+          result = hooks.message?.(ws, message)
+        } catch (error) {
+          done()
+          throw error
+        }
+        return afterHook(result, done)
       },
       open(ws) {
         wsTimings.set(keyOf(ws), process.hrtime.bigint())
-        try {
-          hooks.open?.(ws)
-        } finally {
+        const done = (): void => {
           if (options.config?.disableWebSocketLogging !== true) {
             logWs('INFO', ws, path, 'WebSocket opened')
           }
         }
+        let result: unknown
+        try {
+          result = hooks.open?.(ws)
+        } catch (error) {
+          done()
+          throw error
+        }
+        return afterHook(result, done)
       }
     } as THooks
   }

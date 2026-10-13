@@ -1,5 +1,5 @@
 import type { RequestContextStore } from '../context/request-context'
-import { isStatusResponse } from '../helpers/status'
+import { isStatusResponse, levelForStatus } from '../helpers/status'
 import type { LogLevel, Options, RequestInfo, StoreData } from '../interfaces'
 import type { SamplingRuntime } from '../sampling'
 import { normalizeLoggedError } from '../utils/error'
@@ -35,8 +35,12 @@ export const handleHttpError = (
 ): void => {
   const { config } = options
 
-  const status = errorStatus(error)
-  const level: LogLevel = status >= 400 && status < 500 ? 'WARNING' : 'ERROR'
+  const status = store.status ?? errorStatus(error)
+  // A thrown status() is logged at its own code's level. Any other thrown
+  // value is an error, even when the client already got a 2xx or 3xx: that
+  // is a body that failed after the headers went out.
+  const level: LogLevel =
+    isStatusResponse(error) || status >= 400 ? levelForStatus(status) : 'ERROR'
 
   // Mirrors emit()'s own gate check, but performed *before* normalizing the
   // error so a filtered-out/disabled logger never pays for that work.

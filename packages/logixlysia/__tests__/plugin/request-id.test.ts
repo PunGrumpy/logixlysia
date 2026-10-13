@@ -1,7 +1,7 @@
 import { describe, expect, mock, test } from 'bun:test'
 import { Elysia } from 'elysia'
 import { logixlysia } from '../../src'
-import type { Options } from '../../src/interfaces'
+import type { Options, SinkErrorContext } from '../../src/interfaces'
 
 const UUID_V4_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu
@@ -164,6 +164,83 @@ describe('request ID plugin integration', () => {
 
     expect(res1.headers.get('X-Request-Id')).toBe('custom-1')
     expect(res2.headers.get('X-Request-Id')).toBe('custom-2')
+  })
+
+  test('falls back to a generated id when the generator throws', async () => {
+    const transport = mock<
+      (lvl: unknown, msg: unknown, meta?: unknown) => void
+    >(() => {
+      /* noop */
+    })
+    const onError = mock<(context: SinkErrorContext) => void>(() => {
+      /* noop */
+    })
+    const options: Options = {
+      config: {
+        disableFileLogging: true,
+        disableInternalLogger: true,
+        onError,
+        requestId: {
+          generator: () => {
+            throw new Error('no span')
+          }
+        },
+        transports: [{ log: transport }]
+      }
+    }
+
+    const app = new Elysia().use(logixlysia(options)).get('/test', () => 'ok')
+
+    const response = await app.handle(new Request('http://localhost/test'))
+
+    expect(response.status).toBe(200)
+    expect(transport).toHaveBeenCalledTimes(1)
+    expect(transport.mock.calls[0]?.[0]).toBe('INFO')
+    const meta = transport.mock.calls[0]?.[2] as
+      | { context?: { requestId?: string }; status?: number }
+      | undefined
+    expect(meta?.status).toBe(200)
+    expect(meta?.context?.requestId).toMatch(UUID_V4_REGEX)
+    expect(onError).toHaveBeenCalledTimes(1)
+    const reported = onError.mock.calls[0]?.[0]
+    expect(reported?.sink).toBe('enricher')
+    expect((reported?.error as Error | undefined)?.message).toBe('no span')
+  })
+
+  test('replaces an invalid generated id', async () => {
+    const transport = mock<
+      (lvl: unknown, msg: unknown, meta?: unknown) => void
+    >(() => {
+      /* noop */
+    })
+    const onError = mock<(context: SinkErrorContext) => void>(() => {
+      /* noop */
+    })
+    const options: Options = {
+      config: {
+        disableFileLogging: true,
+        disableInternalLogger: true,
+        onError,
+        requestId: { generator: () => 'bad id with spaces' },
+        transports: [{ log: transport }]
+      }
+    }
+
+    const app = new Elysia().use(logixlysia(options)).get('/test', () => 'ok')
+
+    const response = await app.handle(new Request('http://localhost/test'))
+
+    const meta = transport.mock.calls[0]?.[2] as
+      | { context?: { requestId?: string } }
+      | undefined
+    expect(meta?.context?.requestId).toMatch(UUID_V4_REGEX)
+    expect(response.headers.get('X-Request-Id')).toMatch(UUID_V4_REGEX)
+    expect(onError).toHaveBeenCalledTimes(1)
+    const reported = onError.mock.calls[0]?.[0]
+    expect(reported?.sink).toBe('enricher')
+    expect((reported?.error as Error | undefined)?.message).toBe(
+      'generated request id is not valid: bad id with spaces'
+    )
   })
 
   test('{requestId} token works in customLogFormat', async () => {

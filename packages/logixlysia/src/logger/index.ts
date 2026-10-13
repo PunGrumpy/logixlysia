@@ -90,17 +90,26 @@ const createLazyPino = (
     return realPino
   }
 
-  const lazyPino = new Proxy({} as Pino, {
+  // Elysia's `state()` ignores an object with no own enumerable keys, so the
+  // target carries one; the traps below forward everything to the real pino
+  // once it exists and never construct it just to enumerate.
+  const target = { level: undefined } as unknown as Pino
+  const lazyPino = new Proxy(target, {
     get(_target, prop) {
-      const target = getPino()
-      const value = (target as unknown as Record<string | symbol, unknown>)[
-        prop
-      ]
+      const real = getPino()
+      const value = (real as unknown as Record<string | symbol, unknown>)[prop]
       return typeof value === 'function'
-        ? (value as (...args: unknown[]) => unknown).bind(target)
+        ? (value as (...args: unknown[]) => unknown).bind(real)
         : value
     },
-    has: (_target, prop) => prop in (getPino() as object)
+    getOwnPropertyDescriptor: (base, prop) =>
+      Object.getOwnPropertyDescriptor(realPino ?? base, prop),
+    has: (_target, prop) => prop in (getPino() as object),
+    ownKeys: base => Reflect.ownKeys(realPino ?? base),
+    set(_target, prop, value) {
+      ;(getPino() as unknown as Record<string | symbol, unknown>)[prop] = value
+      return true
+    }
   })
 
   // Explicit config.pino means the user opted in to pino directly: construct eagerly so

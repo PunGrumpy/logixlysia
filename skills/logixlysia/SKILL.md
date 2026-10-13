@@ -55,6 +55,8 @@ app.get('/order/checkout', ({ log }) => {
 })
 ```
 
+A custom log that passes `logFilter` (`log.info`, `store.logger.info(request, …)`, `useLogger().info`) replaces that request's access line, so the request's status, its `durationMs` and the response-phase enricher fields are not logged on a separate line.
+
 ---
 
 ## 3. Configuration Options
@@ -115,7 +117,7 @@ export const fetchFromDatabase = async (userId: string) => {
 
 ## 5. WebSocket Integration
 
-`wrapWs` lives on the plugin instance and takes the route path first, then the hooks: `plugin.wrapWs(path, hooks)`. It logs open, message, and close itself, so hooks are optional: add them only to layer in your own behavior. Spread the result into `.ws()`'s second argument. Inside a hook, the request-scoped logger is `ws.data.store.logger`, and it takes the WebSocket instance (or a key) as the first argument to `mergeContext`, matching the HTTP `store.logger` API.
+`wrapWs` lives on the plugin instance and takes the route path first, then the hooks: `plugin.wrapWs(path, hooks)`. It logs open, message, and close itself, so hooks are optional: add them only to layer in your own behavior. Spread the result into `.ws()`'s second argument. Inside a hook, `ws.data.store.logger` is the plugin's `Logger`, and `mergeContext` takes the WebSocket instance (or a key) as its first argument, matching the HTTP `store.logger` API.
 
 ```typescript
 import { Elysia } from 'elysia'
@@ -156,7 +158,7 @@ When writing or modifying code relating to Logixlysia:
 
 ## 7. Destinations
 
-Each built-in destination is a factory imported from its own subpath, e.g. `logixlysia/axiom`. Pass the result to `config.transports`. Set `useTransportsOnly: true` to skip console output and ship only to transports. `config.onError` receives sink failures (`transport`, `file`, `rotation`, `enricher`, `shutdown`, `format`) instead of the rate-limited stderr fallback.
+Each built-in destination is a factory imported from its own subpath, e.g. `logixlysia/axiom`. Pass the result to `config.transports`. Set `useTransportsOnly: true` to skip console and file output and ship only to transports. `config.onError` receives sink failures (`transport`, `file`, `rotation`, `enricher`, `shutdown`, `format`) instead of the rate-limited stderr fallback.
 
 ```typescript
 import { logixlysia } from 'logixlysia'
@@ -283,6 +285,8 @@ import { useLogger } from 'logixlysia'
 const log = useLogger<CheckoutFields>()
 ```
 
+`useLogger()` returns a request-scoped logger only with `useAsyncLocalStorage: true`; without it, it returns a logger that writes nothing.
+
 ---
 
 ## 12. Neural redaction
@@ -320,7 +324,7 @@ const app = new Elysia().use(logixlysia()).onRequest(({ request, store }) => {
 })
 ```
 
-`logixlysia/ai` merges LLM usage under `ai` in the request context, so it appears on the access log:
+`logixlysia/ai` merges LLM usage under `ai` in the request context, so it appears on the access log, or on the custom log line that replaces the access line:
 
 ```typescript
 import { mergeAIMetrics } from 'logixlysia/ai'

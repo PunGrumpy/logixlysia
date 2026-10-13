@@ -187,4 +187,69 @@ describe('resolveOptions', () => {
       'logixlysia: invalid formatting config'
     )
   })
+
+  test('throws on a logFilter level that is not a known level', () => {
+    expect(() =>
+      resolveOptions({ config: { logFilter: { level: ['WARN' as never] } } })
+    ).toThrow('logixlysia: invalid logFilter config')
+  })
+
+  test('throws when logFilter.level is not an array', () => {
+    expect(() =>
+      resolveOptions({ config: { logFilter: { level: 'WARNING' as never } } })
+    ).toThrow('logixlysia: invalid logFilter config')
+  })
+
+  test('accepts the four log levels in logFilter', () => {
+    const resolved = resolveOptions({
+      config: { logFilter: { level: ['DEBUG', 'INFO', 'WARNING', 'ERROR'] } }
+    })
+
+    expect(resolved.config?.logFilter?.level).toEqual([
+      'DEBUG',
+      'INFO',
+      'WARNING',
+      'ERROR'
+    ])
+  })
+
+  test('throws on useTransportsOnly without a transport', () => {
+    expect(() =>
+      resolveOptions({ config: { useTransportsOnly: true } })
+    ).toThrow('useTransportsOnly')
+    expect(() =>
+      resolveOptions({ config: { transports: [], useTransportsOnly: true } })
+    ).toThrow('useTransportsOnly')
+  })
+
+  test('accepts useTransportsOnly with a transport', () => {
+    const transports = [{ log: () => {} }]
+    const resolved = resolveOptions({
+      config: { transports, useTransportsOnly: true }
+    })
+
+    expect(resolved.config?.transports).toBe(transports)
+    expect(resolved.config?.useTransportsOnly).toBe(true)
+  })
+
+  test('throws on a non-finite or negative flushTimeoutMs', () => {
+    expect(() =>
+      resolveOptions({ config: { flushTimeoutMs: Number.POSITIVE_INFINITY } })
+    ).toThrow('flushTimeoutMs')
+    expect(() =>
+      resolveOptions({ config: { flushTimeoutMs: Number.NaN } })
+    ).toThrow('flushTimeoutMs')
+    expect(() => resolveOptions({ config: { flushTimeoutMs: -1 } })).toThrow(
+      'flushTimeoutMs'
+    )
+  })
+
+  test('accepts flushTimeoutMs of 0 and a positive number', () => {
+    expect(
+      resolveOptions({ config: { flushTimeoutMs: 0 } }).config?.flushTimeoutMs
+    ).toBe(0)
+    expect(
+      resolveOptions({ config: { flushTimeoutMs: 250 } }).config?.flushTimeoutMs
+    ).toBe(250)
+  })
 })

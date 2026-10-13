@@ -47,6 +47,56 @@ describe('redactString', () => {
       )
     ).toBe('Token: [REDACTED]')
   })
+
+  test('masks the password of a URL in free text', () => {
+    expect(redactString('dsn postgres://app:hunter2@db:5432/main')).toBe(
+      'dsn postgres://app:[REDACTED]@db:5432/main'
+    )
+  })
+
+  test('masks Bearer and Basic credentials', () => {
+    expect(redactString('got Bearer abcdefghijklmnop.qrs')).toBe(
+      'got Bearer [REDACTED]'
+    )
+    expect(redactString('Authorization: basic dXNlcjpwYXNz')).toBe(
+      'Authorization: basic [REDACTED]'
+    )
+  })
+
+  test('leaves prose after Bearer and Basic alone', () => {
+    const prose = [
+      'the bearer of this ring',
+      'Basic authentication failed for user',
+      'Bearer authentication required',
+      'Basic subscription renewed'
+    ]
+    for (const text of prose) {
+      expect(redactString(text)).toBe(text)
+    }
+  })
+
+  test('leaves a long word after Bearer alone without hanging', () => {
+    const input = `Bearer ${'a'.repeat(65_536)}`
+    const start = performance.now()
+    const result = redactString(input)
+    expect(performance.now() - start).toBeLessThan(500)
+    expect(result).toBe(input)
+  })
+
+  test('masks a long Bearer token without hanging', () => {
+    const start = performance.now()
+    const result = redactString(`Bearer ${'a'.repeat(65_536)}1`)
+    expect(performance.now() - start).toBeLessThan(500)
+    expect(result).toBe('Bearer [REDACTED]')
+  })
+
+  test('masks a URL password after a long word without hanging', () => {
+    const word = 'a'.repeat(65_536)
+    const start = performance.now()
+    const result = redactString(`${word} postgres://app:hunter2@db/main`)
+    expect(performance.now() - start).toBeLessThan(500)
+    expect(result).toBe(`${word} postgres://app:[REDACTED]@db/main`)
+  })
 })
 
 const createHeaders = (): Headers =>
@@ -198,6 +248,83 @@ describe('redact', () => {
     expect(result.b).not.toBe(original.b)
   })
 
+  test('redacts an error whose name and message are inherited accessors', () => {
+    const out = redact(
+      new DOMException('timed out', 'TimeoutError')
+    ) as DOMException
+    expect(out).toBeInstanceOf(DOMException)
+    expect(out.name).toBe('TimeoutError')
+    expect(out.message).toBe('timed out')
+    expect(out.code).toBe(23)
+  })
+
+  test('redacts an error with a getter-only name', () => {
+    const err = new Error('x@y.com')
+    Object.setPrototypeOf(
+      err,
+      Object.create(Error.prototype, {
+        name: { configurable: true, get: () => 'Named' }
+      })
+    )
+    const out = redact(err)
+    expect(out.name).toBe('Named')
+    expect(out.message).toBe('[REDACTED]')
+  })
+
+  test('keeps message, name and stack non-enumerable', () => {
+    const out = redact(new Error('x'))
+    expect(Object.keys(out)).toEqual([])
+    expect(JSON.stringify(out)).toBe('{}')
+  })
+
+  test('walks the output of toJSON', () => {
+    const vault = {
+      held: 'k-1',
+      toJSON() {
+        return { apiKey: this.held }
+      }
+    }
+    const out: unknown = redact({ vault })
+    expect(out).toEqual({ vault: { apiKey: '[REDACTED]' } })
+  })
+
+  test('walks a CookieMap through toJSON', () => {
+    const out: unknown = redact({
+      jar: new Bun.CookieMap('token=abc; theme=dark')
+    })
+    expect(out).toEqual({ jar: { theme: 'dark', token: '[REDACTED]' } })
+  })
+
+  test('replaces a throwing toJSON with [Unserializable]', () => {
+    const bad = {
+      toJSON: () => {
+        throw new Error('x')
+      }
+    }
+    const out: unknown = redact({ bad })
+    expect(out).toEqual({ bad: '[Unserializable]' })
+  })
+
+  test('passes byte buffers through by reference', () => {
+    const bytes = Buffer.from('abc')
+    expect(redact({ bytes }).bytes).toBe(bytes)
+  })
+
+  test('masks a cookies field by name', () => {
+    expect(redact({ cookies: 'a=b' })).toEqual({ cookies: '[REDACTED]' })
+  })
+
+  test('bounds the walk depth', () => {
+    let deep: unknown = 'leaf'
+    for (let i = 0; i < 20_000; i += 1) {
+      deep = [deep]
+    }
+    const start = performance.now()
+    const out = redact({ deep })
+    expect(performance.now() - start).toBeLessThan(500)
+    expect(JSON.stringify(out)).toContain('[Depth]')
+  })
+
   describe('built-in non-plain objects', () => {
     test('redacts Headers values and returns a new Headers', () => {
       const out = redact({ headers: createHeaders() })
@@ -258,6 +385,12 @@ describe('redact', () => {
       const m = new Map<string, unknown>()
       m.set('self', m)
       expect(redact({ m }).m.get('self')).toBe('[Circular]')
+    })
+
+    test('masks a URL password whatever its shape', () => {
+      const { href } = redact(new URL('https://user:hunter2@db.internal/x'))
+      expect(href).not.toContain('hunter2')
+      expect(href).toContain('redacted')
     })
   })
 })
@@ -438,6 +571,15 @@ describe('redactRequest', () => {
     expect(out.url).toContain('/users/')
     expect(out.url).toContain('/orders')
     expect(() => new Request(out.url)).not.toThrow()
+  })
+
+  test('masks sensitive query keys inside a referer header', () => {
+    const req = new Request('http://h/', {
+      headers: { referer: 'https://app.example/cb?token=abc&x=1' }
+    })
+    expect(redactRequest(req).headers.get('referer')).toBe(
+      'https://app.example/cb?token=redacted&x=1'
+    )
   })
 })
 

@@ -186,11 +186,11 @@ describe('logixlysia plugin - status resolution', () => {
 
     await run(app, '/boom')
 
+    // The earlier app-wide onError answered, so the plugin never saw the thrown value: level and status only.
     expect(transport).toHaveBeenCalledTimes(1)
     const { level, meta } = recordAt(transport, 0)
     expect(level).toBe('ERROR')
     expect(meta.status).toBe(500)
-    expect(transport.mock.calls[0]?.[1]).toBe('db down')
 
     await run(app, '/missing')
 

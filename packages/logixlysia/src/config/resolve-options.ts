@@ -56,6 +56,14 @@ const invalidFormatting = (detail: string): never => {
   throw new Error(`logixlysia: invalid formatting config — ${detail}`)
 }
 
+const invalidLogFilter = (detail: string): never => {
+  throw new Error(`logixlysia: invalid logFilter config — ${detail}`)
+}
+
+const invalidOutput = (detail: string): never => {
+  throw new Error(`logixlysia: invalid output config — ${detail}`)
+}
+
 const validateSampling = (config: Options['config']): void => {
   const sampling = config?.sampling
   if (!sampling) {
@@ -124,6 +132,40 @@ const validateFormatting = (config: Options['config']): void => {
   ) {
     invalidFormatting(
       `slowThreshold (${slowThreshold}) must not exceed verySlowThreshold (${verySlowThreshold})`
+    )
+  }
+}
+
+const validateLogFilter = (config: Options['config']): void => {
+  const level = config?.logFilter?.level
+  if (level === undefined) {
+    return
+  }
+
+  const isKnownLevelList =
+    Array.isArray(level) &&
+    level.every(entry => VALID_SAMPLING_LEVELS.includes(entry))
+  if (!isKnownLevelList) {
+    invalidLogFilter(
+      `level must be an array of DEBUG, INFO, WARNING or ERROR, got ${JSON.stringify(level)}`
+    )
+  }
+}
+
+const validateOutput = (config: Options['config']): void => {
+  if (
+    config?.useTransportsOnly === true &&
+    (config.transports?.length ?? 0) === 0
+  ) {
+    invalidOutput(
+      'useTransportsOnly is set but transports is empty; add a transport or remove useTransportsOnly'
+    )
+  }
+
+  const flushTimeoutMs = config?.flushTimeoutMs
+  if (flushTimeoutMs !== undefined && !isNonNegativeNumber(flushTimeoutMs)) {
+    invalidOutput(
+      `flushTimeoutMs must be a finite number of milliseconds at or above 0, got ${flushTimeoutMs}`
     )
   }
 }
@@ -229,5 +271,7 @@ export const resolveOptions = (options: Options = {}): Options => {
   validateLogRotation(resolved.config)
   validateSampling(resolved.config)
   validateFormatting(resolved.config)
+  validateLogFilter(resolved.config)
+  validateOutput(resolved.config)
   return resolved
 }

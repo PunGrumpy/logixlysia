@@ -10,6 +10,9 @@ import { createTempDir, removeTempDir } from '../_helpers/tmp'
 
 const DAY_MS = 86_400_000
 
+/** Owner/group/other permission bits as a 3-digit octal string, e.g. '600'. */
+const permBits = (mode: number): string => mode.toString(8).slice(-3)
+
 describe('getRotatedFileName', () => {
   test('formats a fixed date deterministically', () => {
     const date = new Date(2026, 0, 2, 3, 4, 5, 123)
@@ -181,5 +184,43 @@ describe('performRotation retention', () => {
     const entries = await fs.readdir(dir)
     const remainingRotated = entries.filter(name => name.startsWith('app.log.'))
     expect(remainingRotated).toHaveLength(1)
+  })
+})
+
+describe('performRotation compression', () => {
+  let dir: string
+
+  beforeEach(async () => {
+    dir = await createTempDir()
+  })
+
+  afterEach(async () => {
+    await removeTempDir(dir)
+  })
+
+  test('creates the archive with the given file mode', async () => {
+    const filePath = path.join(dir, 'app.log')
+    await fs.writeFile(filePath, 'live content')
+
+    await performRotation(filePath, { compress: true }, undefined, 0o640)
+
+    const entries = await fs.readdir(dir)
+    const archives = entries.filter(name => name.endsWith('.gz'))
+    expect(archives).toHaveLength(1)
+    const { mode } = await fs.stat(path.join(dir, archives[0]))
+    expect(permBits(mode)).toBe('640')
+  })
+
+  test('defaults the archive mode to 0o600 when none is given', async () => {
+    const filePath = path.join(dir, 'app.log')
+    await fs.writeFile(filePath, 'live content')
+
+    await performRotation(filePath, { compress: true })
+
+    const entries = await fs.readdir(dir)
+    const archives = entries.filter(name => name.endsWith('.gz'))
+    expect(archives).toHaveLength(1)
+    const { mode } = await fs.stat(path.join(dir, archives[0]))
+    expect(permBits(mode)).toBe('600')
   })
 })

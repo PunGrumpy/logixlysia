@@ -1,4 +1,5 @@
 import type { LogLevel, Transport } from '../interfaces'
+import { stringifyForLog } from '../utils/json'
 import { sanitizeLogText } from '../utils/sanitize'
 import { settle } from '../utils/settle'
 
@@ -12,6 +13,7 @@ export const OTEL_SEVERITY: Record<LogLevel, number> = {
 
 const DEFAULT_FLUSH_INTERVAL_MS = 2000
 const DEFAULT_MAX_BATCH_SIZE = 20
+const DEFAULT_MAX_ENTRIES_PER_REQUEST = 500
 const DEFAULT_MAX_PENDING_BATCHES = 32
 const DEFAULT_RETRIES = 2
 const REPORT_INTERVAL_MS = 5000
@@ -37,17 +39,26 @@ export interface BatchTransportOptions {
    */
   maxBatchSize?: number
   /**
-   * Batches allowed to be waiting on the backend at once. Once the limit is
-   * reached, new batches are dropped and reported instead of buffered, so an
-   * unreachable backend cannot grow memory without bound.
+   * The most entries one request carries. Lower it for a backend with a
+   * per-request item limit. The Sentry adapter defaults to 100.
+   * @default 500
+   */
+  maxEntriesPerRequest?: number
+  /**
+   * Bound on the entries that wait behind the request in flight, as a
+   * multiple of `maxBatchSize`: at most `maxPendingBatches × maxBatchSize`
+   * entries wait, and entries beyond that are dropped and reported.
    * @default 32
    */
   maxPendingBatches?: number
   /**
-   * Called when a batch fails after retries, or is dropped because too
-   * many batches are pending. When omitted, failures go to stderr, rate
-   * limited to once every 5 seconds. Pass the same function you give
-   * `config.onError` to see transport failures in one place.
+   * Called when a request fails after retries, or when entries are dropped
+   * because too many were already waiting. Failures of a request that a
+   * `log()` or `flush()` call started are rejected to that caller instead.
+   * When omitted, failures go to stderr, rate limited to once every 5
+   * seconds. To see every transport failure in one place, forward them to
+   * the function you give `config.onError`, as
+   * `error => handle({ error, sink: 'transport' })`.
    */
   onError?: (error: unknown) => void
   /**
@@ -64,6 +75,8 @@ export interface BatchTransportOptions {
 
 /** A {@link Transport} that batches entries and can be flushed on demand. */
 export interface AdapterTransport extends Transport {
+  /** Stops accepting entries, then flushes the ones already accepted. Idempotent. */
+  close: () => Promise<void>
   /** Sends any buffered entries immediately. Call before process exit. */
   flush: () => Promise<void>
 }
@@ -73,6 +86,44 @@ export interface LogEntry {
   message: string
   meta: Record<string, unknown>
   timestamp: Date
+}
+
+const UNSERIALIZABLE_TEXT = '[Unserializable]'
+
+/** A plain copy of one meta value, as JSON would carry it; `undefined` when JSON would drop it. */
+const snapshotValue = (value: unknown): unknown => {
+  const json = stringifyForLog(value)
+  if (json === '') {
+    return
+  }
+  try {
+    return JSON.parse(json) as unknown
+  } catch {
+    // stringifyForLog only ever returns valid JSON; this is belt and braces.
+    return UNSERIALIZABLE_TEXT
+  }
+}
+
+/**
+ * A JSON-safe copy of a record's meta, taken when the record is logged.
+ * Later mutations of the logged objects are not shipped, a BigInt is its
+ * decimal string, a cycle is "[Circular]", and a field that cannot be
+ * serialized becomes "[Unserializable]" on its own, so one bad value never
+ * takes the rest of the record or the batch with it.
+ */
+export const snapshotMeta = (
+  meta: Record<string, unknown>
+): Record<string, unknown> => {
+  const entries: [string, unknown][] = []
+  for (const [key, value] of Object.entries(meta)) {
+    const copy = snapshotValue(value)
+    if (copy !== undefined) {
+      entries.push([key, copy])
+    }
+  }
+  // fromEntries defines own properties, so an own `__proto__` key in the
+  // logged data stays a key instead of reaching the setter.
+  return Object.fromEntries(entries)
 }
 
 /** Normalizes a base URL by dropping trailing slashes. */
@@ -97,15 +148,28 @@ export const transportError = (
   options?: ErrorOptions
 ): Error => new Error(`[logixlysia] ${adapter} transport: ${detail}`, options)
 
+/** `scheme://user:pass@host` with everything between `://` and the last `@` replaced. */
+const URL_USERINFO = /^(?<scheme>[a-z][a-z0-9+.-]*:\/\/).*@/iu
+
+const withoutCredentials = (url: string): string =>
+  url.replace(URL_USERINFO, '$<scheme><redacted>@')
+
+const tryParseUrl = (value: string): URL | undefined => {
+  try {
+    return new URL(value)
+  } catch {
+    // Reported by the caller, without the input: it may carry credentials.
+  }
+}
+
 /** Parses a fully built endpoint once, at construction, so a bad env var fails here rather than on the first flush. */
 export const resolveEndpoint = (name: string, url: string): string => {
-  let parsed: URL
-  try {
-    parsed = new URL(url)
-  } catch (error) {
-    throw transportError(name, `invalid endpoint URL '${url}'`, {
-      cause: error
-    })
+  const parsed = tryParseUrl(url)
+  if (!parsed) {
+    throw transportError(
+      name,
+      `invalid endpoint URL '${withoutCredentials(url)}'`
+    )
   }
   if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
     throw transportError(
@@ -293,13 +357,19 @@ const createQueueReporter = (
  * after `flushIntervalMs` via an unref'ed timer (errors go to `onError` since
  * no caller is awaiting).
  *
- * Only one send runs at a time, so batches reach the backend in the order they
- * were buffered, and `flush()` resolves once every batch queued before it has
- * settled. Batches queued beyond `maxPendingBatches` are dropped and reported.
+ * One request runs at a time, so entries reach the backend in the order they
+ * were buffered. Entries that arrive while a request is in flight wait, and go
+ * out together in the next request, up to `maxEntriesPerRequest`. That request
+ * starts as soon as the one in flight returns if a full batch is waiting, and
+ * on the timer otherwise. At most `maxPendingBatches × maxBatchSize` entries
+ * wait; beyond that, entries are dropped and reported once per request.
+ * `flush()` resolves once every entry accepted before the call has settled.
  */
 export const createBatchQueue = (input: {
   flushIntervalMs: number
   maxBatchSize: number
+  /** The most entries one request carries. */
+  maxEntriesPerRequest?: number
   maxPendingBatches?: number
   name: string
   onError?: (error: unknown) => void
@@ -307,54 +377,118 @@ export const createBatchQueue = (input: {
 }): BatchQueue => {
   let buffer: LogEntry[] = []
   let timer: ReturnType<typeof setTimeout> | undefined
-  let tail: Promise<void> = Promise.resolve()
-  let pending = 0
+  /** The request in flight, as a promise that never rejects. */
+  let inFlight: Promise<void> | undefined
+  let dropped = 0
+  // Entries accepted by `push` and entries whose request has settled. A
+  // flush waits for the entries accepted before it was called, not for the
+  // queue to go idle: under steady traffic it never is.
+  let accepted = 0
+  let settled = 0
 
   const report = createQueueReporter(input.name, input.onError)
-  const maxPendingBatches =
-    input.maxPendingBatches ?? DEFAULT_MAX_PENDING_BATCHES
+  const maxWaiting =
+    (input.maxPendingBatches ?? DEFAULT_MAX_PENDING_BATCHES) *
+    input.maxBatchSize
+  const maxPerRequest = input.maxEntriesPerRequest ?? maxWaiting
 
-  const sendAfter = async (
-    prior: Promise<void>,
-    entries: LogEntry[]
-  ): Promise<void> => {
-    await prior
-    await input.send(entries)
+  const takeBatch = (): LogEntry[] => {
+    const entries = buffer.slice(0, maxPerRequest)
+    buffer = buffer.slice(maxPerRequest)
+    return entries
   }
 
-  // Swallow the failure on the chain itself so one bad batch cannot poison
-  // the batches after it; the caller of enqueueSend still sees the rejection.
-  const settleSend = async (send: Promise<void>): Promise<void> => {
-    await settle(send)
-    pending -= 1
-  }
-
-  const enqueueSend = (entries: LogEntry[]): Promise<void> => {
-    if (pending >= maxPendingBatches) {
-      report(
-        new Error(
-          `[logixlysia] ${input.name} transport: ${pending} batches pending; batch of ${entries.length} dropped`
-        )
-      )
-      return tail
+  const reportDropped = (): void => {
+    if (dropped === 0) {
+      return
     }
-    pending += 1
-    const send = sendAfter(tail, entries)
-    tail = settleSend(send)
+    // Reset first: an `onError` that logs through this transport can drop
+    // more entries while it runs, and the next report must count them.
+    const count = dropped
+    dropped = 0
+    report(
+      new Error(
+        `[logixlysia] ${input.name} transport: ${count} entries dropped while ${maxWaiting} were already waiting`
+      )
+    )
+  }
+
+  /**
+   * Runs the one request for `entries`, then starts the next request if a
+   * full batch arrived meanwhile. A send started by `push` or `flush` rethrows
+   * so that caller sees the failure; a send started here, with nobody
+   * awaiting it, reports the failure instead.
+   */
+  const runSend = async (
+    entries: LogEntry[],
+    background: boolean
+  ): Promise<void> => {
+    try {
+      // Yield first. Without it a `send` that throws synchronously runs this
+      // `finally` inside `startSend`, before `inFlight` is assigned there, and
+      // that assignment then overwrites the tracker of the request started
+      // below. Do not remove.
+      await Promise.resolve()
+      await input.send(entries)
+    } catch (error) {
+      if (!background) {
+        throw error
+      }
+      report(error)
+    } finally {
+      settled += entries.length
+      inFlight = undefined
+      // A full batch goes out at once; fewer entries wait for the timer, as
+      // they would with nothing in flight. Sending every remainder would cost
+      // a request per round trip under light traffic, and would let an
+      // `onError` that logs each failure keep a failing backend busy.
+      if (buffer.length >= input.maxBatchSize) {
+        inFlight = runSend(takeBatch(), true)
+      }
+      // After the next request has started: an `onError` that logs through
+      // this same transport re-enters `push`, and must find it in flight.
+      reportDropped()
+    }
+  }
+
+  /** Starts a request for the caller; `inFlight` tracks it without rejecting. */
+  const startSend = (): Promise<void> => {
+    const send = runSend(takeBatch(), false)
+    inFlight = settle(send)
     return send
   }
 
-  const flush = async (): Promise<void> => {
+  // Recursion rather than a loop: `no-await-in-loop` is an error in the lint
+  // preset. The first failure of a request this drain started is kept and
+  // rethrown once everything accepted before the flush has settled.
+  const drainUntil = async (
+    target: number,
+    failure?: unknown
+  ): Promise<void> => {
+    if (settled >= target) {
+      if (failure !== undefined) {
+        throw failure
+      }
+      return
+    }
+    if (inFlight) {
+      await inFlight
+      return drainUntil(target, failure)
+    }
+    try {
+      await startSend()
+    } catch (error) {
+      return drainUntil(target, failure ?? error)
+    }
+    return drainUntil(target, failure)
+  }
+
+  const flush = (): Promise<void> => {
     if (timer) {
       clearTimeout(timer)
       timer = undefined
     }
-    const entries = buffer
-    buffer = []
-    if (entries.length > 0) {
-      await enqueueSend(entries)
-    }
-    await tail
+    return drainUntil(accepted)
   }
 
   const flushFromTimer = async (): Promise<void> => {
@@ -366,13 +500,21 @@ export const createBatchQueue = (input: {
   }
 
   const push = (entry: LogEntry): Promise<void> | undefined => {
-    buffer.push(entry)
-    if (buffer.length >= input.maxBatchSize) {
-      return flush()
+    if (inFlight && buffer.length >= maxWaiting) {
+      dropped += 1
+      return
     }
+    buffer.push(entry)
+    accepted += 1
+    // Before the batch check: a full batch waiting behind a request in flight
+    // can be split by the per-request cap, and what is left goes out on the
+    // timer.
     if (!timer) {
       timer = setTimeout(flushFromTimer, input.flushIntervalMs)
       timer.unref?.()
+    }
+    if (buffer.length >= input.maxBatchSize) {
+      return inFlight ? undefined : flush()
     }
   }
 
@@ -400,9 +542,29 @@ export const createHttpTransport = (
   const timeout = input.options.timeout ?? DEFAULT_TIMEOUT_MS
   const url = resolveEndpoint(input.name, input.url)
 
+  const positiveInteger = (name: string, value: number): number => {
+    if (!Number.isInteger(value) || value < 1) {
+      throw transportError(
+        input.name,
+        `${name} must be a positive integer, got ${value}`
+      )
+    }
+    return value
+  }
+
+  const maxBatchSize = positiveInteger(
+    'maxBatchSize',
+    input.options.maxBatchSize ?? DEFAULT_MAX_BATCH_SIZE
+  )
+  const maxEntriesPerRequest = positiveInteger(
+    'maxEntriesPerRequest',
+    input.options.maxEntriesPerRequest ?? DEFAULT_MAX_ENTRIES_PER_REQUEST
+  )
+
   const queue = createBatchQueue({
     flushIntervalMs: input.options.flushIntervalMs ?? DEFAULT_FLUSH_INTERVAL_MS,
-    maxBatchSize: input.options.maxBatchSize ?? DEFAULT_MAX_BATCH_SIZE,
+    maxBatchSize,
+    maxEntriesPerRequest,
     maxPendingBatches: input.options.maxPendingBatches,
     name: input.name,
     onError: input.options.onError,
@@ -417,10 +579,23 @@ export const createHttpTransport = (
       })
   })
 
+  let closed = false
+
   return {
+    close: async () => {
+      closed = true
+      await queue.flush()
+    },
     flush: queue.flush,
     log: (level, message, meta) =>
-      queue.push({ level, message, meta: meta ?? {}, timestamp: new Date() })
+      closed
+        ? undefined
+        : queue.push({
+            level,
+            message,
+            meta: snapshotMeta(meta ?? {}),
+            timestamp: new Date()
+          })
   }
 }
 
@@ -450,19 +625,31 @@ const flattenInto = (
     return
   }
   if (value instanceof Date) {
-    out[prefix] = value.toISOString()
+    out[prefix] = Number.isNaN(value.getTime())
+      ? UNSERIALIZABLE_TEXT
+      : value.toISOString()
+    return
+  }
+  if (typeof value === 'bigint') {
+    out[prefix] = value.toString()
     return
   }
   if (isPlainObject(value) && depth < FLATTEN_MAX_DEPTH) {
-    for (const [key, child] of Object.entries(value)) {
+    let entries: [string, unknown][]
+    try {
+      entries = Object.entries(value)
+    } catch {
+      out[prefix] = UNSERIALIZABLE_TEXT
+      return
+    }
+    for (const [key, child] of entries) {
       flattenInto(out, child, prefix ? `${prefix}.${key}` : key, depth + 1)
     }
     return
   }
-  try {
-    out[prefix] = JSON.stringify(value)
-  } catch {
-    out[prefix] = String(value)
+  const json = stringifyForLog(value)
+  if (json !== '') {
+    out[prefix] = json
   }
 }
 

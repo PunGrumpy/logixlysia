@@ -234,6 +234,16 @@ interface NetlifyGeo {
   timezone?: string
 }
 
+/** A non-empty string field, bounded; any other type is ignored. */
+const geoText = (value: unknown): string | undefined =>
+  typeof value === 'string' && value.length > 0
+    ? value.slice(0, GEO_STRING_MAX)
+    : undefined
+
+/** A string that is a short country or region code; any other value is ignored. */
+const geoCode = (value: unknown): string | undefined =>
+  typeof value === 'string' && GEO_CODE_REGEX.test(value) ? value : undefined
+
 const readNetlifyGeo = (
   request: Request
 ): Record<string, unknown> | undefined => {
@@ -255,17 +265,21 @@ const readNetlifyGeo = (
 
   const data = parsed as NetlifyGeo
   const geo: Record<string, unknown> = {}
-  if (data.city) {
-    geo.city = data.city.slice(0, GEO_STRING_MAX)
+  const city = geoText(data.city)
+  if (city !== undefined) {
+    geo.city = city
   }
-  if (data.country?.code && GEO_CODE_REGEX.test(data.country.code)) {
-    geo.country = data.country.code
+  const country = geoCode(data.country?.code)
+  if (country !== undefined) {
+    geo.country = country
   }
-  if (data.subdivision?.code && GEO_CODE_REGEX.test(data.subdivision.code)) {
-    geo.region = data.subdivision.code
+  const region = geoCode(data.subdivision?.code)
+  if (region !== undefined) {
+    geo.region = region
   }
-  if (data.timezone) {
-    geo.timezone = data.timezone.slice(0, GEO_STRING_MAX)
+  const timezone = geoText(data.timezone)
+  if (timezone !== undefined) {
+    geo.timezone = timezone
   }
   if (typeof data.latitude === 'number' && isInRange(data.latitude, -90, 90)) {
     geo.latitude = data.latitude

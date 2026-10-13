@@ -61,16 +61,9 @@ const app = new Elysia()
           level: ['ERROR', 'WARNING']
         },
 
-        // Pino configuration
-        pino: {
-          level: 'info',
-          redact: ['password', 'token', 'apiKey', 'creditCard'],
-          base: {
-            service: 'my-api',
-            version: process.env.APP_VERSION,
-            environment: 'production'
-          }
-        },
+        // Mask secrets in console, file and transport output
+        autoRedact: true,
+        redactKeys: ['customerSsn'],
 
         // Use transports for external services
         useTransportsOnly: false,
@@ -223,7 +216,7 @@ app.onError(({ code, error, store }) => {
   )
 
   return {
-    error: error.message,
+    error: error instanceof Error ? error.message : String(error),
     status: code
   }
 })
@@ -231,26 +224,24 @@ app.onError(({ code, error, store }) => {
 
 ### JSON Format for Error Logs
 
-```ts
-app.use(
-  logixlysia({
-    config: {
-      customLogFormat:
-        '{"level": "{level}", "message": "{message}", "method": "{method}", "pathname": "{pathname}", "status": "{status}"}'
-    }
-  })
-)
+`customLogFormat` produces a text line, not JSON (the method is padded, quotes are not escaped, error rows follow the line, and colors apply on a TTY), so for JSON output write each record from a transport and turn off the console line:
 
-app.get('/error', () => {
-  throw new Error('Validation failed')
+```ts
+logixlysia({
+  config: {
+    disableInternalLogger: true,
+    transports: [
+      {
+        log: (level, message, meta) =>
+          console.log(JSON.stringify({ level, message, ...meta }))
+      }
+    ]
+  }
 })
 ```
 
-Output for both regular requests and errors will be in JSON format:
-
-```json
-{"level": "INFO", "message": "", "method": "GET", "pathname": "/hello", "status": "200"}
-{"level": "ERROR", "message": "Validation failed", "method": "GET", "pathname": "/error", "status": "500"}
+```
+{"level":"INFO","message":"","request":{"method":"GET","url":"http://localhost:3000/hello"},"status":200,"durationMs":0.42}
 ```
 
 ## Custom Transports
@@ -313,7 +304,7 @@ const slackTransport = {
 
 ### MongoDB Transport
 
-```ts
+```ts check=skip
 import { MongoClient } from 'mongodb'
 
 const client = new MongoClient(process.env.MONGODB_URI)
@@ -360,16 +351,8 @@ app.use(
           }
         : undefined,
 
-      pino: {
-        level: isDev ? 'debug' : 'info',
-        prettyPrint: isDev,
-        redact: isProd ? ['password', 'token', 'apiKey'] : [],
-        base: {
-          service: 'my-api',
-          version: process.env.APP_VERSION,
-          environment: process.env.NODE_ENV
-        }
-      },
+      autoRedact: isProd,
+      redactKeys: ['customerSsn'],
 
       transports: isProd ? [elasticsearchTransport, slackTransport] : []
     }
@@ -382,7 +365,7 @@ app.use(
 ### Complete REST API with Logging
 
 ```ts
-import { Elysia } from 'elysia'
+import { Elysia, t } from 'elysia'
 import logixlysia from 'logixlysia'
 
 const app = new Elysia()
@@ -412,11 +395,15 @@ const app = new Elysia()
     pino.info({ action: 'create_user' }, 'Creating user')
     return { user: body }
   })
-  .put('/users/:id', ({ store, params, body }) => {
-    const { pino } = store
-    pino.info({ userId: params.id, action: 'update_user' }, 'Updating user')
-    return { user: { id: params.id, ...body } }
-  })
+  .put(
+    '/users/:id',
+    ({ store, params, body }) => {
+      const { pino } = store
+      pino.info({ userId: params.id, action: 'update_user' }, 'Updating user')
+      return { user: { id: params.id, ...body } }
+    },
+    { body: t.Object({ name: t.String() }, { additionalProperties: true }) }
+  )
   .delete('/users/:id', ({ store, params }) => {
     const { pino } = store
     pino.info({ userId: params.id, action: 'delete_user' }, 'Deleting user')

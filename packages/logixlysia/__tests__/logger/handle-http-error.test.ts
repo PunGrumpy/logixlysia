@@ -171,15 +171,18 @@ describe('handleHttpError', () => {
     expect(message).not.toContain('leak-me')
   })
 
-  // Pins decided drift #2 from plans/017: the error path now honors the same
-  // sink gates as the success path, so `useTransportsOnly` with zero
-  // transports configured is "effectively disabled" end to end — no
-  // transport call (none configured) and no console output either.
-  test('useTransportsOnly with no transports configured emits nothing at all', async () => {
+  // The error path honors the same sink gates as the success path, so a
+  // logger with every sink turned off writes nothing, not even to the
+  // console.
+  test('an effectively disabled logger emits nothing on the error path', async () => {
     const { spies, restore } = spyConsole()
     try {
       const app = new Elysia()
-        .use(logixlysia({ config: { useTransportsOnly: true } }))
+        .use(
+          logixlysia({
+            config: { disableFileLogging: true, disableInternalLogger: true }
+          })
+        )
         .get('/down', () => {
           throw new HttpError(503, 'downstream')
         })

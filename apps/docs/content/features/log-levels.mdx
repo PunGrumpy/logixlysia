@@ -5,6 +5,8 @@ description: Control log verbosity
 
 Control the verbosity of your logging output with Logixlysia's log level system.
 
+A request's line takes its level from the final status the client got, including a status set with `set.status` before a throw or by a later `onError` hook: 5xx is `ERROR`, 4xx is `WARNING`, anything else is `INFO`. The exception is a thrown error, other than a `status()` result, that reached the client as a 2xx or 3xx, such as a body that failed after the headers went out: it is still an `ERROR` line.
+
 ## Available Levels
 
 Logixlysia has four log levels, from most to least verbose:
