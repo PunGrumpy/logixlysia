@@ -348,6 +348,18 @@ const withReentrancyGuard = <T>(
   }
 }
 
+const UNREADABLE = Symbol('unreadable')
+
+/** A Proxy whose `get` trap throws cannot even be asked for its `toJSON`. */
+const readToJson = (value: object): unknown => {
+  try {
+    const { toJSON } = value as { toJSON?: unknown }
+    return toJSON
+  } catch {
+    return UNREADABLE
+  }
+}
+
 /**
  * Mutually recursive. One object lets each walker reach the others by
  * property instead of by a binding declared later in the file.
@@ -463,18 +475,37 @@ const walker = {
     recordValue: Record<string, unknown>,
     inProgress: WeakSet<object>,
     extraKeys?: readonly string[]
-  ): Record<string, unknown> => {
-    const keys = Object.keys(recordValue)
+  ): Record<string, unknown> | string => {
+    let keys: string[]
+    try {
+      keys = Object.keys(recordValue)
+    } catch {
+      return UNSERIALIZABLE_TEXT
+    }
     let result: Record<string, unknown> | undefined
 
     for (const [index, key] of keys.entries()) {
-      const original = recordValue[key]
+      let original: unknown
+      let unreadable = false
+      try {
+        original = recordValue[key]
+      } catch {
+        // A getter or Proxy trap that throws: only this field is lost, as
+        // stringifyForLog does without autoRedact.
+        unreadable = true
+      }
       const sensitive = isSensitiveKey(key, extraKeys)
-      const redacted = sensitive
-        ? REDACTED_TEXT
-        : walker.value(original, inProgress, extraKeys)
+      let redacted: unknown = REDACTED_TEXT
+      if (unreadable) {
+        redacted = UNSERIALIZABLE_TEXT
+      } else if (!sensitive) {
+        redacted = walker.value(original, inProgress, extraKeys)
+      }
 
-      if (result === undefined && (sensitive || redacted !== original)) {
+      if (
+        result === undefined &&
+        (sensitive || unreadable || redacted !== original)
+      ) {
         result = {}
         for (const priorKey of keys.slice(0, index)) {
           result[priorKey] = recordValue[priorKey]
@@ -590,7 +621,10 @@ const walker = {
       return value
     }
 
-    const { toJSON } = value as { toJSON?: unknown }
+    const toJSON = readToJson(value)
+    if (toJSON === UNREADABLE) {
+      return UNSERIALIZABLE_TEXT
+    }
     if (typeof toJSON === 'function') {
       return withReentrancyGuard(value, inProgress, () =>
         walker.toJson(value as { toJSON: () => unknown }, inProgress, extraKeys)

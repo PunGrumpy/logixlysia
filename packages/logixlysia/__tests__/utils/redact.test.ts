@@ -686,3 +686,31 @@ describe('IPv4/IPv6 redaction precision', () => {
     expect(performance.now() - start).toBeLessThan(500)
   })
 })
+
+const throwingTrap = (): never => {
+  throw new Error('trap')
+}
+
+describe('values that cannot be read', () => {
+  test('replaces only the field whose getter throws', () => {
+    const out = redact({
+      a: {
+        get b(): string {
+          throw new Error('g')
+        }
+      },
+      c: 'x'
+    })
+    // Stringifying throws if the walker handed back the original object.
+    expect(JSON.stringify(out)).toBe('{"a":{"b":"[Unserializable]"},"c":"x"}')
+  })
+
+  test('replaces a Proxy whose ownKeys or get trap throws', () => {
+    expect(redact({ p: new Proxy({}, { ownKeys: throwingTrap }) })).toEqual({
+      p: '[Unserializable]'
+    })
+    expect(redact({ p: new Proxy({}, { get: throwingTrap }) })).toEqual({
+      p: '[Unserializable]'
+    })
+  })
+})

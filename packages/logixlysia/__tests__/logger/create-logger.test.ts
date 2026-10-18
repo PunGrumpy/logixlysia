@@ -101,6 +101,45 @@ describe('createLogger', () => {
     await sleep(0)
   })
 
+  test('delivers the record when a context value has a throwing getter under autoRedact', async () => {
+    const transport = mock<
+      (lvl: unknown, msg: unknown, meta?: unknown) => void
+    >(() => {
+      /* noop */
+    })
+    const options: Options = {
+      config: {
+        autoRedact: true,
+        disableFileLogging: true,
+        disableInternalLogger: true,
+        transports: [{ log: transport }]
+      }
+    }
+
+    const logger = createLogger(options)
+    const request = createMockRequest('http://localhost/test')
+
+    logger.info(request, 'hello', {
+      bad: {
+        get boom(): string {
+          throw new Error('boom')
+        }
+      },
+      ok: 1
+    })
+
+    expect(transport).toHaveBeenCalledTimes(1)
+    const meta = transport.mock.calls[0]?.[2] as
+      | Record<string, unknown>
+      | undefined
+    expect(meta?.context).toEqual({
+      bad: { boom: '[Unserializable]' },
+      ok: 1
+    })
+
+    await sleep(0)
+  })
+
   test('handleHttpError emits transport error log', async () => {
     const transport = mock<
       (lvl: unknown, msg: unknown, meta?: unknown) => void
