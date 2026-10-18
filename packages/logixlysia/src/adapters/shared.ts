@@ -324,12 +324,13 @@ export interface BatchQueue {
 /**
  * Routes a batch failure to the adapter's `onError` hook, or — when no hook is
  * configured — to stderr at most once per interval, so a backend that fails on
- * every batch cannot flood the console.
+ * every batch cannot flood the console. Returns whether the error reached the
+ * hook or stderr.
  */
 const createQueueReporter = (
   name: string,
   onError?: (error: unknown) => void
-): ((error: unknown) => void) => {
+): ((error: unknown) => boolean) => {
   let lastReportedAt = 0
 
   return error => {
@@ -339,15 +340,16 @@ const createQueueReporter = (
       } catch {
         // Swallow errors thrown by the hook itself.
       }
-      return
+      return true
     }
 
     const now = Date.now()
     if (now - lastReportedAt < REPORT_INTERVAL_MS) {
-      return
+      return false
     }
     lastReportedAt = now
     console.error(`[logixlysia] ${name} transport failed:`, error)
+    return true
   }
 }
 
@@ -387,6 +389,9 @@ export const createBatchQueue = (input: {
   let settled = 0
 
   const report = createQueueReporter(input.name, input.onError)
+  // Its own rate limit: a failing backend reports a failure before every
+  // drop report, and one shared window would hide the drops for good.
+  const reportDrops = createQueueReporter(input.name, input.onError)
   const maxWaiting =
     (input.maxPendingBatches ?? DEFAULT_MAX_PENDING_BATCHES) *
     input.maxBatchSize
@@ -406,11 +411,15 @@ export const createBatchQueue = (input: {
     // more entries while it runs, and the next report must count them.
     const count = dropped
     dropped = 0
-    report(
+    const reported = reportDrops(
       new Error(
         `[logixlysia] ${input.name} transport: ${count} entries dropped while ${maxWaiting} were already waiting`
       )
     )
+    if (!reported) {
+      // Rate limited on stderr: carry the count into the next report.
+      dropped += count
+    }
   }
 
   /**
