@@ -538,8 +538,6 @@ export interface HttpTransportInput {
 export const createHttpTransport = (
   input: HttpTransportInput
 ): AdapterTransport => {
-  const retries = input.options.retries ?? DEFAULT_RETRIES
-  const timeout = input.options.timeout ?? DEFAULT_TIMEOUT_MS
   const url = resolveEndpoint(input.name, input.url)
 
   const positiveInteger = (name: string, value: number): number => {
@@ -547,6 +545,30 @@ export const createHttpTransport = (
       throw transportError(
         input.name,
         `${name} must be a positive integer, got ${value}`
+      )
+    }
+    return value
+  }
+
+  const nonNegativeInteger = (name: string, value: number): number => {
+    if (!Number.isInteger(value) || value < 0) {
+      throw transportError(
+        input.name,
+        `${name} must be an integer at or above 0, got ${value}`
+      )
+    }
+    return value
+  }
+
+  const finiteMilliseconds = (
+    name: string,
+    value: number,
+    min: number
+  ): number => {
+    if (!Number.isFinite(value) || value < min) {
+      throw transportError(
+        input.name,
+        `${name} must be a finite number of milliseconds at or above ${min}, got ${value}`
       )
     }
     return value
@@ -561,11 +583,31 @@ export const createHttpTransport = (
     input.options.maxEntriesPerRequest ?? DEFAULT_MAX_ENTRIES_PER_REQUEST
   )
 
+  const retries = nonNegativeInteger(
+    'retries',
+    input.options.retries ?? DEFAULT_RETRIES
+  )
+  // 0 would abort every request before it is sent.
+  const timeout = finiteMilliseconds(
+    'timeout',
+    input.options.timeout ?? DEFAULT_TIMEOUT_MS,
+    1
+  )
+  const flushIntervalMs = finiteMilliseconds(
+    'flushIntervalMs',
+    input.options.flushIntervalMs ?? DEFAULT_FLUSH_INTERVAL_MS,
+    0
+  )
+  const maxPendingBatches = positiveInteger(
+    'maxPendingBatches',
+    input.options.maxPendingBatches ?? DEFAULT_MAX_PENDING_BATCHES
+  )
+
   const queue = createBatchQueue({
-    flushIntervalMs: input.options.flushIntervalMs ?? DEFAULT_FLUSH_INTERVAL_MS,
+    flushIntervalMs,
     maxBatchSize,
     maxEntriesPerRequest,
-    maxPendingBatches: input.options.maxPendingBatches,
+    maxPendingBatches,
     name: input.name,
     onError: input.options.onError,
     send: entries =>

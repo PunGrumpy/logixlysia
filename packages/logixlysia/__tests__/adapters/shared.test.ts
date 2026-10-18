@@ -1059,4 +1059,82 @@ describe('createHttpTransport', () => {
       stub.restore()
     }
   })
+
+  test('rejects a maxPendingBatches that is not a positive integer', () => {
+    const stub = stubFetch([{ status: 200 }])
+    try {
+      for (const value of [0, -1, 0.5, Number.NaN, Number.POSITIVE_INFINITY]) {
+        expect(() =>
+          createHttpTransport({
+            body: entries => JSON.stringify(entries),
+            headers: {},
+            name: 'Test',
+            options: { maxPendingBatches: value },
+            url: 'https://ingest.example/v1'
+          })
+        ).toThrow('maxPendingBatches')
+      }
+    } finally {
+      stub.restore()
+    }
+  })
+
+  test('rejects a retries value that is not a non-negative integer', () => {
+    const stub = stubFetch([{ status: 200 }])
+    try {
+      for (const value of [-1, 1.5, Number.NaN, Number.POSITIVE_INFINITY]) {
+        expect(() =>
+          createHttpTransport({
+            body: entries => JSON.stringify(entries),
+            headers: {},
+            name: 'Test',
+            options: { retries: value },
+            url: 'https://ingest.example/v1'
+          })
+        ).toThrow('retries')
+      }
+    } finally {
+      stub.restore()
+    }
+  })
+
+  test('rejects a non-finite or out-of-range timeout or flushIntervalMs', () => {
+    const stub = stubFetch([{ status: 200 }])
+    try {
+      const badValues: Record<string, number[]> = {
+        flushIntervalMs: [-1, Number.NaN, Number.POSITIVE_INFINITY],
+        timeout: [0, -5, Number.NaN, Number.POSITIVE_INFINITY]
+      }
+      for (const [name, values] of Object.entries(badValues)) {
+        for (const value of values) {
+          expect(() =>
+            createHttpTransport({
+              body: entries => JSON.stringify(entries),
+              headers: {},
+              name: 'Test',
+              options: { [name]: value },
+              url: 'https://ingest.example/v1'
+            })
+          ).toThrow(name)
+        }
+      }
+
+      expect(() =>
+        createHttpTransport({
+          body: entries => JSON.stringify(entries),
+          headers: {},
+          name: 'Test',
+          options: {
+            flushIntervalMs: 0,
+            maxPendingBatches: 1,
+            retries: 0,
+            timeout: 1
+          },
+          url: 'https://ingest.example/v1'
+        })
+      ).not.toThrow()
+    } finally {
+      stub.restore()
+    }
+  })
 })
