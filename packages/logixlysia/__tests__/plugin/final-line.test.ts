@@ -856,6 +856,8 @@ describe('logixlysia plugin - final line', () => {
 
     expect(transport).toHaveBeenCalledTimes(1)
     expect(recordAt(transport, 0).meta.status).toBe(200)
+    expect(recordAt(transport, 0).level).toBe('ERROR')
+    expect(recordAt(transport, 0).meta.error?.message).toBe('cleanup failed')
   })
 
   test("settles a sync generator's body cancelled before its first read even when the cleanup throws", async () => {
@@ -876,6 +878,8 @@ describe('logixlysia plugin - final line', () => {
 
     expect(transport).toHaveBeenCalledTimes(1)
     expect(recordAt(transport, 0).meta.status).toBe(200)
+    expect(recordAt(transport, 0).level).toBe('ERROR')
+    expect(recordAt(transport, 0).meta.error?.message).toBe('cleanup failed')
   })
 
   test('logs an error a later onError maps to a redirect as an error line with the final status', async () => {
