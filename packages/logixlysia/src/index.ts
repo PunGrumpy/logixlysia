@@ -500,7 +500,18 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
       return
     }
     record.phase = 'streaming'
-    const onSettled = (): void => settleStream(request, record)
+    // A client that disconnects while the source awaits its next value would
+    // otherwise get no line until that await settles, which may be never.
+    const onAbort = (): void => {
+      if (record.phase === 'streaming' && record.status !== undefined) {
+        finishRequest(request, record, record.status)
+      }
+    }
+    request.signal.addEventListener('abort', onAbort, { once: true })
+    const onSettled = (): void => {
+      request.signal.removeEventListener('abort', onAbort)
+      settleStream(request, record)
+    }
     const runInScope = useAsyncLocalStorage
       ? runInLoggerScope(createRequestScopedLogger(request))
       : runUnscoped

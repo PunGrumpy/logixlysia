@@ -792,6 +792,45 @@ describe('logixlysia plugin - final line', () => {
     expect(meta.status).toBe(200)
   })
 
+  test('writes the line when the client disconnects while the generator waits', async () => {
+    const { options, transport } = createCaptureTransport()
+    const app = new Elysia()
+      .use(logixlysia(options))
+      .get('/sse', async function* waitForever() {
+        yield 'a'
+        // Never settles: an SSE loop waiting for an event that never comes.
+        await Promise.withResolvers<undefined>().promise
+      })
+    const controller = new AbortController()
+    const response = await app.handle(
+      new Request('http://localhost/sse', { signal: controller.signal })
+    )
+    await response.body?.getReader().read()
+    await sleep(20)
+    controller.abort()
+    await sleep(30)
+
+    expect(transport).toHaveBeenCalledTimes(1)
+    const { level, meta } = recordAt(transport, 0)
+    expect(level).toBe('INFO')
+    expect(meta.status).toBe(200)
+    expect(meta.durationMs).toBeGreaterThanOrEqual(15)
+  })
+
+  test('writes the line once when the client disconnects after the stream ended', async () => {
+    const { options, transport } = createCaptureTransport()
+    const app = new Elysia().use(logixlysia(options)).get('/s', slowStream)
+    const controller = new AbortController()
+    const response = await app.handle(
+      new Request('http://localhost/s', { signal: controller.signal })
+    )
+    await response.text()
+    controller.abort()
+    await sleep(30)
+
+    expect(transport).toHaveBeenCalledTimes(1)
+  })
+
   test('settles a body cancelled before its first read even when the cleanup throws', async () => {
     const { options, transport } = createCaptureTransport()
     let stream: AsyncGenerator<unknown, void> | undefined
