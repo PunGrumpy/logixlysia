@@ -713,4 +713,28 @@ describe('values that cannot be read', () => {
       p: '[Unserializable]'
     })
   })
+
+  test('redacts what an own getter on an Error returns', () => {
+    const error = new Error('x')
+    Object.defineProperty(error, 'detail', {
+      enumerable: true,
+      get: () => 'mail me at someone@example.com'
+    })
+    expect((redact(error) as unknown as { detail: string }).detail).toBe(
+      'mail me at [REDACTED]'
+    )
+  })
+
+  test('keeps the error when an own getter on it throws', () => {
+    const error = new Error('x')
+    Object.defineProperty(error, 'detail', {
+      enumerable: true,
+      get: throwingTrap
+    })
+    let result: unknown
+    expect(() => {
+      result = redact(error)
+    }).not.toThrow()
+    expect((result as { detail: string }).detail).toBe('[Unserializable]')
+  })
 })

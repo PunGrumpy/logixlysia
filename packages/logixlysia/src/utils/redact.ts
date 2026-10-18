@@ -435,18 +435,26 @@ const walker = {
         continue
       }
 
+      let current: unknown = descriptor.value
       if (descriptor.get !== undefined || descriptor.set !== undefined) {
-        Object.defineProperty(newError, key, descriptor)
-        continue
+        // Read once, on the original: the copy has no internal state for the
+        // getter to read, and what it returns is what a sink would write.
+        try {
+          current = descriptor.get?.call(originalError)
+        } catch {
+          current = UNSERIALIZABLE_TEXT
+        }
       }
 
       const redactedValue = isSensitiveKey(key, extraKeys)
         ? REDACTED_TEXT
-        : walker.value(descriptor.value, inProgress, extraKeys)
+        : walker.value(current, inProgress, extraKeys)
 
       Object.defineProperty(newError, key, {
-        ...descriptor,
-        value: redactedValue
+        configurable: descriptor.configurable,
+        enumerable: descriptor.enumerable,
+        value: redactedValue,
+        writable: descriptor.writable ?? descriptor.set !== undefined
       })
     }
 
