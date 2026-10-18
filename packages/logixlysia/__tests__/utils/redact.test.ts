@@ -24,6 +24,22 @@ describe('redactString', () => {
     expect(result.endsWith('[REDACTED]')).toBe(true)
   })
 
+  test('redacts a JWT-shaped run of eyJ without hanging', () => {
+    for (const input of ['eyJ'.repeat(34_000), 'eyJ_'.repeat(25_000)]) {
+      const start = performance.now()
+      redactString(input)
+      expect(performance.now() - start).toBeLessThan(500)
+    }
+  })
+
+  test('still redacts a JWT after =, a space or a parenthesis', () => {
+    expect(redactString('token=eyJa.eyJb.c&x=1')).toBe('token=[REDACTED]&x=1')
+    expect(redactString('(eyJa.eyJb.c)')).toBe('([REDACTED])')
+    expect(redactString('Bearer eyJhbGciOi.eyJzdWIiOi.sig-_x')).not.toContain(
+      'eyJ'
+    )
+  })
+
   test('redacts IPs', () => {
     expect(redactString('IP is 192.168.1.1')).toBe('IP is [REDACTED]')
   })
