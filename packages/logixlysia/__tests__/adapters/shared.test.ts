@@ -95,6 +95,18 @@ describe('snapshotMeta', () => {
       at: '2026-01-01T00:00:00.000Z'
     })
   })
+
+  test('keeps an Error, a Map and a Set in the copy', () => {
+    expect(
+      snapshotMeta({
+        cause: new Error('connection reset'),
+        tags: new Set(['a'])
+      })
+    ).toEqual({
+      cause: { message: 'connection reset', name: 'Error' },
+      tags: ['a']
+    })
+  })
 })
 
 describe('flattenMeta', () => {

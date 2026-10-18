@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test'
+import { HttpError } from '../../src/interfaces'
 import { stringifyForLog } from '../../src/utils/json'
 
 describe('stringifyForLog', () => {
@@ -20,6 +21,47 @@ describe('stringifyForLog', () => {
     const shared = { x: 1 }
     expect(stringifyForLog({ a: shared, b: shared })).toBe(
       '{"a":{"x":1},"b":{"x":1}}'
+    )
+  })
+
+  test('writes an Error as its name, message, cause and own fields', () => {
+    const error = Object.assign(
+      new Error('outer', { cause: new Error('inner') }),
+      { code: 'E1' }
+    )
+    const json = stringifyForLog({ e: error })
+    expect(JSON.parse(json)).toEqual({
+      e: {
+        cause: { message: 'inner', name: 'Error' },
+        code: 'E1',
+        message: 'outer',
+        name: 'Error'
+      }
+    })
+    expect(json).not.toContain('stack')
+  })
+
+  test('writes a Map as an object and a Set as an array', () => {
+    expect(
+      stringifyForLog({ m: new Map([['a', 1]]), s: new Set(['x', 'y']) })
+    ).toBe('{"m":{"a":1},"s":["x","y"]}')
+  })
+
+  test('keeps a toJSON result as it is', () => {
+    expect(stringifyForLog(new HttpError(404, 'gone'))).toBe(
+      JSON.stringify(new HttpError(404, 'gone'))
+    )
+  })
+
+  test('marks a Map that contains itself as circular, and writes a shared Error twice', () => {
+    const map = new Map<string, unknown>()
+    map.set('self', map)
+    expect(stringifyForLog(map)).toBe('{"self":"[Circular]"}')
+
+    const shared = new Error('twice')
+    const written = '{"message":"twice","name":"Error"}'
+    expect(stringifyForLog({ a: shared, b: shared })).toBe(
+      `{"a":${written},"b":${written}}`
     )
   })
 
