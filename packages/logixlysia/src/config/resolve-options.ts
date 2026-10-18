@@ -170,6 +170,32 @@ const validateOutput = (config: Options['config']): void => {
   }
 }
 
+/** RFC 9110 `token`: the characters a header field name may contain. */
+const HEADER_NAME_REGEX = /^[!#$%&'*+.^_`|~0-9A-Za-z-]+$/u
+
+const validateRequestId = (config: Options['config']): void => {
+  const requestId = config?.requestId
+  if (
+    typeof requestId !== 'object' ||
+    requestId === null ||
+    requestId.header === undefined
+  ) {
+    return
+  }
+  // Typed as string, but a JavaScript caller can pass anything.
+  const raw: unknown = requestId.header
+  // An empty or blank header falls back to X-Request-Id (request-id.ts).
+  const header = typeof raw === 'string' ? raw.trim() : undefined
+  if (
+    header === undefined ||
+    (header !== '' && !HEADER_NAME_REGEX.test(header))
+  ) {
+    throw new Error(
+      `logixlysia: invalid requestId config — header must be a valid HTTP header name, got ${JSON.stringify(raw)}`
+    )
+  }
+}
+
 const PRESET_DEFAULTS: Record<LogPreset, NonNullable<Options['config']>> = {
   dev: {
     pino: {
@@ -273,5 +299,6 @@ export const resolveOptions = (options: Options = {}): Options => {
   validateFormatting(resolved.config)
   validateLogFilter(resolved.config)
   validateOutput(resolved.config)
+  validateRequestId(resolved.config)
   return resolved
 }
