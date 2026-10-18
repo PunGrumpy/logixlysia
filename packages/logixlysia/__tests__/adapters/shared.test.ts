@@ -1,4 +1,4 @@
-import { describe, expect, mock, test } from 'bun:test'
+import { describe, expect, mock, setSystemTime, test } from 'bun:test'
 import {
   createBatchQueue,
   createHttpTransport,
@@ -93,6 +93,18 @@ describe('snapshotMeta', () => {
   test('turns a Date into its ISO string', () => {
     expect(snapshotMeta({ at: new Date('2026-01-01T00:00:00.000Z') })).toEqual({
       at: '2026-01-01T00:00:00.000Z'
+    })
+  })
+
+  test('keeps an Error, a Map and a Set in the copy', () => {
+    expect(
+      snapshotMeta({
+        cause: new Error('connection reset'),
+        tags: new Set(['a'])
+      })
+    ).toEqual({
+      cause: { message: 'connection reset', name: 'Error' },
+      tags: ['a']
     })
   })
 })
@@ -1001,6 +1013,96 @@ describe('createBatchQueue', () => {
 
     expect(batches).toEqual([['a', 'b'], ['c', 'd'], ['failure logged']])
     expect(failures).toBe(1)
+  })
+
+  test('carries a drop count the stderr rate limit holds back into the next report', async () => {
+    const console = spyConsole(['error'])
+    const pending: Deferred[] = []
+    try {
+      const queue = createBatchQueue({
+        flushIntervalMs: 60_000,
+        maxBatchSize: 1,
+        maxPendingBatches: 1,
+        name: 'Test',
+        send: () => {
+          const next = deferred()
+          pending.push(next)
+          return next.promise
+        }
+      })
+      const release = async (): Promise<void> => {
+        pending.shift()?.resolve()
+        await sleep(5)
+      }
+      queue.push(entry({ message: 'a' }))
+      await sleep(5)
+      for (const message of ['b', 'c', 'd']) {
+        queue.push(entry({ message }))
+      }
+      await release()
+      for (const message of ['e', 'f', 'g']) {
+        queue.push(entry({ message }))
+      }
+      await release()
+      setSystemTime(new Date(Date.now() + 6000))
+      for (const message of ['h', 'i']) {
+        queue.push(entry({ message }))
+      }
+      await release()
+
+      const drops = console.spies.error.mock.calls
+        .map(call => String((call[1] as Error).message))
+        .filter(message => message.includes('dropped'))
+      expect(drops).toHaveLength(2)
+      expect(drops.at(-1)).toContain('3 entries dropped')
+    } finally {
+      setSystemTime()
+      console.restore()
+      for (const next of pending) {
+        next.resolve()
+      }
+    }
+  })
+
+  test('reports drops on stderr right after a failure report', async () => {
+    const console = spyConsole(['error'])
+    const pending: PromiseWithResolvers<void>[] = []
+    try {
+      const queue = createBatchQueue({
+        flushIntervalMs: 60_000,
+        maxBatchSize: 1,
+        maxPendingBatches: 1,
+        name: 'Test',
+        send: () => {
+          const next: PromiseWithResolvers<void> = Promise.withResolvers()
+          pending.push(next)
+          return next.promise
+        }
+      })
+      queue.push(entry({ message: 'a' }))
+      await sleep(5)
+      queue.push(entry({ message: 'b' }))
+      await sleep(5)
+      pending.shift()?.resolve()
+      await sleep(5)
+      queue.push(entry({ message: 'c' }))
+      queue.push(entry({ message: 'd' }))
+      pending.shift()?.reject(new Error('down'))
+      await sleep(5)
+
+      const messages = console.spies.error.mock.calls.map(call =>
+        String((call[1] as Error).message)
+      )
+      expect(messages.some(message => message.includes('down'))).toBe(true)
+      expect(
+        messages.some(message => message.includes('1 entries dropped'))
+      ).toBe(true)
+    } finally {
+      console.restore()
+      for (const next of pending) {
+        next.resolve()
+      }
+    }
   })
 })
 
