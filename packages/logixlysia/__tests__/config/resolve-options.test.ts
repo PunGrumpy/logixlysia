@@ -252,4 +252,30 @@ describe('resolveOptions', () => {
       resolveOptions({ config: { flushTimeoutMs: 250 } }).config?.flushTimeoutMs
     ).toBe(250)
   })
+
+  test('throws on a requestId header that is not a valid header name', () => {
+    const headers = [
+      'X Request Id',
+      'X-Request-Id:',
+      'Ünïcode',
+      'a\nb',
+      42 as unknown as string
+    ]
+
+    for (const header of headers) {
+      expect(() =>
+        resolveOptions({ config: { requestId: { header } } })
+      ).toThrow('requestId')
+    }
+  })
+
+  test('accepts a valid, blank or absent requestId header', () => {
+    for (const header of ['X-Correlation-Id', 'x_trace.id', '', '  ']) {
+      expect(() =>
+        resolveOptions({ config: { requestId: { header } } })
+      ).not.toThrow()
+    }
+    expect(() => resolveOptions({ config: { requestId: true } })).not.toThrow()
+    expect(() => resolveOptions({ config: { requestId: {} } })).not.toThrow()
+  })
 })
