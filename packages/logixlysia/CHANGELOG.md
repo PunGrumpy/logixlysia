@@ -1,5 +1,15 @@
 # Changelog
 
+## 6.10.1
+
+### Patch Changes
+
+- 83932be: Adapters without an `onError` hook now report every dropped entry on stderr. Previously a drop count that fell inside the 5-second rate limit was discarded, so during an outage stderr showed one small count and then only the failures. An `Error`, `Map` or `Set` in a record's context now reaches the backend with its content (an error's name, message, cause and own fields, a map as an object, a set as an array) instead of as `{}`, and the console's `{context}` text shows the same.
+- 559a88e: A handler that forwards its request to another app with its own plugin (`inner.handle(request)`) no longer loses the outer app's access line, and with several plugin instances each module's routes are logged through that module's own instance, with its own context and transports, again. Since 6.10.0 every line went through the first instance. Creating one instance and sharing it is still the recommended setup.
+- 9ec1a3b: `autoRedact` no longer takes quadratic time on a long run of `eyJ` in a header, path or value (a 100 KB header cost about a second per log line), and a getter or Proxy trap that throws no longer drops the whole record: only that field becomes `"[Unserializable]"`, as it does without `autoRedact`. A getter defined on an error is now redacted like any other field.
+- bceda8d: A streamed or SSE response is now logged when the client disconnects, even while the generator is waiting for its next value. Since 6.10.0 such a request got no line until that wait ended, which for an SSE loop could be never. A generator whose cleanup throws is logged as an error whether the body was cancelled before or after its first read.
+- d7ed8be: A `requestId.header` that is not a valid HTTP header name now throws when the plugin is created. Before, it made every request fail with `Invalid header name`. The HTTP adapters now also reject a `retries`, `timeout`, `flushIntervalMs` or `maxPendingBatches` that is not a usable number when they are created. Before, `maxPendingBatches: NaN` buffered without bound while the backend was down, `0` dropped almost every entry, and a `NaN` timeout failed every request.
+
 ## 6.10.0
 
 ### Minor Changes
