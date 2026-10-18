@@ -21,6 +21,10 @@ const DEFAULT_TIMEOUT_MS = 5000
 const RETRY_BASE_DELAY_MS = 250
 const RETRY_JITTER_MIN = 0.5
 const MAX_RETRY_AFTER_MS = 30_000
+/** The largest value `AbortSignal.timeout` accepts, 2^32 - 1. */
+const MAX_ABORT_TIMEOUT_MS = 4_294_967_295
+/** `setTimeout` runs a timer above 2^31 - 1 ms after 1 ms. */
+const MAX_TIMER_DELAY_MS = 2_147_483_647
 const MILLIS_PER_SECOND = 1000
 const HTTP_TOO_MANY_REQUESTS = 429
 const HTTP_SERVER_ERROR_MIN = 500
@@ -560,15 +564,19 @@ export const createHttpTransport = (
     return value
   }
 
-  const finiteMilliseconds = (
+  const millisecondsInRange = (
     name: string,
     value: number,
-    min: number
+    min: number,
+    max: number,
+    { integer }: { integer: boolean }
   ): number => {
-    if (!Number.isFinite(value) || value < min) {
+    // Written so that NaN fails the range check.
+    const inRange = value >= min && value <= max
+    if (!inRange || (integer && !Number.isInteger(value))) {
       throw transportError(
         input.name,
-        `${name} must be a finite number of milliseconds at or above ${min}, got ${value}`
+        `${name} must be a ${integer ? 'whole number' : 'number'} of milliseconds from ${min} to ${max}, got ${value}`
       )
     }
     return value
@@ -587,16 +595,20 @@ export const createHttpTransport = (
     'retries',
     input.options.retries ?? DEFAULT_RETRIES
   )
-  // 0 would abort every request before it is sent.
-  const timeout = finiteMilliseconds(
+  // AbortSignal.timeout rejects fractions, and 0 would abort every request.
+  const timeout = millisecondsInRange(
     'timeout',
     input.options.timeout ?? DEFAULT_TIMEOUT_MS,
-    1
+    1,
+    MAX_ABORT_TIMEOUT_MS,
+    { integer: true }
   )
-  const flushIntervalMs = finiteMilliseconds(
+  const flushIntervalMs = millisecondsInRange(
     'flushIntervalMs',
     input.options.flushIntervalMs ?? DEFAULT_FLUSH_INTERVAL_MS,
-    0
+    0,
+    MAX_TIMER_DELAY_MS,
+    { integer: false }
   )
   const maxPendingBatches = positiveInteger(
     'maxPendingBatches',
