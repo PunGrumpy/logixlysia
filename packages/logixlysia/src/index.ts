@@ -146,6 +146,36 @@ const runInLoggerScope =
   pull =>
     loggerStorage.run(logger, pull)
 
+/**
+ * Forwards a cancel to the source. Its cleanup can throw on its own, outside
+ * the delegation, when the body was cancelled before its first read; the
+ * request's line must still carry that error.
+ */
+const returnRecordingError = async (
+  record: RequestRecord,
+  iterator: AsyncIterator<unknown>
+): Promise<void> => {
+  try {
+    await iterator.return?.()
+  } catch (error) {
+    record.error ??= error
+    throw error
+  }
+}
+
+/** {@link returnRecordingError} for a sync generator. */
+const returnSyncRecordingError = (
+  record: RequestRecord,
+  iterator: Iterator<unknown>
+): void => {
+  try {
+    iterator.return?.()
+  } catch (error) {
+    record.error ??= error
+    throw error
+  }
+}
+
 const wrapAsyncStream = async function* wrapAsyncStream(
   record: RequestRecord,
   source: AsyncIterable<unknown>,
@@ -180,7 +210,7 @@ const wrapAsyncStream = async function* wrapAsyncStream(
     // (a no-op on a source that already finished). The request settles even
     // when the source's own cleanup throws.
     try {
-      await iterator.return?.()
+      await returnRecordingError(record, iterator)
     } finally {
       onSettled()
     }
@@ -215,7 +245,7 @@ const wrapSyncStream = function* wrapSyncStream(
     throw error
   } finally {
     try {
-      iterator.return?.()
+      returnSyncRecordingError(record, iterator)
     } finally {
       onSettled()
     }
@@ -500,7 +530,18 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
       return
     }
     record.phase = 'streaming'
-    const onSettled = (): void => settleStream(request, record)
+    // A client that disconnects while the source awaits its next value would
+    // otherwise get no line until that await settles, which may be never.
+    const onAbort = (): void => {
+      if (record.phase === 'streaming' && record.status !== undefined) {
+        finishRequest(request, record, record.status)
+      }
+    }
+    request.signal.addEventListener('abort', onAbort, { once: true })
+    const onSettled = (): void => {
+      request.signal.removeEventListener('abort', onAbort)
+      settleStream(request, record)
+    }
     const runInScope = useAsyncLocalStorage
       ? runInLoggerScope(createRequestScopedLogger(request))
       : runUnscoped
