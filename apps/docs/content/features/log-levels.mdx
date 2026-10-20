@@ -19,11 +19,11 @@ DEBUG > INFO > WARNING > ERROR
 
 Logixlysia writes each access line once, from the final response, and picks its level from the status the client received:
 
-| Status | Level |
-| --- | --- |
-| `500` and above | `ERROR` |
-| `400` to `499` | `WARNING` |
-| Below `400` | `INFO` |
+| Status          | Level     |
+| --------------- | --------- |
+| `500` and above | `ERROR`   |
+| `400` to `499`  | `WARNING` |
+| Below `400`     | `INFO`    |
 
 This includes responses from Elysia's `status()` helper, whether a handler returns it, throws it, or returns it from `beforeHandle`:
 
