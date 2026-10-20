@@ -71,7 +71,7 @@ Logixlysia reports the failure through [`onError`](/docs/configuration#onerror) 
 logixlysia({
   config: {
     requestId: {
-      generator: () => getTraceId() // falls back to a UUID if this throws
+      generator: () => getTraceId()
     },
     onError: ({ sink, error }) => {
       if (sink === 'enricher')
