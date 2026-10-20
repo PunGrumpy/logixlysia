@@ -74,7 +74,8 @@ logixlysia({
       generator: () => getTraceId() // falls back to a UUID if this throws
     },
     onError: ({ sink, error }) => {
-      if (sink === 'enricher') console.warn('request id generator failed', error)
+      if (sink === 'enricher')
+        console.warn('request id generator failed', error)
     }
   }
 })

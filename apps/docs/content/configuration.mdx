@@ -291,11 +291,19 @@ Use only transports, disable console and file logging.
 useTransportsOnly: true
 ```
 
-`useTransportsOnly: true` requires at least one entry in `transports`. If `transports` is empty or missing, the plugin throws `logixlysia: invalid output config` when you construct it. This includes a conditional list that can end up empty, such as `transports: token ? [adapter] : []`. Set `useTransportsOnly` only when a transport is present:
+`useTransportsOnly: true` requires at least one entry in `transports`. If `transports` is empty or missing, the plugin throws `logixlysia: invalid output config` when you construct it. This includes a conditional list that can end up empty, such as `token ? [createAxiomTransport({ apiKey: token })] : []`. Set `useTransportsOnly` only when a transport is present:
 
 ```ts
-transports: token ? [adapter] : [],
-useTransportsOnly: Boolean(token)
+const token = process.env.AXIOM_API_KEY
+
+const app = new Elysia().use(
+  logixlysia({
+    config: {
+      transports: token ? [createAxiomTransport({ apiKey: token })] : [],
+      useTransportsOnly: Boolean(token)
+    }
+  })
+)
 ```
 
 To turn every sink off, set `disableInternalLogger: true` and `disableFileLogging: true` instead.
