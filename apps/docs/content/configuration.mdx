@@ -376,6 +376,8 @@ Reads the request id from the configured header or generates one, and echoes it 
 requestId: true
 ```
 
+`requestId.header` must be a valid HTTP header name: letters, digits, and ``!#$%&'*+.^_`|~-``, with no spaces. A value such as `'X Request Id'` makes the plugin throw `logixlysia: invalid requestId config` when you construct it. An empty or blank header falls back to `X-Request-Id`.
+
 If a custom `requestId.generator` throws or returns an id that does not match `^[A-Za-z0-9._-]{1,128}$`, the plugin uses a random UUID for that request instead. It reports the failure through `onError` with `sink: 'enricher'`. Without `onError`, it writes the failure to stderr at most once every 5 seconds.
 
 ### `useAsyncLocalStorage`
