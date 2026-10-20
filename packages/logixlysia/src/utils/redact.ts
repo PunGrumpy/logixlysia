@@ -13,7 +13,12 @@ const IPV6_REGEX =
   /(?<![\w:])(?:(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}|(?:[0-9a-fA-F]{1,4}:){1,7}:(?:[0-9a-fA-F]{1,4}(?::[0-9a-fA-F]{1,4}){0,6})?|::(?:[0-9a-fA-F]{1,4}(?::[0-9a-fA-F]{1,4}){0,6}))(?![\w:])/gu
 /** Digit runs that may be formatted PANs (spaces/dashes); validated with Luhn before redacting. */
 const CREDIT_CARD_CANDIDATE_REGEX = /\b(?:\d[ -]*?){13,19}\b/gu
-const JWT_REGEX = /eyJ[a-zA-Z0-9_-]+\.eyJ[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+/gu
+/**
+ * Starts only where a token can start: after a character outside the token
+ * alphabet. Otherwise every `eyJ` inside a long run is a start position whose
+ * scan runs to the end of the run, which is quadratic in the run's length.
+ */
+const JWT_REGEX = /(?<![\w-])eyJ[\w-]+\.eyJ[\w-]+\.[\w-]+/gu
 /**
  * `://user:password@` in free text (the user part may be empty, as in a Redis
  * URL); a password is a secret whatever it looks like. The scheme in front is
@@ -343,6 +348,18 @@ const withReentrancyGuard = <T>(
   }
 }
 
+const UNREADABLE = Symbol('unreadable')
+
+/** A Proxy whose `get` trap throws cannot even be asked for its `toJSON`. */
+const readToJson = (value: object): unknown => {
+  try {
+    const { toJSON } = value as { toJSON?: unknown }
+    return toJSON
+  } catch {
+    return UNREADABLE
+  }
+}
+
 /**
  * Mutually recursive. One object lets each walker reach the others by
  * property instead of by a binding declared later in the file.
@@ -418,18 +435,26 @@ const walker = {
         continue
       }
 
+      let current: unknown = descriptor.value
       if (descriptor.get !== undefined || descriptor.set !== undefined) {
-        Object.defineProperty(newError, key, descriptor)
-        continue
+        // Read once, on the original: the copy has no internal state for the
+        // getter to read, and what it returns is what a sink would write.
+        try {
+          current = descriptor.get?.call(originalError)
+        } catch {
+          current = UNSERIALIZABLE_TEXT
+        }
       }
 
       const redactedValue = isSensitiveKey(key, extraKeys)
         ? REDACTED_TEXT
-        : walker.value(descriptor.value, inProgress, extraKeys)
+        : walker.value(current, inProgress, extraKeys)
 
       Object.defineProperty(newError, key, {
-        ...descriptor,
-        value: redactedValue
+        configurable: descriptor.configurable,
+        enumerable: descriptor.enumerable,
+        value: redactedValue,
+        writable: descriptor.writable ?? descriptor.set !== undefined
       })
     }
 
@@ -458,18 +483,37 @@ const walker = {
     recordValue: Record<string, unknown>,
     inProgress: WeakSet<object>,
     extraKeys?: readonly string[]
-  ): Record<string, unknown> => {
-    const keys = Object.keys(recordValue)
+  ): Record<string, unknown> | string => {
+    let keys: string[]
+    try {
+      keys = Object.keys(recordValue)
+    } catch {
+      return UNSERIALIZABLE_TEXT
+    }
     let result: Record<string, unknown> | undefined
 
     for (const [index, key] of keys.entries()) {
-      const original = recordValue[key]
+      let original: unknown
+      let unreadable = false
+      try {
+        original = recordValue[key]
+      } catch {
+        // A getter or Proxy trap that throws: only this field is lost, as
+        // stringifyForLog does without autoRedact.
+        unreadable = true
+      }
       const sensitive = isSensitiveKey(key, extraKeys)
-      const redacted = sensitive
-        ? REDACTED_TEXT
-        : walker.value(original, inProgress, extraKeys)
+      let redacted: unknown = REDACTED_TEXT
+      if (unreadable) {
+        redacted = UNSERIALIZABLE_TEXT
+      } else if (!sensitive) {
+        redacted = walker.value(original, inProgress, extraKeys)
+      }
 
-      if (result === undefined && (sensitive || redacted !== original)) {
+      if (
+        result === undefined &&
+        (sensitive || unreadable || redacted !== original)
+      ) {
         result = {}
         for (const priorKey of keys.slice(0, index)) {
           result[priorKey] = recordValue[priorKey]
@@ -585,7 +629,10 @@ const walker = {
       return value
     }
 
-    const { toJSON } = value as { toJSON?: unknown }
+    const toJSON = readToJson(value)
+    if (toJSON === UNREADABLE) {
+      return UNSERIALIZABLE_TEXT
+    }
     if (typeof toJSON === 'function') {
       return withReentrancyGuard(value, inProgress, () =>
         walker.toJson(value as { toJSON: () => unknown }, inProgress, extraKeys)

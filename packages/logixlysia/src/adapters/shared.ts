@@ -21,6 +21,10 @@ const DEFAULT_TIMEOUT_MS = 5000
 const RETRY_BASE_DELAY_MS = 250
 const RETRY_JITTER_MIN = 0.5
 const MAX_RETRY_AFTER_MS = 30_000
+/** The largest value `AbortSignal.timeout` accepts, 2^32 - 1. */
+const MAX_ABORT_TIMEOUT_MS = 4_294_967_295
+/** `setTimeout` runs a timer above 2^31 - 1 ms after 1 ms. */
+const MAX_TIMER_DELAY_MS = 2_147_483_647
 const MILLIS_PER_SECOND = 1000
 const HTTP_TOO_MANY_REQUESTS = 429
 const HTTP_SERVER_ERROR_MIN = 500
@@ -324,12 +328,13 @@ export interface BatchQueue {
 /**
  * Routes a batch failure to the adapter's `onError` hook, or — when no hook is
  * configured — to stderr at most once per interval, so a backend that fails on
- * every batch cannot flood the console.
+ * every batch cannot flood the console. Returns whether the error reached the
+ * hook or stderr.
  */
 const createQueueReporter = (
   name: string,
   onError?: (error: unknown) => void
-): ((error: unknown) => void) => {
+): ((error: unknown) => boolean) => {
   let lastReportedAt = 0
 
   return error => {
@@ -339,15 +344,16 @@ const createQueueReporter = (
       } catch {
         // Swallow errors thrown by the hook itself.
       }
-      return
+      return true
     }
 
     const now = Date.now()
     if (now - lastReportedAt < REPORT_INTERVAL_MS) {
-      return
+      return false
     }
     lastReportedAt = now
     console.error(`[logixlysia] ${name} transport failed:`, error)
+    return true
   }
 }
 
@@ -387,6 +393,9 @@ export const createBatchQueue = (input: {
   let settled = 0
 
   const report = createQueueReporter(input.name, input.onError)
+  // Its own rate limit: a failing backend reports a failure before every
+  // drop report, and one shared window would hide the drops for good.
+  const reportDrops = createQueueReporter(input.name, input.onError)
   const maxWaiting =
     (input.maxPendingBatches ?? DEFAULT_MAX_PENDING_BATCHES) *
     input.maxBatchSize
@@ -406,11 +415,15 @@ export const createBatchQueue = (input: {
     // more entries while it runs, and the next report must count them.
     const count = dropped
     dropped = 0
-    report(
+    const reported = reportDrops(
       new Error(
         `[logixlysia] ${input.name} transport: ${count} entries dropped while ${maxWaiting} were already waiting`
       )
     )
+    if (!reported) {
+      // Rate limited on stderr: carry the count into the next report.
+      dropped += count
+    }
   }
 
   /**
@@ -538,8 +551,6 @@ export interface HttpTransportInput {
 export const createHttpTransport = (
   input: HttpTransportInput
 ): AdapterTransport => {
-  const retries = input.options.retries ?? DEFAULT_RETRIES
-  const timeout = input.options.timeout ?? DEFAULT_TIMEOUT_MS
   const url = resolveEndpoint(input.name, input.url)
 
   const positiveInteger = (name: string, value: number): number => {
@@ -547,6 +558,34 @@ export const createHttpTransport = (
       throw transportError(
         input.name,
         `${name} must be a positive integer, got ${value}`
+      )
+    }
+    return value
+  }
+
+  const nonNegativeInteger = (name: string, value: number): number => {
+    if (!Number.isInteger(value) || value < 0) {
+      throw transportError(
+        input.name,
+        `${name} must be an integer at or above 0, got ${value}`
+      )
+    }
+    return value
+  }
+
+  const millisecondsInRange = (
+    name: string,
+    value: number,
+    min: number,
+    max: number,
+    { integer }: { integer: boolean }
+  ): number => {
+    // Written so that NaN fails the range check.
+    const inRange = value >= min && value <= max
+    if (!inRange || (integer && !Number.isInteger(value))) {
+      throw transportError(
+        input.name,
+        `${name} must be a ${integer ? 'whole number' : 'number'} of milliseconds from ${min} to ${max}, got ${value}`
       )
     }
     return value
@@ -561,11 +600,35 @@ export const createHttpTransport = (
     input.options.maxEntriesPerRequest ?? DEFAULT_MAX_ENTRIES_PER_REQUEST
   )
 
+  const retries = nonNegativeInteger(
+    'retries',
+    input.options.retries ?? DEFAULT_RETRIES
+  )
+  // AbortSignal.timeout rejects fractions, and 0 would abort every request.
+  const timeout = millisecondsInRange(
+    'timeout',
+    input.options.timeout ?? DEFAULT_TIMEOUT_MS,
+    1,
+    MAX_ABORT_TIMEOUT_MS,
+    { integer: true }
+  )
+  const flushIntervalMs = millisecondsInRange(
+    'flushIntervalMs',
+    input.options.flushIntervalMs ?? DEFAULT_FLUSH_INTERVAL_MS,
+    0,
+    MAX_TIMER_DELAY_MS,
+    { integer: false }
+  )
+  const maxPendingBatches = positiveInteger(
+    'maxPendingBatches',
+    input.options.maxPendingBatches ?? DEFAULT_MAX_PENDING_BATCHES
+  )
+
   const queue = createBatchQueue({
-    flushIntervalMs: input.options.flushIntervalMs ?? DEFAULT_FLUSH_INTERVAL_MS,
+    flushIntervalMs,
     maxBatchSize,
     maxEntriesPerRequest,
-    maxPendingBatches: input.options.maxPendingBatches,
+    maxPendingBatches,
     name: input.name,
     onError: input.options.onError,
     send: entries =>

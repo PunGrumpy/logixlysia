@@ -24,6 +24,22 @@ describe('redactString', () => {
     expect(result.endsWith('[REDACTED]')).toBe(true)
   })
 
+  test('redacts a JWT-shaped run of eyJ without hanging', () => {
+    for (const input of ['eyJ'.repeat(34_000), 'eyJ_'.repeat(25_000)]) {
+      const start = performance.now()
+      redactString(input)
+      expect(performance.now() - start).toBeLessThan(500)
+    }
+  })
+
+  test('still redacts a JWT after =, a space or a parenthesis', () => {
+    expect(redactString('token=eyJa.eyJb.c&x=1')).toBe('token=[REDACTED]&x=1')
+    expect(redactString('(eyJa.eyJb.c)')).toBe('([REDACTED])')
+    expect(redactString('Bearer eyJhbGciOi.eyJzdWIiOi.sig-_x')).not.toContain(
+      'eyJ'
+    )
+  })
+
   test('redacts IPs', () => {
     expect(redactString('IP is 192.168.1.1')).toBe('IP is [REDACTED]')
   })
@@ -668,5 +684,57 @@ describe('IPv4/IPv6 redaction precision', () => {
     const start = performance.now()
     redactString(input)
     expect(performance.now() - start).toBeLessThan(500)
+  })
+})
+
+const throwingTrap = (): never => {
+  throw new Error('trap')
+}
+
+describe('values that cannot be read', () => {
+  test('replaces only the field whose getter throws', () => {
+    const out = redact({
+      a: {
+        get b(): string {
+          throw new Error('g')
+        }
+      },
+      c: 'x'
+    })
+    // Stringifying throws if the walker handed back the original object.
+    expect(JSON.stringify(out)).toBe('{"a":{"b":"[Unserializable]"},"c":"x"}')
+  })
+
+  test('replaces a Proxy whose ownKeys or get trap throws', () => {
+    expect(redact({ p: new Proxy({}, { ownKeys: throwingTrap }) })).toEqual({
+      p: '[Unserializable]'
+    })
+    expect(redact({ p: new Proxy({}, { get: throwingTrap }) })).toEqual({
+      p: '[Unserializable]'
+    })
+  })
+
+  test('redacts what an own getter on an Error returns', () => {
+    const error = new Error('x')
+    Object.defineProperty(error, 'detail', {
+      enumerable: true,
+      get: () => 'mail me at someone@example.com'
+    })
+    expect((redact(error) as unknown as { detail: string }).detail).toBe(
+      'mail me at [REDACTED]'
+    )
+  })
+
+  test('keeps the error when an own getter on it throws', () => {
+    const error = new Error('x')
+    Object.defineProperty(error, 'detail', {
+      enumerable: true,
+      get: throwingTrap
+    })
+    let result: unknown
+    expect(() => {
+      result = redact(error)
+    }).not.toThrow()
+    expect((result as { detail: string }).detail).toBe('[Unserializable]')
   })
 })

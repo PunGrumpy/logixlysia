@@ -1,4 +1,4 @@
-import { describe, expect, mock, test } from 'bun:test'
+import { describe, expect, mock, setSystemTime, test } from 'bun:test'
 import {
   createBatchQueue,
   createHttpTransport,
@@ -93,6 +93,18 @@ describe('snapshotMeta', () => {
   test('turns a Date into its ISO string', () => {
     expect(snapshotMeta({ at: new Date('2026-01-01T00:00:00.000Z') })).toEqual({
       at: '2026-01-01T00:00:00.000Z'
+    })
+  })
+
+  test('keeps an Error, a Map and a Set in the copy', () => {
+    expect(
+      snapshotMeta({
+        cause: new Error('connection reset'),
+        tags: new Set(['a'])
+      })
+    ).toEqual({
+      cause: { message: 'connection reset', name: 'Error' },
+      tags: ['a']
     })
   })
 })
@@ -1002,6 +1014,96 @@ describe('createBatchQueue', () => {
     expect(batches).toEqual([['a', 'b'], ['c', 'd'], ['failure logged']])
     expect(failures).toBe(1)
   })
+
+  test('carries a drop count the stderr rate limit holds back into the next report', async () => {
+    const console = spyConsole(['error'])
+    const pending: Deferred[] = []
+    try {
+      const queue = createBatchQueue({
+        flushIntervalMs: 60_000,
+        maxBatchSize: 1,
+        maxPendingBatches: 1,
+        name: 'Test',
+        send: () => {
+          const next = deferred()
+          pending.push(next)
+          return next.promise
+        }
+      })
+      const release = async (): Promise<void> => {
+        pending.shift()?.resolve()
+        await sleep(5)
+      }
+      queue.push(entry({ message: 'a' }))
+      await sleep(5)
+      for (const message of ['b', 'c', 'd']) {
+        queue.push(entry({ message }))
+      }
+      await release()
+      for (const message of ['e', 'f', 'g']) {
+        queue.push(entry({ message }))
+      }
+      await release()
+      setSystemTime(new Date(Date.now() + 6000))
+      for (const message of ['h', 'i']) {
+        queue.push(entry({ message }))
+      }
+      await release()
+
+      const drops = console.spies.error.mock.calls
+        .map(call => String((call[1] as Error).message))
+        .filter(message => message.includes('dropped'))
+      expect(drops).toHaveLength(2)
+      expect(drops.at(-1)).toContain('3 entries dropped')
+    } finally {
+      setSystemTime()
+      console.restore()
+      for (const next of pending) {
+        next.resolve()
+      }
+    }
+  })
+
+  test('reports drops on stderr right after a failure report', async () => {
+    const console = spyConsole(['error'])
+    const pending: PromiseWithResolvers<void>[] = []
+    try {
+      const queue = createBatchQueue({
+        flushIntervalMs: 60_000,
+        maxBatchSize: 1,
+        maxPendingBatches: 1,
+        name: 'Test',
+        send: () => {
+          const next: PromiseWithResolvers<void> = Promise.withResolvers()
+          pending.push(next)
+          return next.promise
+        }
+      })
+      queue.push(entry({ message: 'a' }))
+      await sleep(5)
+      queue.push(entry({ message: 'b' }))
+      await sleep(5)
+      pending.shift()?.resolve()
+      await sleep(5)
+      queue.push(entry({ message: 'c' }))
+      queue.push(entry({ message: 'd' }))
+      pending.shift()?.reject(new Error('down'))
+      await sleep(5)
+
+      const messages = console.spies.error.mock.calls.map(call =>
+        String((call[1] as Error).message)
+      )
+      expect(messages.some(message => message.includes('down'))).toBe(true)
+      expect(
+        messages.some(message => message.includes('1 entries dropped'))
+      ).toBe(true)
+    } finally {
+      console.restore()
+      for (const next of pending) {
+        next.resolve()
+      }
+    }
+  })
 })
 
 describe('createHttpTransport', () => {
@@ -1054,6 +1156,86 @@ describe('createHttpTransport', () => {
             })
           ).toThrow(name)
         }
+      }
+    } finally {
+      stub.restore()
+    }
+  })
+
+  test('rejects a maxPendingBatches that is not a positive integer', () => {
+    const stub = stubFetch([{ status: 200 }])
+    try {
+      for (const value of [0, -1, 0.5, Number.NaN, Number.POSITIVE_INFINITY]) {
+        expect(() =>
+          createHttpTransport({
+            body: entries => JSON.stringify(entries),
+            headers: {},
+            name: 'Test',
+            options: { maxPendingBatches: value },
+            url: 'https://ingest.example/v1'
+          })
+        ).toThrow('maxPendingBatches')
+      }
+    } finally {
+      stub.restore()
+    }
+  })
+
+  test('rejects a retries value that is not a non-negative integer', () => {
+    const stub = stubFetch([{ status: 200 }])
+    try {
+      for (const value of [-1, 1.5, Number.NaN, Number.POSITIVE_INFINITY]) {
+        expect(() =>
+          createHttpTransport({
+            body: entries => JSON.stringify(entries),
+            headers: {},
+            name: 'Test',
+            options: { retries: value },
+            url: 'https://ingest.example/v1'
+          })
+        ).toThrow('retries')
+      }
+    } finally {
+      stub.restore()
+    }
+  })
+
+  test('rejects a non-finite or out-of-range timeout or flushIntervalMs', () => {
+    const stub = stubFetch([{ status: 200 }])
+    try {
+      const badValues: Record<string, number[]> = {
+        flushIntervalMs: [-1, 2 ** 31, Number.NaN, Number.POSITIVE_INFINITY],
+        timeout: [0, -5, 1.5, 2 ** 32, Number.NaN, Number.POSITIVE_INFINITY]
+      }
+      for (const [name, values] of Object.entries(badValues)) {
+        for (const value of values) {
+          expect(() =>
+            createHttpTransport({
+              body: entries => JSON.stringify(entries),
+              headers: {},
+              name: 'Test',
+              options: { [name]: value },
+              url: 'https://ingest.example/v1'
+            })
+          ).toThrow(name)
+        }
+      }
+
+      const validOptions = [
+        { flushIntervalMs: 0, maxPendingBatches: 1, retries: 0, timeout: 1 },
+        { flushIntervalMs: 2_147_483_647, timeout: 4_294_967_295 },
+        { flushIntervalMs: 0.5 }
+      ]
+      for (const options of validOptions) {
+        expect(() =>
+          createHttpTransport({
+            body: entries => JSON.stringify(entries),
+            headers: {},
+            name: 'Test',
+            options,
+            url: 'https://ingest.example/v1'
+          })
+        ).not.toThrow()
       }
     } finally {
       stub.restore()

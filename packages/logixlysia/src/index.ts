@@ -74,6 +74,16 @@ const resolveHandledStatus = (
   return getStatusCode(setStatus)
 }
 
+/**
+ * Shared by every plugin instance. Elysia keeps only the first instance's
+ * `onRequest` and `wrap` (both dedupe by plugin name), so a second instance,
+ * mounted in a sibling module, never sees its requests start and closes them
+ * from its own route hooks. It times them from the start the first instance
+ * saw, and its line replaces the one the first instance's wrap would write.
+ */
+const requestStarts = new WeakMap<Request, bigint>()
+const lineOwners = new WeakMap<Request, symbol>()
+
 interface RequestRecord {
   /** A custom log replaced the access line for this request. */
   customLogged: boolean
@@ -90,24 +100,6 @@ interface RequestRecord {
   status?: number
   /** The wrap saw this request. Otherwise the hooks close it, as before the wrap existed. */
   wrapped: boolean
-}
-
-const records = new WeakMap<Request, RequestRecord>()
-
-const openRecord = (request: Request): RequestRecord => {
-  const existing = records.get(request)
-  if (existing) {
-    return existing
-  }
-  const record: RequestRecord = {
-    customLogged: false,
-    phase: 'open',
-    pulled: false,
-    startedAt: process.hrtime.bigint(),
-    wrapped: false
-  }
-  records.set(request, record)
-  return record
 }
 
 const responseStatus = (response: unknown): number =>
@@ -146,6 +138,36 @@ const runInLoggerScope =
   pull =>
     loggerStorage.run(logger, pull)
 
+/**
+ * Forwards a cancel to the source. Its cleanup can throw on its own, outside
+ * the delegation, when the body was cancelled before its first read; the
+ * request's line must still carry that error.
+ */
+const returnRecordingError = async (
+  record: RequestRecord,
+  iterator: AsyncIterator<unknown>
+): Promise<void> => {
+  try {
+    await iterator.return?.()
+  } catch (error) {
+    record.error ??= error
+    throw error
+  }
+}
+
+/** {@link returnRecordingError} for a sync generator. */
+const returnSyncRecordingError = (
+  record: RequestRecord,
+  iterator: Iterator<unknown>
+): void => {
+  try {
+    iterator.return?.()
+  } catch (error) {
+    record.error ??= error
+    throw error
+  }
+}
+
 const wrapAsyncStream = async function* wrapAsyncStream(
   record: RequestRecord,
   source: AsyncIterable<unknown>,
@@ -180,7 +202,7 @@ const wrapAsyncStream = async function* wrapAsyncStream(
     // (a no-op on a source that already finished). The request settles even
     // when the source's own cleanup throws.
     try {
-      await iterator.return?.()
+      await returnRecordingError(record, iterator)
     } finally {
       onSettled()
     }
@@ -215,7 +237,7 @@ const wrapSyncStream = function* wrapSyncStream(
     throw error
   } finally {
     try {
-      iterator.return?.()
+      returnSyncRecordingError(record, iterator)
     } finally {
       onSettled()
     }
@@ -277,6 +299,30 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
   rawOptions: Options = {}
 ): LogixlysiaPlugin<TFields> => {
   const options = resolveOptions(rawOptions)
+  // Per instance: an app that forwards a request to another app with its own
+  // plugin must not see that app's record as its own.
+  const records = new WeakMap<Request, RequestRecord>()
+  const instance = Symbol('logixlysia')
+  const openRecord = (request: Request): RequestRecord => {
+    const existing = records.get(request)
+    if (existing) {
+      return existing
+    }
+    let startedAt = requestStarts.get(request)
+    if (startedAt === undefined) {
+      startedAt = process.hrtime.bigint()
+      requestStarts.set(request, startedAt)
+    }
+    const record: RequestRecord = {
+      customLogged: false,
+      phase: 'open',
+      pulled: false,
+      startedAt,
+      wrapped: false
+    }
+    records.set(request, record)
+    return record
+  }
   const contextStore = createRequestContextStore()
   const baseLogger = createPluginLogger(options, contextStore)
   const wrapWs = createWsHandlerWrapper(options, baseLogger, contextStore)
@@ -454,6 +500,22 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
       return
     }
     record.phase = 'closed'
+    const owner = lineOwners.get(request)
+    if (record.wrapped && owner !== undefined && owner !== instance) {
+      // Another instance's route hooks wrote this request's line. Still
+      // resolve this instance's tail sampling, or what it buffered for the
+      // request (a `useLogger()` call, say) is never kept or dropped.
+      try {
+        logger.finalizeRequest(
+          request,
+          { beforeTime: record.startedAt },
+          status
+        )
+      } catch (failure) {
+        reportFormatError(failure, onSinkError)
+      }
+      return
+    }
     try {
       const store = closeRequest(
         request,
@@ -500,7 +562,18 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
       return
     }
     record.phase = 'streaming'
-    const onSettled = (): void => settleStream(request, record)
+    // A client that disconnects while the source awaits its next value would
+    // otherwise get no line until that await settles, which may be never.
+    const onAbort = (): void => {
+      if (record.phase === 'streaming' && record.status !== undefined) {
+        finishRequest(request, record, record.status)
+      }
+    }
+    request.signal.addEventListener('abort', onAbort, { once: true })
+    const onSettled = (): void => {
+      request.signal.removeEventListener('abort', onAbort)
+      settleStream(request, record)
+    }
     const runInScope = useAsyncLocalStorage
       ? runInLoggerScope(createRequestScopedLogger(request))
       : runUnscoped
@@ -524,6 +597,9 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
     status: number,
     responseHeaders?: Headers
   ): void => {
+    if (!lineOwners.has(request)) {
+      lineOwners.set(request, instance)
+    }
     finishRequest(request, record, status, responseHeaders)
     exitRequestScope()
   }
