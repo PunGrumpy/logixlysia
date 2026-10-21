@@ -128,6 +128,7 @@ declare global {
   var processData: (...args: any[]) => any
   var performRiskyOperation: (...args: any[]) => any
   var generateId: () => string
+  var getTraceId: () => string
   var newUser: any
   var user: any
   var order: any
