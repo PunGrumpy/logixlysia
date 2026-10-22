@@ -482,8 +482,7 @@ export const createHttpTransport = (
     max: number,
     { integer }: { integer: boolean }
   ): number => {
-    // Written so that NaN fails the range check.
-    const inRange = value >= min && value <= max
+    const inRange = !Number.isNaN(value) && value >= min && value <= max
     if (!inRange || (integer && !Number.isInteger(value))) {
       throw transportError(
         input.name,
