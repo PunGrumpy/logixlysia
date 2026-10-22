@@ -576,7 +576,7 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
   /**
    * Closes a request the wrap did not see: Elysia skips higher-order
    * functions with `aot: false`, and `group()` and `guard()` do not merge
-   * them into the parent. The hooks then write the line, as before.
+   * them into the parent. The hooks then write the line.
    */
   const finishUnwrapped = (
     request: Request,
@@ -710,7 +710,7 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
       }
       if (record.phase === 'closed') {
         // Thrown after the line was written (a route afterHandle, a response
-        // schema): a second, error line, as before the wrap existed.
+        // schema): a second, error line.
         logger.handleHttpError(request, error, { beforeTime: record.startedAt })
         exitRequestScope()
         return
@@ -723,8 +723,8 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
       if (record.wrapped) {
         return
       }
-      // An exit that reached neither hook above (a resolve short-circuit, a
-      // 404, an error an earlier app-wide onError answered).
+      // An exit that reached neither hook above (a resolve short-circuit, or an
+      // error an earlier app-wide onError answered).
       const error = 'error' in context ? context.error : undefined
       if (error !== undefined) {
         record.error = error
