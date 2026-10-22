@@ -291,6 +291,23 @@ Use only transports, disable console and file logging.
 useTransportsOnly: true
 ```
 
+`useTransportsOnly: true` requires at least one entry in `transports`. If `transports` is empty or missing, the plugin throws `logixlysia: invalid output config` when you construct it. This includes a conditional list that can end up empty, such as `token ? [createAxiomTransport({ apiKey: token })] : []`. Set `useTransportsOnly` only when a transport is present:
+
+```ts
+const token = process.env.AXIOM_API_KEY
+
+const app = new Elysia().use(
+  logixlysia({
+    config: {
+      transports: token ? [createAxiomTransport({ apiKey: token })] : [],
+      useTransportsOnly: Boolean(token)
+    }
+  })
+)
+```
+
+To turn every sink off, set `disableInternalLogger: true` and `disableFileLogging: true` instead.
+
 ### `disableInternalLogger`
 
 Disable console logging.
@@ -333,6 +350,8 @@ How long the plugin waits for transports and the file sink to flush when the app
 - **Type:** `number`
 - **Default:** `5000`
 
+The value must be a finite number at or above `0`. `Infinity`, `NaN`, and negative values make the plugin throw `logixlysia: invalid output config` when you construct it.
+
 ```ts
 flushTimeoutMs: 2000
 ```
@@ -365,6 +384,10 @@ Reads the request id from the configured header or generates one, and echoes it 
 requestId: true
 ```
 
+`requestId.header` must be a valid HTTP header name: letters, digits, and ``!#$%&'*+.^_`|~-``, with no spaces. A value such as `'X Request Id'` makes the plugin throw `logixlysia: invalid requestId config` when you construct it. An empty or blank header falls back to `X-Request-Id`.
+
+If a custom `requestId.generator` throws or returns an id that does not match `^[A-Za-z0-9._-]{1,128}$`, the plugin uses a random UUID for that request instead. It reports the failure through `onError` with `sink: 'enricher'`. Without `onError`, it writes the failure to stderr at most once every 5 seconds.
+
 ### `useAsyncLocalStorage`
 
 Makes `useLogger()` return the current request's logger from anywhere in the call stack; without it `useLogger()` is a no-op. See [request context](/docs/features/request-context).
@@ -395,6 +418,8 @@ Restricts which log levels get processed. See [Filtering](/docs/features/filteri
 
 - **Type:** `{ level?: LogLevel[] }`
 - **Default:** all levels
+
+`level` must be an array containing only `'DEBUG'`, `'INFO'`, `'WARNING'`, or `'ERROR'`. Any other value, such as `'WARN'`, makes the plugin throw `logixlysia: invalid logFilter config` when you construct it.
 
 ```ts
 logFilter: {
