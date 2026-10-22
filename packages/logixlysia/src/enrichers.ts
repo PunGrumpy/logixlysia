@@ -21,8 +21,8 @@ const ZERO_TRACE_ID = '0'.repeat(32)
 const ZERO_SPAN_ID = '0'.repeat(16)
 const INVALID_VERSION = 'ff'
 const CURRENT_VERSION = '00'
-/** `00-` + 32 + `-` + 16 + `-` + 2: version 00 is exactly these four fields. */
-const VERSION_00_LENGTH = 55
+const VERSION_00_LENGTH =
+  `${CURRENT_VERSION}-${ZERO_TRACE_ID}-${ZERO_SPAN_ID}-00`.length
 
 export interface TraceparentEnricherOptions {
   /**
