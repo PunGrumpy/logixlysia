@@ -6,6 +6,7 @@ import { flushLogixlysia, logixlysia } from '../../src'
 import type { Options } from '../../src/interfaces'
 import { getFileSink } from '../../src/output/file-sink'
 import { spyConsole } from '../_helpers/console'
+import { neverSettles } from '../_helpers/never-settles'
 import { sleep } from '../_helpers/sleep'
 import { createTempDir, removeTempDir } from '../_helpers/tmp'
 import { waitFor } from '../_helpers/wait-for'
@@ -14,11 +15,6 @@ import { waitFor } from '../_helpers/wait-for'
 // `waitFor` for the hook's observable effect.
 const NO_WAIT_SETTLE_MS = 30
 const SLOW_TRANSPORT_MS = 40
-
-const neverSettles = (): Promise<void> => {
-  const { promise }: PromiseWithResolvers<void> = Promise.withResolvers()
-  return promise
-}
 
 const startApp = (options: Options) => {
   const app = new Elysia().use(logixlysia(options))

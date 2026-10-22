@@ -319,7 +319,7 @@ describe('colorized console output', () => {
     expect(output).toContain('boom')
   })
 
-  test('{context} token inlines JSON when the tree has nothing to show', () => {
+  test('{context} token stays empty when the context tree already shows the fields', () => {
     const request = createMockRequest('http://localhost/hello')
     const output = capture(
       {
@@ -333,7 +333,6 @@ describe('colorized console output', () => {
       }
     )
 
-    // The tree already renders userId, so the inline {context} token is empty.
     expect(output).not.toContain('{"userId"')
     expect(output).toContain('\u001B[36muserId')
   })

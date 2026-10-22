@@ -3,6 +3,7 @@ import { Elysia } from 'elysia'
 import type { AnyElysia } from 'elysia'
 import { logixlysia } from '../../src'
 import type { WsHandlerHooks } from '../../src/websocket/wrap-ws'
+import { awaitOpen } from '../_helpers/await-open'
 import { sleep } from '../_helpers/sleep'
 import { waitFor } from '../_helpers/wait-for'
 
@@ -79,20 +80,7 @@ const exchange = async (
     messages.push(event.data)
   })
 
-  const {
-    promise: opened,
-    reject: onOpenFailure,
-    resolve: onOpen
-  }: PromiseWithResolvers<void> = Promise.withResolvers()
-  socket.addEventListener('open', () => onOpen())
-  // Without these, a socket that never opens leaves the test waiting here
-  // instead of failing and stopping the server in `afterEach`.
-  socket.addEventListener('error', () =>
-    onOpenFailure(new Error('WebSocket connection failed'))
-  )
-  socket.addEventListener('close', () =>
-    onOpenFailure(new Error('WebSocket closed before opening'))
-  )
+  const opened = awaitOpen(socket)
   await opened
 
   if (message !== undefined) {

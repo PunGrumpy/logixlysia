@@ -2,6 +2,7 @@ import { describe, expect, mock, test } from 'bun:test'
 import { Elysia, sse, status } from 'elysia'
 import { logixlysia, useLogger } from '../../src'
 import type { Options } from '../../src/interfaces'
+import { neverSettles } from '../_helpers/never-settles'
 import { sleep } from '../_helpers/sleep'
 
 interface CapturedMeta {
@@ -47,12 +48,7 @@ const run = async (
   path: string
 ): Promise<{ body: string; response: Response }> => {
   const response = await app.handle(new Request(`http://localhost${path}`))
-  let body = ''
-  try {
-    body = await response.text()
-  } catch {
-    // A body that fails mid-stream still has headers to assert on.
-  }
+  const body = await response.text().catch(() => '')
   await sleep(30)
   return { body, response }
 }
@@ -793,8 +789,7 @@ describe('logixlysia plugin - final line', () => {
       .use(logixlysia(options))
       .get('/sse', async function* waitForever() {
         yield 'a'
-        // Never settles: an SSE loop waiting for an event that never comes.
-        await Promise.withResolvers<undefined>().promise
+        await neverSettles()
       })
     const controller = new AbortController()
     const response = await app.handle(
