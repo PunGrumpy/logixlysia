@@ -9,10 +9,6 @@ const NON_ALPHANUMERIC = /[^a-z0-9\s]+/gu
 const WHITESPACE = /\s+/gu
 
 const normalizeStatusName = (value: string): string => {
-  // Handles common variants:
-  // - case differences: "not found" vs "Not Found"
-  // - spacing/punctuation: "Not-Found", "not_found"
-  // - camelCase/PascalCase: "InternalServerError"
   const trimmed = value.trim()
   if (!trimmed) {
     return ''

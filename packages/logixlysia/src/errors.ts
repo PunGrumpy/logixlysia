@@ -58,7 +58,6 @@ const MIN_RESPONSE_STATUS = 200
 const MAX_RESPONSE_STATUS = 599
 const FALLBACK_RESPONSE_STATUS = 500
 
-/** Falls back to 500 for a status `Response.json` would reject. */
 const responseStatus = (status: number): number =>
   status >= MIN_RESPONSE_STATUS &&
   status <= MAX_RESPONSE_STATUS &&
@@ -89,15 +88,9 @@ export class HttpError extends Error {
     this.link = init.link
     this.why = init.why
 
-    // Set explicitly — a native subclass otherwise reports the generic
-    // "Error", and the constructor-name fallback breaks under minification.
-    // Then made non-enumerable to match `Error.prototype.name`.
     this.name = 'HttpError'
     Object.defineProperty(this, 'name', { enumerable: false })
 
-    // Non-enumerable so `JSON.stringify`, spreads, and framework serializers
-    // that walk own keys cannot pick it up. Property access still works, which
-    // is all the log pipeline needs.
     Object.defineProperty(this, 'internal', {
       configurable: true,
       enumerable: false,
@@ -105,10 +98,6 @@ export class HttpError extends Error {
       writable: false
     })
 
-    // Elysia renders a thrown error with `toResponse()` when it has one, and
-    // falls back to the plain message otherwise. Defining it only when there
-    // is something structured to say keeps plain errors byte-identical to
-    // their pre-`HttpErrorInit` behaviour.
     const hasClientFields =
       init.code !== undefined ||
       init.why !== undefined ||
