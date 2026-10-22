@@ -98,12 +98,7 @@ const snapshotValue = (value: unknown): unknown => {
   if (json === '') {
     return
   }
-  try {
-    return JSON.parse(json) as unknown
-  } catch {
-    // stringifyForLog only ever returns valid JSON; this is belt and braces.
-    return UNSERIALIZABLE_TEXT
-  }
+  return JSON.parse(json) as unknown
 }
 
 export const snapshotMeta = (
