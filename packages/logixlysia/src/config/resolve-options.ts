@@ -1,4 +1,5 @@
 import type { LogPreset, Options } from '../interfaces'
+import { requestIdHeaderName } from '../middleware/request-id'
 import { parseInterval, parseRetention, parseSize } from '../utils/rotation'
 
 const VALID_PRESETS: ReadonlySet<LogPreset> = new Set(['dev', 'prod', 'json'])
@@ -183,11 +184,9 @@ const validateRequestId = (config: Options['config']): void => {
     return
   }
   const raw: unknown = requestId.header
-  // An empty or blank header falls back to X-Request-Id (request-id.ts).
-  const header = typeof raw === 'string' ? raw.trim() : undefined
   if (
-    header === undefined ||
-    (header !== '' && !HEADER_NAME_REGEX.test(header))
+    typeof raw !== 'string' ||
+    !HEADER_NAME_REGEX.test(requestIdHeaderName(raw))
   ) {
     throw new Error(
       `logixlysia: invalid requestId config — header must be a valid HTTP header name, got ${JSON.stringify(raw)}`

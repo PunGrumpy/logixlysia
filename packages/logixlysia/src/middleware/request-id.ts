@@ -5,6 +5,9 @@ const DEFAULT_HEADER = 'X-Request-Id'
 const VALID_REQUEST_ID = /^[A-Za-z0-9._-]{1,128}$/u
 const REPORTED_ID_MAX = 64
 
+export const requestIdHeaderName = (header: string | undefined): string =>
+  header?.trim() || DEFAULT_HEADER
+
 const reportGeneratorError = createErrorReporter(
   'enricher',
   'request id generator failed'
@@ -48,7 +51,7 @@ export const resolveRequestIdConfig = (
   return {
     enabled: true,
     generator: raw.generator ?? (() => crypto.randomUUID()),
-    header: raw.header?.trim() || DEFAULT_HEADER,
+    header: requestIdHeaderName(raw.header),
     onError
   }
 }
