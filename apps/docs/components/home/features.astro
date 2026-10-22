@@ -8,7 +8,6 @@ import FilterRow from './filter-row.astro'
 import SamplingRow from './sampling-row.astro'
 import SectionLabel from './section-label.astro'
 
-// Dual-mode terminal palette: muted ink colors in light mode, vesper in dark.
 const c = {
   barMint: 'bg-[#067647] dark:bg-[#99ffe4]',
   barOrange: 'bg-[#B26A00] dark:bg-[#ffc799]',
@@ -26,7 +25,6 @@ const c = {
 const th =
   'border-[#EBEBEB] border-b pb-2 pr-6 text-left font-normal text-[11px] text-muted-foreground uppercase tracking-[0.08em] transition-opacity duration-300 dark:border-white/8'
 
-// 01 · The full access log record: every column the plugin captures.
 const contextRows = [
   {
     barCls: c.barMint,
@@ -96,7 +94,6 @@ const contextRows = [
   }
 ]
 
-// 02 · The filter keeps warnings and errors; the rest dims away.
 const filterRows = [
   {
     barCls: c.barMint,
@@ -161,7 +158,6 @@ const filterRows = [
   }
 ]
 
-// 03 · Head sampling dims the routine rows; the 500 replays the request.
 const samplingRows = [
   {
     barCls: c.barMint,
@@ -221,7 +217,6 @@ const samplingRows = [
   }
 ]
 
-// 04 · Fields the enrichers attach to the GET /reports request.
 const enricherFields = [
   { cls: c.blue, name: 'trace_id', value: '4bf92f3577b34da6a3ce929d0e0e4736' },
   { name: 'geo.city', value: 'Berlin' },
@@ -230,7 +225,6 @@ const enricherFields = [
   { name: 'ua.device', value: 'desktop' }
 ]
 
-// 05 · The meter shows each file against the 10 MB rotation cap.
 const files = [
   { live: true, name: 'logs/api-2026-07-21.log', pct: 21, size: '2.1 MB' },
   { live: false, name: 'logs/api-2026-07-20.log', pct: 100, size: '10.0 MB' },
@@ -239,7 +233,6 @@ const files = [
 ---
 
 <section class="mx-auto grid w-full max-w-5xl gap-16 sm:gap-24">
-  <!-- 01 · Request context -->
   <div class="grid gap-8">
     <div class="grid justify-items-start gap-4">
       <SectionLabel name="Request context">
@@ -327,7 +320,6 @@ const files = [
     </div>
   </div>
 
-  <!-- 02 · Filtering -->
   <div class="grid gap-8">
     <div class="grid justify-items-start gap-4">
       <SectionLabel name="Filtering">
@@ -413,7 +405,6 @@ const files = [
     </div>
   </div>
 
-  <!-- 03 · Sampling -->
   <div class="grid gap-8">
     <div class="grid justify-items-start gap-4">
       <SectionLabel badge="New" name="Sampling">
@@ -512,7 +503,6 @@ const files = [
     </div>
   </div>
 
-  <!-- 04 · Enrichers -->
   <div class="grid gap-8">
     <div class="grid justify-items-start gap-4">
       <SectionLabel badge="New" name="Enrichers">
@@ -597,7 +587,6 @@ const files = [
     </div>
   </div>
 
-  <!-- 05 · File rotation -->
   <div class="grid gap-8">
     <div class="grid justify-items-start gap-4">
       <SectionLabel name="File rotation">
@@ -690,7 +679,6 @@ const files = [
     '(prefers-reduced-motion: reduce)'
   ).matches
 
-  // Resolves immediately while `el` is on screen; otherwise waits for it.
   const visibilityGate = (el: Element) => {
     let visible = false
     let onVisible: (() => void) | undefined
@@ -712,12 +700,10 @@ const files = [
           })
   }
 
-  // 01 · Tail the access log: rows arrive one by one, like a live stream.
   const tailDemo = document.querySelector('[data-tail]')
   if (tailDemo && !reduceMotion) {
     const rows = [...tailDemo.querySelectorAll<HTMLElement>('[data-log]')]
     const waitUntilVisible = visibilityGate(tailDemo)
-    // setTimeout chain instead of an awaited loop: rows reveal one by one.
     const revealRows = () =>
       new Promise<void>(resolve => {
         let index = 0
@@ -755,13 +741,11 @@ const files = [
     loop()
   }
 
-  // 02 · Replay the raw stream, then apply the filter and dim the noise.
   const filterDemo = document.querySelector('[data-filter-demo]')
   if (filterDemo && !reduceMotion) {
     const lines = [...filterDemo.querySelectorAll<HTMLElement>('[data-log]')]
     const chip = filterDemo.querySelector<HTMLElement>('[data-filter-chip]')
     const waitUntilVisible = visibilityGate(filterDemo)
-    // setTimeout chain instead of an awaited loop: lines reveal one by one.
     const revealLines = () =>
       new Promise<void>(resolve => {
         let index = 0
@@ -807,7 +791,6 @@ const files = [
     loop()
   }
 
-  // 03 · Head sampling dims the routine rows, then the 500 replays them.
   const samplingDemo = document.querySelector('[data-sampling-demo]')
   if (samplingDemo && !reduceMotion) {
     const sampled = [
@@ -845,7 +828,6 @@ const files = [
     loop()
   }
 
-  // 05 · The live file grows until the size threshold, flashes, and rotates.
   const rotation = document.querySelector('[data-rotation]')
   if (rotation && !reduceMotion) {
     const row = rotation.querySelector<HTMLElement>('[data-live-row]')
@@ -853,7 +835,6 @@ const files = [
     const bar = rotation.querySelector<HTMLElement>('[data-live-bar]')
     const waitUntilVisible = visibilityGate(rotation)
     if (row && size && bar) {
-      // setTimeout chain instead of an awaited loop: the size ticks upward.
       const growFile = () =>
         new Promise<void>(resolve => {
           let megabytes = 0.1

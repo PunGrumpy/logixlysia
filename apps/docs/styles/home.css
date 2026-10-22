@@ -1,11 +1,3 @@
-/* Homepage-only presentational CSS (imported by pages/index.astro): the
-   animations and disclosure styling nothing else on the site uses. Plain CSS
-   only — no @theme/@apply here. Site-wide overrides belong in ../theme.css,
-   which Blume appends after everything else. */
-
-/* Terminal block cursor, referenced from the Tailwind
-   animate-[term-blink_...] utilities in demo.astro. steps(1) makes it
-   snap on/off like a real terminal instead of fading. */
 @keyframes term-blink {
   50% {
     opacity: 0;
@@ -20,9 +12,6 @@
   animation-play-state: paused;
 }
 
-/* Animated FAQ disclosure. Pure CSS via ::details-content +
-   interpolate-size; browsers without support (and reduced-motion users)
-   keep the native instant toggle. */
 @media (prefers-reduced-motion: no-preference) {
   .faq-item {
     interpolate-size: allow-keywords;
