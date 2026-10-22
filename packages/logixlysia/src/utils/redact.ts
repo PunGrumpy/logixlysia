@@ -220,13 +220,16 @@ const redactSearchParams = (
   return result
 }
 
-const redactPathSegment = (segment: string): string => {
-  let decoded = segment
+const decodeOrRaw = (segment: string): string => {
   try {
-    decoded = decodeURIComponent(segment)
+    return decodeURIComponent(segment)
   } catch {
-    // Malformed escape: redact the raw segment instead.
+    return segment
   }
+}
+
+const redactPathSegment = (segment: string): string => {
+  const decoded = decodeOrRaw(segment)
   const redacted = redactString(decoded)
   if (decoded === segment) {
     return redacted
