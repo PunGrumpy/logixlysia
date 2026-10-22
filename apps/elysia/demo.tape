@@ -1,18 +1,7 @@
-# Logixlysia — recorded terminal demo of the playground in `apps/elysia`.
-#
-# VHS drives a real PTY, so the frames show exactly what a developer sees:
-# colours, the context tree, redaction, and the error formatting that unit
-# tests cannot assert on.
-#
 # Every `Wait` is an assertion — vhs exits non-zero if the pattern never
 # appears, so a green recording is also a passing smoke test. They all use
 # `Wait+Screen`: bare `Wait` is `Wait+Line`, which only ever sees the last
 # line, and that line is the prompt by the time curl has returned.
-#
-# Pacing notes: typing speed varies per command (config commands are typed
-# slower than muscle-memory curls), there are pauses before Enter, one
-# typo-and-fix on `/checkout`, and the video ends on a cleared prompt so the
-# GIF loops cleanly.
 #
 # Run locally from the repository root (needs vhs, ttyd and ffmpeg):
 #   bun install && bun run build --filter logixlysia
@@ -58,7 +47,6 @@ Wait+Screen /localhost:3001/
 # leave the keystrokes buffered and shift every command that follows.
 Sleep 3s
 
-# A plain 200: level, service tag, method, path, status, duration.
 Type "curl localhost:3001/" Enter
 Wait+Screen /GET/
 Sleep 900ms
@@ -74,28 +62,24 @@ Enter
 Wait+Screen /usr_demo/
 Sleep 1100ms
 
-# autoRedact scrubs the card, e-mail, IP and JWT before they reach stdout.
 Type@12ms "curl localhost:3001/auto-redact"
 Sleep 300ms
 Enter
 Wait+Screen /REDACTED/
 Sleep 1300ms
 
-# 4xx degrades the line to WARNING.
 Type@12ms "curl localhost:3001/status/404"
 Sleep 200ms
 Enter
 Wait+Screen /"status":404/
 Sleep 900ms
 
-# A thrown handler error becomes a red ERROR line with the message attached.
 Type@12ms "curl localhost:3001/boom"
 Sleep 350ms
 Enter
 Wait+Screen /Boom!/
 Sleep 1300ms
 
-# AI metrics ride along on the request line.
 Type@14ms "curl -X POST localhost:3001/chat"
 Sleep 300ms
 Enter

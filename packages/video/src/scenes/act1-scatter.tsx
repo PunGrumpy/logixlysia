@@ -2,12 +2,6 @@ import { AbsoluteFill, useCurrentFrame } from 'remotion'
 import { ink, mono, ringLight, sans, sec } from '../lib/theme'
 import { BlockWipe, Grain, Halftone, PaperGrid, Pop, progress } from '../lib/ui'
 
-/**
- * Act 1: kinetic words on paper. Each word settles into its own grid cell,
- * one per beat, while log-line chips and small objects drift around them,
- * the way the reference floats emoji and product shots between words.
- */
-
 interface Word {
   at: number
   size?: number
@@ -147,7 +141,6 @@ const ObjEl = ({ o }: { o: Obj }) => {
   )
 }
 
-/** The field the wipe reveals and Act 2 opens on: a blue-green halftone. */
 export const NoiseField = () => (
   <AbsoluteFill
     style={{
@@ -163,7 +156,6 @@ export const NoiseField = () => (
 export const Act1Scatter = ({ wipeEnd }: { wipeEnd: number }) => {
   const frame = useCurrentFrame()
   const wipe = progress(frame, wipeEnd - sec(WIPE_SECONDS), wipeEnd, t => t)
-  // A slow push-in keeps the paper alive between word beats.
   const zoom = 1 + progress(frame, 0, wipeEnd, t => t) * 0.035
   const pan = frame * DRIFT_PX
   return (

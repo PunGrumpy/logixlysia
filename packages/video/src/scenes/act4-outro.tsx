@@ -9,11 +9,6 @@ import {
 import { black, fox, mono, sans, sec } from '../lib/theme'
 import { Glass, Grain, progress, useFade, useFadeOut } from '../lib/ui'
 
-/**
- * Act 4: black outro. Tagline, three glass feature cards with gradient blobs,
- * then the wordmark, install line and URL, mirroring the reference's ending.
- */
-
 const TAGLINE_AT = sec(0.2)
 const CARDS_AT = sec(1.6)
 const LOGO_AT = sec(4.6)
@@ -123,7 +118,6 @@ export const Act4Outro = () => {
     fps,
     frame: frame - LOGO_AT
   })
-  // The outro is split into four chunks that land 100 ms apart.
   const subtitleIn = progress(
     frame,
     LOGO_AT + LOGO_STAGGER,

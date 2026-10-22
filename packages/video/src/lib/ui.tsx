@@ -12,7 +12,6 @@ import { paper, paperLine, ringDark } from './theme'
 const easeOut = Easing.out(Easing.cubic)
 const easeInOut = Easing.inOut(Easing.quad)
 
-/** 0..1 progress of `frame` across `[start, end]`, eased and clamped. */
 export const progress = (
   frame: number,
   start: number,
@@ -25,7 +24,6 @@ export const progress = (
     extrapolateRight: 'clamp'
   })
 
-/** Off-white paper with a faint square grid, like the reference's first act. */
 export const PaperGrid = ({
   children,
   cell = 60
@@ -44,7 +42,6 @@ export const PaperGrid = ({
   </AbsoluteFill>
 )
 
-/** Film grain: a static turbulence texture at low opacity. */
 export const Grain = ({ opacity = 0.08 }: { opacity?: number }) => (
   <AbsoluteFill
     style={{ mixBlendMode: 'overlay', opacity, pointerEvents: 'none' }}
@@ -106,10 +103,6 @@ const cellDistance = (
   return Math.hypot(nx - 0.5, ny - 0.5) / 0.71
 }
 
-/**
- * Pixel-block wipe. `t` 0..1 reveals `children` as a growing cluster of
- * square cells spreading from one corner, matching the reference's transition.
- */
 export const BlockWipe = ({
   t,
   children,
@@ -184,7 +177,6 @@ export const BlockWipe = ({
   )
 }
 
-/** Frosted glass panel used for chat bubbles, cards and pills. */
 export const Glass = ({
   children,
   style,
@@ -202,7 +194,6 @@ export const Glass = ({
       backdropFilter: 'blur(28px) saturate(1.2)',
       background: tint,
       borderRadius: radius,
-      // A shadow ring reads on any backdrop; a solid border only suits one.
       boxShadow: `${ringDark}, 0 20px 60px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.18)`,
       ...style
     }}
@@ -270,7 +261,6 @@ export const useFadeOut = (end: number, dur = 12): number => {
   return 1 - progress(frame, end - dur, end, easeInOut)
 }
 
-/** Typewriter: returns the prefix of `text` visible at the current frame. */
 export const useTyped = (text: string, at: number, cps = 28): string => {
   const frame = useCurrentFrame()
   const { fps } = useVideoConfig()

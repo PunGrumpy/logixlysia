@@ -34,9 +34,7 @@ const waitForFonts = async (
   continueRender(handle)
 }
 
-/** Injects the bundled fonts and holds the render until the browser has them. */
 export const Fonts = () => {
-  // Created once, on first render, like a `useState` initializer.
   const handleRef = useRef<number | null>(null)
   if (handleRef.current === null) {
     handleRef.current = delayRender('fonts')

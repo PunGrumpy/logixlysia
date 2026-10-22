@@ -37,8 +37,6 @@ type Case = readonly [name: string, fn: BenchFn]
 // yields, so a longer synchronous run exhausts the heap.
 const RUN_OPTIONS = { time: 500 }
 
-// Cases stay in the order given, so logixlysia leads each table; the
-// comparison sorts rows by speed anyway.
 const suite = (name: string, cases: readonly Case[]): void => {
   test(name, async ({ bench }) => {
     const registrations: BenchRegistration<string>[] = []
@@ -115,7 +113,6 @@ suite('Logger Creation', [
   ]
 ])
 
-// Initialize loggers with output disabled for fair comparison of overhead
 const logix = createLogger({
   config: {
     disableInternalLogger: true,
