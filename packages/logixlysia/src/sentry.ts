@@ -4,7 +4,8 @@ import {
   envString,
   flattenMeta,
   getPath,
-  transportError
+  transportError,
+  tryParseUrl
 } from './adapters/shared'
 import type {
   AdapterTransport,
@@ -83,15 +84,6 @@ const traceIdFor = (entry: LogEntry): string => {
 interface ParsedDsn {
   envelopeUrl: string
   publicKey: string
-}
-
-// URL.canParse is missing on Node.js < 18.17, which this package still supports.
-const tryParseUrl = (value: string): URL | undefined => {
-  try {
-    return new URL(value)
-  } catch {
-    // Malformed URL: fall through to undefined so parseDsn reports the DSN.
-  }
 }
 
 /** Names what's wrong with a DSN without echoing the DSN itself (it carries a secret key). */

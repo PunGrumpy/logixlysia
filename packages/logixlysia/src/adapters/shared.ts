@@ -145,13 +145,8 @@ const URL_USERINFO = /^(?<scheme>[a-z][a-z0-9+.-]*:\/\/).*@/iu
 const withoutCredentials = (url: string): string =>
   url.replace(URL_USERINFO, '$<scheme><redacted>@')
 
-const tryParseUrl = (value: string): URL | undefined => {
-  try {
-    return new URL(value)
-  } catch {
-    // Reported by the caller, without the input: it may carry credentials.
-  }
-}
+export const tryParseUrl = (value: string): URL | undefined =>
+  URL.canParse(value) ? new URL(value) : undefined
 
 export const resolveEndpoint = (name: string, url: string): string => {
   const parsed = tryParseUrl(url)
@@ -657,12 +652,7 @@ export const defaultBody = (entry: LogEntry): string => {
   if (isPlainObject(request)) {
     const method = typeof request.method === 'string' ? request.method : ''
     const url = typeof request.url === 'string' ? request.url : ''
-    let path = url
-    try {
-      path = new URL(url).pathname
-    } catch {
-      // Keep the raw URL when it does not parse.
-    }
+    const path = tryParseUrl(url)?.pathname ?? url
     const body = `${method} ${path}`.trim()
     if (body) {
       return body
