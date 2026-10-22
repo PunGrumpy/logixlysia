@@ -42,9 +42,9 @@ export interface OtlpTransportOptions extends BatchTransportOptions {
    */
   endpoint?: string
   /**
-   * Extra request headers, e.g. vendor auth. Merged over headers parsed from
-   * `OTEL_EXPORTER_OTLP_LOGS_HEADERS`, then `OTEL_EXPORTER_OTLP_HEADERS`
-   * (`k=v,k2=v2`).
+   * Extra request headers, e.g. vendor auth. Merged over the headers parsed
+   * from `OTEL_EXPORTER_OTLP_LOGS_HEADERS`, or from
+   * `OTEL_EXPORTER_OTLP_HEADERS` when that is unset (`k=v,k2=v2`).
    */
   headers?: Record<string, string>
   /** Extra OTLP resource attributes merged next to `service.name`. */

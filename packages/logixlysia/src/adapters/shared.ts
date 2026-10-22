@@ -32,12 +32,14 @@ const FLATTEN_MAX_DEPTH = 3
 
 export interface BatchTransportOptions {
   /**
-   * Max time (ms) an entry waits in the buffer before it is sent.
+   * How long (ms) an entry waits in the buffer before it is sent. While a
+   * request is still in flight, it goes out as soon as that request returns.
    * @default 2000
    */
   flushIntervalMs?: number
   /**
-   * Entries buffered before an immediate flush, regardless of the interval.
+   * Entries buffered before a send starts without waiting for the interval.
+   * While a request is in flight, the batch goes out as soon as it returns.
    * @default 20
    */
   maxBatchSize?: number
