@@ -2,8 +2,10 @@ import { describe, expect, test } from 'bun:test'
 import type { RequestOutcome } from '../../src/sampling'
 import { resolveSampling } from '../../src/sampling'
 
-/** Returns each value in turn, then repeats the last one. */
-const sequence = (values: number[]): (() => number) => {
+const ROLL_INSIDE_TEN_PERCENT = 0.05
+const ROLL_OUTSIDE_TEN_PERCENT = 0.5
+
+const rollsThenRepeatLast = (values: number[]): (() => number) => {
   let index = 0
   return () => {
     const value = values[Math.min(index, values.length - 1)] as number
@@ -46,10 +48,9 @@ describe('head sampling', () => {
   })
 
   test('keeps the configured share of a thinned level', () => {
-    // 0.05 -> 5 < 10 (kept); 0.5 -> 50 >= 10 (dropped)
     const sampling = resolveSampling(
       { head: { INFO: 10 } },
-      sequence([0.05, 0.5])
+      rollsThenRepeatLast([ROLL_INSIDE_TEN_PERCENT, ROLL_OUTSIDE_TEN_PERCENT])
     )
     const key = {}
     expect(sampling?.decide('INFO', key)).toBe('keep')

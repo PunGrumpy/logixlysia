@@ -6,11 +6,10 @@ import {
   performRotation,
   shouldRotate
 } from '../../src/output/rotation-manager'
+import { permBits } from '../_helpers/perm-bits'
 import { createTempDir, removeTempDir } from '../_helpers/tmp'
 
 const DAY_MS = 86_400_000
-
-const permBits = (mode: number): string => mode.toString(8).slice(-3)
 
 describe('getRotatedFileName', () => {
   test('formats a fixed date deterministically', () => {

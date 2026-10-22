@@ -4,10 +4,9 @@ import path from 'node:path'
 import type { Options, SinkErrorContext } from '../../src/interfaces'
 import { logToFile } from '../../src/output/file'
 import { spyConsole } from '../_helpers/console'
+import { permBits } from '../_helpers/perm-bits'
 import { createMockRequest } from '../_helpers/request'
 import { createTempDir, removeTempDir } from '../_helpers/tmp'
-
-const permBits = (mode: number): string => mode.toString(8).slice(-3)
 
 const MESSAGE_ID_REGEX = /msg-(?<id>\d+)$/u
 
@@ -363,8 +362,8 @@ describe('logToFile', () => {
       const options: Options = { config: {} }
 
       const writeAndFail = async (): Promise<void> => {
-        try {
-          await logToFile({
+        await expect(
+          logToFile({
             data: { message: 'hello' },
             filePath: path.join(blocker, 'app.log'),
             level: 'INFO',
@@ -372,9 +371,7 @@ describe('logToFile', () => {
             request: createMockRequest('http://localhost/test'),
             store: { beforeTime: 0n }
           })
-        } catch {
-          // Expected: the log directory is a regular file.
-        }
+        ).rejects.toThrow()
       }
 
       await writeAndFail()
