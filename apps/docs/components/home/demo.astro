@@ -364,6 +364,8 @@ const interactiveRoutes = [
 </section>
 
 <script>
+  const MAX_TERMINAL_LINES = 28
+
   const sleep = (ms: number): Promise<void> =>
     new Promise(resolve => {
       setTimeout(resolve, ms)
@@ -560,8 +562,7 @@ const interactiveRoutes = [
     } else {
       body.append(fragment)
     }
-    // Bounded backlog: the oldest lines scroll away like a real terminal.
-    while (body.childElementCount > 28) {
+    while (body.childElementCount > MAX_TERMINAL_LINES) {
       body.firstElementChild?.remove()
     }
     body.scrollTop = body.scrollHeight
