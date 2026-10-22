@@ -17,11 +17,6 @@ export type StubResponse =
   | { body?: string; headers?: Record<string, string>; status: number }
   | { reject: unknown }
 
-/**
- * Replaces `globalThis.fetch` with a stub that records calls and answers with
- * the queued responses (the last one repeats). A `{ reject }` entry makes the
- * call fail with that value. Call `restore()` in `finally`.
- */
 export const stubFetch = (
   responses: StubResponse[] = [{ status: 200 }]
 ): FetchStub => {
@@ -64,7 +59,6 @@ export const stubFetch = (
   }
 }
 
-/** Sets env vars for a test, returning a restore function. */
 export const stubEnv = (
   vars: Record<string, string | undefined>
 ): (() => void) => {

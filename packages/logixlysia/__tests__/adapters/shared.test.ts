@@ -21,7 +21,6 @@ interface Deferred {
   resolve: () => void
 }
 
-/** A promise a test resolves by hand, to stand in for a slow send. */
 const deferred = (): Deferred => {
   const { promise, resolve }: PromiseWithResolvers<void> =
     Promise.withResolvers()

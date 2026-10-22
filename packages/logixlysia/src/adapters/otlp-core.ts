@@ -41,20 +41,13 @@ const toOtlpAttributes = (
 
 export interface OtlpCoreInput {
   headers: Record<string, string>
-  /** Adapter name used in error messages, e.g. 'OTLP' or 'HyperDX'. */
   name: string
   options: BatchTransportOptions
   resourceAttributes: Record<string, string>
   serviceName: string
-  /** Full OTLP logs URL, e.g. `https://collector:4318/v1/logs`. */
   url: string
 }
 
-/**
- * Shared OTLP-logs transport core: builds an `ExportLogsServiceRequest` JSON
- * payload and POSTs it to the logs URL. Backs both the generic
- * `logixlysia/otlp` adapter and vendor wrappers like `logixlysia/hyperdx`.
- */
 export const createOtlpCore = (input: OtlpCoreInput): AdapterTransport => {
   const resourceAttributes = toOtlpAttributes({
     'service.name': input.serviceName,

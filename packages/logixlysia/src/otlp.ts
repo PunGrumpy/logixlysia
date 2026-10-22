@@ -17,11 +17,6 @@ const decodeHeaderValue = (value: string): string => {
   }
 }
 
-/**
- * Parses the standard `OTEL_EXPORTER_OTLP_HEADERS` format (`k=v,k2=v2`,
- * W3C Baggage): split on the first `=`, percent-decode values, allow empty
- * values.
- */
 const parseHeadersEnv = (raw: string): Record<string, string> => {
   const headers: Record<string, string> = {}
   for (const pair of raw.split(',')) {
@@ -62,11 +57,6 @@ export interface OtlpTransportOptions extends BatchTransportOptions {
   serviceName?: string
 }
 
-/**
- * Resolves the logs URL with the spec's precedence: an explicit option, then
- * the signal-specific endpoint (used as-is), then the generic endpoint (with
- * the logs path appended).
- */
 const resolveLogsUrl = (endpointOption: string | undefined): string => {
   if (endpointOption) {
     return `${stripTrailingSlashes(endpointOption)}${LOGS_PATH}`

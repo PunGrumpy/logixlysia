@@ -47,7 +47,6 @@ export const createBetterStackTransport = (
   return createHttpTransport({
     body: entries =>
       stringifyForLog(
-        // Meta first so the adapter-owned fields below always win on collision.
         entries.map(entry => ({
           ...entry.meta,
           dt: entry.timestamp.toISOString(),

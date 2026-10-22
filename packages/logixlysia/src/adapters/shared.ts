@@ -3,7 +3,6 @@ import { stringifyForLog } from '../utils/json'
 import { sanitizeLogText } from '../utils/sanitize'
 import { settle } from '../utils/settle'
 
-/** OpenTelemetry severity numbers for each Logixlysia log level. */
 export const OTEL_SEVERITY: Record<LogLevel, number> = {
   DEBUG: 5,
   ERROR: 17,
@@ -94,7 +93,6 @@ export interface LogEntry {
 
 const UNSERIALIZABLE_TEXT = '[Unserializable]'
 
-/** A plain copy of one meta value, as JSON would carry it; `undefined` when JSON would drop it. */
 const snapshotValue = (value: unknown): unknown => {
   const json = stringifyForLog(value)
   if (json === '') {
@@ -108,13 +106,6 @@ const snapshotValue = (value: unknown): unknown => {
   }
 }
 
-/**
- * A JSON-safe copy of a record's meta, taken when the record is logged.
- * Later mutations of the logged objects are not shipped, a BigInt is its
- * decimal string, a cycle is "[Circular]", and a field that cannot be
- * serialized becomes "[Unserializable]" on its own, so one bad value never
- * takes the rest of the record or the batch with it.
- */
 export const snapshotMeta = (
   meta: Record<string, unknown>
 ): Record<string, unknown> => {
@@ -130,7 +121,6 @@ export const snapshotMeta = (
   return Object.fromEntries(entries)
 }
 
-/** Normalizes a base URL by dropping trailing slashes. */
 export const stripTrailingSlashes = (url: string): string => {
   let end = url.length
   while (end > 0 && url[end - 1] === '/') {
@@ -139,20 +129,17 @@ export const stripTrailingSlashes = (url: string): string => {
   return url.slice(0, end)
 }
 
-/** Reads a non-empty environment variable, or `undefined`. */
 export const envString = (name: string): string | undefined => {
   const value = process.env[name]
   return value && value.length > 0 ? value : undefined
 }
 
-/** A configuration error for the named adapter, thrown at creation time. */
 export const transportError = (
   adapter: string,
   detail: string,
   options?: ErrorOptions
 ): Error => new Error(`[logixlysia] ${adapter} transport: ${detail}`, options)
 
-/** `scheme://user:pass@host` with everything between `://` and the last `@` replaced. */
 const URL_USERINFO = /^(?<scheme>[a-z][a-z0-9+.-]*:\/\/).*@/iu
 
 const withoutCredentials = (url: string): string =>
@@ -166,7 +153,6 @@ const tryParseUrl = (value: string): URL | undefined => {
   }
 }
 
-/** Parses a fully built endpoint once, at construction, so a bad env var fails here rather than on the first flush. */
 export const resolveEndpoint = (name: string, url: string): string => {
   const parsed = tryParseUrl(url)
   if (!parsed) {
@@ -200,18 +186,12 @@ const sleep = (ms: number): Promise<void> => {
 export interface PostWithRetryInput {
   body: string
   headers: Record<string, string>
-  /** Adapter name used in error messages, e.g. 'Axiom'. */
   name: string
   retries: number
   timeout: number
   url: string
 }
 
-/**
- * RFC 9110 `delta-seconds`: digits and nothing else. Reading the value the
- * way `parseInt` does would take `"1e3"` as 1 s and `"+5"` as 5 s, values the
- * spec does not allow; those fall through to the date branch instead.
- */
 const DELTA_SECONDS_REGEX = /^\d+$/u
 
 const parseRetryAfterMs = (value: string): number | undefined => {
@@ -230,11 +210,6 @@ const parseRetryAfterMs = (value: string): number | undefined => {
   return delta > 0 ? delta : undefined
 }
 
-/**
- * How long to wait before the next attempt: the server's `Retry-After`
- * (delta-seconds or HTTP-date, capped at 30 s) when it sent a usable one,
- * otherwise jittered linear backoff.
- */
 export const resolveRetryDelay = (
   response: Response | undefined,
   attempt: number
@@ -312,11 +287,6 @@ const attemptPost = async (
   return retryOrRethrow(httpError, resolveRetryDelay(response, attempt))
 }
 
-/**
- * POSTs a payload, retrying on network errors, 429, and 5xx responses with
- * jittered linear backoff, or the server's `Retry-After` when it sends one.
- * Non-retryable HTTP errors (4xx except 429) throw immediately.
- */
 export const postWithRetry = (input: PostWithRetryInput): Promise<void> =>
   attemptPost(input, 0)
 
@@ -325,12 +295,6 @@ export interface BatchQueue {
   push: (entry: LogEntry) => Promise<void> | undefined
 }
 
-/**
- * Routes a batch failure to the adapter's `onError` hook, or — when no hook is
- * configured — to stderr at most once per interval, so a backend that fails on
- * every batch cannot flood the console. Returns whether the error reached the
- * hook or stderr.
- */
 const createQueueReporter = (
   name: string,
   onError?: (error: unknown) => void
@@ -357,24 +321,9 @@ const createQueueReporter = (
   }
 }
 
-/**
- * Buffers entries and sends them in batches: immediately once `maxBatchSize`
- * is reached (the returned promise propagates send errors to the caller), or
- * after `flushIntervalMs` via an unref'ed timer (errors go to `onError` since
- * no caller is awaiting).
- *
- * One request runs at a time, so entries reach the backend in the order they
- * were buffered. Entries that arrive while a request is in flight wait, and go
- * out together in the next request, up to `maxEntriesPerRequest`. That request
- * starts as soon as the one in flight returns if a full batch is waiting, and
- * on the timer otherwise. At most `maxPendingBatches × maxBatchSize` entries
- * wait; beyond that, entries are dropped and reported once per request.
- * `flush()` resolves once every entry accepted before the call has settled.
- */
 export const createBatchQueue = (input: {
   flushIntervalMs: number
   maxBatchSize: number
-  /** The most entries one request carries. */
   maxEntriesPerRequest?: number
   maxPendingBatches?: number
   name: string
@@ -383,18 +332,12 @@ export const createBatchQueue = (input: {
 }): BatchQueue => {
   let buffer: LogEntry[] = []
   let timer: ReturnType<typeof setTimeout> | undefined
-  /** The request in flight, as a promise that never rejects. */
   let inFlight: Promise<void> | undefined
   let dropped = 0
-  // Entries accepted by `push` and entries whose request has settled. A
-  // flush waits for the entries accepted before it was called, not for the
-  // queue to go idle: under steady traffic it never is.
   let accepted = 0
   let settled = 0
 
   const report = createQueueReporter(input.name, input.onError)
-  // Its own rate limit: a failing backend reports a failure before every
-  // drop report, and one shared window would hide the drops for good.
   const reportDrops = createQueueReporter(input.name, input.onError)
   const maxWaiting =
     (input.maxPendingBatches ?? DEFAULT_MAX_PENDING_BATCHES) *
@@ -411,8 +354,6 @@ export const createBatchQueue = (input: {
     if (dropped === 0) {
       return
     }
-    // Reset first: an `onError` that logs through this transport can drop
-    // more entries while it runs, and the next report must count them.
     const count = dropped
     dropped = 0
     const reported = reportDrops(
@@ -421,17 +362,10 @@ export const createBatchQueue = (input: {
       )
     )
     if (!reported) {
-      // Rate limited on stderr: carry the count into the next report.
       dropped += count
     }
   }
 
-  /**
-   * Runs the one request for `entries`, then starts the next request if a
-   * full batch arrived meanwhile. A send started by `push` or `flush` rethrows
-   * so that caller sees the failure; a send started here, with nobody
-   * awaiting it, reports the failure instead.
-   */
   const runSend = async (
     entries: LogEntry[],
     background: boolean
@@ -451,29 +385,19 @@ export const createBatchQueue = (input: {
     } finally {
       settled += entries.length
       inFlight = undefined
-      // A full batch goes out at once; fewer entries wait for the timer, as
-      // they would with nothing in flight. Sending every remainder would cost
-      // a request per round trip under light traffic, and would let an
-      // `onError` that logs each failure keep a failing backend busy.
       if (buffer.length >= input.maxBatchSize) {
         inFlight = runSend(takeBatch(), true)
       }
-      // After the next request has started: an `onError` that logs through
-      // this same transport re-enters `push`, and must find it in flight.
       reportDropped()
     }
   }
 
-  /** Starts a request for the caller; `inFlight` tracks it without rejecting. */
   const startSend = (): Promise<void> => {
     const send = runSend(takeBatch(), false)
     inFlight = settle(send)
     return send
   }
 
-  // Recursion rather than a loop: `no-await-in-loop` is an error in the lint
-  // preset. The first failure of a request this drain started is kept and
-  // rethrown once everything accepted before the flush has settled.
   const drainUntil = async (
     target: number,
     failure?: unknown
@@ -519,9 +443,6 @@ export const createBatchQueue = (input: {
     }
     buffer.push(entry)
     accepted += 1
-    // Before the batch check: a full batch waiting behind a request in flight
-    // can be split by the per-request cap, and what is left goes out on the
-    // timer.
     if (!timer) {
       timer = setTimeout(flushFromTimer, input.flushIntervalMs)
       timer.unref?.()
@@ -535,19 +456,13 @@ export const createBatchQueue = (input: {
 }
 
 export interface HttpTransportInput {
-  /** Builds the request body for a flushed batch. */
   body: (entries: LogEntry[]) => string
   headers: Record<string, string>
-  /** Adapter name used in error messages, e.g. 'Axiom'. */
   name: string
   options: BatchTransportOptions
   url: string
 }
 
-/**
- * The common adapter shape: a batch queue whose flushes POST to a fixed URL
- * with retry, exposed as an {@link AdapterTransport}.
- */
 export const createHttpTransport = (
   input: HttpTransportInput
 ): AdapterTransport => {
@@ -716,11 +631,6 @@ const flattenInto = (
   }
 }
 
-/**
- * Flattens a transport meta object into dot-notation scalar keys
- * (`request.method`, `context.requestId`, …). Values nested deeper than three
- * levels — and arrays — are JSON-stringified.
- */
 export const flattenMeta = (
   meta: Record<string, unknown>
 ): Record<string, FlatValue> => {
@@ -729,7 +639,6 @@ export const flattenMeta = (
   return out
 }
 
-/** Reads a dot-notation path (e.g. `context.userId`) from a meta object. */
 export const getPath = (
   meta: Record<string, unknown>,
   path: string
@@ -744,10 +653,6 @@ export const getPath = (
   return current
 }
 
-/**
- * Fallback log body for access logs, whose `message` is empty:
- * `GET /path` derived from the request meta.
- */
 export const defaultBody = (entry: LogEntry): string => {
   if (entry.message) {
     return entry.message
