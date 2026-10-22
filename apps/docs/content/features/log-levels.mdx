@@ -35,7 +35,7 @@ app
   })
 ```
 
-The first route logs a `WARNING` with status `404` and the message `Item not found`. A string body becomes the log message. Any other body is replaced by the status text, so the second route logs `Conflict` and keeps the response payload out of the log.
+The first route logs a `WARNING` with status `404` and an empty message, because a returned `status()` is not an error. Only a thrown `status()` sets the message. A string body becomes the message, so `throw status(404, 'Item not found')` logs `Item not found`. Any other body is replaced by the status text, so the second route logs `Conflict` and keeps the response payload out of the log.
 
 If a handler returns a `Response`, Logixlysia logs the `Response` status. When that status is `200`, `set.status` applies instead.
 
