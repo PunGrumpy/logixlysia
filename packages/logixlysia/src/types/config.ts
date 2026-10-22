@@ -117,8 +117,8 @@ export interface SinkErrorContext {
 
 export interface RequestIdConfig {
   /**
-   * Enable request ID generation.
-   * When used as a boolean on `Options.config.requestId`, `true` enables with defaults.
+   * Set to `false` to turn request IDs off while keeping the object form.
+   * @default true
    */
   enabled?: boolean
   /**
