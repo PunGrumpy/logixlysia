@@ -207,8 +207,7 @@ const walker = {
       return await walker.entries(value, childContext, depth)
     }
     // Dates, Maps, class instances and the like: no safe generic way to rebuild
-    // them, so they pass through. Flatten anything that can carry free-text PII
-    // into plain fields before it reaches the transport.
+    // them, so they pass through.
     return value
   },
 
@@ -277,6 +276,11 @@ const queueFullError = (maxQueue: number): Error =>
  *
  * The wrapper fails closed by default: a record the model could not process is
  * dropped and reported through `onError`, never forwarded unredacted.
+ *
+ * Strings inside plain objects, arrays and errors are redacted, down to
+ * `maxDepth` levels of `meta`. Any other object, such as a `Date`, a `Map` or
+ * a class instance, is delivered as it is, so flatten anything that can carry
+ * free-text PII into plain fields first.
  *
  * @param transport The transport to protect. Its `flush`, if any, is preserved.
  * @param source The model, a promise for it, or a loader run on the first record.
