@@ -190,9 +190,6 @@ describe('interval rotation', () => {
       const logsDir = path.join(dir, 'logs')
       const filePath = path.join(logsDir, 'restart.log')
       await fs.mkdir(logsDir, { recursive: true })
-      // Seed the file directly (no sink involved), so its birthtime is the
-      // real filesystem creation time — simulating a file left over from a
-      // previous process.
       await fs.writeFile(filePath, 'seed\n')
 
       setSystemTime(new Date(Date.now() + TWO_HOURS_MS))
@@ -225,10 +222,6 @@ describe('interval rotation', () => {
   })
 
   test('idle process does not rotate until the next write', async () => {
-    // Documents the accepted idle-process tradeoff from
-    // plans/spikes/021-interval-rotation-decision.md: a process that writes
-    // no logs for longer than `interval` does not rotate until the next
-    // write arrives.
     const dir = await createTempDir()
     try {
       const filePath = path.join(dir, 'logs', 'idle.log')

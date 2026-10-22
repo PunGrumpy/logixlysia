@@ -34,9 +34,7 @@ export const isStructuredError = (
     'internal' in value)
 
 export interface NormalizedLoggedError {
-  /** Safe structured representation for data/transport meta. */
   error: Record<string, unknown>
-  /** Safe one-line message for the log line. */
   message: string
 }
 

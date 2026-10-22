@@ -11,7 +11,6 @@ const IPV4_REGEX =
  */
 const IPV6_REGEX =
   /(?<![\w:])(?:(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}|(?:[0-9a-fA-F]{1,4}:){1,7}:(?:[0-9a-fA-F]{1,4}(?::[0-9a-fA-F]{1,4}){0,6})?|::(?:[0-9a-fA-F]{1,4}(?::[0-9a-fA-F]{1,4}){0,6}))(?![\w:])/gu
-/** Digit runs that may be formatted PANs (spaces/dashes); validated with Luhn before redacting. */
 const CREDIT_CARD_CANDIDATE_REGEX = /\b(?:\d[ -]*?){13,19}\b/gu
 /**
  * Starts only where a token can start: after a character outside the token
@@ -47,7 +46,6 @@ const REDACTED_TEXT = '[REDACTED]'
 const CIRCULAR_REF = '[Circular]'
 const UNSERIALIZABLE_TEXT = '[Unserializable]'
 
-/** Case-insensitive key/header names whose VALUES are always redacted. */
 export const DEFAULT_REDACT_KEYS: readonly string[] = [
   'authorization',
   'proxy-authorization',
@@ -77,28 +75,19 @@ export const DEFAULT_REDACT_KEYS: readonly string[] = [
 
 const CAMEL_CASE_BOUNDARY_REGEX = /(?<before>[a-z0-9])(?<after>[A-Z])/gu
 
-/** Normalize `X_Api-Key` / `apiKey` style variants to `x-api-key` form. */
 const normalizeKeyName = (key: string): string =>
   key
     .replace(CAMEL_CASE_BOUNDARY_REGEX, '$<before>-$<after>')
     .replaceAll('_', '-')
     .toLowerCase()
 
-/** Words that make a key sensitive wherever they appear as a whole part. */
 const SENSITIVE_KEY_PARTS: ReadonlySet<string> = new Set([
   'passwd',
   'password',
   'secret'
 ])
-/** A key ending in this part names a credential (`auth-token`, `x-csrf-token`). */
 const SENSITIVE_LAST_KEY_PART = 'token'
 
-/**
- * True for a default or extra key name, or for any key with a whole part
- * `password`, `passwd` or `secret`, or ending in the part `token`. Parts are
- * split on case changes, `_` and `-`, so `tokenizer` and `maxTokens` stay
- * unmatched while `newPassword` and `X-CSRF-Token` match.
- */
 export const isSensitiveKey = (
   key: string,
   extraKeys?: readonly string[]
@@ -131,7 +120,6 @@ export const buildPinoRedactPaths = (
   })
 }
 
-/** Luhn checksum; `digits` must contain only `0-9` and length in PAN range. */
 const passesLuhn = (digits: string): boolean => {
   if (digits.length < PAN_MIN_LEN || digits.length > PAN_MAX_LEN) {
     return false
@@ -172,7 +160,6 @@ const redactCreditCardCandidates = (text: string): string =>
     return match
   })
 
-/** True when `text` has a URL scheme (a letter, then letters, digits, `+`, `.` or `-`) ending at `end`. */
 const endsWithUrlScheme = (text: string, end: number): boolean => {
   for (let i = end - 1; i >= 0; i -= 1) {
     const char = text.charAt(i)
@@ -186,7 +173,6 @@ const endsWithUrlScheme = (text: string, end: number): boolean => {
   return false
 }
 
-/** Returns `text` unchanged (same value) when nothing matched — callers can compare `=== input`. */
 export const redactString = (text: string): string => {
   let result = text
 
@@ -220,7 +206,6 @@ const URL_SAFE_REDACT = 'redacted'
 const redactUrlAuthoritySegment = (value: string): string =>
   redactString(value).replaceAll(REDACTED_TEXT, URL_SAFE_REDACT)
 
-/** Always returns a new instance; `params` is left untouched. */
 const redactSearchParams = (
   params: URLSearchParams,
   extraKeys?: readonly string[]
@@ -235,10 +220,6 @@ const redactSearchParams = (
   return result
 }
 
-/**
- * Redacts the decoded segment so `%40` cannot hide an email. Re-encodes only
- * when redaction changed the text; other segments keep their spelling.
- */
 const redactPathSegment = (segment: string): string => {
   let decoded = segment
   try {
@@ -253,7 +234,6 @@ const redactPathSegment = (segment: string): string => {
   return redacted === decoded ? segment : encodeURIComponent(redacted)
 }
 
-/** Apply PII redaction to a request URL while keeping the result parseable by the URL/Request constructors. */
 const redactRequestUrl = (
   urlString: string,
   extraKeys?: readonly string[]
@@ -282,14 +262,12 @@ const redactRequestUrl = (
   }
 }
 
-/** Headers whose value is an absolute URL and may carry a sensitive query key. */
 const URL_VALUED_HEADERS: ReadonlySet<string> = new Set([
   'content-location',
   'location',
   'referer'
 ])
 
-/** The URL's own serialisation, so a masked copy can be told from a merely normalised one. */
 const normalizedHref = (value: string): string => {
   try {
     return new URL(value).href
@@ -298,7 +276,6 @@ const normalizedHref = (value: string): string => {
   }
 }
 
-/** One header value: whole when the name is sensitive, by URL rules for a URL-valued header, by pattern otherwise. */
 const redactHeaderValue = (
   name: string,
   value: string,
@@ -316,7 +293,6 @@ const redactHeaderValue = (
   return redacted === normalizedHref(value) ? value : redacted
 }
 
-/** Always returns a new instance; `headers` is left untouched. */
 const redactHeaders = (
   headers: Headers,
   extraKeys?: readonly string[]
@@ -350,7 +326,6 @@ const withReentrancyGuard = <T>(
 
 const UNREADABLE = Symbol('unreadable')
 
-/** A Proxy whose `get` trap throws cannot even be asked for its `toJSON`. */
 const readToJson = (value: object): unknown => {
   try {
     const { toJSON } = value as { toJSON?: unknown }
@@ -360,17 +335,7 @@ const readToJson = (value: object): unknown => {
   }
 }
 
-/**
- * Mutually recursive. One object lets each walker reach the others by
- * property instead of by a binding declared later in the file.
- */
 const walker = {
-  /**
-   * Redacts each item; returns the ORIGINAL array reference when no item changed (zero
-   * allocations for the common no-PII case). A new array is materialized lazily, starting from
-   * the first item that changes — items before that point are known-unchanged, so they're copied
-   * from `value` as-is rather than recomputed.
-   */
   array: (
     value: unknown[],
     inProgress: WeakSet<object>,
@@ -478,7 +443,6 @@ const walker = {
     return result
   },
 
-  /** Same lazy-materialization strategy as {@link walker.array}, for plain objects. */
   record: (
     recordValue: Record<string, unknown>,
     inProgress: WeakSet<object>,
@@ -498,8 +462,6 @@ const walker = {
       try {
         original = recordValue[key]
       } catch {
-        // A getter or Proxy trap that throws: only this field is lost, as
-        // stringifyForLog does without autoRedact.
         unreadable = true
       }
       const sensitive = isSensitiveKey(key, extraKeys)
@@ -536,7 +498,6 @@ const walker = {
       Array.from(value, item => walker.value(item, inProgress, extraKeys))
     ),
 
-  /** What the sinks will serialize is the toJSON output, so that is what the key and pattern checks must see. */
   toJson: (
     value: { toJSON: () => unknown },
     inProgress: WeakSet<object>,
@@ -574,9 +535,6 @@ const walker = {
     }
 
     if (value instanceof Date) {
-      // Dates carry no redactable string content and are never mutated by this module, so they
-      // pass through by reference (part of the identity fast path) instead of being defensively
-      // cloned as before.
       return value
     }
 
@@ -625,7 +583,6 @@ const walker = {
     }
 
     if (ArrayBuffer.isView(value) || value instanceof ArrayBuffer) {
-      // Bytes carry no keys to match; walking a buffer costs one key check per byte.
       return value
     }
 
@@ -651,14 +608,6 @@ const walker = {
   }
 }
 
-/**
- * Apart from a circular reference and a value nested deeper than 64 levels,
- * which become marker strings, the walk keeps each value's shape: a string
- * stays a string, an array an array, an Error an Error. The exception is a
- * non-error value with `toJSON`, which becomes what it serializes to, since
- * that is what the sinks write. For everything else the input type still
- * describes the output.
- */
 export const redact = <T>(value: T, extraKeys?: readonly string[]): T =>
   walker.value(value, new WeakSet(), extraKeys) as T
 

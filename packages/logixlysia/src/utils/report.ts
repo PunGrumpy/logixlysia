@@ -7,11 +7,6 @@ export type ErrorReporter = (
   onError?: (context: SinkErrorContext) => void
 ) => void
 
-/**
- * Routes a failure to `config.onError`, or — when no hook is configured — to
- * stderr at most once per interval, so a component that fails on every request
- * cannot flood the very log it is meant to be feeding.
- */
 export const createErrorReporter = (
   sink: SinkErrorContext['sink'],
   label: string

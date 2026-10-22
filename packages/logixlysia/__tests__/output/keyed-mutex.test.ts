@@ -12,8 +12,6 @@ describe('createKeyedMutex', () => {
       const release = await mutex.acquire('key')
       holders += 1
       maxHolders = Math.max(maxHolders, holders)
-      // Hold the lock across a macrotask window: any concurrent holder would
-      // overlap here and push `holders` above 1.
       await sleep(5)
       holders -= 1
       release()
@@ -30,8 +28,6 @@ describe('createKeyedMutex', () => {
   test('acquisitions for different keys never block each other', async () => {
     const mutex = createKeyedMutex()
 
-    // Both resolve immediately (before either releases) because they key on
-    // different strings; a shared/global lock would make the second await hang.
     const releaseA = await mutex.acquire('a')
     const releaseB = await mutex.acquire('b')
 
@@ -45,8 +41,6 @@ describe('createKeyedMutex', () => {
 
     const releaseA = await mutex.acquire('key')
 
-    // B registers itself as the map's "current" lock for `key` synchronously
-    // inside acquire(), before it awaits A's lock.
     const bAcquirePromise = mutex.acquire('key').then(release => {
       events.push('B-start')
       return release
@@ -67,7 +61,6 @@ describe('createKeyedMutex', () => {
       return release
     })
 
-    // Give any wrongly-unblocked C a window to (incorrectly) start.
     await sleep(5)
     expect(cStarted).toBe(false)
 

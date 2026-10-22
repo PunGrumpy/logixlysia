@@ -25,7 +25,6 @@ describe('logToFile race condition', () => {
         }
       }
 
-      // Create 50 concurrent write operations
       const writes = Array.from({ length: 50 }, (_, i) =>
         logToFile({
           data: { message: `message-${i}-${'x'.repeat(20)}` },
@@ -37,10 +36,8 @@ describe('logToFile race condition', () => {
         })
       )
 
-      // Wait for all writes to complete
       await Promise.all(writes)
 
-      // Read all log files (original + rotated)
       const files = await fs.readdir(path.join(dir, 'logs'))
       const logFiles = files.filter(
         name => name === 'concurrent.log' || name.startsWith('concurrent.log.')
@@ -56,7 +53,6 @@ describe('logToFile race condition', () => {
         const lines = content.split('\n').filter(l => l.length > 0)
         totalLines += lines.length
 
-        // Extract message numbers from each line
         for (const line of lines) {
           const match = line.match(MESSAGE_REGEX)
           if (match) {
@@ -65,11 +61,9 @@ describe('logToFile race condition', () => {
         }
       }
 
-      // All 50 messages should be present (no data loss)
       expect(allMessages.size).toBe(50)
       expect(totalLines).toBe(50)
 
-      // Verify all message IDs from 0-49 are present
       for (let i = 0; i < 50; i += 1) {
         expect(allMessages.has(String(i))).toBe(true)
       }
@@ -89,7 +83,6 @@ describe('logToFile race condition', () => {
         }
       }
 
-      // Create 20 writes that should all trigger rotation
       const writes = Array.from({ length: 20 }, (_, i) =>
         logToFile({
           data: { message: `msg-${i}-${'x'.repeat(100)}` },
@@ -101,10 +94,8 @@ describe('logToFile race condition', () => {
         })
       )
 
-      // This should not throw errors or lose data
       await expect(Promise.all(writes)).resolves.toBeDefined()
 
-      // Count total log entries across all files
       const files = await fs.readdir(path.join(dir, 'logs'))
       let totalEntries = 0
 
@@ -116,7 +107,6 @@ describe('logToFile race condition', () => {
         totalEntries += lines.length
       }
 
-      // All 20 entries should be preserved
       expect(totalEntries).toBe(20)
     } finally {
       await removeTempDir(dir)
@@ -136,8 +126,6 @@ describe('logToFile race condition', () => {
 
       const total = 20
 
-      // Fire all calls in the same tick (no awaits between them) so any
-      // caller that fails to see a same-tick prior lock is exposed.
       const writes = Array.from({ length: total }, (_, i) =>
         logToFile({
           data: { message: `msg-${i}-${'x'.repeat(50)}` },
@@ -167,7 +155,6 @@ describe('logToFile race condition', () => {
         totalLines += lines.length
 
         for (const line of lines) {
-          // Every line must be a single, complete, well-formed entry.
           expect(line).toMatch(EXCLUSION_LINE_REGEX)
           const match = line.match(EXCLUSION_LINE_REGEX)
           if (match) {
@@ -176,7 +163,6 @@ describe('logToFile race condition', () => {
         }
       }
 
-      // No lines dropped or torn: exactly `total` distinct, well-formed lines.
       expect(totalLines).toBe(total)
       expect(seenIds.size).toBe(total)
     } finally {

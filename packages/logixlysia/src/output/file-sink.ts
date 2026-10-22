@@ -22,12 +22,10 @@ export interface FileSinkOptions {
   logDirMode?: number
   logFileMode?: number
   logRotation?: LogRotationConfig
-  /** Reports a rotation-sink failure; falls back to a stderr line when omitted. */
   onRotationError?: (error: unknown) => void
 }
 
 export interface FileSink {
-  /** Flushes, then releases the file handle. Idempotent. */
   close: () => Promise<void>
   /** Resolves once every write issued so far is durably on disk. */
   flush: () => Promise<void>
@@ -91,12 +89,10 @@ class FileSinkImpl implements FileSink {
     return promise
   }
 
-  /** Runs `batch` once `prior` settles, whether it resolved or rejected. */
   private async flushAfter(
     prior: Promise<void>,
     batch: PendingBatch
   ): Promise<void> {
-    // A failed batch already rejected its own writers; the next one still runs.
     await settle(prior)
     await this.flushBatch(batch)
   }
@@ -134,8 +130,6 @@ class FileSinkImpl implements FileSink {
       return
     }
 
-    // The directory only needs creating on first open (or on reopen after a
-    // rotation cleared the handle) — never per line.
     await ensureDir(path.dirname(this.filePath), options.logDirMode)
     const handle = await open(this.filePath, 'a', options.logFileMode ?? 0o600)
     const stat = await handle.stat()
@@ -144,7 +138,6 @@ class FileSinkImpl implements FileSink {
     this.openedAt = resolveOpenedAt(stat.birthtimeMs, Date.now())
   }
 
-  /** True when either configured trigger (size, interval) has been crossed. */
   private shouldRotateNow(rotation: LogRotationConfig): boolean {
     if (
       rotation.maxSize !== undefined &&

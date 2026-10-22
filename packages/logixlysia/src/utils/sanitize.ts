@@ -9,7 +9,6 @@ import { stringifyForLog } from './json'
 const isControlCodePoint = (code: number): boolean =>
   code <= 8 || (code >= 11 && code <= 31) || (code >= 127 && code <= 159)
 
-/** Any value as plain text: strings as-is, objects as JSON, nothing as ''. */
 export const toText = (value: unknown): string => {
   if (typeof value === 'string') {
     return value
@@ -23,11 +22,6 @@ export const toText = (value: unknown): string => {
   return String(value)
 }
 
-/**
- * Turns any value into one safe line of text. Objects are serialized, `\r`,
- * `\n` and `\t` become visible escapes, other C0/C1 control characters are
- * stripped, and the length is bounded. Never throws.
- */
 export const sanitizeLogText = (value: unknown, maxLength = 2048): string => {
   const escaped = toText(value)
     .replaceAll('\r', String.raw`\r`)

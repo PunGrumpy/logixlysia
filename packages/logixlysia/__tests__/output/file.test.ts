@@ -7,7 +7,6 @@ import { spyConsole } from '../_helpers/console'
 import { createMockRequest } from '../_helpers/request'
 import { createTempDir, removeTempDir } from '../_helpers/tmp'
 
-/** Owner/group/other permission bits as a 3-digit octal string, e.g. '600'. */
 const permBits = (mode: number): string => mode.toString(8).slice(-3)
 
 const MESSAGE_ID_REGEX = /msg-(?<id>\d+)$/u
@@ -165,7 +164,6 @@ describe('logToFile', () => {
       const options: Options = { config: {} }
       const total = 50
 
-      // No awaits between calls: all 50 land in the same microtask batch.
       const writes = Array.from({ length: total }, (_, i) =>
         logToFile({
           data: { message: `msg-${i}` },
@@ -177,8 +175,6 @@ describe('logToFile', () => {
         })
       )
 
-      // Every caller's own promise must resolve, proving per-caller
-      // resolution semantics survive batching.
       await Promise.all(writes)
 
       const content = await fs.readFile(filePath, 'utf-8')
@@ -217,8 +213,6 @@ describe('logToFile', () => {
         store: { beforeTime: 0n }
       })
 
-      // Small enough to stay under maxSize: proves the live file was
-      // reopened and writes keep landing in it (not the rotated one).
       await logToFile({
         data: { message: 'y' },
         filePath,
@@ -264,9 +258,6 @@ describe('logToFile', () => {
         store: { beforeTime: 0n }
       })
 
-      // Two small writes after the reset: if bytesWritten leaked across the
-      // rotation instead of resetting to 0, these would spuriously rotate
-      // again.
       await logToFile({
         data: { message: 'a' },
         filePath,
@@ -343,8 +334,6 @@ describe('logToFile', () => {
       })
       const options: Options = { config: { onError } }
 
-      // The hook throwing must not crash the caller; logToFile still
-      // rejects with the original error (callers already .catch() this).
       await expect(
         logToFile({
           data: { message: 'hello' },

@@ -18,13 +18,11 @@ interface LogToFileInput {
   filePath: string
   level: LogLevel
   options: Options
-  /** Duration/URL parts already computed by the caller; parsed on the fly when omitted. */
   precomputed?: { durationMs: number; pathname: string; search: string }
   request: RequestInfo
   store: StoreData
 }
 
-/** Resolves the logged pathname (with query string when configured) from precomputed parts or a fresh parse. */
 const resolvePathname = (
   request: RequestInfo,
   logQueryParams: boolean | undefined,
@@ -35,11 +33,9 @@ const resolvePathname = (
     return logQueryParams ? `${pathname}${search}` : pathname
   }
   try {
-    // Safely parse URL to avoid crashes on malformed URLs
     const { pathname, search } = new URL(request.url)
     return logQueryParams ? `${pathname}${search}` : pathname
   } catch {
-    // Fallback to raw URL if parsing fails
     return request.url
   }
 }
