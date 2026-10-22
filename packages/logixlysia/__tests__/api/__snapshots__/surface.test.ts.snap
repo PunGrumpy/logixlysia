@@ -47,7 +47,6 @@ exports[`published API surface every exports subpath resolves and its named expo
     "createLokiTransport",
   ],
   "./otel": [
-    "__resetForTesting",
     "injectTraceContext",
   ],
   "./otlp": [

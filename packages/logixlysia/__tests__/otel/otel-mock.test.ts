@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, mock, test } from 'bun:test'
+import { resetOtelApi } from '../../src/helpers/otel-api'
 import { createLogger } from '../../src/logger'
-import { __resetForTesting, injectTraceContext } from '../../src/otel'
+import { injectTraceContext } from '../../src/otel'
 
 const fakeSpanContext = {
   spanId: '0123456789abcdef',
@@ -22,14 +23,14 @@ mock.module('@opentelemetry/api', () => ({
 
 describe('logixlysia/otel (mocked)', () => {
   afterEach(() => {
-    __resetForTesting()
+    resetOtelApi()
     getSpanMock.mockImplementation(() => ({
       spanContext: () => fakeSpanContext
     }))
   })
 
   test('injects trace_id & span_id when OTel API returns an active span', () => {
-    __resetForTesting()
+    resetOtelApi()
 
     const logger = createLogger({
       config: {
@@ -52,7 +53,7 @@ describe('logixlysia/otel (mocked)', () => {
   })
 
   test('returns undefined when getSpan returns no active span', () => {
-    __resetForTesting()
+    resetOtelApi()
     getSpanMock.mockImplementation(() => {})
 
     const logger = createLogger({
