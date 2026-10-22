@@ -26,11 +26,7 @@ const waitForFonts = async (
   loads: Promise<unknown>[],
   handle: number
 ): Promise<void> => {
-  try {
-    await Promise.all(loads)
-  } catch {
-    // A font that fails to load falls back; render anyway.
-  }
+  await Promise.allSettled(loads)
   continueRender(handle)
 }
 

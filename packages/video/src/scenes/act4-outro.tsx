@@ -14,6 +14,7 @@ const CARDS_AT = sec(1.6)
 const LOGO_AT = sec(4.6)
 const CARD_STAGGER = sec(0.1)
 const LOGO_STAGGER = sec(0.1)
+const ENTER_RISE_PX = 30
 const EXIT_RISE_PX = 8
 
 interface Card {
@@ -53,8 +54,7 @@ const CardEl = ({ c, i }: { c: Card; i: number }) => {
   if (frame < at) {
     return null
   }
-  // Enter rises 30px; the exit lifts only 8px so it reads softer than the enter.
-  const y = (1 - s) * 30 - (1 - out) * EXIT_RISE_PX
+  const y = (1 - s) * ENTER_RISE_PX - (1 - out) * EXIT_RISE_PX
   return (
     <div style={{ opacity: s * out, transform: `translateY(${y}px)` }}>
       <Glass
