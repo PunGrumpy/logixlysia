@@ -106,7 +106,7 @@ export const isSensitiveKey = (
   )
 }
 
-/** pino redact paths for one key: top-level and one nesting level. */
+/** pino redact paths for every default and extra key: top-level and one nesting level. */
 export const buildPinoRedactPaths = (
   extraKeys?: readonly string[]
 ): string[] => {

@@ -27,9 +27,9 @@ export interface FileSinkOptions {
 
 export interface FileSink {
   close: () => Promise<void>
-  /** Resolves once every write issued so far is durably on disk. */
+  /** Resolves once every write issued so far has been written to the file. */
   flush: () => Promise<void>
-  /** Resolves after `line` is durably written to disk. */
+  /** Resolves after `line` has been written to the file. */
   write: (line: string, options: FileSinkOptions) => Promise<void>
 }
 
@@ -177,8 +177,7 @@ class FileSinkImpl implements FileSink {
         options.logFileMode
       )
     } catch (error) {
-      // Log entries were already durably written and resolved above;
-      // rotation failures must not fail the caller's write.
+      // A rotation failure must not fail the caller's write.
       if (options.onRotationError) {
         options.onRotationError(error)
       } else {
