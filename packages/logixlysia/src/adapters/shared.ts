@@ -371,10 +371,6 @@ export const createBatchQueue = (input: {
     background: boolean
   ): Promise<void> => {
     try {
-      // Yield first. Without it a `send` that throws synchronously runs this
-      // `finally` inside `startSend`, before `inFlight` is assigned there, and
-      // that assignment then overwrites the tracker of the request started
-      // below. Do not remove.
       await Promise.resolve()
       await input.send(entries)
     } catch (error) {
