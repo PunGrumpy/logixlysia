@@ -29,6 +29,22 @@ export interface HttpErrorInit {
 }
 
 /**
+ * Statuses the Fetch spec forbids a body on — `Response.json` throws for
+ * these, as it does for anything outside 200-599.
+ */
+const NULL_BODY_STATUSES = new Set([101, 103, 204, 205, 304])
+const MIN_RESPONSE_STATUS = 200
+const MAX_RESPONSE_STATUS = 599
+const FALLBACK_RESPONSE_STATUS = 500
+
+const responseStatus = (status: number): number =>
+  status >= MIN_RESPONSE_STATUS &&
+  status <= MAX_RESPONSE_STATUS &&
+  !NULL_BODY_STATUSES.has(status)
+    ? status
+    : FALLBACK_RESPONSE_STATUS
+
+/**
  * An HTTP error carrying the context that makes a failure actionable.
  *
  * `code`, `why`, `fix`, and `link` appear in both the log and the response.
@@ -45,26 +61,10 @@ export interface HttpErrorInit {
  * })
  * ```
  *
- * A bare `new HttpError(404, 'Not found')` behaves exactly as before: the
- * response body is the plain message. Only an error that carries at least one
- * client-facing field responds as JSON.
+ * A bare `new HttpError(404, 'Not found')` responds with the plain message.
+ * Only an error that carries at least one client-facing field responds as
+ * JSON.
  */
-/**
- * Statuses the Fetch spec forbids a body on — `Response.json` throws for
- * these, as it does for anything outside 200-599.
- */
-const NULL_BODY_STATUSES = new Set([101, 103, 204, 205, 304])
-const MIN_RESPONSE_STATUS = 200
-const MAX_RESPONSE_STATUS = 599
-const FALLBACK_RESPONSE_STATUS = 500
-
-const responseStatus = (status: number): number =>
-  status >= MIN_RESPONSE_STATUS &&
-  status <= MAX_RESPONSE_STATUS &&
-  !NULL_BODY_STATUSES.has(status)
-    ? status
-    : FALLBACK_RESPONSE_STATUS
-
 export class HttpError extends Error {
   readonly code?: string
   readonly fix?: string
