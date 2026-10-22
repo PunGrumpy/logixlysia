@@ -20,7 +20,6 @@ const createSink = (): { flushed: number; records: Recorded[] } & Transport => {
   }
 }
 
-/** Fails loudly instead of tripping over an optional chain when nothing was recorded. */
 const metaOf = (records: Recorded[], index = 0): Record<string, unknown> => {
   const meta = records[index]?.meta
   if (meta === undefined) {
@@ -31,10 +30,6 @@ const metaOf = (records: Recorded[], index = 0): Record<string, unknown> => {
 
 const NAME_PATTERN = /Anna Müller/gu
 
-/**
- * Stands in for `@desert-ant-labs/redact`: masks one known name so a test can
- * assert the model pass ran, without downloading a 46 MB model.
- */
 const createStubRedactor = (
   overrides: Partial<NeuralRedactor> = {}
 ): {
