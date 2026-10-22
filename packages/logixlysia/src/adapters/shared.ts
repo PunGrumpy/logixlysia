@@ -219,6 +219,14 @@ export const resolveRetryDelay = (
   )
 }
 
+const readBodyText = async (response: Response): Promise<string> => {
+  try {
+    return await response.text()
+  } catch {
+    return ''
+  }
+}
+
 const attemptPost = async (
   input: PostWithRetryInput,
   attempt: number
@@ -254,19 +262,12 @@ const attemptPost = async (
     )
   }
   if (response.ok) {
-    try {
-      await response.body?.cancel()
-    } catch {
-      // Nothing to release when the body is already consumed or closed.
+    if (response.body) {
+      await settle(response.body.cancel())
     }
     return
   }
-  let body = ''
-  try {
-    body = await response.text()
-  } catch {
-    // An unreadable body only costs the error message its detail.
-  }
+  const body = await readBodyText(response)
   const detail = sanitizeLogText(body.slice(0, ERROR_BODY_PREVIEW_LENGTH))
   const httpError = new Error(
     `[logixlysia] ${input.name} transport: HTTP ${response.status}${
