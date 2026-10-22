@@ -85,18 +85,14 @@ const requestStarts = new WeakMap<Request, bigint>()
 const lineOwners = new WeakMap<Request, symbol>()
 
 interface RequestRecord {
-  /** A custom log replaced the access line for this request. */
-  customLogged: boolean
+  accessLineReplaced: boolean
   error?: unknown
   phase: 'open' | 'streaming' | 'closed'
-  /** Elysia pulled the stream wrapper at least once. */
-  pulled: boolean
+  seenByWrap: boolean
   setHeaders?: Record<string, string | number>
   startedAt: bigint
-  /** The status the client got, recorded by the wrap for a stream still running. */
-  status?: number
-  /** The wrap saw this request. Otherwise the hooks close it, as before the wrap existed. */
-  wrapped: boolean
+  streamPulled: boolean
+  streamStatus?: number
 }
 
 const responseStatus = (response: unknown): number =>
@@ -165,7 +161,7 @@ const wrapAsyncStream = async function* wrapAsyncStream(
   runInScope: RunInScope,
   onSettled: () => void
 ): AsyncGenerator<unknown, unknown> {
-  record.pulled = true
+  record.streamPulled = true
   const iterator = source[Symbol.asyncIterator]()
   const scoped: AsyncIterator<unknown> = {
     next: (...args) => runInScope(() => iterator.next(...args)),
@@ -204,7 +200,7 @@ const wrapSyncStream = function* wrapSyncStream(
   runInScope: RunInScope,
   onSettled: () => void
 ): Generator<unknown, unknown> {
-  record.pulled = true
+  record.streamPulled = true
   const iterator = source[Symbol.iterator]()
   const scoped: Iterator<unknown> = {
     next: (...args) => runInScope(() => iterator.next(...args)),
@@ -301,11 +297,11 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
       requestStarts.set(request, startedAt)
     }
     const record: RequestRecord = {
-      customLogged: false,
+      accessLineReplaced: false,
       phase: 'open',
-      pulled: false,
+      seenByWrap: false,
       startedAt,
-      wrapped: false
+      streamPulled: false
     }
     records.set(request, record)
     return record
@@ -340,7 +336,7 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
     }
 
     const record = openRecord(request)
-    record.customLogged = true
+    record.accessLineReplaced = true
     baseLogger.log(
       level,
       request,
@@ -488,7 +484,7 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
     }
     record.phase = 'closed'
     const owner = lineOwners.get(request)
-    if (record.wrapped && owner !== undefined && owner !== instance) {
+    if (record.seenByWrap && owner !== undefined && owner !== instance) {
       // Another instance's route hooks wrote this request's line. Still
       // resolve this instance's tail sampling, or what it buffered for the
       // request (a `useLogger()` call, say) is never kept or dropped.
@@ -515,7 +511,7 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
         (status >= 400 || !isStatusResponse(record.error))
       ) {
         logger.handleHttpError(request, record.error, { ...store, status })
-      } else if (!record.customLogged) {
+      } else if (!record.accessLineReplaced) {
         emitAccessLine(request, status, store)
       }
     } catch (failure) {
@@ -533,11 +529,11 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
     if (record.phase !== 'streaming') {
       return
     }
-    if (record.status === undefined) {
+    if (record.streamStatus === undefined) {
       record.phase = 'open'
       return
     }
-    finishRequest(request, record, record.status)
+    finishRequest(request, record, record.streamStatus)
   }
 
   const wrapStream = (
@@ -552,8 +548,8 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
     // A client that disconnects while the source awaits its next value would
     // otherwise get no line until that await settles, which may be never.
     const onAbort = (): void => {
-      if (record.phase === 'streaming' && record.status !== undefined) {
-        finishRequest(request, record, record.status)
+      if (record.phase === 'streaming' && record.streamStatus !== undefined) {
+        finishRequest(request, record, record.streamStatus)
       }
     }
     request.signal.addEventListener('abort', onAbort, { once: true })
@@ -595,7 +591,7 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
     (fetch: (request: Request, server: unknown) => unknown) =>
     (request: Request, server: unknown): unknown => {
       const record = openRecord(request)
-      record.wrapped = true
+      record.seenByWrap = true
       const settle = async (): Promise<unknown> => {
         let response: unknown
         try {
@@ -609,13 +605,13 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
         }
         if (
           record.phase === 'streaming' &&
-          record.pulled &&
+          record.streamPulled &&
           record.error === undefined
         ) {
           // The body is still being produced; the stream wrapper finishes it.
           // A recorded error means Elysia failed to build the stream after
           // its first pull and answered with an error response instead.
-          record.status = responseStatus(response)
+          record.streamStatus = responseStatus(response)
           return response
         }
         finishRequest(
@@ -682,13 +678,13 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
         applyRequestEnrichers(enrichers, contextStore, request, onSinkError)
       }
 
-      if (useAsyncLocalStorage && !record.wrapped) {
+      if (useAsyncLocalStorage && !record.seenByWrap) {
         loggerStorage.enterWith(createRequestScopedLogger(request))
       }
     })
     .onAfterHandle(({ request, set, response }) => {
       const record = openRecord(request)
-      if (!record.wrapped) {
+      if (!record.seenByWrap) {
         finishUnwrapped(
           request,
           record,
@@ -705,7 +701,7 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
     .onError(({ request, error }) => {
       const record = openRecord(request)
       record.error = error
-      if (record.wrapped) {
+      if (record.seenByWrap) {
         return
       }
       if (record.phase === 'closed') {
@@ -720,7 +716,7 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
     .onAfterResponse(context => {
       const { request, set } = context
       const record = openRecord(request)
-      if (record.wrapped) {
+      if (record.seenByWrap) {
         return
       }
       // An exit that reached neither hook above (a resolve short-circuit, or an
