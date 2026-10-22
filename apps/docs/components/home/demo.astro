@@ -392,11 +392,7 @@ const interactiveRoutes = [
       line.style.display = 'none'
     }
 
-    // Replay only while the terminal is on screen, not paused by the user,
-    // and not taken over by the interactive buttons (the visible pause
-    // control keeps this indefinite replay WCAG 2.2.2 compliant). One
-    // consumer awaits the gate at a time, so a single `onReady` slot is
-    // enough.
+    // The visible pause control keeps this indefinite replay WCAG 2.2.2 compliant.
     let visible = false
     let paused = false
     let onReady: (() => void) | undefined
