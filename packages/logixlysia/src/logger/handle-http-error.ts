@@ -4,7 +4,7 @@ import type { LogLevel, Options, RequestInfo, StoreData } from '../interfaces'
 import type { SamplingRuntime } from '../sampling'
 import { normalizeLoggedError } from '../utils/error'
 import type { FormatContext } from './create-logger'
-import { emit, reportFormatError, shouldLog } from './emit'
+import { emit, isSuppressed, reportFormatError } from './emit'
 import type { Sinks } from './emit'
 
 const isErrorWithStatus = (
@@ -41,11 +41,7 @@ export const handleHttpError = (
   const level: LogLevel =
     isStatusResponse(error) || status >= 400 ? levelForStatus(status) : 'ERROR'
 
-  // Mirrors emit()'s own gate check, but performed *before* normalizing the
-  // error so a filtered-out/disabled logger never pays for that work.
-  // emit() re-checks the same gate, which is cheap and keeps this function a
-  // thin, provably-correct wrapper around the shared pipeline.
-  if (sinks.isEffectivelyDisabled || !shouldLog(level, config?.logFilter)) {
+  if (isSuppressed(sinks, level, config?.logFilter)) {
     return
   }
 

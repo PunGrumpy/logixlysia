@@ -22,7 +22,7 @@ import type {
   StoreData
 } from './interfaces'
 import { createPluginLogger } from './logger'
-import { reportFormatError, resolveSinks, shouldLog } from './logger/emit'
+import { isSuppressed, reportFormatError, resolveSinks } from './logger/emit'
 import { errorStatus } from './logger/handle-http-error'
 import {
   getOrCreateRequestId,
@@ -318,20 +318,13 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
   const logFilter = options.config?.logFilter
   const sinks = resolveSinks(options.config)
 
-  /**
-   * A custom log inside a request. It applies the same gate the logger's own
-   * `debug`/`info`/... apply, for two reasons: a record the level filter drops
-   * must not claim the request and suppress its access line, and the record
-   * that does go out has to be timed from the request's start rather than from
-   * the moment the handler called it.
-   */
   const emitCustomLog = (
     level: LogLevel,
     request: Request,
     message: string,
     context?: Record<string, unknown>
   ): void => {
-    if (sinks.isEffectivelyDisabled || !shouldLog(level, logFilter)) {
+    if (isSuppressed(sinks, level, logFilter)) {
       return
     }
 

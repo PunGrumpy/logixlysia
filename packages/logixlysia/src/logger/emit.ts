@@ -57,6 +57,12 @@ export const shouldLog = (level: LogLevel, logFilter?: LogFilter): boolean => {
   return logFilter.level.includes(level)
 }
 
+export const isSuppressed = (
+  sinks: Sinks,
+  level: LogLevel,
+  logFilter?: LogFilter
+): boolean => sinks.isEffectivelyDisabled || !shouldLog(level, logFilter)
+
 export const parseRequestUrlOnce = (
   request: RequestInfo
 ): { pathname: string; search: string } => {
@@ -214,7 +220,7 @@ export const emit = (input: EmitInput): void => {
   } = input
   const { config } = options
 
-  if (sinks.isEffectivelyDisabled || !shouldLog(level, config?.logFilter)) {
+  if (isSuppressed(sinks, level, config?.logFilter)) {
     return
   }
 

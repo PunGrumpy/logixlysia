@@ -14,7 +14,7 @@ import { resolveSampling } from '../sampling'
 import { elapsedMs } from '../utils/duration'
 import { buildPinoRedactPaths } from '../utils/redact'
 import { createFormatContext } from './create-logger'
-import { emit, parseRequestUrlOnce, resolveSinks, shouldLog } from './emit'
+import { emit, isSuppressed, parseRequestUrlOnce, resolveSinks } from './emit'
 import { handleHttpError } from './handle-http-error'
 
 const ZERO_STORE: StoreData = { beforeTime: 0n }
@@ -188,7 +188,7 @@ export const createLogger = (
     message: string,
     context?: Record<string, unknown>
   ): void => {
-    if (sinks.isEffectivelyDisabled || !shouldLog(level, config?.logFilter)) {
+    if (isSuppressed(sinks, level, config?.logFilter)) {
       return
     }
     const store: StoreData = { beforeTime: process.hrtime.bigint() }
