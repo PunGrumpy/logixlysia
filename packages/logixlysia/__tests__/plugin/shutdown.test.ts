@@ -15,7 +15,6 @@ import { waitFor } from '../_helpers/wait-for'
 const NO_WAIT_SETTLE_MS = 30
 const SLOW_TRANSPORT_MS = 40
 
-/** A flush that never settles, to exercise the shutdown timeout. */
 const neverSettles = (): Promise<void> => {
   const { promise }: PromiseWithResolvers<void> = Promise.withResolvers()
   return promise

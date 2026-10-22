@@ -12,9 +12,7 @@ interface CapturedMeta {
 
 const createCaptureTransport = (config: Options['config'] = {}) => {
   const transport = mock<(lvl: unknown, msg: unknown, meta?: unknown) => void>(
-    () => {
-      /* noop */
-    }
+    () => {}
   )
   const options: Options = {
     config: {

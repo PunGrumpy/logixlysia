@@ -17,18 +17,11 @@ import { settle } from '../utils/settle'
 import { formatLogOutput } from './create-logger'
 import type { FormatContext, PrecomputedLogParts } from './create-logger'
 
-/**
- * Which sinks are active for a given config, resolved once per logger
- * instance (see `createLogger`) since none of these depend on per-request
- * state.
- */
 export interface Sinks {
   hasFileLogging: boolean
   hasInternalLogger: boolean
   hasTransports: boolean
-  /** True when no sink is active at all: `log()`/`handleHttpError()` can skip all work. */
   isEffectivelyDisabled: boolean
-  /** True when at least one active sink reads pathname/search (file logging or the console formatter). */
   needsUrlParts: boolean
 }
 
@@ -64,7 +57,6 @@ export const shouldLog = (level: LogLevel, logFilter?: LogFilter): boolean => {
   return logFilter.level.includes(level)
 }
 
-/** Parses the URL once; only called when at least one active sink reads pathname/search. */
 export const parseRequestUrlOnce = (
   request: RequestInfo
 ): { pathname: string; search: string } => {
@@ -76,12 +68,6 @@ export const parseRequestUrlOnce = (
   }
 }
 
-/**
- * Samples duration and parses the URL once per emission for the sinks that will actually run.
- * `logToTransports`' meta only reads `durationMs` (not pathname/search), so the URL is parsed
- * only when file logging or the internal console logger is active — skipping it entirely for
- * transports-only configs, matching that path's pre-optimization behavior.
- */
 export const computePrecomputedLogParts = (
   store: StoreData,
   request: RequestInfo,
@@ -117,26 +103,19 @@ const consoleForLevel = (level: LogLevel): typeof console.log => {
 }
 
 export interface EmitInput {
-  /** Skips the sampling gate; set when replaying a tail-rescued record. */
   bypassSampling?: boolean
-  /** Shared per-request context bag (peeked, never cloned/retained). */
   contextStore: RequestContextStore
   data: Record<string, unknown>
-  /** Duration captured when a record was buffered, replacing the live sample. */
   durationOverride?: number
-  /** Hoisted per-logger constants for `formatLogOutput`; only read when the internal console logger is active. */
   formatContext: FormatContext
   level: LogLevel
   options: Options
   request: RequestInfo
-  /** Hoisted per-logger sampling runtime; undefined when sampling is off. */
   sampling?: SamplingRuntime
-  /** Hoisted per-logger sink gates from {@link resolveSinks}. */
   sinks: Sinks
   store: StoreData
 }
 
-/** Shared by `emit` and `handleHttpError` so formatting failures share one rate limit. */
 export const reportFormatError = createErrorReporter(
   'format',
   'failed to build a log record'
@@ -157,8 +136,6 @@ const writeRecord = ({
 
   const dataWithContext = mergeLogDataContext(
     data,
-    // mergeLogDataContext only reads/spreads this bag into a new object; it never retains
-    // the reference, so a non-cloning peek is safe here.
     contextStore.peekContext(request)
   )
   const logData =
@@ -191,7 +168,6 @@ const writeRecord = ({
   if (sinks.hasFileLogging) {
     const filePath = config?.logFilePath
     if (filePath) {
-      // file.ts reports a failed write itself (console.error or config.onError).
       settle(
         logToFile({
           data: logData,
@@ -225,11 +201,6 @@ const writeRecord = ({
   consoleForLevel(level)(message)
 }
 
-/**
- * The single log-emission pipeline shared by the success path (`log()`) and
- * the error path (`handleHttpError()`): filter check -> context merge ->
- * redact -> transports -> file -> console, all gated by the same `sinks`.
- */
 export const emit = (input: EmitInput): void => {
   const {
     bypassSampling,
@@ -253,8 +224,6 @@ export const emit = (input: EmitInput): void => {
       return
     }
     if (decision === 'buffer') {
-      // Buffered raw: context merge, redaction and formatting are deferred to
-      // replay, so a request that never gets rescued pays almost nothing.
       sampling.buffer(request, {
         data,
         durationMs: elapsedMs(store.beforeTime),
@@ -264,7 +233,6 @@ export const emit = (input: EmitInput): void => {
     }
   }
 
-  // Logging must never fail the request it describes.
   try {
     writeRecord(input)
   } catch (error) {

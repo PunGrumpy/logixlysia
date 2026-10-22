@@ -12,9 +12,7 @@ interface CapturedMeta {
 
 const createCaptureTransport = (config: Options['config'] = {}) => {
   const transport = mock<(lvl: unknown, msg: unknown, meta?: unknown) => void>(
-    () => {
-      /* noop */
-    }
+    () => {}
   )
   const options: Options = {
     config: {
@@ -186,7 +184,6 @@ describe('logixlysia plugin - status resolution', () => {
 
     await run(app, '/boom')
 
-    // The earlier app-wide onError answered, so the plugin never saw the thrown value: level and status only.
     expect(transport).toHaveBeenCalledTimes(1)
     const { level, meta } = recordAt(transport, 0)
     expect(level).toBe('ERROR')

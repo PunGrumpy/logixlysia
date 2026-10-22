@@ -15,7 +15,6 @@ const isErrorWithStatus = (
   'status' in value &&
   typeof (value as { status?: unknown }).status === 'number'
 
-/** The status a thrown value maps to; anything without one is a 500. */
 export const errorStatus = (error: unknown): number => {
   if (isStatusResponse(error)) {
     return error.code
@@ -50,7 +49,6 @@ export const handleHttpError = (
     return
   }
 
-  // emit guards its own work; this covers normalizing the error before it.
   try {
     const { error: safeError, message } = normalizeLoggedError(
       error,

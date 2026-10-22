@@ -182,7 +182,6 @@ const validateRequestId = (config: Options['config']): void => {
   ) {
     return
   }
-  // Typed as string, but a JavaScript caller can pass anything.
   const raw: unknown = requestId.header
   // An empty or blank header falls back to X-Request-Id (request-id.ts).
   const header = typeof raw === 'string' ? raw.trim() : undefined

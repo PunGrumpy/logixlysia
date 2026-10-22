@@ -42,8 +42,6 @@ describe('request context store', () => {
     const peeked = store.peekContext(request)
     store.mergeContext(request, { plan: 'pro' })
 
-    // Same reference as the internally stored bag: mutations made via mergeContext
-    // are visible through the reference obtained earlier from peekContext.
     expect(peeked).toEqual({ plan: 'pro', userId: 'u1' })
   })
 

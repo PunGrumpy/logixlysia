@@ -10,21 +10,11 @@ export const spyConsole = (
 } => {
   const originals = new Map<ConsoleMethod, typeof console.log>()
   const spies = {
-    debug: mock(() => {
-      /* noop */
-    }),
-    error: mock(() => {
-      /* noop */
-    }),
-    info: mock(() => {
-      /* noop */
-    }),
-    log: mock(() => {
-      /* noop */
-    }),
-    warn: mock(() => {
-      /* noop */
-    })
+    debug: mock(() => {}),
+    error: mock(() => {}),
+    info: mock(() => {}),
+    log: mock(() => {}),
+    warn: mock(() => {})
   } as const
 
   for (const method of methods) {

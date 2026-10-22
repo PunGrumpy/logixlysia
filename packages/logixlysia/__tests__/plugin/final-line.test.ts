@@ -14,9 +14,7 @@ interface CapturedMeta {
 
 const createCaptureTransport = (config: Options['config'] = {}) => {
   const transport = mock<(lvl: unknown, msg: unknown, meta?: unknown) => void>(
-    () => {
-      /* noop */
-    }
+    () => {}
   )
   const options: Options = {
     config: {
@@ -532,13 +530,10 @@ describe('logixlysia plugin - final line', () => {
     const app = new Elysia()
       .use(logixlysia(options))
       .get('/login', ({ cookie }) => {
-        // A NaN maxAge (an unset TTL, say) cannot be serialized, so the error
-        // response fails too and Elysia's fetch rejects.
         cookie.session.set({ maxAge: Number.NaN, value: 'token' })
         return 'ok'
       })
 
-    // The rejection reaches the caller untouched; a server answers it with 500.
     await expect(
       app.handle(new Request('http://localhost/login'))
     ).rejects.toThrow('option maxAge is invalid: NaN')

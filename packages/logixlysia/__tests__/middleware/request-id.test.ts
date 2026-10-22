@@ -23,7 +23,6 @@ describe('resolveRequestIdConfig', () => {
     expect(config?.enabled).toBe(true)
     expect(config?.header).toBe('X-Request-Id')
     expect(typeof config?.generator).toBe('function')
-    // default generator produces UUID v4 format
     const id = config?.generator?.()
     expect(id).toMatch(UUID_V4_REGEX)
   })

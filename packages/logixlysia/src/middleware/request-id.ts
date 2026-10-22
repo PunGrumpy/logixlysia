@@ -41,7 +41,6 @@ export const resolveRequestIdConfig = (
     }
   }
 
-  // Object form — `enabled` defaults to `true` when the object is provided
   if (raw.enabled === false) {
     return null
   }

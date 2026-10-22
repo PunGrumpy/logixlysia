@@ -19,10 +19,6 @@ import { handleHttpError } from './handle-http-error'
 
 const ZERO_STORE: StoreData = { beforeTime: 0n }
 
-/**
- * A stable stand-in for pino that only builds the real instance on first use,
- * or right away when `config.pino` is set.
- */
 const createLazyPino = (
   config: Options['config'],
   pinoFactory: typeof pino
@@ -112,8 +108,6 @@ const createLazyPino = (
     }
   })
 
-  // Explicit config.pino means the user opted in to pino directly: construct eagerly so
-  // invalid options fail fast at plugin setup time, matching pre-lazy behavior.
   if (config?.pino !== undefined) {
     getPino()
   }
@@ -128,13 +122,10 @@ export const createLogger = (
 ): Logger => {
   const contextStore = externalContextStore ?? createRequestContextStore()
   const { config } = options
-  // Hoisted once per logger instance: colors/format/thresholds/service don't change across
-  // requests within a process lifetime (see createFormatContext's doc comment).
   const formatContext = createFormatContext(options)
 
   const lazyPino = createLazyPino(config, pinoFactory)
 
-  // Resolved once per logger instance: none of these depend on per-request state.
   const sinks = resolveSinks(config)
   const sampling = resolveSampling(config?.sampling)
 
@@ -157,7 +148,6 @@ export const createLogger = (
     })
   }
 
-  /** Resolves the tail verdict and re-emits whatever it rescued. */
   const finalizeRequest = (
     request: RequestInfo,
     store: StoreData,

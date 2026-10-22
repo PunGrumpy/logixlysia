@@ -87,13 +87,10 @@ const lineOwners = new WeakMap<Request, symbol>()
 interface RequestRecord {
   /** A custom log replaced the access line for this request. */
   customLogged: boolean
-  /** The value `onError` saw, or the error a streamed body threw. */
   error?: unknown
-  /** `open` until the final line is written; `streaming` while a generator body still runs. */
   phase: 'open' | 'streaming' | 'closed'
   /** Elysia pulled the stream wrapper at least once. */
   pulled: boolean
-  /** The live `set.headers` of the request, for the response enrichers. */
   setHeaders?: Record<string, string | number>
   startedAt: bigint
   /** The status the client got, recorded by the wrap for a stream still running. */
@@ -138,11 +135,6 @@ const runInLoggerScope =
   pull =>
     loggerStorage.run(logger, pull)
 
-/**
- * Forwards a cancel to the source. Its cleanup can throw on its own, outside
- * the delegation, when the body was cancelled before its first read; the
- * request's line must still carry that error.
- */
 const returnRecordingError = async (
   record: RequestRecord,
   iterator: AsyncIterator<unknown>
@@ -155,7 +147,6 @@ const returnRecordingError = async (
   }
 }
 
-/** {@link returnRecordingError} for a sync generator. */
 const returnSyncRecordingError = (
   record: RequestRecord,
   iterator: Iterator<unknown>
@@ -190,8 +181,6 @@ const wrapAsyncStream = async function* wrapAsyncStream(
       record.phase = 'open'
     }
     yield first.value
-    // Delegation forwards every later value, the return value, and the
-    // `return()` of a cancelled body to the source.
     return yield* { [Symbol.asyncIterator]: () => scoped }
   } catch (error) {
     record.error = error
@@ -299,8 +288,6 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
   rawOptions: Options = {}
 ): LogixlysiaPlugin<TFields> => {
   const options = resolveOptions(rawOptions)
-  // Per instance: an app that forwards a request to another app with its own
-  // plugin must not see that app's record as its own.
   const records = new WeakMap<Request, RequestRecord>()
   const instance = Symbol('logixlysia')
   const openRecord = (request: Request): RequestRecord => {
@@ -695,8 +682,6 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
         applyRequestEnrichers(enrichers, contextStore, request, onSinkError)
       }
 
-      // The wrap scopes the logger for the requests it sees; the rest keep
-      // the hook-scoped logger of the previous design.
       if (useAsyncLocalStorage && !record.wrapped) {
         loggerStorage.enterWith(createRequestScopedLogger(request))
       }

@@ -13,9 +13,7 @@ interface LogRecord {
 
 test('logs the connection duration and merged context on a real socket', async () => {
   const transport = mock(
-    (_level: unknown, _message: unknown, _meta?: unknown) => {
-      /* noop */
-    }
+    (_level: unknown, _message: unknown, _meta?: unknown) => {}
   )
   const plugin = logixlysia({
     config: {
