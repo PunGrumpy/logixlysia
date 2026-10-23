@@ -1,5 +1,18 @@
 # Changelog
 
+## 6.10.2
+
+### Patch Changes
+
+- 31c0e89: The adapter docs now say what `flushIntervalMs`, `maxBatchSize` and the OTLP adapter's `headers` actually do: a batch that is due while a request is in flight goes out as soon as that request returns, and the OTLP headers come from `OTEL_EXPORTER_OTLP_LOGS_HEADERS`, or from `OTEL_EXPORTER_OTLP_HEADERS` only when the first is unset. Internally, the adapters share one URL parser and no longer need comment-only `catch` blocks. No behavior change.
+- d0d8fdf: `withRedaction`'s documentation now says which values it leaves alone: only strings inside plain objects, arrays and errors are redacted, down to `maxDepth` levels, and any other object, such as a `Date`, a `Map` or a class instance, is delivered as it is. No behavior change.
+- 3fdd9df: Internal cleanup in the plugin core: comments that restated the code are gone, one helper now applies the level filter on every log path, and `requestId.header` is validated through the same normalisation the middleware applies. No behavior or API change.
+- ef11dca: `HttpError`'s documentation now ships in the type declarations, so editors show it on hover. It had been attached to an internal constant instead of the class.
+  
+  `logixlysia/otel` no longer exports `__resetForTesting`. It reset an internal cache for the package's own tests, was marked `@internal`, and was never documented.
+- 7a73191: Response-phase enrichers now see the headers the client actually got. When a handler returns a `Response` and also sets the same header in `set.headers`, Elysia sends the `Response`'s value, but enrichers were handed the `set.headers` one, so `sizeEnricher` could log a `responseBytes` the client never saw. The `Response`'s header now wins, and `set.headers` still fills in any header the `Response` does not carry.
+- 09260a6: Internal cleanup in the redaction, file output and sampling modules: comments that restated the code are gone, and the ones that stay now match it (the file sink never promised an fsync, and the control-character check never matched tab or LF). No behavior change.
+
 ## 6.10.1
 
 ### Patch Changes
