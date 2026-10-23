@@ -1,34 +1,9 @@
-import { createRequire } from 'node:module'
+import { getOtelApi } from './helpers/otel-api'
 import type { Logger } from './interfaces'
-
-const requireOtel = createRequire(import.meta.url)
 
 export interface TraceContextFields {
   span_id?: string
   trace_id?: string
-}
-
-interface OtelApi {
-  context: { active: () => unknown }
-  trace: {
-    getSpan: (
-      ctx: unknown
-    ) => { spanContext: () => { traceId: string; spanId: string } } | undefined
-  }
-}
-
-let otelApi: OtelApi | null | undefined
-
-const getOtelApi = (): OtelApi | null => {
-  if (otelApi !== undefined) {
-    return otelApi
-  }
-  try {
-    otelApi = requireOtel('@opentelemetry/api') as OtelApi
-  } catch {
-    otelApi = null
-  }
-  return otelApi
 }
 
 /**
@@ -56,13 +31,4 @@ export const injectTraceContext = (
   } satisfies TraceContextFields
   logger.mergeContext(request, fields)
   return fields
-}
-
-/**
- * Reset the cached OTel API reference. Only intended for tests.
- *
- * @internal
- */
-export const __resetForTesting = (): void => {
-  otelApi = undefined
 }

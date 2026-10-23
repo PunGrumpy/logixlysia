@@ -33,9 +33,6 @@ type RowSpec =
   | { kind: 'center'; text: string }
   | { kind: 'left'; text: string }
 
-/**
- * Box banner: Elysia version (centered), URL line, optional logixlysia version line.
- */
 export const renderBanner = (
   urlDisplayLine: string,
   logixlysiaLine: string | null
