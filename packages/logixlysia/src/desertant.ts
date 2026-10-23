@@ -1,42 +1,7 @@
 import type { AdapterTransport } from './adapters/shared'
 import type { LogLevel, Transport } from './interfaces'
 
-/**
- * Neural PII redaction at the transport boundary, for models such as
- * [`@desert-ant-labs/redact`](https://desertant.com/models/redact/).
- *
- * The built-in `autoRedact` pass is synchronous and pattern-based: it masks
- * emails, IPs, Luhn-valid card numbers, JWTs and sensitive keys, but it cannot
- * see free-text PII — names, street addresses, phone numbers, national IDs. A
- * token-classification model can, at the cost of being asynchronous and orders
- * of magnitude slower per string, which rules it out of the per-request hot
- * path that feeds the console.
- *
- * This subpath applies such a model where the cost is affordable and the risk
- * is real: on records leaving the process. Console output stays as fast as it
- * was; everything shipped to a transport is masked first.
- *
- * The model is injected, so logixlysia takes no dependency on it and any
- * structurally compatible redactor works.
- *
- * ```ts
- * import { Redact } from '@desert-ant-labs/redact/native'
- * import { withRedaction } from 'logixlysia/desertant'
- *
- * const axiom = createAxiomTransport()
- *
- * logixlysia({
- *   config: {
- *     autoRedact: true,                          // fast pass, every record
- *     transports: [withRedaction(axiom, Redact.load)] // model pass, shipped records
- *   }
- * })
- * ```
- */
-
-/** Number of nested levels of `meta` walked before values pass through as-is. */
 const DEFAULT_MAX_DEPTH = 4
-/** Records allowed to wait for the model before new ones are dropped. */
 const DEFAULT_MAX_QUEUE = 1000
 
 const CIRCULAR_REF = '[Circular]'
@@ -169,10 +134,6 @@ const isPlainObject = (value: object): value is Record<string, unknown> => {
   return proto === Object.prototype || proto === null
 }
 
-/**
- * Mutually recursive. One object lets each walker reach the others by
- * property instead of by a binding declared later in the file.
- */
 const walker = {
   entries: async (
     record: Record<string, unknown>,
@@ -246,8 +207,7 @@ const walker = {
       return await walker.entries(value, childContext, depth)
     }
     // Dates, Maps, class instances and the like: no safe generic way to rebuild
-    // them, so they pass through. Flatten anything that can carry free-text PII
-    // into plain fields before it reaches the transport.
+    // them, so they pass through.
     return value
   },
 
@@ -274,16 +234,10 @@ interface Queue {
   push: (task: () => Promise<void>) => boolean
 }
 
-/**
- * Serializes redaction. One model instance holds one native handle, and the
- * console has already printed these records in order, so the transport should
- * receive them in order too rather than in whatever order inference finishes.
- */
 const createQueue = (maxQueue: number): Queue => {
   let tail: Promise<void> = Promise.resolve()
   let pending = 0
 
-  // Like `prior.then(task)`: a rejected `prior` skips `task`.
   const runAfter = async (
     prior: Promise<void>,
     task: () => Promise<void>
@@ -322,6 +276,11 @@ const queueFullError = (maxQueue: number): Error =>
  *
  * The wrapper fails closed by default: a record the model could not process is
  * dropped and reported through `onError`, never forwarded unredacted.
+ *
+ * Strings inside plain objects, arrays and errors are redacted, down to
+ * `maxDepth` levels of `meta`. Any other object, such as a `Date`, a `Map` or
+ * a class instance, is delivered as it is, so flatten anything that can carry
+ * free-text PII into plain fields first.
  *
  * @param transport The transport to protect. Its `flush`, if any, is preserved.
  * @param source The model, a promise for it, or a loader run on the first record.

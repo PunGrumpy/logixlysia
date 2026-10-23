@@ -150,9 +150,7 @@ describe('enrichers through the plugin', () => {
 
   test('a throwing enricher is reported and does not break the request', async () => {
     const { events, transport } = createCaptureTransport()
-    const onError = mock((_context: { error: unknown; sink: string }) => {
-      /* noop */
-    })
+    const onError = mock((_context: { error: unknown; sink: string }) => {})
     const app = buildApp(
       {
         enrichers: [

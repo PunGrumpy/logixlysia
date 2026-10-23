@@ -21,8 +21,8 @@ const ZERO_TRACE_ID = '0'.repeat(32)
 const ZERO_SPAN_ID = '0'.repeat(16)
 const INVALID_VERSION = 'ff'
 const CURRENT_VERSION = '00'
-/** `00-` + 32 + `-` + 16 + `-` + 2: version 00 is exactly these four fields. */
-const VERSION_00_LENGTH = 55
+const VERSION_00_LENGTH =
+  `${CURRENT_VERSION}-${ZERO_TRACE_ID}-${ZERO_SPAN_ID}-00`.length
 
 export interface TraceparentEnricherOptions {
   /**
@@ -178,7 +178,6 @@ export const userAgentEnricher = (): Enricher => ({
   }
 })
 
-/** Header candidates per geo field, in priority order across platforms. */
 const GEO_HEADERS: readonly [field: string, headers: readonly string[]][] = [
   ['city', ['x-vercel-ip-city', 'cf-ipcity']],
   ['country', ['x-vercel-ip-country', 'cf-ipcountry']],
@@ -198,7 +197,6 @@ const GEO_NUMERIC_HEADERS: readonly [
 const NETLIFY_GEO_HEADER = 'x-nf-geo'
 const GEO_STRING_MAX = 128
 const GEO_RAW_HEADER_MAX = 2048
-/** ISO-3166-ish country/region codes: short alphanumeric tokens, never free text. */
 const GEO_CODE_REGEX = /^[A-Za-z0-9-]{1,10}$/u
 
 const firstHeader = (
@@ -234,13 +232,11 @@ interface NetlifyGeo {
   timezone?: string
 }
 
-/** A non-empty string field, bounded; any other type is ignored. */
 const geoText = (value: unknown): string | undefined =>
   typeof value === 'string' && value.length > 0
     ? value.slice(0, GEO_STRING_MAX)
     : undefined
 
-/** A string that is a short country or region code; any other value is ignored. */
 const geoCode = (value: unknown): string | undefined =>
   typeof value === 'string' && GEO_CODE_REGEX.test(value) ? value : undefined
 
@@ -294,7 +290,6 @@ const readNetlifyGeo = (
   return Object.keys(geo).length > 0 ? geo : undefined
 }
 
-/** Fields whose value must look like a short country/region code, not free text. */
 const GEO_CODE_FIELDS = new Set(['country', 'region'])
 
 const readGeoStringFields = (
