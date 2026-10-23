@@ -5,7 +5,7 @@ export type EnricherFields = Record<string, unknown> | undefined
 export interface EnricherResponseInput {
   /** Elapsed time for the request in milliseconds. */
   durationMs: number
-  /** Response headers set so far (Elysia's `set.headers`). */
+  /** The response headers the client gets: a returned `Response`'s own, then `set.headers` for any it lacks. */
   headers: Record<string, unknown>
   request: Request
   status: number

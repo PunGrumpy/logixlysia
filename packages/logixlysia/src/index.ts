@@ -272,10 +272,10 @@ export type LogixlysiaPlugin<TFields extends object = LogFields> =
 const DEFAULT_FLUSH_TIMEOUT_MS = 5000
 
 /**
- * The response headers an enricher gets to read. `set.headers` alone misses
- * anything a handler put on a returned `Response` (a `content-length`, say),
- * so the two are merged — with `set.headers` winning, since Elysia applies
- * it last. Only built when an enricher will actually read it.
+ * The response headers an enricher gets to read, merged the way Elysia builds
+ * the wire response: a header on a returned `Response` wins, and
+ * `set.headers` fills in the ones it lacks. Only built when an enricher will
+ * actually read it.
  */
 const readableResponseHeaders = (
   setHeaders: Record<string, string | number>,
@@ -287,7 +287,12 @@ const readableResponseHeaders = (
       merged[key] = value
     }
   }
-  return Object.assign(merged, setHeaders)
+  for (const [key, value] of Object.entries(setHeaders)) {
+    if (!responseHeaders?.has(key)) {
+      merged[key] = value
+    }
+  }
+  return merged
 }
 
 /**
