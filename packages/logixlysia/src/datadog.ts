@@ -70,8 +70,6 @@ export const createDatadogTransport = (
     .join(',')
 
   const toEvent = (entry: LogEntry): Record<string, unknown> => {
-    // Meta first so the adapter-owned facets below always win — access-log
-    // meta carries an HTTP `status` that must not clobber Datadog's status.
     const event: Record<string, unknown> = {
       ...entry.meta,
       ddsource: source,

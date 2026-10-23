@@ -94,7 +94,6 @@ export const createPostHogTransport = (
         batch: entries.map(entry => ({
           distinct_id: distinctIdFor(entry),
           event: eventName,
-          // Meta first so level/message always win on collision.
           properties: {
             ...flattenMeta(entry.meta),
             level: entry.level,

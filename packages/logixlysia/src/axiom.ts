@@ -73,7 +73,6 @@ export const createAxiomTransport = (
   return createHttpTransport({
     body: entries =>
       stringifyForLog(
-        // Meta first so the adapter-owned fields below always win on collision.
         entries.map(entry => ({
           ...entry.meta,
           _time: entry.timestamp.toISOString(),
