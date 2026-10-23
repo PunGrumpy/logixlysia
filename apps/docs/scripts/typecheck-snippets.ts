@@ -110,7 +110,6 @@ declare global {
   var transport: Transport
   var options: import('logixlysia').Options
   var log: import('logixlysia').RequestScopedLogger
-  // Names the docs use as placeholders for the reader's own code.
   var db: any
   var metrics: any
   var customTransport: Transport

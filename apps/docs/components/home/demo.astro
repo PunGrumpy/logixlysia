@@ -3,10 +3,6 @@
 // extensions/banner.ts and the default log format from logger/create-logger.ts
 // ({now} {service}{icon} {method} {pathname} {status} {duration} {message}{speed}),
 // including chalk colors, method padding, duration rounding, and the ⚡ slow badge.
-//
-// The terminal is interactive, à la vercel.com/home: the route chips below it
-// append a freshly timestamped log line. The first click stops the scripted
-// replay and the terminal becomes an append-only session.
 import RouteButton from './route-button.astro'
 import RouteTemplate from './route-template.astro'
 import TermLine from './term-line.astro'
@@ -20,7 +16,6 @@ interface TermLineData {
   parts: TermPart[]
 }
 
-// Dual-mode terminal palette: muted ink colors in light mode, vesper in dark.
 const c = {
   banner: 'text-black/55 dark:text-white/60',
   blue: 'text-[#0550AE] dark:text-[#a5d6ff]',
@@ -168,8 +163,6 @@ const termLines: TermLineData[] = [
   }
 ]
 
-// Routes the visitor can fire into the terminal. `min`/`max` bound the
-// randomized duration; the ts/dur hooks are filled by the script on click.
 const interactiveRoutes = [
   {
     id: 'home',
@@ -371,6 +364,8 @@ const interactiveRoutes = [
 </section>
 
 <script>
+  const MAX_TERMINAL_LINES = 28
+
   const sleep = (ms: number): Promise<void> =>
     new Promise(resolve => {
       setTimeout(resolve, ms)
@@ -390,23 +385,16 @@ const interactiveRoutes = [
     '(prefers-reduced-motion: reduce)'
   ).matches
 
-  // Flips on the first user-sent request: the scripted replay parks itself
-  // and the terminal becomes an append-only session.
   let interactive = false
 
   if (terminal && body && cmd && caret && !reduceMotion) {
-    // Reserve the final height up front so the replay never shifts layout.
     body.style.minHeight = `${body.offsetHeight}px`
     cmd.textContent = ''
     for (const line of lines) {
       line.style.display = 'none'
     }
 
-    // Replay only while the terminal is on screen, not paused by the user,
-    // and not taken over by the interactive buttons (the visible pause
-    // control keeps this indefinite replay WCAG 2.2.2 compliant). One
-    // consumer awaits the gate at a time, so a single `onReady` slot is
-    // enough.
+    // The visible pause control keeps this indefinite replay WCAG 2.2.2 compliant.
     let visible = false
     let paused = false
     let onReady: (() => void) | undefined
@@ -448,8 +436,6 @@ const interactiveRoutes = [
       })
     }
 
-    // setTimeout chains instead of awaited loops keep each frame's timing
-    // identical while staying sequential.
     const typeCommand = () =>
       new Promise<void>(resolve => {
         let index = 0
@@ -493,7 +479,6 @@ const interactiveRoutes = [
 
     const playRound = async () => {
       await waitUntilReady()
-      // Clear the screen, then replay the whole session.
       cmd.textContent = ''
       caret.style.display = ''
       for (const line of lines) {
@@ -504,7 +489,6 @@ const interactiveRoutes = [
       await sleep(350)
       caret.style.display = 'none'
       await revealLines()
-      // Hold the finished session before clearing for the next run.
       await sleep(3200)
     }
 
@@ -517,7 +501,6 @@ const interactiveRoutes = [
     play()
   }
 
-  // — Interactive demo: the route chips append real log lines. —
   const statusRegion = document.querySelector<HTMLElement>('[data-demo-status]')
 
   const pad = (value: number, length = 2) => String(value).padStart(length, '0')
@@ -531,7 +514,6 @@ const interactiveRoutes = [
       return
     }
     interactive = true
-    // Land the terminal in its finished state: full command, every line shown.
     if (cmd) {
       cmd.textContent = command
     }
@@ -544,8 +526,6 @@ const interactiveRoutes = [
     if (pauseButton) {
       pauseButton.hidden = true
     }
-    // Freeze the height: from here new lines scroll inside the terminal
-    // instead of growing the page on every click.
     const height = body.style.minHeight || `${body.offsetHeight}px`
     body.style.minHeight = height
     body.style.maxHeight = height
@@ -582,8 +562,7 @@ const interactiveRoutes = [
     } else {
       body.append(fragment)
     }
-    // Bounded backlog: the oldest lines scroll away like a real terminal.
-    while (body.childElementCount > 28) {
+    while (body.childElementCount > MAX_TERMINAL_LINES) {
       body.firstElementChild?.remove()
     }
     body.scrollTop = body.scrollHeight
