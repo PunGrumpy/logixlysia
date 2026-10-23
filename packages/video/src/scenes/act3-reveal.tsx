@@ -19,13 +19,6 @@ import {
 } from '../lib/ui'
 import { HotField } from './act2-noise'
 
-/**
- * Act 3: the reveal. The hot field collapses into an orb with rings
- * ("Until now." in the reference), the fox appears inside it, and the orb
- * gives way to a blurred stage where one logixlysia access line types out
- * with its context tree: the single line that replaces the ten.
- */
-
 const ORB_SIZE = 360
 const ORB_COLLAPSE_AT = sec(0.2)
 const TEXT_AT = sec(0.9)
@@ -63,7 +56,6 @@ const Ring = ({ scale, index }: { scale: number; index: number }) => {
     fps,
     frame: frame - start
   })
-  // Rings keep expanding slowly after they land, like ripples.
   const growth = 1 + Math.max(0, frame - start) * RING_GROWTH
   const size = ORB_SIZE * scale
   return (

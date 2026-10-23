@@ -26,17 +26,11 @@ const waitForFonts = async (
   loads: Promise<unknown>[],
   handle: number
 ): Promise<void> => {
-  try {
-    await Promise.all(loads)
-  } catch {
-    // A font that fails to load falls back; render anyway.
-  }
+  await Promise.allSettled(loads)
   continueRender(handle)
 }
 
-/** Injects the bundled fonts and holds the render until the browser has them. */
 export const Fonts = () => {
-  // Created once, on first render, like a `useState` initializer.
   const handleRef = useRef<number | null>(null)
   if (handleRef.current === null) {
     handleRef.current = delayRender('fonts')

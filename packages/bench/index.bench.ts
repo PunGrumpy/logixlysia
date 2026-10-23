@@ -37,8 +37,6 @@ type Case = readonly [name: string, fn: BenchFn]
 // yields, so a longer synchronous run exhausts the heap.
 const RUN_OPTIONS = { time: 500 }
 
-// Cases stay in the order given, so logixlysia leads each table; the
-// comparison sorts rows by speed anyway.
 const suite = (name: string, cases: readonly Case[]): void => {
   test(name, async ({ bench }) => {
     const registrations: BenchRegistration<string>[] = []
@@ -115,7 +113,6 @@ suite('Logger Creation', [
   ]
 ])
 
-// Initialize loggers with output disabled for fair comparison of overhead
 const logix = createLogger({
   config: {
     disableInternalLogger: true,
@@ -296,10 +293,11 @@ const bogeychanApp = new Elysia()
   )
   .get('/', () => 'ok')
 
-// evlog has no fully-disabled mode — its "floor" case (evlogApp, below)
-// still assembles and drains a wide event per request, so its number here
-// is not a pure dispatch floor. bogeychan (`enabled: false`) and
-// logixlysia (all sinks disabled) are true floors.
+// evlog can only be switched off process-wide (`initLogger({ enabled: false })`),
+// which would also silence the other evlog suites, so its "floor" case
+// (evlogApp) still assembles and drains a wide event per request and is not a
+// pure dispatch floor. bogeychan (`enabled: false`) and logixlysia (all sinks
+// disabled) are true floors.
 suite('Elysia plugin request path — overhead floor (all sinks disabled)', [
   [
     'logixlysia',
@@ -373,7 +371,7 @@ const logixlysiaFileApp = new Elysia()
   )
   .get('/', () => 'ok')
 
-// `logToFile` is fire-and-forget from `log()` (`.catch(() => {})`), so this
+// `logToFile` is fire-and-forget from `log()` (through `settle()`), so this
 // suite measures enqueue cost per request plus amortized write cost — not a
 // guarantee that each write has completed by the time `handle()` resolves.
 suite('Elysia plugin request path — file sink', [
