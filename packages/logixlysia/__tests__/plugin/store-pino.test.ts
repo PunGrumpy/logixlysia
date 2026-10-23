@@ -7,9 +7,7 @@ import { createLogger } from '../../src/logger'
 
 const createCaptureTransport = () => {
   const transport = mock<(lvl: unknown, msg: unknown, meta?: unknown) => void>(
-    () => {
-      /* noop */
-    }
+    () => {}
   )
   const options: Options = {
     config: {
@@ -32,11 +30,7 @@ describe('store.pino', () => {
 
   test('a handler can log through store.pino', async () => {
     const { options } = createCaptureTransport()
-    // Captures the call instead of writing it, so pino's output stays out of
-    // the test run.
-    const logMethod = mock<(inputArgs: unknown[]) => void>(() => {
-      /* noop */
-    })
+    const logMethod = mock<(inputArgs: unknown[]) => void>(() => {})
     const app = new Elysia()
       .use(
         logixlysia({

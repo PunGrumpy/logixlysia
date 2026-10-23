@@ -10,9 +10,7 @@ type TransportMock = ReturnType<
 >
 
 const setup = () => {
-  const transport: TransportMock = mock(() => {
-    /* noop */
-  })
+  const transport: TransportMock = mock(() => {})
   const contextStore = createRequestContextStore()
   const logger = createLogger(
     {
@@ -58,15 +56,9 @@ describe('wrapWs', () => {
     const ws = { id: 'ws-1' }
 
     const hooks = wrapWs('/chat', {
-      close(_ws) {
-        /* noop */
-      },
-      message(_ws, _message) {
-        /* noop */
-      },
-      open(_ws) {
-        /* noop */
-      }
+      close(_ws) {},
+      message(_ws, _message) {},
+      open(_ws) {}
     })
 
     hooks.open(ws)
@@ -85,9 +77,7 @@ describe('wrapWs', () => {
     const ws = { id: 'ws-1' }
     const closeHook = mock<
       (ws: WebSocketLike, code?: number, reason?: string) => void
-    >(() => {
-      /* noop */
-    })
+    >(() => {})
 
     const hooks = wrapWs('/chat', { close: closeHook })
 

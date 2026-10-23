@@ -1,6 +1,7 @@
 import { expect, mock, test } from 'bun:test'
 import { Elysia } from 'elysia'
 import { logixlysia } from '../../src'
+import { awaitOpen } from '../_helpers/await-open'
 import { sleep } from '../_helpers/sleep'
 import { waitFor } from '../_helpers/wait-for'
 
@@ -13,9 +14,7 @@ interface LogRecord {
 
 test('logs the connection duration and merged context on a real socket', async () => {
   const transport = mock(
-    (_level: unknown, _message: unknown, _meta?: unknown) => {
-      /* noop */
-    }
+    (_level: unknown, _message: unknown, _meta?: unknown) => {}
   )
   const plugin = logixlysia({
     config: {
@@ -43,20 +42,7 @@ test('logs the connection duration and merged context on a real socket', async (
     }
 
     const socket = new WebSocket(`ws://localhost:${port}/chat`)
-    const {
-      promise: opened,
-      reject: onOpenFailure,
-      resolve: onOpen
-    }: PromiseWithResolvers<void> = Promise.withResolvers()
-    socket.addEventListener('open', () => onOpen())
-    // Without these, a socket that never opens leaves the test waiting here
-    // instead of failing and stopping the server in `finally`.
-    socket.addEventListener('error', () =>
-      onOpenFailure(new Error('WebSocket connection failed'))
-    )
-    socket.addEventListener('close', () =>
-      onOpenFailure(new Error('WebSocket closed before opening'))
-    )
+    const opened = awaitOpen(socket)
     await opened
 
     await sleep(IDLE_MS)

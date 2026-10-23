@@ -3,15 +3,14 @@ import { Elysia } from 'elysia'
 import type { AnyElysia } from 'elysia'
 import { logixlysia } from '../../src'
 import type { WsHandlerHooks } from '../../src/websocket/wrap-ws'
+import { awaitOpen } from '../_helpers/await-open'
 import { sleep } from '../_helpers/sleep'
 import { waitFor } from '../_helpers/wait-for'
 
 const REPLY_WINDOW_MS = 100
 
 const transport = mock(
-  (_level: unknown, _message: unknown, _meta?: unknown) => {
-    /* noop */
-  }
+  (_level: unknown, _message: unknown, _meta?: unknown) => {}
 )
 const plugin = logixlysia({
   config: {
@@ -22,9 +21,6 @@ const plugin = logixlysia({
   }
 })
 
-// Bun may report an unhandled rejection through the test runner before this
-// listener sees it, so the tests rely on `errors` and treat this as a second
-// signal only.
 let rejections = 0
 const onRejection = (): void => {
   rejections += 1
@@ -84,20 +80,7 @@ const exchange = async (
     messages.push(event.data)
   })
 
-  const {
-    promise: opened,
-    reject: onOpenFailure,
-    resolve: onOpen
-  }: PromiseWithResolvers<void> = Promise.withResolvers()
-  socket.addEventListener('open', () => onOpen())
-  // Without these, a socket that never opens leaves the test waiting here
-  // instead of failing and stopping the server in `afterEach`.
-  socket.addEventListener('error', () =>
-    onOpenFailure(new Error('WebSocket connection failed'))
-  )
-  socket.addEventListener('close', () =>
-    onOpenFailure(new Error('WebSocket closed before opening'))
-  )
+  const opened = awaitOpen(socket)
   await opened
 
   if (message !== undefined) {

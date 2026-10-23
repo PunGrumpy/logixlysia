@@ -47,7 +47,6 @@ describe('AsyncLocalStorage & useLogger() context integration', () => {
       log.mergeContext({ deep: 'context' })
       log.info('hello from useLogger')
 
-      // Nested async operation using actual Promise resolve to verify async hook context
       const { promise, resolve }: PromiseWithResolvers<void> =
         Promise.withResolvers()
       const nestedLog = useLogger()

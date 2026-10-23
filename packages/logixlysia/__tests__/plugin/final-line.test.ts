@@ -2,6 +2,7 @@ import { describe, expect, mock, test } from 'bun:test'
 import { Elysia, sse, status } from 'elysia'
 import { logixlysia, useLogger } from '../../src'
 import type { Options } from '../../src/interfaces'
+import { neverSettles } from '../_helpers/never-settles'
 import { sleep } from '../_helpers/sleep'
 
 interface CapturedMeta {
@@ -14,9 +15,7 @@ interface CapturedMeta {
 
 const createCaptureTransport = (config: Options['config'] = {}) => {
   const transport = mock<(lvl: unknown, msg: unknown, meta?: unknown) => void>(
-    () => {
-      /* noop */
-    }
+    () => {}
   )
   const options: Options = {
     config: {
@@ -49,12 +48,7 @@ const run = async (
   path: string
 ): Promise<{ body: string; response: Response }> => {
   const response = await app.handle(new Request(`http://localhost${path}`))
-  let body = ''
-  try {
-    body = await response.text()
-  } catch {
-    // A body that fails mid-stream still has headers to assert on.
-  }
+  const body = await response.text().catch(() => '')
   await sleep(30)
   return { body, response }
 }
@@ -532,13 +526,10 @@ describe('logixlysia plugin - final line', () => {
     const app = new Elysia()
       .use(logixlysia(options))
       .get('/login', ({ cookie }) => {
-        // A NaN maxAge (an unset TTL, say) cannot be serialized, so the error
-        // response fails too and Elysia's fetch rejects.
         cookie.session.set({ maxAge: Number.NaN, value: 'token' })
         return 'ok'
       })
 
-    // The rejection reaches the caller untouched; a server answers it with 500.
     await expect(
       app.handle(new Request('http://localhost/login'))
     ).rejects.toThrow('option maxAge is invalid: NaN')
@@ -798,8 +789,7 @@ describe('logixlysia plugin - final line', () => {
       .use(logixlysia(options))
       .get('/sse', async function* waitForever() {
         yield 'a'
-        // Never settles: an SSE loop waiting for an event that never comes.
-        await Promise.withResolvers<undefined>().promise
+        await neverSettles()
       })
     const controller = new AbortController()
     const response = await app.handle(

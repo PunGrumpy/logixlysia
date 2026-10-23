@@ -60,7 +60,6 @@ export const createRequestContextStore = (): RequestContextStore => {
   }
 }
 
-/** Accumulated request context first; explicit `data.context` wins on key collision. */
 export const mergeLogDataContext = (
   data: Record<string, unknown>,
   accumulated: Readonly<Record<string, unknown>>

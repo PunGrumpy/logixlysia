@@ -17,8 +17,6 @@ export interface WsHandlerHooks<
   open?: (ws: TWs) => unknown
 }
 
-// Synthetic requests are only read (method/url) by the log pipeline, never mutated, so caching
-// one per path avoids allocating a fresh Request on every WS open/message/close log event.
 const wsRequestCache = new Map<string, Request>()
 
 const wsSyntheticRequest = (path: string): Request => {
@@ -40,7 +38,6 @@ const payloadTypeOf = (message: unknown): string => {
   return typeof message
 }
 
-/** Runs `done` once `pending` settles, then hands the value or the failure on untouched. */
 const settleHook = async (
   pending: Promise<unknown>,
   done: () => void
@@ -86,7 +83,6 @@ export const createWsHandlerWrapper = (
   ): void => {
     const beforeTime = wsTimings.get(keyOf(ws)) ?? process.hrtime.bigint()
     const store: StoreData = { beforeTime }
-    // Read-only: immediately spread below into a new object, never retained or mutated.
     const accumulated = contextStore.peekContext(ws)
     const context =
       Object.keys(accumulated).length > 0 || extra

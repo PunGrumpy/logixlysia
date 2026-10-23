@@ -29,9 +29,7 @@ describe('createLogger', () => {
   test('respects disableInternalLogger and still calls transports', async () => {
     const transport = mock<
       (lvl: unknown, msg: unknown, meta?: unknown) => void
-    >(() => {
-      /* noop */
-    })
+    >(() => {})
     const options: Options = {
       config: {
         disableFileLogging: true,
@@ -47,7 +45,6 @@ describe('createLogger', () => {
 
     logger.info(request, 'hello')
 
-    // transport should be invoked synchronously
     expect(transport).toHaveBeenCalledTimes(1)
     const [firstCall] = transport.mock.calls
     expect(firstCall).toBeDefined()
@@ -55,7 +52,6 @@ describe('createLogger', () => {
     expect(levelValue).toBe('INFO')
     expect(messageValue).toBe('hello')
 
-    // internal console output should be disabled
     expect(spies.log).not.toHaveBeenCalled()
     expect(spies.info).not.toHaveBeenCalled()
     expect(spies.warn).not.toHaveBeenCalled()
@@ -64,16 +60,13 @@ describe('createLogger', () => {
 
     restore()
 
-    // Avoid unhandled async noise if any transport returns a promise in future
     await sleep(0)
   })
 
   test('autoRedact redacts request URL in transport meta', async () => {
     const transport = mock<
       (lvl: unknown, msg: unknown, meta?: unknown) => void
-    >(() => {
-      /* noop */
-    })
+    >(() => {})
     const sampleJwt =
       'eyJhbGciOiJIUzI1NiIsInR5cCI.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c'
     const options: Options = {
@@ -104,9 +97,7 @@ describe('createLogger', () => {
   test('delivers the record when a context value has a throwing getter under autoRedact', async () => {
     const transport = mock<
       (lvl: unknown, msg: unknown, meta?: unknown) => void
-    >(() => {
-      /* noop */
-    })
+    >(() => {})
     const options: Options = {
       config: {
         autoRedact: true,
@@ -143,9 +134,7 @@ describe('createLogger', () => {
   test('handleHttpError emits transport error log', async () => {
     const transport = mock<
       (lvl: unknown, msg: unknown, meta?: unknown) => void
-    >(() => {
-      /* noop */
-    })
+    >(() => {})
     const options: Options = {
       config: {
         disableFileLogging: true,

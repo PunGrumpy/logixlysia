@@ -115,9 +115,7 @@ describe('logging never fails a request', () => {
   test('a failure while formatting is reported to onError as sink format', async () => {
     const { restore } = spyConsole()
     try {
-      const onError = mock<(context: SinkErrorContext) => void>(() => {
-        /* noop */
-      })
+      const onError = mock<(context: SinkErrorContext) => void>(() => {})
       const nested = {}
       Object.defineProperty(nested, 'boom', {
         enumerable: true,
