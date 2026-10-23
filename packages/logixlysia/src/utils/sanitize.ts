@@ -1,15 +1,12 @@
 import { stringifyForLog } from './json'
 
 /**
- * True for C0 controls (0x00-0x08, 0x0B-0x1F), DEL (0x7F), and C1 controls
- * (0x80-0x9F). Tab, LF, and CR are handled separately by the caller before
- * this check runs, so they are intentionally included here as a safety net
- * in case a caller skips that step.
+ * True for C0 controls other than tab and LF (0x00-0x08, 0x0B-0x1F), DEL
+ * (0x7F), and C1 controls (0x80-0x9F).
  */
 const isControlCodePoint = (code: number): boolean =>
   code <= 8 || (code >= 11 && code <= 31) || (code >= 127 && code <= 159)
 
-/** Any value as plain text: strings as-is, objects as JSON, nothing as ''. */
 export const toText = (value: unknown): string => {
   if (typeof value === 'string') {
     return value
@@ -23,11 +20,6 @@ export const toText = (value: unknown): string => {
   return String(value)
 }
 
-/**
- * Turns any value into one safe line of text. Objects are serialized, `\r`,
- * `\n` and `\t` become visible escapes, other C0/C1 control characters are
- * stripped, and the length is bounded. Never throws.
- */
 export const sanitizeLogText = (value: unknown, maxLength = 2048): string => {
   const escaped = toText(value)
     .replaceAll('\r', String.raw`\r`)

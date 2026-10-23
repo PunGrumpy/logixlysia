@@ -73,7 +73,6 @@ const resolveTail = (
   return { durationMs: tail.durationMs, paths, status: tail.status }
 }
 
-/** Tail rules are OR-ed: any single match rescues the whole request. */
 const matchesTail = (tail: ResolvedTail, outcome: RequestOutcome): boolean => {
   if (tail.status !== undefined && outcome.status >= tail.status) {
     return true
@@ -91,7 +90,6 @@ const matchesTail = (tail: ResolvedTail, outcome: RequestOutcome): boolean => {
   return false
 }
 
-/** Keeps only the rates that actually drop something. */
 const resolveRates = (
   head: SamplingConfig['head']
 ): Partial<Record<LogLevel, number>> | undefined => {

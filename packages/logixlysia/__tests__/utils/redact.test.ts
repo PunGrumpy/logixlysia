@@ -142,7 +142,6 @@ describe('redact', () => {
       }
     })
 
-    // Original should not be mutated
     expect(original.user.email).toBe('test@example.com')
   })
 
@@ -526,7 +525,6 @@ describe('redactRequest', () => {
       method: 'POST'
     })
 
-    // Mirror Elysia consuming the body before logging runs.
     await req.text()
 
     const out = redactRequest(req)
@@ -701,7 +699,6 @@ describe('values that cannot be read', () => {
       },
       c: 'x'
     })
-    // Stringifying throws if the walker handed back the original object.
     expect(JSON.stringify(out)).toBe('{"a":{"b":"[Unserializable]"},"c":"x"}')
   })
 

@@ -8,14 +8,10 @@ import { sleep } from '../_helpers/sleep'
 describe('logToTransports', () => {
   test('calls all transports with level/message/meta', () => {
     const t1 = mock<(lvl: unknown, msg: unknown, metaArg?: unknown) => void>(
-      () => {
-        /* noop */
-      }
+      () => {}
     )
     const t2 = mock<(lvl: unknown, msg: unknown, metaArg?: unknown) => void>(
-      () => {
-        /* noop */
-      }
+      () => {}
     )
 
     const options: Options = {
@@ -60,9 +56,7 @@ describe('logToTransports', () => {
 
   test('computes durationMs from store.beforeTime', () => {
     const t1 = mock<(lvl: unknown, msg: unknown, metaArg?: unknown) => void>(
-      () => {
-        /* noop */
-      }
+      () => {}
     )
     const options: Options = { config: { transports: [{ log: t1 }] } }
     const request = createMockRequest('http://localhost/hello')
@@ -84,9 +78,7 @@ describe('logToTransports', () => {
     expect(Number.isFinite(meta.durationMs as number)).toBe(true)
 
     const t2 = mock<(lvl: unknown, msg: unknown, metaArg?: unknown) => void>(
-      () => {
-        /* noop */
-      }
+      () => {}
     )
     const zeroOptions: Options = { config: { transports: [{ log: t2 }] } }
     const zeroStore = { beforeTime: 0n }
@@ -134,7 +126,6 @@ describe('logToTransports', () => {
       const [firstErrorCall] = spies.error.mock.calls
       expect(firstErrorCall?.[0]).toContain('transport failed')
 
-      // A second immediate failure must not log again (rate limit).
       logToTransports({
         data: { message: 'ignored again' },
         level: 'INFO',
@@ -188,7 +179,6 @@ describe('logToTransports', () => {
       store
     })
 
-    // Let promise microtasks run; rejections should be caught internally.
     await sleep(0)
 
     expect(rejecting).toHaveBeenCalledTimes(1)
@@ -229,8 +219,6 @@ describe('logToTransports', () => {
     expect(sink).toBe('transport')
     expect(error).toBeDefined()
 
-    // A second immediate failure still invokes the hook (unlike the stderr
-    // fallback, onError is not rate-limited: the hook owns its own policy).
     logToTransports({
       data: { message: 'ignored again' },
       level: 'INFO',

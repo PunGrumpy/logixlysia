@@ -45,7 +45,6 @@ interface LogToTransportsInput {
   data: Record<string, unknown>
   level: LogLevel
   options: Options
-  /** Duration already computed by the caller; sampled on the fly when omitted. */
   precomputed?: { durationMs: number; pathname: string; search: string }
   request: RequestInfo
   store: StoreData
@@ -81,10 +80,6 @@ export const logToTransports = (input: LogToTransportsInput): void => {
   }
 }
 
-/**
- * Runs one optional lifecycle method on every configured transport. Failures
- * are reported like `log()` failures and never stop the other transports.
- */
 const runTransportLifecycle = (
   options: Options,
   method: 'close' | 'flush'
@@ -101,7 +96,6 @@ const runTransportLifecycle = (
   })
 }
 
-/** Waits for in-flight `log()` work and every transport's own `flush()`. */
 export const flushTransports = async (options: Options): Promise<void> => {
   await Promise.allSettled([
     ...pendingTransportWork,
@@ -109,7 +103,6 @@ export const flushTransports = async (options: Options): Promise<void> => {
   ])
 }
 
-/** Releases each transport's resources; only reached via `flushLogixlysia`. */
 export const closeTransports = async (options: Options): Promise<void> => {
   await Promise.allSettled(runTransportLifecycle(options, 'close'))
 }

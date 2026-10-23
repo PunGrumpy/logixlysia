@@ -11,10 +11,13 @@ import { createTempDir, removeTempDir } from '../_helpers/tmp'
 const ONE_HOUR_MS = 60 * 60 * 1000
 const TWO_HOURS_MS = 2 * ONE_HOUR_MS
 
+const restoreRealClock = (): void => {
+  setSystemTime()
+}
+
 describe('interval rotation', () => {
   afterEach(() => {
-    // Always reset the faked clock so it never leaks into other test files.
-    setSystemTime()
+    restoreRealClock()
   })
 
   test('rotates on the first write after the interval elapses', async () => {
@@ -59,10 +62,7 @@ describe('interval rotation', () => {
       expect(rotatedContent).toContain('msg-1')
       expect(rotatedContent).toContain('msg-2')
 
-      // Reset to the real clock before the next write: the rotated-away
-      // file's replacement gets a real (post-rotation) birthtime, so this
-      // write must not immediately trip the interval again.
-      setSystemTime()
+      restoreRealClock()
 
       await logToFile({
         data: { message: 'msg-3' },
@@ -190,9 +190,6 @@ describe('interval rotation', () => {
       const logsDir = path.join(dir, 'logs')
       const filePath = path.join(logsDir, 'restart.log')
       await fs.mkdir(logsDir, { recursive: true })
-      // Seed the file directly (no sink involved), so its birthtime is the
-      // real filesystem creation time — simulating a file left over from a
-      // previous process.
       await fs.writeFile(filePath, 'seed\n')
 
       setSystemTime(new Date(Date.now() + TWO_HOURS_MS))
@@ -225,10 +222,6 @@ describe('interval rotation', () => {
   })
 
   test('idle process does not rotate until the next write', async () => {
-    // Documents the accepted idle-process tradeoff from
-    // plans/spikes/021-interval-rotation-decision.md: a process that writes
-    // no logs for longer than `interval` does not rotate until the next
-    // write arrives.
     const dir = await createTempDir()
     try {
       const filePath = path.join(dir, 'logs', 'idle.log')

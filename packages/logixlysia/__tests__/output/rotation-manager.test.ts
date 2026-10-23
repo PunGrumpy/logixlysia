@@ -6,12 +6,10 @@ import {
   performRotation,
   shouldRotate
 } from '../../src/output/rotation-manager'
+import { permBits } from '../_helpers/perm-bits'
 import { createTempDir, removeTempDir } from '../_helpers/tmp'
 
 const DAY_MS = 86_400_000
-
-/** Owner/group/other permission bits as a 3-digit octal string, e.g. '600'. */
-const permBits = (mode: number): string => mode.toString(8).slice(-3)
 
 describe('getRotatedFileName', () => {
   test('formats a fixed date deterministically', () => {
@@ -75,7 +73,6 @@ describe('performRotation retention', () => {
       `${filePath}.2026-01-04-00-00-00-000`
     ]
 
-    // Stagger mtimes: index 0 is oldest, index 3 is newest.
     await Promise.all(
       rotatedPaths.map(async (rotatedPath, index) => {
         await fs.writeFile(rotatedPath, `rotated-${index}`)
@@ -84,18 +81,14 @@ describe('performRotation retention', () => {
       })
     )
 
-    // performRotation rotates the live file first, producing a 5th rotated
-    // file (the newest of all), then cleans up down to maxFiles.
     await performRotation(filePath, { maxFiles: 2 })
 
     const entries = await fs.readdir(dir)
     const remainingRotated = entries.filter(name => name.startsWith('app.log.'))
 
     expect(remainingRotated).toHaveLength(2)
-    // The two oldest pre-existing rotated files must be gone.
     expect(remainingRotated).not.toContain('app.log.2026-01-01-00-00-00-000')
     expect(remainingRotated).not.toContain('app.log.2026-01-02-00-00-00-000')
-    // The newest pre-existing rotated file survives.
     expect(remainingRotated).toContain('app.log.2026-01-04-00-00-00-000')
   })
 
