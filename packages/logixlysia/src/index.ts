@@ -263,7 +263,9 @@ const DEFAULT_FLUSH_TIMEOUT_MS = 5000
  * Elysia sends the cookies from both, so an enricher sees every one (a string
  * for a single cookie, an array for several). A response that already went
  * through Elysia's merge carries the `set.headers` cookie, so it is not added
- * twice. Only built when an enricher will actually read it.
+ * twice. A `set.headers` cookie that is an array is split into one cookie
+ * each, and Elysia drops it when the Response has a cookie of its own, so
+ * the enricher does too. Only built when an enricher will actually read it.
  */
 const readableResponseHeaders = (
   setHeaders: Record<string, string | number>,
@@ -281,8 +283,14 @@ const readableResponseHeaders = (
     }
   }
   const cookies = responseHeaders?.getSetCookie() ?? []
-  const setCookie = setHeaders['set-cookie']
-  if (setCookie !== undefined && !cookies.includes(String(setCookie))) {
+  const setCookie: unknown = setHeaders['set-cookie']
+  if (Array.isArray(setCookie)) {
+    // Elysia turns an array into a `Headers` before it merges, and that merge
+    // keeps the array's cookies only when the Response has none of its own.
+    if (cookies.length === 0) {
+      cookies.push(...setCookie.map(String))
+    }
+  } else if (setCookie !== undefined && !cookies.includes(String(setCookie))) {
     cookies.push(String(setCookie))
   }
   if (cookies.length > 0) {
