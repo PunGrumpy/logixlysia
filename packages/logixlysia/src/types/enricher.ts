@@ -5,7 +5,7 @@ export type EnricherFields = Record<string, unknown> | undefined
 export interface EnricherResponseInput {
   /** Elapsed time for the request in milliseconds. */
   durationMs: number
-  /** The response headers the client gets: a returned `Response`'s own, then `set.headers` for any it lacks. */
+  /** The response headers the client gets: a returned `Response`'s own, then `set.headers` for any it lacks. `set-cookie` holds the cookies from both (an array when there are several). */
   headers: Record<string, unknown>
   request: Request
   status: number
