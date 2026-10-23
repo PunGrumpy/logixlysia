@@ -274,8 +274,11 @@ const DEFAULT_FLUSH_TIMEOUT_MS = 5000
 /**
  * The response headers an enricher gets to read, merged the way Elysia builds
  * the wire response: a header on a returned `Response` wins, and
- * `set.headers` fills in the ones it lacks. Only built when an enricher will
- * actually read it.
+ * `set.headers` fills in the ones it lacks. `set-cookie` is the exception:
+ * Elysia sends the cookies from both, so an enricher sees every one (a string
+ * for a single cookie, an array for several). A response that already went
+ * through Elysia's merge carries the `set.headers` cookie, so it is not added
+ * twice. Only built when an enricher will actually read it.
  */
 const readableResponseHeaders = (
   setHeaders: Record<string, string | number>,
@@ -288,9 +291,17 @@ const readableResponseHeaders = (
     }
   }
   for (const [key, value] of Object.entries(setHeaders)) {
-    if (!responseHeaders?.has(key)) {
+    if (key !== 'set-cookie' && !responseHeaders?.has(key)) {
       merged[key] = value
     }
+  }
+  const cookies = responseHeaders?.getSetCookie() ?? []
+  const setCookie = setHeaders['set-cookie']
+  if (setCookie !== undefined && !cookies.includes(String(setCookie))) {
+    cookies.push(String(setCookie))
+  }
+  if (cookies.length > 0) {
+    merged['set-cookie'] = cookies.length === 1 ? cookies[0] : cookies
   }
   return merged
 }

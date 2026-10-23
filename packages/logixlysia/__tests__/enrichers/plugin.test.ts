@@ -235,6 +235,38 @@ describe('enrichers through the plugin', () => {
     expect(contextOf(events[0])).toMatchObject({ responseBytes: 4 })
   })
 
+  for (const aot of [true, false]) {
+    test(`set-cookie from the returned Response and set.headers both reach the enricher, as on the wire (aot: ${aot})`, async () => {
+      const { events, transport } = createCaptureTransport()
+      const app = new Elysia({ aot })
+        .use(
+          logixlysia({
+            config: {
+              disableFileLogging: true,
+              disableInternalLogger: true,
+              enrichers: [
+                {
+                  response: ({ headers }) => ({
+                    cookies: headers['set-cookie']
+                  })
+                }
+              ],
+              transports: [{ log: transport }]
+            }
+          })
+        )
+        .get('/cookies', ({ set }) => {
+          set.headers['set-cookie'] = 'b=2'
+          return new Response('body', { headers: { 'set-cookie': 'a=1' } })
+        })
+
+      const response = await app.handle(new Request('http://localhost/cookies'))
+
+      expect(response.headers.getSetCookie()).toEqual(['a=1', 'b=2'])
+      expect(contextOf(events[0])).toMatchObject({ cookies: ['a=1', 'b=2'] })
+    })
+  }
+
   test('set.headers fills in a header the returned Response lacks', async () => {
     const { events, transport } = createCaptureTransport()
     const app = new Elysia()
