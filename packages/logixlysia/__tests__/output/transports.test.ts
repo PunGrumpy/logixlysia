@@ -1,4 +1,4 @@
-import { describe, expect, mock, test } from 'bun:test'
+import { describe, expect, mock, setSystemTime, test } from 'bun:test'
 import type { Options } from '../../src/interfaces'
 import { logToTransports } from '../../src/output'
 import { spyConsole } from '../_helpers/console'
@@ -95,13 +95,9 @@ describe('logToTransports', () => {
     expect(zeroMeta.durationMs).toBe(0)
   })
 
-  // This test must run before any other test that triggers a transport
-  // failure (e.g. the "never throws"/"swallows async rejections" tests
-  // below): `reportTransportError`'s rate limit is module-scoped state that
-  // persists across tests in this file, so it must observe the very first
-  // failure to reliably assert both the log and the rate limit.
   test('reports a throwing transport to stderr, rate-limited', () => {
     const { spies, restore } = spyConsole(['error'])
+    setSystemTime(new Date(Date.now() + 6000))
 
     try {
       const throwing = mock<
@@ -136,6 +132,7 @@ describe('logToTransports', () => {
 
       expect(spies.error).toHaveBeenCalledTimes(1)
     } finally {
+      setSystemTime()
       restore()
     }
   })

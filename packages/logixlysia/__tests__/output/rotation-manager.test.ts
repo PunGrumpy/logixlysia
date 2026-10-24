@@ -145,12 +145,6 @@ describe('performRotation retention', () => {
       })
     )
 
-    // The rotated file's exact name includes an unpredictable
-    // process.hrtime.bigint() suffix, so it can't be pre-created as a
-    // directory before performRotation picks the name itself. Instead,
-    // spy on the shared fs.promises.writeFile (the same object instance
-    // rotation-manager.ts imports) to fail only the `.gz` write, which
-    // reproduces the same EISDIR-class failure compressFile would hit.
     const originalWriteFile = fs.writeFile.bind(fs)
     const writeFileSpy = spyOn(fs, 'writeFile').mockImplementation(
       async (target, ...args) => {

@@ -8,10 +8,9 @@ import { ensureDir } from './fs'
 import { performRotation } from './rotation-manager'
 
 /**
- * The live file's creation time when the filesystem reports one;
- * some filesystems report 0/absent birthtime — fall back to `now`
- * (losing restart-survival for the interval clock, but never wrong
- * by more than the process lifetime).
+ * The live file's creation time when the filesystem reports one. Some
+ * filesystems report 0 or no birthtime; then `now` is used, so the interval
+ * clock restarts at open and rotation can run late by the file's age.
  */
 export const resolveOpenedAt = (
   birthtimeMs: number | undefined,
@@ -99,7 +98,6 @@ class FileSinkImpl implements FileSink {
 
   private async flushBatch(batch: PendingBatch): Promise<void> {
     const options = this.latestOptions
-    // Lines already carry their own trailing newline; join needs no separator.
     const text = batch.lines.join('')
 
     try {
@@ -114,10 +112,6 @@ class FileSinkImpl implements FileSink {
       return
     }
 
-    // Rotation (if triggered) is awaited before resolving so callers observe
-    // a consistent on-disk state: the line's write plus any rotation it
-    // caused. maybeRotate() catches and reports its own errors, so it never
-    // rejects this chain.
     await this.maybeRotate(options)
 
     for (const resolver of batch.resolvers) {
@@ -177,7 +171,6 @@ class FileSinkImpl implements FileSink {
         options.logFileMode
       )
     } catch (error) {
-      // A rotation failure must not fail the caller's write.
       if (options.onRotationError) {
         options.onRotationError(error)
       } else {

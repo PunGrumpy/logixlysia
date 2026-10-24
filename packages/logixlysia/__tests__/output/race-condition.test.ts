@@ -7,9 +7,6 @@ import { createMockRequest } from '../_helpers/request'
 import { createTempDir, removeTempDir } from '../_helpers/tmp'
 
 const MESSAGE_REGEX = /message-(?<id>\d+)/u
-// A full-line regex: a torn line (cut mid-write) or a merged line (two
-// writes concatenated without a newline in between) will not match this
-// anchored pattern, revealing broken mutual exclusion.
 const EXCLUSION_LINE_REGEX =
   /^(?:DEBUG|INFO|WARNING|ERROR) [\d.]+ms GET \/test\d+ msg-(?<id>\d+)-x+$/u
 
@@ -20,7 +17,6 @@ describe('logToFile race condition', () => {
       const filePath = path.join(dir, 'logs', 'concurrent.log')
       const options: Options = {
         config: {
-          // Very small size to trigger rotation quickly
           logRotation: { compress: false, maxSize: 100 }
         }
       }
@@ -78,7 +74,6 @@ describe('logToFile race condition', () => {
       const filePath = path.join(dir, 'logs', 'serialize.log')
       const options: Options = {
         config: {
-          // Trigger rotation on every write
           logRotation: { compress: false, maxSize: 1 }
         }
       }
@@ -119,7 +114,6 @@ describe('logToFile race condition', () => {
       const filePath = path.join(dir, 'logs', 'exclusion.log')
       const options: Options = {
         config: {
-          // Rotate on every write so the critical section races with rotation
           logRotation: { compress: false, maxSize: 1 }
         }
       }
