@@ -1,5 +1,29 @@
 # Changelog
 
+## 7.0.0-next.1
+
+### Major Changes
+
+- 189048e: Target Elysia `>= 2.0.0-beta.32`, the current public beta, and bring the 6.10.x fixes to the `next` line.
+  
+  - Elysia 2.0.0-beta.32 restored the `on*` lifecycle names, so the plugin registers `onStart`, `onStop`, `onRequest`, `onAfterHandle` and `onError` again and your app keeps those names too. `.as('scoped')` is still `.as('plugin')`, `onAfterHandle` still reads `responseValue`, route hooks still go before the handler, and `resolve` is gone.
+  - `status()` results are `ElysiaStatus` objects with a `status` field; the plugin reads that instead of `code`.
+  - A thrown error answers 500 even after `set.status` was set, as Elysia 2 does, and the log line says 500.
+  - Response-phase enrichers see a `set.headers['set-cookie']` array next to a returned `Response`'s own cookies, as Elysia 2 sends them.
+  - Streamed and `sse()` bodies are timed until they end under Elysia 2, which pulls an `sse()` generator only when the body is read. A body cancelled by the client is logged when the cancel arrives, including a cleanup that throws, which Elysia 2 otherwise swallows.
+  - Two plugin instances in one app keep their own transports. Elysia 2 deep-merges a deduplicated plugin's `store` into the first instance's, which routed the first instance's lines to the second's transports.
+  - The plugin registers no `onAfterResponse` hook any more. In Elysia 2.0.0-beta.32 any such hook makes Elysia tee generator responses and `sse()` loses its event-stream framing; the request wrap covers the exits that hook handled.
+  - The plugin object exposes `store` (`logger`, `pino`), because Elysia 2 instances no longer do. `logixlysia().store.pino` keeps working for code outside a request.
+  - Peer dependencies are `elysia >= 2.0.0-beta.32` and `typescript >= 5.7.0`. The playground uses `@elysia/openapi` 2.0.0-beta.6 and the tests `@elysia/node` 2.0.0-beta.3.
+
+### Patch Changes
+
+- 32fb541: Adapter `timeout` values above 2,147,483,647 ms (2^31 - 1) are now rejected at construction. Node clamps a longer timer to 1 ms, so such a timeout aborted every request on Node; Bun was unaffected. The Datadog transport doc now names the attributes the event reserves (`ddsource`, `message`, `service`, `status`, `timestamp`) and says that a numeric `meta.status` moves to `http.status_code`.
+- d316f86: `NeuralRedactorSource`'s documentation now says that a loader which fails is not retried, and that every later record is then handled as a redaction failure. No behavior change.
+- c159bc5: The access-log format tokens are defined in one list that both the matcher and the token table are derived from, so a token cannot be added to one without the other. The response headers handed to enrichers are merged only when a response-phase enricher is registered. No behavior change.
+- 362e171: A failed log compression is reported once by the rotation manager, instead of being reported and then rethrown to a caller that swallowed it. No behavior change.
+- 3df3990: The `requestId` and `generator` docs now state the validation rule (1-128 characters of `A-Z a-z 0-9 . _ -`) and the UUID fallback that applies when an inbound or generated ID fails it. `redactRequest`'s doc says the original request is returned when nothing needed redacting. `LogFields` is documented as the default field shape. No behavior change.
+
 ## 7.0.0-next.0
 
 ### Major Changes
