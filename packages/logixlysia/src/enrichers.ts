@@ -67,8 +67,6 @@ export const traceparentEnricher = (
 
       const [, version, traceId, spanId, flags] = match
 
-      // `ff` is reserved, all-zero ids are invalid, and a version-00 header
-      // carrying extra fields is malformed rather than forward-compatible.
       if (
         version === INVALID_VERSION ||
         traceId === ZERO_TRACE_ID ||
