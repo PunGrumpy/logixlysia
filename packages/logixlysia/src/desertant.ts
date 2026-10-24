@@ -33,6 +33,8 @@ export interface NeuralRedactor {
 /**
  * A redactor, a promise for one, or a loader called once on the first record —
  * `Redact.load` can be passed directly, keeping model download off the boot path.
+ * A loader that fails is not retried: every later record is then handled as a
+ * redaction failure.
  */
 export type NeuralRedactorSource =
   | (() => NeuralRedactor | Promise<NeuralRedactor>)
@@ -93,12 +95,7 @@ const resolveRedactor = (
 ): Promise<NeuralRedactor> =>
   Promise.resolve(typeof source === 'function' ? source() : source)
 
-/**
- * Resolves the source once. A rejected load stays rejected: retrying on every
- * record would hammer the model host, and the failure is reported per record
- * through `onError` either way.
- */
-const memoizeRedactor = (
+const loadRedactorOnce = (
   source: NeuralRedactorSource
 ): (() => Promise<NeuralRedactor>) => {
   let cached: Promise<NeuralRedactor> | undefined
@@ -292,7 +289,7 @@ export const withRedaction = (
     onFailure = 'drop'
   } = options
 
-  const getRedactor = memoizeRedactor(source)
+  const getRedactor = loadRedactorOnce(source)
   const queue = createQueue(maxQueue)
 
   const report = (error: unknown): void => {
