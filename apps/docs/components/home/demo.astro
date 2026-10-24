@@ -11,8 +11,7 @@ type TermPart = [cls: string, text: string, hook?: string]
 
 interface TermLineData {
   cls?: string
-  /** Pause in ms before this line prints during the replay animation. */
-  delay?: number
+  delayMs?: number
   parts: TermPart[]
 }
 
@@ -45,7 +44,7 @@ const banner: TermPart[][] = [
 
 const bannerLines: TermLineData[] = banner.map((parts, index) => ({
   cls: index === banner.length - 1 ? `${c.banner} mb-4` : c.banner,
-  delay: 35,
+  delayMs: 35,
   parts
 }))
 
@@ -57,7 +56,7 @@ const prefix = (time: string): TermPart => [
 const termLines: TermLineData[] = [
   ...bannerLines,
   {
-    delay: 500,
+    delayMs: 500,
     parts: [
       prefix('31.804'),
       [c.foxInfo, ' 🦊 '],
@@ -72,7 +71,7 @@ const termLines: TermLineData[] = [
     ]
   },
   {
-    delay: 350,
+    delayMs: 350,
     parts: [
       prefix('32.108'),
       [c.foxInfo, ' 🦊 '],
@@ -87,7 +86,7 @@ const termLines: TermLineData[] = [
     ]
   },
   {
-    delay: 650,
+    delayMs: 650,
     parts: [
       prefix('33.020'),
       [c.foxWarn, ' 🦊 '],
@@ -102,7 +101,7 @@ const termLines: TermLineData[] = [
     ]
   },
   {
-    delay: 400,
+    delayMs: 400,
     parts: [
       prefix('33.412'),
       [c.foxInfo, ' 🦊 '],
@@ -117,7 +116,7 @@ const termLines: TermLineData[] = [
     ]
   },
   {
-    delay: 600,
+    delayMs: 600,
     parts: [
       prefix('34.001'),
       [c.foxInfo, ' 🦊 '],
@@ -133,7 +132,7 @@ const termLines: TermLineData[] = [
     ]
   },
   {
-    delay: 850,
+    delayMs: 850,
     parts: [
       prefix('35.219'),
       [c.foxError, ' 🦊 '],
@@ -148,7 +147,7 @@ const termLines: TermLineData[] = [
     ]
   },
   {
-    delay: 90,
+    delayMs: 90,
     parts: [
       ['', '  └─ '],
       [c.mint, 'error'],
@@ -158,7 +157,7 @@ const termLines: TermLineData[] = [
   },
   {
     cls: blink,
-    delay: 250,
+    delayMs: 250,
     parts: [[c.muted, '▌']]
   }
 ]
@@ -333,7 +332,7 @@ const interactiveRoutes = [
         ><span data-term-caret class:list={[c.muted, blink]}>▌</span>
       </div>
       {termLines.map(line => (
-        <TermLine cls={line.cls} delay={line.delay} parts={line.parts} />
+        <TermLine cls={line.cls} delayMs={line.delayMs} parts={line.parts} />
       ))}
     </div>
   </div>
@@ -378,7 +377,7 @@ const interactiveRoutes = [
   const pauseButton =
     terminal?.querySelector<HTMLElement>('[data-term-pause]') ?? null
   const lines = body
-    ? [...body.querySelectorAll<HTMLElement>('[data-delay]')]
+    ? [...body.querySelectorAll<HTMLElement>('[data-delay-ms]')]
     : []
   const command = cmd?.textContent ?? ''
   const reduceMotion = window.matchMedia(
@@ -472,7 +471,7 @@ const interactiveRoutes = [
           setTimeout(() => {
             line.style.display = ''
             tick()
-          }, Number(line.dataset.delay) || 40)
+          }, Number(line.dataset.delayMs) || 40)
         }
         tick()
       })
@@ -555,7 +554,6 @@ const interactiveRoutes = [
     if (duration) {
       duration.textContent = durationText
     }
-    // Keep the blinking block cursor as the last line.
     const cursor = lines.at(-1)
     if (cursor && cursor.parentElement === body) {
       cursor.before(fragment)

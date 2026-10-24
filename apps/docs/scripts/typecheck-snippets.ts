@@ -49,9 +49,6 @@ interface PreludeImport {
   typeOnly?: boolean
 }
 
-// A fragment assumes the imports a reader's file would have. It gets only the
-// names it uses and does not declare itself; a false match from the
-// identifier scan adds an unused import, which tsc accepts.
 const PRELUDE: PreludeImport[] = [
   {
     defaultName: 'logixlysia',

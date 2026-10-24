@@ -3,7 +3,8 @@
  * the generated stylesheet ("config first, then the user's theme.css"), so
  * anything here wins without specificity tricks — which is exactly what a
  * page-scoped sheet like styles/home.css cannot do, since Astro inlines that
- * one *before* the linked Tailwind stylesheet and only on the homepage.
+ * one *before* the linked Tailwind stylesheet and only on the pages that
+ * import it.
  */
 
 html {
