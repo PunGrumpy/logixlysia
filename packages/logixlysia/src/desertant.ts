@@ -92,8 +92,13 @@ interface WalkContext {
 
 const resolveRedactor = (
   source: NeuralRedactorSource
-): Promise<NeuralRedactor> =>
-  Promise.resolve(typeof source === 'function' ? source() : source)
+): Promise<NeuralRedactor> => {
+  try {
+    return Promise.resolve(typeof source === 'function' ? source() : source)
+  } catch (error) {
+    return Promise.reject(error)
+  }
+}
 
 const loadRedactorOnce = (
   source: NeuralRedactorSource
