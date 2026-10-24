@@ -240,8 +240,6 @@ describe('interval rotation', () => {
 
       setSystemTime(new Date(Date.now() + TWO_HOURS_MS))
 
-      // No write happens here — just wait one macrotask so any (nonexistent)
-      // background rotation would have had a chance to run.
       await sleep(10)
 
       const logsDir = path.join(dir, 'logs')
