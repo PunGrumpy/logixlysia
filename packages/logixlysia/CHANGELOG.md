@@ -1,5 +1,15 @@
 # Changelog
 
+## 6.10.4
+
+### Patch Changes
+
+- 32fb541: Adapter `timeout` values above 2,147,483,647 ms (2^31 - 1) are now rejected at construction. Node clamps a longer timer to 1 ms, so such a timeout aborted every request on Node; Bun was unaffected. The Datadog transport doc now names the attributes the event reserves (`ddsource`, `message`, `service`, `status`, `timestamp`) and says that a numeric `meta.status` moves to `http.status_code`.
+- d316f86: `NeuralRedactorSource`'s documentation now says that a loader which fails is not retried, and that every later record is then handled as a redaction failure. No behavior change.
+- c159bc5: The access-log format tokens are defined in one list that both the matcher and the token table are derived from, so a token cannot be added to one without the other. The response headers handed to enrichers are merged only when a response-phase enricher is registered. No behavior change.
+- 362e171: A failed log compression is reported once by the rotation manager, instead of being reported and then rethrown to a caller that swallowed it. No behavior change.
+- 3df3990: The `requestId` and `generator` docs now state the validation rule (1-128 characters of `A-Z a-z 0-9 . _ -`) and the UUID fallback that applies when an inbound or generated ID fails it. `redactRequest`'s doc says the original request is returned when nothing needed redacting. `LogFields` is documented as the default field shape. No behavior change.
+
 ## 6.10.3
 
 ### Patch Changes
