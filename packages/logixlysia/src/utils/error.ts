@@ -78,8 +78,6 @@ export const normalizeLoggedError = (
   logErrorPayload: boolean
 ): NormalizedLoggedError => {
   if (isStatusResponse(error)) {
-    // A string body becomes the message. Any other body is the app's response
-    // payload and may carry user data, so the status text stands in for it.
     const message =
       typeof error.response === 'string' && error.response !== ''
         ? error.response

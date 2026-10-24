@@ -3,12 +3,6 @@ const EMAIL_REGEX =
   /[a-zA-Z0-9._%+-]{1,64}@[a-zA-Z0-9.-]{1,253}\.[a-zA-Z]{2,63}/gu
 const IPV4_REGEX =
   /(?<![\w/.])(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(?![\w.])/gu
-/**
- * Bounded IPv6: either all 8 groups, or a single `::` compression. Requiring
- * one of those shapes (rather than "2+ colon-separated hex groups") keeps
- * clock times (`12:30:45`) and MAC addresses (`aa:bb:cc:dd:ee:ff`) from
- * matching.
- */
 const IPV6_REGEX =
   /(?<![\w:])(?:(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}|(?:[0-9a-fA-F]{1,4}:){1,7}:(?:[0-9a-fA-F]{1,4}(?::[0-9a-fA-F]{1,4}){0,6})?|::(?:[0-9a-fA-F]{1,4}(?::[0-9a-fA-F]{1,4}){0,6}))(?![\w:])/gu
 const CREDIT_CARD_CANDIDATE_REGEX = /\b(?:\d[ -]*?){13,19}\b/gu

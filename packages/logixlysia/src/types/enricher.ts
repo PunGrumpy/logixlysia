@@ -3,7 +3,6 @@ export type EnricherFields = Record<string, unknown> | undefined
 
 /** What the response phase of an enricher gets to look at. */
 export interface EnricherResponseInput {
-  /** Elapsed time for the request in milliseconds. */
   durationMs: number
   /** The response headers the client gets: a returned `Response`'s own, then `set.headers` for any it lacks. `set-cookie` holds the cookies from both (an array when there are several), except that a `set.headers` array of cookies is dropped when the `Response` has its own, as Elysia does. */
   headers: Record<string, unknown>
