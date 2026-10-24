@@ -149,12 +149,6 @@ const walker = {
     return Object.fromEntries(entries)
   },
 
-  /**
-   * Errors are rebuilt rather than mutated: the message and stack of a failed
-   * request are exactly where free-text PII ("user Anna Müller not found") tends
-   * to surface, and the original instance must stay untouched for the rest of
-   * the pipeline.
-   */
   error: async (
     original: Error,
     context: WalkContext,
@@ -206,8 +200,6 @@ const walker = {
     if (isPlainObject(value)) {
       return await walker.entries(value, childContext, depth)
     }
-    // Dates, Maps, class instances and the like: no safe generic way to rebuild
-    // them, so they pass through.
     return value
   },
 
