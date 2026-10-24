@@ -167,7 +167,6 @@ const endsWithUrlScheme = (text: string, end: number): boolean => {
 export const redactString = (text: string): string => {
   let result = text
 
-  // Before the email pass, which would otherwise eat `password@host.tld`.
   result = result.replace(
     URL_PASSWORD_REGEX,
     (match: string, prefix: string, offset: number, whole: string) =>

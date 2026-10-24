@@ -70,6 +70,12 @@ describe('redactString', () => {
     )
   })
 
+  test('masks a URL password before the email pass can eat it, even with a dotted host', () => {
+    expect(
+      redactString('dsn postgres://app:hunter2@db.internal.example/main')
+    ).toBe('dsn postgres://app:[REDACTED]@db.internal.example/main')
+  })
+
   test('masks Bearer and Basic credentials', () => {
     expect(redactString('got Bearer abcdefghijklmnop.qrs')).toBe(
       'got Bearer [REDACTED]'
