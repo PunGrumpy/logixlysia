@@ -9,10 +9,6 @@ const NON_ALPHANUMERIC = /[^a-z0-9\s]+/gu
 const WHITESPACE = /\s+/gu
 
 const normalizeStatusName = (value: string): string => {
-  // Handles common variants:
-  // - case differences: "not found" vs "Not Found"
-  // - spacing/punctuation: "Not-Found", "not_found"
-  // - camelCase/PascalCase: "InternalServerError"
   const trimmed = value.trim()
   if (!trimmed) {
     return ''
@@ -39,6 +35,28 @@ const STATUS_BY_NORMALIZED_NAME = (() => {
   return map
 })()
 
+/**
+ * What Elysia's `status(code, body)` returns or throws: an `ElysiaStatus` with
+ * a numeric `status` and the `response` body. Matched by the class name rather
+ * than by `instanceof`, so it still works when the app resolves a second copy
+ * of Elysia, and a plain object with the same keys (an API envelope, say)
+ * never matches.
+ */
+export interface StatusResponseLike {
+  response: unknown
+  status: number
+}
+
+export const isStatusResponse = (value: unknown): value is StatusResponseLike =>
+  typeof value === 'object' &&
+  value !== null &&
+  !(value instanceof Error) &&
+  (value as { constructor?: { name?: string } }).constructor?.name ===
+    'ElysiaStatus' &&
+  'status' in value &&
+  typeof value.status === 'number' &&
+  'response' in value
+
 export const getStatusCode = (value: unknown): number => {
   if (typeof value === 'number' && Number.isFinite(value)) {
     return value
@@ -55,4 +73,16 @@ export const getStatusCode = (value: unknown): number => {
   }
 
   return 500
+}
+
+export const levelForStatus = (
+  status: number
+): 'INFO' | 'WARNING' | 'ERROR' => {
+  if (status >= 500) {
+    return 'ERROR'
+  }
+  if (status >= 400) {
+    return 'WARNING'
+  }
+  return 'INFO'
 }

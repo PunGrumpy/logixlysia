@@ -1,3 +1,4 @@
+import { setTimeout as sleep } from 'node:timers/promises'
 import { Elysia } from 'elysia'
 import { resolveOptions } from './config/resolve-options'
 import {
@@ -8,7 +9,11 @@ import {
 import { createRequestContextStore } from './context/request-context'
 import { loggerStorage, noopRequestLogger } from './context/storage'
 import { startServer } from './extensions'
-import { getStatusCode } from './helpers/status'
+import {
+  getStatusCode,
+  isStatusResponse,
+  levelForStatus
+} from './helpers/status'
 import type {
   LogFields,
   LogixlysiaStore,
@@ -18,7 +23,7 @@ import type {
   StoreData
 } from './interfaces'
 import { createPluginLogger } from './logger'
-import { resolveSinks, shouldLog } from './logger/emit'
+import { isSuppressed, reportFormatError, resolveSinks } from './logger/emit'
 import { errorStatus } from './logger/handle-http-error'
 import {
   getOrCreateRequestId,
@@ -43,29 +48,220 @@ export interface EmptyElysiaSlot {
 }
 
 const DEFAULT_STATUS = 200
+const SERVER_ERROR_STATUS = 500
 
 /**
- * The status the client actually sees. Elysia leaves `set.status` at 200
- * unless a handler assigned one, and on the wire a returned `Response` beats
- * that untouched default — so a streaming, redirecting or proxying handler's
- * own status is the one worth logging.
+ * The status the client actually sees. A `status()` result carries its own
+ * code. A returned `Response` keeps its own status unless that is 200, in
+ * which case `set.status` applies, as in Elysia's `mergeStatus`. Otherwise
+ * Elysia sends `set.status`, which stays 200 unless a handler assigned one.
  */
 const resolveHandledStatus = (
   setStatus: unknown,
   response: unknown
 ): number => {
-  if (setStatus !== undefined && setStatus !== null) {
-    const assigned = getStatusCode(setStatus)
-    if (assigned !== DEFAULT_STATUS) {
-      return assigned
-    }
-  }
-
-  if (response instanceof Response) {
+  if (isStatusResponse(response)) {
     return response.status
   }
 
-  return DEFAULT_STATUS
+  if (response instanceof Response && response.status !== DEFAULT_STATUS) {
+    return response.status
+  }
+
+  if (setStatus === undefined || setStatus === null) {
+    return DEFAULT_STATUS
+  }
+
+  return getStatusCode(setStatus)
+}
+
+/**
+ * Shared by every plugin instance. Elysia keeps only the first instance's
+ * `onRequest` and `wrap` (both dedupe by plugin name), so a second instance,
+ * mounted in a sibling module, never sees its requests start and closes them
+ * from its own route hooks. It times them from the start the first instance
+ * saw, and its line replaces the one the first instance's wrap would write.
+ */
+const requestStarts = new WeakMap<Request, bigint>()
+const lineOwners = new WeakMap<Request, symbol>()
+
+interface RequestRecord {
+  accessLineReplaced: boolean
+  error?: unknown
+  phase: 'open' | 'streaming' | 'closed'
+  seenByWrap: boolean
+  setHeaders?: Record<string, string | number | string[]>
+  startedAt: bigint
+  streamLazy: boolean
+  streamPulled: boolean
+  streamStatus?: number
+}
+
+const nextTick = (): Promise<void> => sleep(0)
+
+const responseStatus = (response: unknown): number =>
+  response instanceof Response ? response.status : DEFAULT_STATUS
+
+const isGeneratorObject = (
+  value: unknown
+): value is AsyncIterable<unknown> | Iterable<unknown> =>
+  typeof value === 'object' &&
+  value !== null &&
+  typeof (value as { next?: unknown }).next === 'function' &&
+  (Symbol.asyncIterator in value || Symbol.iterator in value)
+
+/**
+ * Elysia uses a `ReadableStream` yielded first as the whole body and never
+ * pulls the generator again. A `Response` yielded anywhere, or a stream
+ * yielded later, is encoded like any other chunk. Only the first value can
+ * take the response over.
+ */
+const takesOverResponse = (first: unknown): boolean =>
+  first instanceof ReadableStream
+
+/**
+ * Pulls a handler's generator, inside the request's logger scope when
+ * `useAsyncLocalStorage` is on. Elysia pulls every value after the first
+ * from a ReadableStream `pull`, which Bun 1.3.14 runs in the context of
+ * whoever reads the body rather than the one the wrap entered, so the
+ * body would otherwise lose `useLogger()` after its first `yield`.
+ */
+type RunInScope = <T>(pull: () => T) => T
+
+const runUnscoped: RunInScope = pull => pull()
+
+const runInLoggerScope =
+  (logger: RequestScopedLogger): RunInScope =>
+  pull =>
+    loggerStorage.run(logger, pull)
+
+const returnRecordingError = async (
+  record: RequestRecord,
+  iterator: AsyncIterator<unknown>
+): Promise<void> => {
+  try {
+    await iterator.return?.()
+  } catch (error) {
+    record.error ??= error
+    throw error
+  }
+}
+
+const returnSyncRecordingError = (
+  record: RequestRecord,
+  iterator: Iterator<unknown>
+): void => {
+  try {
+    iterator.return?.()
+  } catch (error) {
+    record.error ??= error
+    throw error
+  }
+}
+
+/** The marker `sse()` sets, which makes Elysia defer the first pull to the body read. */
+const isTypedSse = (value: object): boolean =>
+  'sse' in value && (value as { sse?: unknown }).sse === true
+
+const ITERATOR_PROTOCOL_KEYS = new Set<PropertyKey>([
+  'next',
+  'return',
+  'throw',
+  Symbol.asyncIterator,
+  Symbol.iterator
+])
+
+/**
+ * Elysia reads markers off the generator object itself: `sse(generator)` sets
+ * the ones that select event-stream framing. When an `onAfterResponse` hook is
+ * registered, Elysia 2 hands `onAfterHandle` a tee of the generator whose
+ * `next` and `return` are own properties, so those must not be copied or the
+ * wrapper is bypassed.
+ */
+const copyStreamMarkers = (wrapper: object, source: object): void => {
+  for (const key of Reflect.ownKeys(source)) {
+    if (ITERATOR_PROTOCOL_KEYS.has(key)) {
+      continue
+    }
+    const descriptor = Object.getOwnPropertyDescriptor(source, key)
+    if (descriptor?.enumerable) {
+      Object.defineProperty(wrapper, key, descriptor)
+    }
+  }
+}
+
+const wrapAsyncStream = async function* wrapAsyncStream(
+  record: RequestRecord,
+  source: AsyncIterable<unknown>,
+  runInScope: RunInScope,
+  onSettled: () => void
+): AsyncGenerator<unknown, unknown> {
+  record.streamPulled = true
+  const iterator = source[Symbol.asyncIterator]()
+  const scoped: AsyncIterator<unknown> = {
+    next: (...args) => runInScope(() => iterator.next(...args)),
+    return: iterator.return?.bind(iterator),
+    throw: iterator.throw?.bind(iterator)
+  }
+  try {
+    const first = await scoped.next()
+    if (first.done) {
+      return first.value
+    }
+    if (takesOverResponse(first.value)) {
+      record.phase = 'open'
+    }
+    yield first.value
+    return yield* { [Symbol.asyncIterator]: () => scoped }
+  } catch (error) {
+    record.error = error
+    throw error
+  } finally {
+    // A body cancelled before its first read parks this generator at the
+    // `yield` above, outside the delegation, so forward the cancel by hand
+    // (a no-op on a source that already finished). The request settles even
+    // when the source's own cleanup throws.
+    try {
+      await returnRecordingError(record, iterator)
+    } finally {
+      onSettled()
+    }
+  }
+}
+
+const wrapSyncStream = function* wrapSyncStream(
+  record: RequestRecord,
+  source: Iterable<unknown>,
+  runInScope: RunInScope,
+  onSettled: () => void
+): Generator<unknown, unknown> {
+  record.streamPulled = true
+  const iterator = source[Symbol.iterator]()
+  const scoped: Iterator<unknown> = {
+    next: (...args) => runInScope(() => iterator.next(...args)),
+    return: iterator.return?.bind(iterator),
+    throw: iterator.throw?.bind(iterator)
+  }
+  try {
+    const first = scoped.next()
+    if (first.done) {
+      return first.value
+    }
+    if (takesOverResponse(first.value)) {
+      record.phase = 'open'
+    }
+    yield first.value
+    return yield* { [Symbol.iterator]: () => scoped }
+  } catch (error) {
+    record.error = error
+    throw error
+  } finally {
+    try {
+      returnSyncRecordingError(record, iterator)
+    } finally {
+      onSettled()
+    }
+  }
 }
 
 /**
@@ -80,26 +276,36 @@ export interface LogixlysiaSingleton<TFields extends object = LogFields> {
   store: LogixlysiaStore
 }
 
-// Elysia's `SingletonBase` slots are `Record<string, unknown>`; ours are intentionally closed (see #220).
 export type Logixlysia<TFields extends object = LogFields> = Elysia<
   '',
   'local',
-  // @ts-expect-error: closed slots are correct at runtime and for merged WS context inference.
+  // @ts-expect-error — closed slots are correct at runtime and for merged WebSocket context inference.
   LogixlysiaSingleton<TFields>
 >
 
 export type LogixlysiaPlugin<TFields extends object = LogFields> =
   Logixlysia<TFields> & {
+    /**
+     * The plugin's `logger` and `pino`, for code that runs outside a request.
+     * Elysia 2 instances expose no `store` of their own, so the plugin object
+     * carries the one it registers.
+     */
+    store: LogixlysiaStore
     wrapWs: ReturnType<typeof createWsHandlerWrapper>
   }
 
 const DEFAULT_FLUSH_TIMEOUT_MS = 5000
 
 /**
- * The response headers an enricher gets to read. `set.headers` alone misses
- * anything a handler put on a returned `Response` (a `content-length`, say),
- * so the two are merged — with `set.headers` winning, since Elysia applies
- * it last. Only built when an enricher will actually read it.
+ * The response headers an enricher gets to read, merged the way Elysia builds
+ * the wire response: a header on a returned `Response` wins, and
+ * `set.headers` fills in the ones it lacks. `set-cookie` is the exception:
+ * Elysia sends the cookies from both, so an enricher sees every one (a string
+ * for a single cookie, an array for several). A response that already went
+ * through Elysia's merge carries the `set.headers` cookie, so it is not added
+ * twice. A `set.headers` cookie that is an array is split into one cookie
+ * each, next to the Response's own, as Elysia 2 sends them. Only built when an
+ * enricher will actually read it.
  */
 const readableResponseHeaders = (
   setHeaders: Record<string, string | number | string[]>,
@@ -111,7 +317,28 @@ const readableResponseHeaders = (
       merged[key] = value
     }
   }
-  return Object.assign(merged, setHeaders)
+  for (const [key, value] of Object.entries(setHeaders)) {
+    if (key !== 'set-cookie' && !responseHeaders?.has(key)) {
+      merged[key] = value
+    }
+  }
+  const cookies = responseHeaders?.getSetCookie() ?? []
+  const setCookie: unknown = setHeaders['set-cookie']
+  let added: string[] = []
+  if (Array.isArray(setCookie)) {
+    added = setCookie.map(String)
+  } else if (setCookie !== undefined) {
+    added = [String(setCookie)]
+  }
+  for (const cookie of added) {
+    if (!cookies.includes(cookie)) {
+      cookies.push(cookie)
+    }
+  }
+  if (cookies.length > 0) {
+    merged['set-cookie'] = cookies.length === 1 ? cookies[0] : cookies
+  }
+  return merged
 }
 
 /**
@@ -123,45 +350,65 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
   rawOptions: Options = {}
 ): LogixlysiaPlugin<TFields> => {
   const options = resolveOptions(rawOptions)
-  const didCustomLog = new WeakSet<Request>()
-  const closed = new WeakSet<Request>()
-  const requestStartTimes = new WeakMap<Request, bigint>()
+  const records = new WeakMap<Request, RequestRecord>()
+  const instance = Symbol('logixlysia')
+  const openRecord = (request: Request): RequestRecord => {
+    const existing = records.get(request)
+    if (existing) {
+      return existing
+    }
+    let startedAt = requestStarts.get(request)
+    if (startedAt === undefined) {
+      startedAt = process.hrtime.bigint()
+      requestStarts.set(request, startedAt)
+    }
+    const record: RequestRecord = {
+      accessLineReplaced: false,
+      phase: 'open',
+      seenByWrap: false,
+      startedAt,
+      streamLazy: false,
+      streamPulled: false
+    }
+    records.set(request, record)
+    return record
+  }
   const contextStore = createRequestContextStore()
   const baseLogger = createPluginLogger(options, contextStore)
   const wrapWs = createWsHandlerWrapper(options, baseLogger, contextStore)
-  const requestIdConfig = resolveRequestIdConfig(options.config?.requestId)
+  const requestIdConfig = resolveRequestIdConfig(
+    options.config?.requestId,
+    options.config?.onError
+  )
   const enrichers = resolveEnrichers(options.config?.enrichers)
   const onSinkError = options.config?.onError
   const logFilter = options.config?.logFilter
   const sinks = resolveSinks(options.config)
 
-  /**
-   * A custom log inside a request. It applies the same gate the logger's own
-   * `debug`/`info`/... apply, for two reasons: a record the level filter drops
-   * must not claim the request and suppress its access line, and the record
-   * that does go out has to be timed from the request's start rather than from
-   * the moment the handler called it.
-   */
   const emitCustomLog = (
     level: LogLevel,
     request: Request,
     message: string,
     context?: Record<string, unknown>
   ): void => {
-    if (sinks.isEffectivelyDisabled || !shouldLog(level, logFilter)) {
+    if (isSuppressed(sinks, level, logFilter)) {
       return
     }
 
-    didCustomLog.add(request)
+    const record = openRecord(request)
+    record.accessLineReplaced = true
     baseLogger.log(
       level,
       request,
       { context, message },
-      { beforeTime: requestStartTimes.get(request) ?? process.hrtime.bigint() }
+      { beforeTime: record.startedAt }
     )
   }
 
-  const logger = {
+  // Frozen because Elysia 2 deep-merges a deduplicated plugin's store into the
+  // first instance's: unfrozen, a second instance's methods would land on this
+  // object and route the first instance's lines to the second's transports.
+  const logger = Object.freeze({
     ...baseLogger,
     debug: (
       request: Request,
@@ -191,7 +438,7 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
     ) => {
       emitCustomLog('WARNING', request, message, context)
     }
-  }
+  })
 
   const createRequestScopedLogger = (
     request: Request
@@ -208,7 +455,7 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
   })
 
   /**
-   * Everything both exits share once the status is known: echo the request id,
+   * Everything the exits share once the status is known: echo the request id,
    * run the response-phase enrichers, and resolve tail sampling — all before
    * the request's final log line, so it and any replayed records see the same
    * context. Returns the timing store for that final line.
@@ -232,10 +479,10 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
     }
 
     const store: StoreData = {
-      beforeTime: requestStartTimes.get(request) ?? 0n
+      beforeTime: records.get(request)?.startedAt ?? 0n
     }
 
-    if (enrichers) {
+    if (enrichers && enrichers.response.length > 0) {
       applyResponseEnrichers(
         enrichers,
         contextStore,
@@ -255,37 +502,210 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
 
   const useAsyncLocalStorage = options.config?.useAsyncLocalStorage === true
 
-  /**
-   * Restores the no-op logger once a request is over, so a promise that
-   * outlives it and calls `useLogger()` writes nowhere instead of into
-   * whichever request happened to run last.
-   */
   const exitRequestScope = (): void => {
     if (useAsyncLocalStorage) {
       loggerStorage.enterWith(noopRequestLogger)
     }
   }
 
-  /**
-   * The timing store for the error line. When a hook after the handler throws,
-   * the `error` hook runs for a request `afterHandle` already closed: its success line
-   * is on the wire and cannot be retracted, but the error line still has to
-   * carry the request's real duration, and closing twice would resolve tail
-   * sampling twice for the same request.
-   */
-  const errorStore = (
+  const emitAccessLine = (
     request: Request,
-    setHeaders: Record<string, string | number | string[]>,
-    error: unknown
-  ): StoreData => {
-    if (closed.has(request)) {
-      return { beforeTime: requestStartTimes.get(request) ?? 0n }
+    status: number,
+    store: StoreData
+  ): void => {
+    const accumulated = contextStore.getContext(request)
+    const data: Record<string, unknown> = { status }
+    if (Object.keys(accumulated).length > 0) {
+      data.context = { ...accumulated }
     }
 
-    const store = closeRequest(request, setHeaders, errorStatus(error))
-    closed.add(request)
-    return store
+    logger.log(levelForStatus(status), request, data, store)
   }
+
+  /**
+   * The final line for a request whose response Elysia has produced. Runs
+   * once, with the status the client got. A request whose body is still
+   * streaming is finished by the stream wrapper instead. A thrown value that
+   * is not Elysia's own status() result is an error whatever the status the
+   * client got (a later onError may have mapped it to a 3xx, or a streamed
+   * body may have failed after a 200 went out); a thrown status() result is
+   * an error only when its code says so.
+   */
+  const finishRequest = (
+    request: Request,
+    record: RequestRecord,
+    status: number,
+    responseHeaders?: Headers
+  ): void => {
+    if (record.phase === 'closed') {
+      return
+    }
+    record.phase = 'closed'
+    const owner = lineOwners.get(request)
+    const lineWrittenByAnotherInstance =
+      record.seenByWrap && owner !== undefined && owner !== instance
+    if (lineWrittenByAnotherInstance) {
+      try {
+        logger.finalizeRequest(
+          request,
+          { beforeTime: record.startedAt },
+          status
+        )
+      } catch (failure) {
+        reportFormatError(failure, onSinkError)
+      }
+      return
+    }
+    try {
+      const store = closeRequest(
+        request,
+        record.setHeaders ?? {},
+        status,
+        responseHeaders
+      )
+      if (
+        record.error !== undefined &&
+        (status >= 400 || !isStatusResponse(record.error))
+      ) {
+        logger.handleHttpError(request, record.error, { ...store, status })
+      } else if (!record.accessLineReplaced) {
+        emitAccessLine(request, status, store)
+      }
+    } catch (failure) {
+      reportFormatError(failure, onSinkError)
+    }
+  }
+
+  /**
+   * Called from a stream wrapper's `finally`. A body the wrap already saw the
+   * response for is finished here with that status. A body that ended,
+   * failed or handed Elysia a whole response before the response existed
+   * goes back to `open`, so the wrap writes the line with the real status.
+   */
+  const settleStream = (request: Request, record: RequestRecord): void => {
+    if (record.phase !== 'streaming') {
+      return
+    }
+    if (record.streamStatus === undefined) {
+      record.phase = 'open'
+      return
+    }
+    finishRequest(request, record, record.streamStatus)
+  }
+
+  const wrapStream = (
+    request: Request,
+    record: RequestRecord,
+    response: unknown
+  ): unknown => {
+    if (!isGeneratorObject(response)) {
+      return
+    }
+    record.phase = 'streaming'
+    record.streamLazy = isTypedSse(response)
+    // A client that disconnects while the source awaits its next value would
+    // otherwise get no line until that await settles, which may be never.
+    const onAbort = (): void => {
+      if (record.phase === 'streaming' && record.streamStatus !== undefined) {
+        finishRequest(request, record, record.streamStatus)
+      }
+    }
+    request.signal.addEventListener('abort', onAbort, { once: true })
+    const onSettled = (): void => {
+      request.signal.removeEventListener('abort', onAbort)
+      settleStream(request, record)
+    }
+    const runInScope = useAsyncLocalStorage
+      ? runInLoggerScope(createRequestScopedLogger(request))
+      : runUnscoped
+    const wrapper =
+      Symbol.asyncIterator in response
+        ? wrapAsyncStream(record, response, runInScope, onSettled)
+        : wrapSyncStream(record, response, runInScope, onSettled)
+    copyStreamMarkers(wrapper, response)
+    return wrapper
+  }
+
+  /**
+   * Closes a request the wrap did not see: Elysia skips higher-order
+   * functions with `aot: false`, and `group()` and `guard()` do not merge
+   * them into the parent. The hooks then write the line.
+   */
+  const finishUnwrapped = (
+    request: Request,
+    record: RequestRecord,
+    status: number,
+    responseHeaders?: Headers
+  ): void => {
+    if (!lineOwners.has(request)) {
+      lineOwners.set(request, instance)
+    }
+    finishRequest(request, record, status, responseHeaders)
+    exitRequestScope()
+  }
+
+  const wrapFetch =
+    (
+      fetch: (
+        request: Request,
+        ...rest: unknown[]
+      ) => Response | Promise<Response>
+    ) =>
+    (request: Request, ...rest: unknown[]): Promise<Response> => {
+      const record = openRecord(request)
+      record.seenByWrap = true
+      const settle = async (): Promise<Response> => {
+        // Typed as a `Response` by Elysia's `wrap`, but a WebSocket upgrade
+        // resolves to `undefined`, so every read below guards for it.
+        let response: unknown
+        try {
+          response = await fetch(request, ...rest)
+        } catch (error) {
+          // Elysia rejects when mapping an error throws again (a cookie it
+          // cannot serialize, say), and the server then answers 500.
+          record.error ??= error
+          finishRequest(request, record, SERVER_ERROR_STATUS)
+          throw error
+        }
+        if (
+          record.phase === 'streaming' &&
+          !record.streamPulled &&
+          record.error === undefined
+        ) {
+          // Elysia 2 builds an event-stream Response before it pulls the
+          // generator, and the stream then pulls on its own a tick later. A
+          // wrapper still unpulled after that tick was discarded (a
+          // `mapResponse` answered in its place), so the request is finished
+          // below with the response that went out.
+          await nextTick()
+        }
+        if (
+          record.phase === 'streaming' &&
+          (record.streamPulled || record.streamLazy) &&
+          record.error === undefined
+        ) {
+          // The body is still being produced; the stream wrapper finishes it.
+          // Elysia pulls a plain generator once before it builds the Response
+          // and an `sse()` generator only when the body is read, so an
+          // `sse()` wrapper is still unpulled here. A plain wrapper that is
+          // unpulled was discarded (a `mapResponse` answered in its place),
+          // and a recorded error means Elysia failed to build the stream and
+          // answered with an error response; both are finished below.
+          record.streamStatus = responseStatus(response)
+          return response as Response
+        }
+        finishRequest(
+          request,
+          record,
+          responseStatus(response),
+          response instanceof Response ? response.headers : undefined
+        )
+        return response as Response
+      }
+      return useAsyncLocalStorage
+        ? loggerStorage.run(createRequestScopedLogger(request), settle)
+        : settle()
+    }
 
   const app = new Elysia({
     detail: {
@@ -294,7 +714,7 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
       tags: ['logging', 'pino']
     },
     name: 'Logixlysia'
-  })
+  }).wrap(wrapFetch)
 
   // @ts-expect-error — derived log typing matches LogixlysiaSingleton.
   const plugin = app
@@ -302,7 +722,7 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
     .state('pino', logger.pino)
     .state('beforeTime', 0n)
     .derive(({ request }) => ({ log: createRequestScopedLogger(request) }))
-    .setup(({ server }): void => {
+    .onStart(({ server }): void => {
       if (server) {
         startServer(server, options)
       } else {
@@ -311,102 +731,81 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
         startServer({ hostname, port, protocol: 'http' }, options)
       }
     })
-    .cleanup(async () => {
+    .onStop(async () => {
       const timeoutMs =
         options.config?.flushTimeoutMs ?? DEFAULT_FLUSH_TIMEOUT_MS
       const timedOut = await raceWithTimeout(flushAll(options), timeoutMs)
-      // A zero timeout means the caller opted out of waiting, so the flush
-      // "timing out" is expected and not worth reporting.
-      if (timedOut && timeoutMs > 0) {
+      const waitWasRequested = timeoutMs > 0
+      if (timedOut && waitWasRequested) {
         reportShutdownTimeout(options.config?.onError, timeoutMs)
       }
     })
-    .request(({ request, store }) => {
-      const beforeTime = process.hrtime.bigint()
-      requestStartTimes.set(request, beforeTime)
-      // Published for handlers that read `store.beforeTime`. The plugin's own
-      // timing comes from the per-request map above, since Elysia's store is
-      // app-global and concurrent requests share this slot.
-      store.beforeTime = beforeTime
+    .onRequest(({ request, set, store }) => {
+      const record = openRecord(request)
+      record.setHeaders = set.headers
+      store.beforeTime = record.startedAt
       logger.beginRequest(request)
       if (requestIdConfig) {
         const requestId = getOrCreateRequestId(request, requestIdConfig)
         contextStore.mergeContext(request, { requestId })
+        // Set at the start as well as at close: a short-circuited request
+        // never reaches the later hooks, and the wrap runs after the Response
+        // exists.
+        set.headers[requestIdConfig.header] = requestId
       }
 
       if (enrichers) {
         applyRequestEnrichers(enrichers, contextStore, request, onSinkError)
       }
 
-      if (useAsyncLocalStorage) {
+      if (useAsyncLocalStorage && !record.seenByWrap) {
         loggerStorage.enterWith(createRequestScopedLogger(request))
       }
     })
-    .afterHandle(({ request, set, responseValue }) => {
-      try {
-        if (closed.has(request)) {
-          return
-        }
-
-        const status = resolveHandledStatus(set.status, responseValue)
-
-        // Runs before the early return: a request that only emitted custom
-        // logs still needs its buffered records replayed.
-        const store = closeRequest(
+    .onAfterHandle(({ request, set, responseValue }) => {
+      const record = openRecord(request)
+      if (!record.seenByWrap) {
+        finishUnwrapped(
           request,
-          set.headers,
-          status,
+          record,
+          resolveHandledStatus(set.status, responseValue),
           responseValue instanceof Response ? responseValue.headers : undefined
         )
-        closed.add(request)
-
-        if (didCustomLog.has(request)) {
-          return
-        }
-
-        let level: 'INFO' | 'WARNING' | 'ERROR' = 'INFO'
-        if (status >= 500) {
-          level = 'ERROR'
-        } else if (status >= 400) {
-          level = 'WARNING'
-        }
-
-        const accumulated = contextStore.getContext(request)
-        const data: Record<string, unknown> = { status }
-        if (Object.keys(accumulated).length > 0) {
-          data.context = { ...accumulated }
-        }
-
-        logger.log(level, request, data, store)
-        // Nothing else is cleaned up here: the timings and the context bag
-        // live in WeakMaps keyed by the request, and a hook running after this
-        // one may still throw, in which case the `error` hook needs both to stay
-        // truthful.
-      } finally {
-        exitRequestScope()
+        return
+      }
+      const wrapped = wrapStream(request, record, responseValue)
+      if (wrapped !== undefined) {
+        return wrapped
       }
     })
-    .error(({ request, error, set }) => {
-      try {
-        logger.handleHttpError(
-          request,
-          error,
-          errorStore(request, set.headers, error)
-        )
-      } finally {
-        requestStartTimes.delete(request)
-        contextStore.clearContext(request)
-        exitRequestScope()
+    .onError(({ request, error }) => {
+      const record = openRecord(request)
+      record.error = error
+      if (record.seenByWrap) {
+        return
       }
+      if (record.phase === 'closed') {
+        // Thrown after the line was written (a route afterHandle, a response
+        // schema): a second, error line.
+        logger.handleHttpError(request, error, { beforeTime: record.startedAt })
+        exitRequestScope()
+        return
+      }
+      finishUnwrapped(request, record, errorStatus(error))
     })
     .as('plugin') as Logixlysia<TFields>
 
-  return Object.assign(plugin, { wrapWs }) as LogixlysiaPlugin<TFields>
+  const store: LogixlysiaStore = {
+    beforeTime: 0n,
+    logger,
+    pino: logger.pino
+  }
+  return Object.assign(plugin, { store, wrapWs }) as LogixlysiaPlugin<TFields>
 }
 
 /**
  * Drains every transport and file sink; with `close: true` also releases
- * them. For processes that stop without Elysia's `cleanup` (workers,
+ * them. For processes that stop without Elysia's `onStop` (workers,
  * scripts, custom signal handlers). Safe to call more than once.
  */
 export const flushLogixlysia = async (
@@ -430,16 +829,20 @@ export type {
   EnricherResponseInput,
   HeadSamplingConfig,
   LogFields,
+  LogFilter,
   Logger,
+  LogixlysiaConfig,
   LogixlysiaContext,
   LogixlysiaStore,
   LogLevel,
   LogPreset,
+  LogRotationConfig,
   Options,
   Pino,
   RequestIdConfig,
   RequestScopedLogger,
   SamplingConfig,
+  SinkErrorContext,
   StoreData,
   TailSamplingConfig,
   Transport
@@ -456,6 +859,7 @@ export type {
   SamplingRuntime
 } from './sampling'
 export { resolveSampling } from './sampling'
+export type { WebSocketLike } from './websocket/wrap-ws'
 export type { WsHandlerHooks } from './websocket/wrap-ws'
 export { createWsHandlerWrapper } from './websocket/wrap-ws'
 

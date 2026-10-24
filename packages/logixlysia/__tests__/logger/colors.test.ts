@@ -29,9 +29,6 @@ type ConsoleMethod = 'debug' | 'error' | 'info' | 'log' | 'warn'
 
 const DATE_PATTERN_REGEX = /\d{4}-\d{2}-\d{2}/u
 
-/** Creates a logger with `config`, runs `act` against it, and returns the string
- * logged to `console[method]` (as an internal-console-sink test always emits
- * to exactly one console method per act). */
 const capture = (
   config: LogixlysiaConfig,
   method: ConsoleMethod,
@@ -322,7 +319,7 @@ describe('colorized console output', () => {
     expect(output).toContain('boom')
   })
 
-  test('{context} token inlines JSON when the tree has nothing to show', () => {
+  test('{context} token stays empty when the context tree already shows the fields', () => {
     const request = createMockRequest('http://localhost/hello')
     const output = capture(
       {
@@ -336,7 +333,6 @@ describe('colorized console output', () => {
       }
     )
 
-    // The tree already renders userId, so the inline {context} token is empty.
     expect(output).not.toContain('{"userId"')
     expect(output).toContain('\u001B[36muserId')
   })

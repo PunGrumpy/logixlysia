@@ -9,6 +9,7 @@ import type {
   BatchTransportOptions,
   LogEntry
 } from './adapters/shared'
+import { stringifyForLog } from './utils/json'
 
 const DEFAULT_SITE = 'datadoghq.com'
 const DEFAULT_SOURCE = 'logixlysia'
@@ -46,7 +47,11 @@ export interface DatadogTransportOptions extends BatchTransportOptions {
 /**
  * Creates a transport that ships logs to Datadog via the v2 logs intake API.
  * The log level lands in the `status` attribute (Datadog's default status
- * remapper), and the full meta object rides along as searchable attributes.
+ * remapper). Meta fields ride along as searchable attributes, except that
+ * `ddsource`, `message`, `service`, `status` and `timestamp` are reserved.
+ * `tags` overwrite `meta.ddtags`, `hostname` (or `DD_HOSTNAME`) overwrites
+ * `meta.hostname`, and a numeric `meta.status` is moved to `http.status_code`,
+ * replacing `meta.http`.
  *
  * @throws {Error} When no API key is configured.
  */
@@ -69,8 +74,6 @@ export const createDatadogTransport = (
     .join(',')
 
   const toEvent = (entry: LogEntry): Record<string, unknown> => {
-    // Meta first so the adapter-owned facets below always win — access-log
-    // meta carries an HTTP `status` that must not clobber Datadog's status.
     const event: Record<string, unknown> = {
       ...entry.meta,
       ddsource: source,
@@ -92,7 +95,7 @@ export const createDatadogTransport = (
   }
 
   return createHttpTransport({
-    body: entries => JSON.stringify(entries.map(toEvent)),
+    body: entries => stringifyForLog(entries.map(toEvent)),
     headers: {
       'Content-Type': 'application/json',
       'DD-API-KEY': apiKey

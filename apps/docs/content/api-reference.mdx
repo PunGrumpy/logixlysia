@@ -9,8 +9,10 @@ description: Complete API reference for Logixlysia
 
 Main plugin function that adds logging capabilities to your Elysia application.
 
-```ts
-function logixlysia(options?: Options): Logixlysia
+```ts check=skip
+function logixlysia<TFields extends object = LogFields>(
+  options?: Options
+): LogixlysiaPlugin<TFields>
 ```
 
 **Parameters:**
@@ -19,11 +21,12 @@ function logixlysia(options?: Options): Logixlysia
 
 **Returns:**
 
-- `Logixlysia`: Elysia instance with logging capabilities
+- `LogixlysiaPlugin<TFields>`: the Elysia plugin instance (its store carries `logger`, `pino` and `beforeTime`, and every handler receives a derived `log`) plus `wrapWs`
 
 **Example:**
 
 ```ts
+import { Elysia } from 'elysia'
 import logixlysia from 'logixlysia'
 
 const app = new Elysia().use(
@@ -35,13 +38,52 @@ const app = new Elysia().use(
 )
 ```
 
+### `useLogger`
+
+Returns the current request's `RequestScopedLogger`. Outside a request, or without `useAsyncLocalStorage: true`, it returns a no-op logger that writes nothing.
+
+```ts check=skip
+function useLogger<
+  TFields extends object = LogFields
+>(): RequestScopedLogger<TFields>
+```
+
+### `flushLogixlysia`
+
+Drains the transports in `options` and every file sink, and with `close: true` also releases them. Pass the same `options` object you gave the plugin; see [graceful shutdown](/docs/adapters/overview#graceful-shutdown).
+
+```ts check=skip
+function flushLogixlysia(
+  options: Options,
+  flags?: { close?: boolean }
+): Promise<void>
+```
+
+### `createLogger`
+
+Builds a `Logger` from `Options` without registering the plugin. It keeps its own request context, separate from any plugin instance's.
+
+```ts check=skip
+function createLogger(options?: Options): Logger
+```
+
+### `resolveOptions`
+
+Applies a preset's defaults under the explicit `config` and validates the result, the same way the plugin does with the options you pass it. It throws where the plugin would: an unknown preset, or an invalid rotation, sampling, threshold, `logFilter` or output setting.
+
+```ts check=skip
+function resolveOptions(options?: Options): Options
+```
+
+**Also exported:** `createPluginLogger`, `createWsHandlerWrapper`, `getOrCreateRequestId`, `resolveRequestIdConfig` and `resolveSampling` are the building blocks the plugin is assembled from. They may change between minor versions.
+
 ## Types
 
 ### `Logixlysia`
 
 Elysia instance type with Logixlysia store.
 
-```ts
+```ts check=skip
 import type { LogixlysiaSingleton } from 'logixlysia'
 
 type Logixlysia = Elysia<'', 'local', LogixlysiaSingleton>
@@ -53,14 +95,17 @@ The plugin declares its own `LogixlysiaSingleton` with a closed `store`, a `deri
 
 Configuration options for Logixlysia.
 
-```ts
+```ts check=skip
 type Options = {
+  preset?: 'dev' | 'prod' | 'json'
   config?: {
     showStartupMessage?: boolean
     startupMessageFormat?: 'simple' | 'banner'
     useColors?: boolean
     ip?: boolean
     autoRedact?: boolean
+    redactKeys?: string[]
+    logErrorPayload?: boolean
     timestamp?: {
       translateTime?: string
     }
@@ -75,7 +120,17 @@ type Options = {
     useTransportsOnly?: boolean
     disableInternalLogger?: boolean
     disableFileLogging?: boolean
+    onError?: (context: SinkErrorContext) => void
+    flushTimeoutMs?: number
+    enrichers?: EnricherLike[]
+    requestId?: boolean | RequestIdConfig
+    useAsyncLocalStorage?: boolean
+    disableWebSocketLogging?: boolean
+    logFilter?: LogFilter
+    sampling?: SamplingConfig
     logFilePath?: string
+    logDirMode?: number
+    logFileMode?: number
     logRotation?: LogRotationConfig
     pino?: PinoLoggerOptions & { prettyPrint?: boolean | object }
   }
@@ -86,7 +141,7 @@ type Options = {
 
 Store type available in Elysia context.
 
-```ts
+```ts check=skip
 type LogixlysiaStore = {
   logger: Logger
   pino: Pino
@@ -98,7 +153,7 @@ type LogixlysiaStore = {
 
 - `logger`: Logger instance with helper methods
 - `pino`: Direct Pino logger instance
-- `beforeTime`: Request start time (bigint)
+- `beforeTime`: A `bigint` from `process.hrtime.bigint()`, taken at the start of the most recent request. Elysia shares the store between concurrent requests, so the value is accurate only while requests do not overlap. The plugin's own durations do not use it.
 
 Keep `LogixlysiaStore` a closed object type (no index signature). That helps merged handler and WebSocket types stay accurate.
 
@@ -106,7 +161,7 @@ Keep `LogixlysiaStore` a closed object type (no index signature). That helps mer
 
 Logger interface with logging methods.
 
-```ts
+```ts check=skip
 type Logger = {
   pino: Pino
   log: (
@@ -140,6 +195,31 @@ type Logger = {
     message: string,
     context?: Record<string, unknown>
   ) => void
+  mergeContext: (
+    key: RequestInfo | object,
+    partial: Record<string, unknown>
+  ) => void
+  getContext: (key: RequestInfo | object) => Readonly<Record<string, unknown>>
+  beginRequest: (request: RequestInfo) => void
+  finalizeRequest: (
+    request: RequestInfo,
+    store: StoreData,
+    status: number
+  ) => void
+}
+```
+
+### `RequestScopedLogger`
+
+The `log` every handler receives, and what `useLogger()` returns. It is bound to one request, so its methods take no `request` argument.
+
+```ts check=skip
+type RequestScopedLogger<TFields extends object = LogFields> = {
+  debug: (message: string, context?: Partial<TFields>) => void
+  info: (message: string, context?: Partial<TFields>) => void
+  warn: (message: string, context?: Partial<TFields>) => void
+  error: (message: string, context?: Partial<TFields>) => void
+  mergeContext: (partial: Partial<TFields>) => void
 }
 ```
 
@@ -147,7 +227,7 @@ type Logger = {
 
 Log level type.
 
-```ts
+```ts check=skip
 type LogLevel = 'DEBUG' | 'INFO' | 'WARNING' | 'ERROR'
 ```
 
@@ -155,19 +235,23 @@ type LogLevel = 'DEBUG' | 'INFO' | 'WARNING' | 'ERROR'
 
 Custom transport interface.
 
-```ts
+```ts check=skip
 type Transport = {
   log: (
     level: LogLevel,
     message: string,
     meta?: Record<string, unknown>
   ) => void | Promise<void>
+  flush?: () => void | Promise<void>
+  close?: () => void | Promise<void>
 }
 ```
 
+`flush` drains entries the transport has queued or batched; the shutdown flush calls it when the app stops. `close` releases held sockets, timers and buffers, and is reached only through `flushLogixlysia(options, { close: true })`.
+
 ### `LogRotationConfig`
 
-Log rotation configuration.
+Log rotation configuration. Importable from `logixlysia`.
 
 ```ts
 type LogRotationConfig = {
@@ -179,11 +263,32 @@ type LogRotationConfig = {
 }
 ```
 
+### `SinkErrorContext`
+
+The argument of `config.onError`, importable from `logixlysia`.
+
+```ts check=skip
+type SinkErrorContext = {
+  sink: 'transport' | 'file' | 'rotation' | 'shutdown' | 'enricher' | 'format'
+  error: unknown
+}
+```
+
+### `LogFilter`
+
+The type of `config.logFilter`, importable from `logixlysia`. Only the listed levels are logged; a missing or empty list keeps every level.
+
+```ts check=skip
+type LogFilter = {
+  level?: LogLevel[]
+}
+```
+
 ### `Pino`
 
 Pino logger type.
 
-```ts
+```ts check=skip
 type Pino = PinoLogger<never, boolean>
 ```
 
@@ -191,7 +296,7 @@ type Pino = PinoLogger<never, boolean>
 
 Context type for request handlers.
 
-```ts
+```ts check=skip
 type LogixlysiaContext = {
   request: Request
   store: LogixlysiaStore
@@ -204,7 +309,7 @@ type LogixlysiaContext = {
 
 An HTTP error carrying the context that makes a failure actionable.
 
-```ts
+```ts check=skip
 class HttpError extends Error {
   readonly code?: string
   readonly fix?: string
@@ -238,7 +343,7 @@ interface HttpErrorInit {
 
 **Example:**
 
-```ts
+```ts check=skip
 import { HttpError } from 'logixlysia'
 
 throw new HttpError(402, 'Card declined', {
@@ -288,15 +393,19 @@ app.get('/users/:id', ({ store, params, request }) => {
 ### Custom Logging
 
 ```ts
-app.post('/users', ({ store, body, request }) => {
-  const { logger } = store
+app.post(
+  '/users',
+  ({ store, body, request }) => {
+    const { logger } = store
 
-  logger.debug(request, 'Creating user', { email: body.email })
+    logger.debug(request, 'Creating user', { email: body.email })
 
-  // ... create user logic
+    // ... create user logic
 
-  logger.info(request, 'User created', { userId: newUser.id })
+    logger.info(request, 'User created', { userId: newUser.id })
 
-  return newUser
-})
+    return newUser
+  },
+  { body: t.Object({ email: t.String() }) }
+)
 ```

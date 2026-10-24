@@ -272,6 +272,21 @@ describe('geoEnricher', () => {
     ).toBeUndefined()
   })
 
+  test('ignores Netlify geo fields that are not strings', () => {
+    const payload = btoa(
+      JSON.stringify({
+        city: 5,
+        country: { code: 'TH' },
+        subdivision: { code: 7 },
+        timezone: ['x']
+      })
+    )
+
+    expect(
+      enricher.request?.(requestWith({ 'x-nf-geo': payload }))?.geo
+    ).toEqual({ country: 'TH' })
+  })
+
   test('drops a non-numeric coordinate', () => {
     expect(
       enricher.request?.(

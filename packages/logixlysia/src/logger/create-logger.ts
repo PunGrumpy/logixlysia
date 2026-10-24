@@ -12,12 +12,37 @@ const pad3 = (value: number): string => String(value).padStart(3, '0')
 const DEFAULT_SLOW_MS = 500
 const DEFAULT_VERY_SLOW_MS = 1000
 const METHOD_PAD = 7
+const MAX_KEY_LENGTH = 256
 
 const DEFAULT_LOG_FORMAT =
   '{now} {service}{icon} {method} {pathname} {status} {duration} {message}{speed}'
 
-const LOG_FORMAT_REGEX =
-  /\{(?:now|epoch|level|icon|duration|method|pathname|path|query|status|statusText|message|ip|context|service|speed|requestId)\}/gu
+const FORMAT_TOKENS = [
+  'now',
+  'epoch',
+  'level',
+  'icon',
+  'duration',
+  'method',
+  'pathname',
+  'path',
+  'query',
+  'status',
+  'statusText',
+  'message',
+  'ip',
+  'context',
+  'service',
+  'speed',
+  'requestId'
+] as const
+
+type FormatToken = `{${(typeof FORMAT_TOKENS)[number]}}`
+
+const LOG_FORMAT_REGEX = new RegExp(
+  `\\{(?:${FORMAT_TOKENS.join('|')})\\}`,
+  'gu'
+)
 
 export interface FormattedLogOutput {
   contextLines: string[]
@@ -28,23 +53,15 @@ const shouldUseColors = (options: Options): boolean => {
   const { config } = options
   const enabledByConfig = config?.useColors ?? true
 
-  // Avoid ANSI sequences in non-interactive output (pipes, CI logs, files).
   const isTty = typeof process !== 'undefined' && process.stdout?.isTTY === true
   return enabledByConfig && isTty
 }
 
-// pino-pretty's shorthand for `yyyy-mm-dd HH:MM:ss.SSS` (minus the `o`
-// timezone-offset token, which this formatter does not support).
+// pino-pretty's `standard` expands to `yyyy-mm-dd HH:MM:ss.l o`; this
+// formatter has no `l` or `o` token, so it uses `SSS` and drops the offset.
 const STANDARD_TIMESTAMP_PATTERN = 'yyyy-mm-dd HH:MM:ss.SSS'
-// `SYS:` and `UTC:` are the same length.
 const TIMESTAMP_PREFIX_LENGTH = 'sys:'.length
 
-/**
- * Splits a `timestamp.translateTime` value into the literal pattern to
- * expand and whether it should be read with UTC getters. Mirrors
- * pino-pretty's `SYS:`/`UTC:` prefixes (case-insensitive); a bare pattern
- * keeps this formatter's historical local-time behaviour.
- */
 const resolveTimestampPattern = (
   pattern: string
 ): { pattern: string; utc: boolean } => {
@@ -83,7 +100,6 @@ const formatTimestamp = (date: Date, pattern?: string): string => {
     .replaceAll('SSS', SSS)
 }
 
-/** Resolves client IP from x-forwarded-for (first IP) or x-real-ip. Empty when neither header is set (e.g. localhost). */
 const getIp = (request: RequestInfo): string => {
   const forwarded = request.headers.get('x-forwarded-for')
   const candidate = forwarded
@@ -153,7 +169,6 @@ const getSpeedToken = (isVerySlow: boolean, useColors: boolean): string => {
   return ` ${chalk.yellow(badge)}`
 }
 
-/** Logixlysia brand: fox emoji with level-colored background when colors are enabled. */
 const getLevelIcon = (level: LogLevel, useColors: boolean): string => {
   if (!useColors) {
     return '🦊'
@@ -225,11 +240,6 @@ const getColoredMethod = (method: string, useColors: boolean): string => {
   return chalk.white.bold(upper)
 }
 
-/**
- * Colors the method, then pads afterward, so the padding never sits inside the
- * ANSI-wrapped text (padding the already-colored/padded string first would make
- * `getColoredMethod`'s comparisons against literals like `'GET'` always miss).
- */
 const getColoredMethodToken = (method: string, useColors: boolean): string => {
   const upper = method.toUpperCase()
   const padding = ' '.repeat(Math.max(0, METHOD_PAD - upper.length))
@@ -294,20 +304,11 @@ export interface FormatContext {
   format: string
   serviceToken: string
   slowThreshold: number
-  /** Format tokens actually present in `format` (see {@link LOG_FORMAT_REGEX}). */
   tokens: Set<string>
   useColors: boolean
   verySlowThreshold: number
 }
 
-/**
- * Resolves colors/format/thresholds/service once per logger instance instead of per log line.
- * Safe to hoist: TTY-ness and config don't change across a process's lifetime, so freezing the
- * colors decision at construction time matches real process lifecycles.
- *
- * NOTE: adding a new format token requires adding it both to {@link LOG_FORMAT_REGEX} and to the
- * token-gating checks in {@link formatLogOutput} below.
- */
 export const createFormatContext = (options: Options): FormatContext => {
   const { config } = options
   const useColors = shouldUseColors(options)
@@ -337,20 +338,19 @@ const stringifyTreeValue = (value: unknown): string => {
   if (typeof value === 'string') {
     return sanitizeLogText(value)
   }
-  if (typeof value === 'number' || typeof value === 'boolean') {
+  if (
+    typeof value === 'number' ||
+    typeof value === 'bigint' ||
+    typeof value === 'boolean'
+  ) {
     return String(value)
   }
   if (value instanceof Error) {
     return sanitizeLogText(value.message)
   }
-  try {
-    return sanitizeLogText(JSON.stringify(value))
-  } catch {
-    return sanitizeLogText(String(value))
-  }
+  return sanitizeLogText(value)
 }
 
-/** Nested objects to expand in the context tree (excludes Arrays, Error, Date). */
 const isExpandableObject = (value: unknown): value is Record<string, unknown> =>
   value !== null &&
   typeof value === 'object' &&
@@ -365,7 +365,8 @@ const collectContextEntries = (
 ): [string, string][] => {
   const out: [string, string][] = []
   for (const [k, v] of Object.entries(obj)) {
-    const key = prefix ? `${prefix}.${k}` : k
+    const safeKey = sanitizeLogText(k, MAX_KEY_LENGTH)
+    const key = prefix ? `${prefix}.${safeKey}` : safeKey
     const expandable = isExpandableObject(v) && depthRemaining > 1
 
     if (expandable) {
@@ -409,16 +410,16 @@ const collectStructuredErrorEntries = (error: unknown): [string, string][] => {
   }
   if (isStructuredError(error)) {
     if (error.code !== undefined) {
-      entries.push(['error.code', String(error.code)])
+      entries.push(['error.code', sanitizeLogText(error.code)])
     }
     if (error.why !== undefined) {
-      entries.push(['error.why', String(error.why)])
+      entries.push(['error.why', sanitizeLogText(error.why)])
     }
     if (error.fix !== undefined) {
-      entries.push(['error.fix', String(error.fix)])
+      entries.push(['error.fix', sanitizeLogText(error.fix)])
     }
     if (error.link !== undefined) {
-      entries.push(['error.link', String(error.link)])
+      entries.push(['error.link', sanitizeLogText(error.link)])
     }
     if (error.internal !== undefined) {
       entries.push(['error.internal', stringifyTreeValue(error.internal)])
@@ -454,8 +455,6 @@ export const buildContextTreeLines = (
     )
   }
 
-  // WARNING as well as ERROR: a 4xx is logged at WARNING, and its
-  // `why`/`fix`/`link` are exactly as worth showing as a 5xx's.
   if ((level === 'ERROR' || level === 'WARNING') && data.error !== undefined) {
     entries.push(...collectStructuredErrorEntries(data.error))
   }
@@ -465,20 +464,18 @@ export const buildContextTreeLines = (
 
 const getContextString = (value: unknown): string => {
   if (typeof value === 'object' && value !== null) {
-    return JSON.stringify(value)
+    return sanitizeLogText(value, Number.POSITIVE_INFINITY)
   }
 
   return ''
 }
 
-/** Raw duration/URL parts computed once per log emission by the caller (see `logger/index.ts`). */
 export interface PrecomputedLogParts {
   durationMs: number
   pathname: string
   search: string
 }
 
-/** `{now}`/`{epoch}` share a single `Date` sample; each is only formatted when requested. */
 const getTimestampTokens = (
   tokens: Set<string>,
   translateTime: string | undefined,
@@ -506,7 +503,6 @@ const getMessageToken = (
   return typeof data.message === 'string' ? sanitizeLogText(data.message) : ''
 }
 
-/** `{pathname}`/`{path}`/`{query}` share a single URL parse (or the precomputed one). */
 const getPathnameTokens = (
   tokens: Set<string>,
   request: RequestInfo,
@@ -543,7 +539,6 @@ const getPathnameTokens = (
   return { coloredPathname: getColoredPathname(pathname, useColors), query }
 }
 
-/** `{status}`/`{statusText}` share a single status-code resolution. */
 const getStatusTokens = (
   tokens: Set<string>,
   data: Record<string, unknown>,
@@ -595,7 +590,6 @@ const getContextToken = (
   return getContextString(data.context)
 }
 
-/** `{duration}`/`{speed}` share a single duration sample and slow-threshold check. */
 const getDurationTokens = (
   tokens: Set<string>,
   store: StoreData,
@@ -653,9 +647,7 @@ export const formatLogOutput = ({
   data: Record<string, unknown>
   store: StoreData
   options: Options
-  /** Hoisted per-logger constants; computed on the fly when a direct caller omits it. */
   formatContext?: FormatContext
-  /** Duration/URL parts already computed by the caller; parsed on the fly when omitted. */
   precomputed?: PrecomputedLogParts
 }): FormattedLogOutput => {
   const { config } = options
@@ -701,7 +693,7 @@ export const formatLogOutput = ({
   const icon = tokens.has('{icon}') ? getLevelIcon(level, useColors) : ''
   const requestId = getRequestIdToken(tokens, data)
 
-  const tokenMap: Record<string, string> = {
+  const tokenMap: Record<FormatToken, string> = {
     '{context}': ctxString,
     '{duration}': coloredDuration,
     '{epoch}': epoch,
@@ -723,7 +715,7 @@ export const formatLogOutput = ({
 
   const main = format.replace(
     LOG_FORMAT_REGEX,
-    match => tokenMap[match] ?? match
+    match => tokenMap[match as FormatToken]
   )
 
   const contextLines = buildContextTreeLines(level, data, options, useColors)

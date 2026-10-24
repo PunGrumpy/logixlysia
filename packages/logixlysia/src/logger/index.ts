@@ -14,15 +14,11 @@ import { resolveSampling } from '../sampling'
 import { elapsedMs } from '../utils/duration'
 import { buildPinoRedactPaths } from '../utils/redact'
 import { createFormatContext } from './create-logger'
-import { emit, parseRequestUrlOnce, resolveSinks, shouldLog } from './emit'
+import { emit, isSuppressed, parseRequestUrlOnce, resolveSinks } from './emit'
 import { handleHttpError } from './handle-http-error'
 
 const ZERO_STORE: StoreData = { beforeTime: 0n }
 
-/**
- * A stable stand-in for pino that only builds the real instance on first use,
- * or right away when `config.pino` is set.
- */
 const createLazyPino = (
   config: Options['config'],
   pinoFactory: typeof pino
@@ -62,11 +58,6 @@ const createLazyPino = (
       : {})
   }
 
-  // Pino (and, when configured, its pino-pretty transform stream) is expensive to construct
-  // and is only ever needed when a caller explicitly reads store.pino/logger.pino or configures
-  // config.pino — the plugin's own log path writes via console.* and never touches it. Building
-  // it lazily behind a stable Proxy keeps `store.pino === logger.pino` identity while deferring
-  // the cost until first access.
   const prettyStream = (): ReturnType<typeof pretty> =>
     pretty({
       colorize: process.stdout?.isTTY === true,
@@ -90,21 +81,35 @@ const createLazyPino = (
     return realPino
   }
 
-  const lazyPino = new Proxy({} as Pino, {
+  // Elysia's `state()` ignores an object with no own enumerable keys, so the
+  // target carries one; the traps below forward everything to the real pino
+  // once it exists and never construct it just to enumerate.
+  const target = { level: undefined } as unknown as Pino
+  const lazyPino = new Proxy(target, {
     get(_target, prop) {
-      const target = getPino()
-      const value = (target as unknown as Record<string | symbol, unknown>)[
-        prop
-      ]
+      if (prop === Symbol.toStringTag) {
+        // Elysia 2 deep-merges a deduplicated plugin's store, recursing into
+        // anything that reports as a plain object. The tag makes this proxy a
+        // leaf Elysia replaces instead, so a second instance's pino is never
+        // merged into (or built by) the first's.
+        return 'Pino'
+      }
+      const real = getPino()
+      const value = (real as unknown as Record<string | symbol, unknown>)[prop]
       return typeof value === 'function'
-        ? (value as (...args: unknown[]) => unknown).bind(target)
+        ? (value as (...args: unknown[]) => unknown).bind(real)
         : value
     },
-    has: (_target, prop) => prop in (getPino() as object)
+    getOwnPropertyDescriptor: (base, prop) =>
+      Object.getOwnPropertyDescriptor(realPino ?? base, prop),
+    has: (_target, prop) => prop in (getPino() as object),
+    ownKeys: base => Reflect.ownKeys(realPino ?? base),
+    set(_target, prop, value) {
+      ;(getPino() as unknown as Record<string | symbol, unknown>)[prop] = value
+      return true
+    }
   })
 
-  // Explicit config.pino means the user opted in to pino directly: construct eagerly so
-  // invalid options fail fast at plugin setup time, matching pre-lazy behavior.
   if (config?.pino !== undefined) {
     getPino()
   }
@@ -119,13 +124,10 @@ export const createLogger = (
 ): Logger => {
   const contextStore = externalContextStore ?? createRequestContextStore()
   const { config } = options
-  // Hoisted once per logger instance: colors/format/thresholds/service don't change across
-  // requests within a process lifetime (see createFormatContext's doc comment).
   const formatContext = createFormatContext(options)
 
   const lazyPino = createLazyPino(config, pinoFactory)
 
-  // Resolved once per logger instance: none of these depend on per-request state.
   const sinks = resolveSinks(config)
   const sampling = resolveSampling(config?.sampling)
 
@@ -148,7 +150,6 @@ export const createLogger = (
     })
   }
 
-  /** Resolves the tail verdict and re-emits whatever it rescued. */
   const finalizeRequest = (
     request: RequestInfo,
     store: StoreData,
@@ -189,7 +190,7 @@ export const createLogger = (
     message: string,
     context?: Record<string, unknown>
   ): void => {
-    if (sinks.isEffectivelyDisabled || !shouldLog(level, config?.logFilter)) {
+    if (isSuppressed(sinks, level, config?.logFilter)) {
       return
     }
     const store: StoreData = { beforeTime: process.hrtime.bigint() }

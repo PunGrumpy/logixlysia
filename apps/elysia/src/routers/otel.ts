@@ -3,7 +3,7 @@ import { injectTraceContext } from 'logixlysia/otel'
 
 export const otelRouter = <App extends Logixlysia>(app: App) =>
   app
-    .request(({ request, store }) => {
+    .onRequest(({ request, store }) => {
       injectTraceContext(store.logger, request)
     })
     .get(

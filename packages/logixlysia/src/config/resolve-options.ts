@@ -1,4 +1,5 @@
 import type { LogPreset, Options } from '../interfaces'
+import { requestIdHeaderName } from '../middleware/request-id'
 import { parseInterval, parseRetention, parseSize } from '../utils/rotation'
 
 const VALID_PRESETS: ReadonlySet<LogPreset> = new Set(['dev', 'prod', 'json'])
@@ -54,6 +55,14 @@ const invalidSampling = (detail: string): never => {
 
 const invalidFormatting = (detail: string): never => {
   throw new Error(`logixlysia: invalid formatting config — ${detail}`)
+}
+
+const invalidLogFilter = (detail: string): never => {
+  throw new Error(`logixlysia: invalid logFilter config — ${detail}`)
+}
+
+const invalidOutput = (detail: string): never => {
+  throw new Error(`logixlysia: invalid output config — ${detail}`)
 }
 
 const validateSampling = (config: Options['config']): void => {
@@ -124,6 +133,63 @@ const validateFormatting = (config: Options['config']): void => {
   ) {
     invalidFormatting(
       `slowThreshold (${slowThreshold}) must not exceed verySlowThreshold (${verySlowThreshold})`
+    )
+  }
+}
+
+const validateLogFilter = (config: Options['config']): void => {
+  const level = config?.logFilter?.level
+  if (level === undefined) {
+    return
+  }
+
+  const isKnownLevelList =
+    Array.isArray(level) &&
+    level.every(entry => VALID_SAMPLING_LEVELS.includes(entry))
+  if (!isKnownLevelList) {
+    invalidLogFilter(
+      `level must be an array of DEBUG, INFO, WARNING or ERROR, got ${JSON.stringify(level)}`
+    )
+  }
+}
+
+const validateOutput = (config: Options['config']): void => {
+  if (
+    config?.useTransportsOnly === true &&
+    (config.transports?.length ?? 0) === 0
+  ) {
+    invalidOutput(
+      'useTransportsOnly is set but transports is empty; add a transport or remove useTransportsOnly'
+    )
+  }
+
+  const flushTimeoutMs = config?.flushTimeoutMs
+  if (flushTimeoutMs !== undefined && !isNonNegativeNumber(flushTimeoutMs)) {
+    invalidOutput(
+      `flushTimeoutMs must be a finite number of milliseconds at or above 0, got ${flushTimeoutMs}`
+    )
+  }
+}
+
+/** RFC 9110 `token`: the characters a header field name may contain. */
+const HEADER_NAME_REGEX = /^[!#$%&'*+.^_`|~0-9A-Za-z-]+$/u
+
+const validateRequestId = (config: Options['config']): void => {
+  const requestId = config?.requestId
+  if (
+    typeof requestId !== 'object' ||
+    requestId === null ||
+    requestId.header === undefined
+  ) {
+    return
+  }
+  const raw: unknown = requestId.header
+  if (
+    typeof raw !== 'string' ||
+    !HEADER_NAME_REGEX.test(requestIdHeaderName(raw))
+  ) {
+    throw new Error(
+      `logixlysia: invalid requestId config — header must be a valid HTTP header name, got ${JSON.stringify(raw)}`
     )
   }
 }
@@ -229,5 +295,8 @@ export const resolveOptions = (options: Options = {}): Options => {
   validateLogRotation(resolved.config)
   validateSampling(resolved.config)
   validateFormatting(resolved.config)
+  validateLogFilter(resolved.config)
+  validateOutput(resolved.config)
+  validateRequestId(resolved.config)
   return resolved
 }

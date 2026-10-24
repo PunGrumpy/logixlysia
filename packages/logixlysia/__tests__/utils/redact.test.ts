@@ -24,6 +24,22 @@ describe('redactString', () => {
     expect(result.endsWith('[REDACTED]')).toBe(true)
   })
 
+  test('redacts a JWT-shaped run of eyJ without hanging', () => {
+    for (const input of ['eyJ'.repeat(34_000), 'eyJ_'.repeat(25_000)]) {
+      const start = performance.now()
+      redactString(input)
+      expect(performance.now() - start).toBeLessThan(500)
+    }
+  })
+
+  test('still redacts a JWT after =, a space or a parenthesis', () => {
+    expect(redactString('token=eyJa.eyJb.c&x=1')).toBe('token=[REDACTED]&x=1')
+    expect(redactString('(eyJa.eyJb.c)')).toBe('([REDACTED])')
+    expect(redactString('Bearer eyJhbGciOi.eyJzdWIiOi.sig-_x')).not.toContain(
+      'eyJ'
+    )
+  })
+
   test('redacts IPs', () => {
     expect(redactString('IP is 192.168.1.1')).toBe('IP is [REDACTED]')
   })
@@ -47,7 +63,71 @@ describe('redactString', () => {
       )
     ).toBe('Token: [REDACTED]')
   })
+
+  test('masks the password of a URL in free text', () => {
+    expect(redactString('dsn postgres://app:hunter2@db:5432/main')).toBe(
+      'dsn postgres://app:[REDACTED]@db:5432/main'
+    )
+  })
+
+  test('masks a URL password before the email pass can eat it, even with a dotted host', () => {
+    expect(
+      redactString('dsn postgres://app:hunter2@db.internal.example/main')
+    ).toBe('dsn postgres://app:[REDACTED]@db.internal.example/main')
+  })
+
+  test('masks Bearer and Basic credentials', () => {
+    expect(redactString('got Bearer abcdefghijklmnop.qrs')).toBe(
+      'got Bearer [REDACTED]'
+    )
+    expect(redactString('Authorization: basic dXNlcjpwYXNz')).toBe(
+      'Authorization: basic [REDACTED]'
+    )
+  })
+
+  test('leaves prose after Bearer and Basic alone', () => {
+    const prose = [
+      'the bearer of this ring',
+      'Basic authentication failed for user',
+      'Bearer authentication required',
+      'Basic subscription renewed'
+    ]
+    for (const text of prose) {
+      expect(redactString(text)).toBe(text)
+    }
+  })
+
+  test('leaves a long word after Bearer alone without hanging', () => {
+    const input = `Bearer ${'a'.repeat(65_536)}`
+    const start = performance.now()
+    const result = redactString(input)
+    expect(performance.now() - start).toBeLessThan(500)
+    expect(result).toBe(input)
+  })
+
+  test('masks a long Bearer token without hanging', () => {
+    const start = performance.now()
+    const result = redactString(`Bearer ${'a'.repeat(65_536)}1`)
+    expect(performance.now() - start).toBeLessThan(500)
+    expect(result).toBe('Bearer [REDACTED]')
+  })
+
+  test('masks a URL password after a long word without hanging', () => {
+    const word = 'a'.repeat(65_536)
+    const start = performance.now()
+    const result = redactString(`${word} postgres://app:hunter2@db/main`)
+    expect(performance.now() - start).toBeLessThan(500)
+    expect(result).toBe(`${word} postgres://app:[REDACTED]@db/main`)
+  })
 })
+
+const createHeaders = (): Headers =>
+  new Headers({
+    authorization: 'Bearer TEST_TOKEN',
+    cookie: 'sid=TEST_SESSION',
+    'x-trace': 'ok',
+    'x-user-email': 'a@b.co'
+  })
 
 describe('redact', () => {
   test('redacts deeply nested objects', () => {
@@ -68,7 +148,6 @@ describe('redact', () => {
       }
     })
 
-    // Original should not be mutated
     expect(original.user.email).toBe('test@example.com')
   })
 
@@ -181,6 +260,14 @@ describe('redact', () => {
     expect(original.user.email).toBe('test@example.com')
   })
 
+  test('a redacted Error is never the original instance, even when nothing changed', () => {
+    const original = new Error('nothing sensitive')
+    const result = redact({ error: original }) as { error: Error }
+    expect(result.error).not.toBe(original)
+    expect(result.error).toBeInstanceOf(Error)
+    expect(result.error.message).toBe('nothing sensitive')
+  })
+
   test('only clones the branch containing a change; sibling branches keep their reference', () => {
     const unrelated = { safe: true }
     const original = { a: unrelated, b: { email: 'x@example.com' } }
@@ -188,6 +275,163 @@ describe('redact', () => {
     expect(result).not.toBe(original)
     expect(result.a).toBe(unrelated)
     expect(result.b).not.toBe(original.b)
+  })
+
+  test('redacts an error whose name and message are inherited accessors', () => {
+    const out = redact(
+      new DOMException('timed out', 'TimeoutError')
+    ) as DOMException
+    expect(out).toBeInstanceOf(DOMException)
+    expect(out.name).toBe('TimeoutError')
+    expect(out.message).toBe('timed out')
+    expect(out.code).toBe(23)
+  })
+
+  test('redacts an error with a getter-only name', () => {
+    const err = new Error('x@y.com')
+    Object.setPrototypeOf(
+      err,
+      Object.create(Error.prototype, {
+        name: { configurable: true, get: () => 'Named' }
+      })
+    )
+    const out = redact(err)
+    expect(out.name).toBe('Named')
+    expect(out.message).toBe('[REDACTED]')
+  })
+
+  test('keeps message, name and stack non-enumerable', () => {
+    const out = redact(new Error('x'))
+    expect(Object.keys(out)).toEqual([])
+    expect(JSON.stringify(out)).toBe('{}')
+  })
+
+  test('walks the output of toJSON', () => {
+    const vault = {
+      held: 'k-1',
+      toJSON() {
+        return { apiKey: this.held }
+      }
+    }
+    const out: unknown = redact({ vault })
+    expect(out).toEqual({ vault: { apiKey: '[REDACTED]' } })
+  })
+
+  test('walks a toJSON that returns its own object instead of reporting a cycle', () => {
+    const self = {
+      apiKey: 'k-1',
+      toJSON() {
+        return this
+      }
+    }
+    const out = redact({ self }) as { self: { apiKey: string } }
+    expect(out.self.apiKey).toBe('[REDACTED]')
+  })
+
+  test('walks a CookieMap through toJSON', () => {
+    const out: unknown = redact({
+      jar: new Bun.CookieMap('token=abc; theme=dark')
+    })
+    expect(out).toEqual({ jar: { theme: 'dark', token: '[REDACTED]' } })
+  })
+
+  test('replaces a throwing toJSON with [Unserializable]', () => {
+    const bad = {
+      toJSON: () => {
+        throw new Error('x')
+      }
+    }
+    const out: unknown = redact({ bad })
+    expect(out).toEqual({ bad: '[Unserializable]' })
+  })
+
+  test('passes byte buffers through by reference', () => {
+    const bytes = Buffer.from('abc')
+    expect(redact({ bytes }).bytes).toBe(bytes)
+  })
+
+  test('masks a cookies field by name', () => {
+    expect(redact({ cookies: 'a=b' })).toEqual({ cookies: '[REDACTED]' })
+  })
+
+  test('bounds the walk depth', () => {
+    let deep: unknown = 'leaf'
+    for (let i = 0; i < 20_000; i += 1) {
+      deep = [deep]
+    }
+    const start = performance.now()
+    const out = redact({ deep })
+    expect(performance.now() - start).toBeLessThan(500)
+    expect(JSON.stringify(out)).toContain('[Depth]')
+  })
+
+  describe('built-in non-plain objects', () => {
+    test('redacts Headers values and returns a new Headers', () => {
+      const out = redact({ headers: createHeaders() })
+      expect(out.headers).toBeInstanceOf(Headers)
+      expect(out.headers.get('authorization')).toBe('[REDACTED]')
+      expect(out.headers.get('cookie')).toBe('[REDACTED]')
+      expect(out.headers.get('x-trace')).toBe('ok')
+      expect(out.headers.get('x-user-email')).toBe('[REDACTED]')
+      const serialized = JSON.stringify([...out.headers])
+      expect(serialized).not.toContain('TEST_TOKEN')
+      expect(serialized).not.toContain('TEST_SESSION')
+    })
+
+    test('leaves the original Headers untouched', () => {
+      const original = createHeaders()
+      redact({ headers: original })
+      expect(original.get('authorization')).toBe('Bearer TEST_TOKEN')
+    })
+
+    test('redacts URL query values', () => {
+      const out = redact({
+        u: new URL('https://api.test/p?token=TEST_TOKEN&q=1')
+      })
+      expect(out.u).toBeInstanceOf(URL)
+      expect(out.u.searchParams.get('token')).toBe('redacted')
+      expect(out.u.searchParams.get('q')).toBe('1')
+      expect(out.u.href).not.toContain('TEST_TOKEN')
+    })
+
+    test('redacts URLSearchParams values', () => {
+      const out = redact({ p: new URLSearchParams('password=TEST_PW&x=1') })
+      expect(out.p).toBeInstanceOf(URLSearchParams)
+      expect(out.p.get('password')).toBe('redacted')
+      expect(out.p.get('x')).toBe('1')
+    })
+
+    test('redacts Map entries by key name and by value pattern', () => {
+      const out = redact({
+        m: new Map<unknown, unknown>([
+          ['password', 'TEST_PW'],
+          ['note', 'mail a@b.co'],
+          [1, 'keep']
+        ])
+      })
+      expect(out.m).toBeInstanceOf(Map)
+      expect(out.m.get('password')).toBe('[REDACTED]')
+      expect(out.m.get('note')).toBe('mail [REDACTED]')
+      expect(out.m.get(1)).toBe('keep')
+    })
+
+    test('redacts Set members', () => {
+      const out = redact({ s: new Set(['a@b.co', 'plain']) })
+      expect(out.s).toBeInstanceOf(Set)
+      expect([...out.s]).toEqual(['[REDACTED]', 'plain'])
+    })
+
+    test('replaces a Map that contains itself without stack overflow', () => {
+      const m = new Map<string, unknown>()
+      m.set('self', m)
+      expect(redact({ m }).m.get('self')).toBe('[Circular]')
+    })
+
+    test('masks a URL password whatever its shape', () => {
+      const { href } = redact(new URL('https://user:hunter2@db.internal/x'))
+      expect(href).not.toContain('hunter2')
+      expect(href).toContain('redacted')
+    })
   })
 })
 
@@ -201,6 +445,44 @@ describe('isSensitiveKey', () => {
   test('does not match on substring (no false positives)', () => {
     expect(isSensitiveKey('tokenizer')).toBe(false)
     expect(isSensitiveKey('sessions')).toBe(false)
+  })
+
+  test('matches compound password, secret and token names', () => {
+    const keys = [
+      'newPassword',
+      'current_password',
+      'password_confirmation',
+      'userPassword',
+      'apiSecret',
+      'secretKey',
+      'aws_secret_access_key',
+      'authToken',
+      'sessionToken',
+      'bearerToken',
+      'X-CSRF-Token',
+      'x-access-token',
+      'nextPageToken'
+    ]
+    for (const key of keys) {
+      expect(isSensitiveKey(key)).toBe(true)
+    }
+  })
+
+  test('does not match token counters or other benign compounds', () => {
+    const keys = [
+      'tokenCount',
+      'token_limit',
+      'maxTokens',
+      'inputTokens',
+      'totalTokens',
+      'secretariat',
+      'passwordless',
+      'tokenizer',
+      'sessions'
+    ]
+    for (const key of keys) {
+      expect(isSensitiveKey(key)).toBe(false)
+    }
   })
 })
 
@@ -268,15 +550,10 @@ describe('redactRequest', () => {
       method: 'POST'
     })
 
-    // Mirror Elysia consuming the body before logging runs.
     await req.text()
 
     const out = redactRequest(req)
     expect(out.headers.get('x-forwarded-for')).toBe('[REDACTED]')
-    // The logging-only clone must not carry the original (already-consumed)
-    // stream — re-attaching it is what threw "ReadableStream has already been
-    // used" on Bun <=1.2.x. Asserting a null body guards the fix on every Bun
-    // version, not just the ones where the reuse happens to throw.
     expect(out.body).toBeNull()
   })
 
@@ -300,6 +577,44 @@ describe('redactRequest', () => {
     const out = redactRequest(req, ['promo'])
     expect(out.url).not.toContain('SECRET')
     expect(out.url).toContain('promo=redacted')
+  })
+
+  test('masks every value of a repeated query parameter by pattern', () => {
+    const out = redactRequest(
+      new Request('http://h/p?to=ok&to=bob@example.com')
+    )
+    expect(new URL(out.url).searchParams.getAll('to')).toEqual([
+      'ok',
+      '[REDACTED]'
+    ])
+  })
+
+  test('masks every value of a repeated sensitive query parameter', () => {
+    const out = redactRequest(new Request('http://h/p?apiKey=one&apiKey=two'))
+    expect(new URL(out.url).searchParams.getAll('apiKey')).toEqual([
+      'redacted',
+      'redacted'
+    ])
+  })
+
+  test('redacts percent-encoded emails in path segments', () => {
+    const out = redactRequest(
+      new Request('http://h/users/alice%40example.com/orders')
+    )
+    expect(out.url).not.toContain('alice')
+    expect(out.url).not.toContain('example.com')
+    expect(out.url).toContain('/users/')
+    expect(out.url).toContain('/orders')
+    expect(() => new Request(out.url)).not.toThrow()
+  })
+
+  test('masks sensitive query keys inside a referer header', () => {
+    const req = new Request('http://h/', {
+      headers: { referer: 'https://app.example/cb?token=abc&x=1' }
+    })
+    expect(redactRequest(req).headers.get('referer')).toBe(
+      'https://app.example/cb?token=redacted&x=1'
+    )
   })
 })
 
@@ -388,5 +703,56 @@ describe('IPv4/IPv6 redaction precision', () => {
     const start = performance.now()
     redactString(input)
     expect(performance.now() - start).toBeLessThan(500)
+  })
+})
+
+const throwingTrap = (): never => {
+  throw new Error('trap')
+}
+
+describe('values that cannot be read', () => {
+  test('replaces only the field whose getter throws', () => {
+    const out = redact({
+      a: {
+        get b(): string {
+          throw new Error('g')
+        }
+      },
+      c: 'x'
+    })
+    expect(JSON.stringify(out)).toBe('{"a":{"b":"[Unserializable]"},"c":"x"}')
+  })
+
+  test('replaces a Proxy whose ownKeys or get trap throws', () => {
+    expect(redact({ p: new Proxy({}, { ownKeys: throwingTrap }) })).toEqual({
+      p: '[Unserializable]'
+    })
+    expect(redact({ p: new Proxy({}, { get: throwingTrap }) })).toEqual({
+      p: '[Unserializable]'
+    })
+  })
+
+  test('redacts what an own getter on an Error returns', () => {
+    const error = new Error('x')
+    Object.defineProperty(error, 'detail', {
+      enumerable: true,
+      get: () => 'mail me at someone@example.com'
+    })
+    expect((redact(error) as unknown as { detail: string }).detail).toBe(
+      'mail me at [REDACTED]'
+    )
+  })
+
+  test('keeps the error when an own getter on it throws', () => {
+    const error = new Error('x')
+    Object.defineProperty(error, 'detail', {
+      enumerable: true,
+      get: throwingTrap
+    })
+    let result: unknown
+    expect(() => {
+      result = redact(error)
+    }).not.toThrow()
+    expect((result as { detail: string }).detail).toBe('[Unserializable]')
   })
 })

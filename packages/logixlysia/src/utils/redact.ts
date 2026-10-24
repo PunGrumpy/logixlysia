@@ -3,30 +3,46 @@ const EMAIL_REGEX =
   /[a-zA-Z0-9._%+-]{1,64}@[a-zA-Z0-9.-]{1,253}\.[a-zA-Z]{2,63}/gu
 const IPV4_REGEX =
   /(?<![\w/.])(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(?![\w.])/gu
-/**
- * Bounded IPv6: either all 8 groups, or a single `::` compression. Requiring
- * one of those shapes (rather than "2+ colon-separated hex groups") keeps
- * clock times (`12:30:45`) and MAC addresses (`aa:bb:cc:dd:ee:ff`) from
- * matching.
- */
 const IPV6_REGEX =
   /(?<![\w:])(?:(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}|(?:[0-9a-fA-F]{1,4}:){1,7}:(?:[0-9a-fA-F]{1,4}(?::[0-9a-fA-F]{1,4}){0,6})?|::(?:[0-9a-fA-F]{1,4}(?::[0-9a-fA-F]{1,4}){0,6}))(?![\w:])/gu
-/** Digit runs that may be formatted PANs (spaces/dashes); validated with Luhn before redacting. */
 const CREDIT_CARD_CANDIDATE_REGEX = /\b(?:\d[ -]*?){13,19}\b/gu
-const JWT_REGEX = /eyJ[a-zA-Z0-9_-]+\.eyJ[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+/gu
+/**
+ * Starts only where a token can start: after a character outside the token
+ * alphabet. Otherwise every `eyJ` inside a long run is a start position whose
+ * scan runs to the end of the run, which is quadratic in the run's length.
+ */
+const JWT_REGEX = /(?<![\w-])eyJ[\w-]+\.eyJ[\w-]+\.[\w-]+/gu
+/**
+ * `://user:password@` in free text (the user part may be empty, as in a Redis
+ * URL); a password is a secret whatever it looks like. The scheme in front is
+ * checked by `endsWithUrlScheme` instead of matched here: a pattern that
+ * starts with `[a-z][a-z0-9+.-]*` retries from every letter of a long word,
+ * which is quadratic in the word's length.
+ */
+const URL_PASSWORD_REGEX = /(?<prefix>:\/\/[^\s/?#@:]*:)[^\s/?#@]+@/gu
+const URL_SCHEME_LETTER_REGEX = /[a-z]/iu
+const URL_SCHEME_MARK_REGEX = /[\d+.-]/u
+const HTTP_CREDENTIAL_REGEX =
+  /\b(?<scheme>[Bb]earer|[Bb]asic)\s+(?<token>[\w\-.~+/]{8,}=*)/gu
+const CREDENTIAL_MARK_REGEX = /[\d\-.~+/]/u
+/** No `i` flag, under which `[A-Z]` would match every lowercase letter too. */
+const INNER_CAPITAL_REGEX = /\w[A-Z]/u
+const looksLikeCredential = (token: string): boolean =>
+  CREDENTIAL_MARK_REGEX.test(token) || INNER_CAPITAL_REGEX.test(token)
 
 const PAN_MIN_LEN = 13
 const PAN_MAX_LEN = 19
 
 const REDACTED_TEXT = '[REDACTED]'
 const CIRCULAR_REF = '[Circular]'
+const UNSERIALIZABLE_TEXT = '[Unserializable]'
 
-/** Case-insensitive key/header names whose VALUES are always redacted. */
 export const DEFAULT_REDACT_KEYS: readonly string[] = [
   'authorization',
   'proxy-authorization',
   'cookie',
   'set-cookie',
+  'cookies',
   'x-api-key',
   'api-key',
   'apikey',
@@ -50,12 +66,18 @@ export const DEFAULT_REDACT_KEYS: readonly string[] = [
 
 const CAMEL_CASE_BOUNDARY_REGEX = /(?<before>[a-z0-9])(?<after>[A-Z])/gu
 
-/** Normalize `X_Api-Key` / `apiKey` style variants to `x-api-key` form. */
 const normalizeKeyName = (key: string): string =>
   key
     .replace(CAMEL_CASE_BOUNDARY_REGEX, '$<before>-$<after>')
     .replaceAll('_', '-')
     .toLowerCase()
+
+const SENSITIVE_KEY_PARTS: ReadonlySet<string> = new Set([
+  'passwd',
+  'password',
+  'secret'
+])
+const SENSITIVE_LAST_KEY_PART = 'token'
 
 export const isSensitiveKey = (
   key: string,
@@ -65,13 +87,17 @@ export const isSensitiveKey = (
   if (DEFAULT_REDACT_KEYS.includes(normalized)) {
     return true
   }
+  if (extraKeys?.some(extraKey => normalizeKeyName(extraKey) === normalized)) {
+    return true
+  }
+  const parts = normalized.split('-')
   return (
-    extraKeys?.some(extraKey => normalizeKeyName(extraKey) === normalized) ??
-    false
+    parts.some(part => SENSITIVE_KEY_PARTS.has(part)) ||
+    parts.at(-1) === SENSITIVE_LAST_KEY_PART
   )
 }
 
-/** pino redact paths for one key: top-level and one nesting level. */
+/** pino redact paths for every default and extra key: top-level and one nesting level. */
 export const buildPinoRedactPaths = (
   extraKeys?: readonly string[]
 ): string[] => {
@@ -85,7 +111,6 @@ export const buildPinoRedactPaths = (
   })
 }
 
-/** Luhn checksum; `digits` must contain only `0-9` and length in PAN range. */
 const passesLuhn = (digits: string): boolean => {
   if (digits.length < PAN_MIN_LEN || digits.length > PAN_MAX_LEN) {
     return false
@@ -126,28 +151,81 @@ const redactCreditCardCandidates = (text: string): string =>
     return match
   })
 
-/** Returns `text` unchanged (same value) when nothing matched — callers can compare `=== input`. */
+const endsWithUrlScheme = (text: string, end: number): boolean => {
+  for (let i = end - 1; i >= 0; i -= 1) {
+    const char = text.charAt(i)
+    if (URL_SCHEME_LETTER_REGEX.test(char)) {
+      return true
+    }
+    if (!URL_SCHEME_MARK_REGEX.test(char)) {
+      return false
+    }
+  }
+  return false
+}
+
 export const redactString = (text: string): string => {
   let result = text
 
+  result = result.replace(
+    URL_PASSWORD_REGEX,
+    (match: string, prefix: string, offset: number, whole: string) =>
+      endsWithUrlScheme(whole, offset) ? `${prefix}${REDACTED_TEXT}@` : match
+  )
   result = result.replace(EMAIL_REGEX, REDACTED_TEXT)
   result = result.replace(IPV4_REGEX, REDACTED_TEXT)
   result = result.replace(IPV6_REGEX, REDACTED_TEXT)
   result = redactCreditCardCandidates(result)
   result = result.replace(JWT_REGEX, REDACTED_TEXT)
+  result = result.replace(
+    HTTP_CREDENTIAL_REGEX,
+    (match: string, scheme: string, token: string) =>
+      looksLikeCredential(token) ? `${scheme} ${REDACTED_TEXT}` : match
+  )
 
   return result
 }
 
 /**
- * Host and userinfo cannot contain `[REDACTED]` — `[` begins an IPv6 literal in URLs and breaks parsing.
+ * The host cannot hold `[REDACTED]`: `[` opens an IPv6 literal. Userinfo would
+ * percent-encode it, so one bracket-free token serves both.
  */
 const URL_SAFE_REDACT = 'redacted'
 
 const redactUrlAuthoritySegment = (value: string): string =>
   redactString(value).replaceAll(REDACTED_TEXT, URL_SAFE_REDACT)
 
-/** Apply PII redaction to a request URL while keeping the result parseable by the URL/Request constructors. */
+const redactSearchParams = (
+  params: URLSearchParams,
+  extraKeys?: readonly string[]
+): URLSearchParams => {
+  const result = new URLSearchParams()
+  for (const [key, value] of params) {
+    result.append(
+      key,
+      isSensitiveKey(key, extraKeys) ? URL_SAFE_REDACT : redactString(value)
+    )
+  }
+  return result
+}
+
+const decodeOrRaw = (segment: string): string => {
+  try {
+    return decodeURIComponent(segment)
+  } catch {
+    return segment
+  }
+}
+
+const redactPathSegment = (segment: string): string => {
+  const decoded = decodeOrRaw(segment)
+  const redacted = redactString(decoded)
+  if (decoded === segment) {
+    return redacted
+  }
+  return redacted === decoded ? segment : encodeURIComponent(redacted)
+}
+
 const redactRequestUrl = (
   urlString: string,
   extraKeys?: readonly string[]
@@ -158,26 +236,16 @@ const redactRequestUrl = (
       u.username = redactUrlAuthoritySegment(u.username)
     }
     if (u.password !== '') {
-      u.password = redactUrlAuthoritySegment(u.password)
+      u.password = URL_SAFE_REDACT
     }
     u.hostname = redactUrlAuthoritySegment(u.hostname)
-    u.pathname = redactString(u.pathname)
-    // `searchParams.set` re-serializes the whole query string, so redact
-    // decoded values directly rather than re-running pattern redaction on
-    // `u.search` afterward (which would see already percent-encoded text).
-    // Iterate a copy: `set` below rewrites the live list.
-    for (const key of new URLSearchParams(u.searchParams).keys()) {
-      if (isSensitiveKey(key, extraKeys)) {
-        u.searchParams.set(key, URL_SAFE_REDACT)
-        continue
-      }
-      const value = u.searchParams.get(key)
-      if (value !== null) {
-        const redactedValue = redactString(value)
-        if (redactedValue !== value) {
-          u.searchParams.set(key, redactedValue)
-        }
-      }
+    u.pathname = u.pathname.split('/').map(redactPathSegment).join('/')
+    // Assigning `search` re-serializes the query, so do it only when a value
+    // changed. The values are decoded here, so patterns never run against
+    // percent-encoded text.
+    const query = redactSearchParams(u.searchParams, extraKeys).toString()
+    if (query !== u.searchParams.toString()) {
+      u.search = query
     }
     u.hash = redactString(u.hash)
     return u.toString()
@@ -186,30 +254,80 @@ const redactRequestUrl = (
   }
 }
 
+const URL_VALUED_HEADERS: ReadonlySet<string> = new Set([
+  'content-location',
+  'location',
+  'referer'
+])
+
+const normalizedHref = (value: string): string => {
+  try {
+    return new URL(value).href
+  } catch {
+    return value
+  }
+}
+
+const redactHeaderValue = (
+  name: string,
+  value: string,
+  extraKeys?: readonly string[]
+): string => {
+  if (isSensitiveKey(name, extraKeys)) {
+    return REDACTED_TEXT
+  }
+  if (!URL_VALUED_HEADERS.has(name.toLowerCase())) {
+    return redactString(value)
+  }
+  const redacted = redactRequestUrl(value, extraKeys)
+  // Keep the client's spelling when nothing was masked: serialising a URL
+  // alone adds a trailing slash, and a changed header clones the request.
+  return redacted === normalizedHref(value) ? value : redacted
+}
+
+const redactHeaders = (
+  headers: Headers,
+  extraKeys?: readonly string[]
+): Headers => {
+  const result = new Headers()
+  for (const [name, value] of headers) {
+    result.append(name, redactHeaderValue(name, value, extraKeys))
+  }
+  return result
+}
+
+const MAX_DEPTH = 64
+const DEPTH_TEXT = '[Depth]'
+/** Containers open on the walk. `redact` is synchronous, so one counter serves nested calls too. */
+let depth = 0
+
 const withReentrancyGuard = <T>(
   obj: object,
   inProgress: WeakSet<object>,
   run: () => T
 ): T => {
   inProgress.add(obj)
+  depth += 1
   try {
     return run()
   } finally {
+    depth -= 1
     inProgress.delete(obj)
   }
 }
 
-/**
- * Mutually recursive. One object lets each walker reach the others by
- * property instead of by a binding declared later in the file.
- */
+const UNREADABLE = Symbol('unreadable')
+
+const readToJson = (value: object): unknown => {
+  try {
+    const { toJSON } = value as { toJSON?: unknown }
+    return toJSON
+  } catch {
+    return UNREADABLE
+  }
+}
+
 const walker = {
-  /**
-   * Redacts each item; returns the ORIGINAL array reference when no item changed (zero
-   * allocations for the common no-PII case). A new array is materialized lazily, starting from
-   * the first item that changes — items before that point are known-unchanged, so they're copied
-   * from `value` as-is rather than recomputed.
-   */
   array: (
     value: unknown[],
     inProgress: WeakSet<object>,
@@ -228,9 +346,6 @@ const walker = {
     return result ?? value
   },
 
-  // Errors are exempt from the identity fast path: a redacted Error is always constructed
-  // fresh (even when nothing changed) so consumers never receive the original, potentially
-  // stack-trace-carrying instance by reference.
   error: (
     originalError: Error,
     inProgress: WeakSet<object>,
@@ -240,11 +355,26 @@ const walker = {
     const proto = Object.getPrototypeOf(originalError) as object
     const newError = Object.create(proto) as Error & Record<string, unknown>
 
-    newError.message = redactedMessage
-    newError.name = originalError.name
-
+    // Defined, not assigned: `DOMException` and getter-only subclasses have
+    // accessor `name`/`message` on the prototype, and assigning through
+    // them throws in strict mode. Native errors keep all three non-enumerable.
+    const defineOwn = (key: string, value: unknown): void => {
+      Object.defineProperty(newError, key, {
+        configurable: true,
+        enumerable: false,
+        value,
+        writable: true
+      })
+    }
+    defineOwn('message', redactedMessage)
+    defineOwn('name', originalError.name)
     if (originalError.stack !== undefined) {
-      newError.stack = redactString(originalError.stack)
+      defineOwn('stack', redactString(originalError.stack))
+    }
+    if (originalError instanceof DOMException) {
+      // The copy has no DOMException internal slot, so the prototype's `code`
+      // getter would throw on it; the console tree reads `.code` on errors.
+      defineOwn('code', originalError.code)
     }
 
     const errorRecord = originalError as unknown as Record<string, unknown>
@@ -259,41 +389,82 @@ const walker = {
         continue
       }
 
+      let current: unknown = descriptor.value
       if (descriptor.get !== undefined || descriptor.set !== undefined) {
-        Object.defineProperty(newError, key, descriptor)
-        continue
+        // Read once, on the original: the copy has no internal state for the
+        // getter to read, and what it returns is what a sink would write.
+        try {
+          current = descriptor.get?.call(originalError)
+        } catch {
+          current = UNSERIALIZABLE_TEXT
+        }
       }
 
       const redactedValue = isSensitiveKey(key, extraKeys)
         ? REDACTED_TEXT
-        : walker.value(descriptor.value, inProgress, extraKeys)
+        : walker.value(current, inProgress, extraKeys)
 
       Object.defineProperty(newError, key, {
-        ...descriptor,
-        value: redactedValue
+        configurable: descriptor.configurable,
+        enumerable: descriptor.enumerable,
+        value: redactedValue,
+        writable: descriptor.writable ?? descriptor.set !== undefined
       })
     }
 
     return newError
   },
 
-  /** Same lazy-materialization strategy as {@link walker.array}, for plain objects. */
+  map: (
+    value: Map<unknown, unknown>,
+    inProgress: WeakSet<object>,
+    extraKeys?: readonly string[]
+  ): Map<unknown, unknown> => {
+    const result = new Map<unknown, unknown>()
+    for (const [key, entry] of value) {
+      const sensitive =
+        typeof key === 'string' && isSensitiveKey(key, extraKeys)
+      result.set(
+        key,
+        sensitive ? REDACTED_TEXT : walker.value(entry, inProgress, extraKeys)
+      )
+    }
+    return result
+  },
+
   record: (
     recordValue: Record<string, unknown>,
     inProgress: WeakSet<object>,
     extraKeys?: readonly string[]
-  ): Record<string, unknown> => {
-    const keys = Object.keys(recordValue)
+  ): Record<string, unknown> | string => {
+    let keys: string[]
+    try {
+      keys = Object.keys(recordValue)
+    } catch {
+      return UNSERIALIZABLE_TEXT
+    }
     let result: Record<string, unknown> | undefined
 
     for (const [index, key] of keys.entries()) {
-      const original = recordValue[key]
+      let original: unknown
+      let unreadable = false
+      try {
+        original = recordValue[key]
+      } catch {
+        unreadable = true
+      }
       const sensitive = isSensitiveKey(key, extraKeys)
-      const redacted = sensitive
-        ? REDACTED_TEXT
-        : walker.value(original, inProgress, extraKeys)
+      let redacted: unknown = REDACTED_TEXT
+      if (unreadable) {
+        redacted = UNSERIALIZABLE_TEXT
+      } else if (!sensitive) {
+        redacted = walker.value(original, inProgress, extraKeys)
+      }
 
-      if (result === undefined && (sensitive || redacted !== original)) {
+      if (
+        result === undefined &&
+        (sensitive || unreadable || redacted !== original)
+      ) {
         result = {}
         for (const priorKey of keys.slice(0, index)) {
           result[priorKey] = recordValue[priorKey]
@@ -305,6 +476,37 @@ const walker = {
     }
 
     return result ?? recordValue
+  },
+
+  set: (
+    value: Set<unknown>,
+    inProgress: WeakSet<object>,
+    extraKeys?: readonly string[]
+  ): Set<unknown> =>
+    new Set(
+      Array.from(value, item => walker.value(item, inProgress, extraKeys))
+    ),
+
+  toJson: (
+    value: { toJSON: () => unknown },
+    inProgress: WeakSet<object>,
+    extraKeys?: readonly string[]
+  ): unknown => {
+    let plain: unknown
+    try {
+      plain = value.toJSON()
+    } catch {
+      return UNSERIALIZABLE_TEXT
+    }
+    const toJsonReturnedItself = plain === value
+    if (toJsonReturnedItself) {
+      return walker.record(
+        value as unknown as Record<string, unknown>,
+        inProgress,
+        extraKeys
+      )
+    }
+    return walker.value(plain, inProgress, extraKeys)
   },
 
   value: (
@@ -321,9 +523,6 @@ const walker = {
     }
 
     if (value instanceof Date) {
-      // Dates carry no redactable string content and are never mutated by this module, so they
-      // pass through by reference (part of the identity fast path) instead of being defensively
-      // cloned as before.
       return value
     }
 
@@ -331,9 +530,57 @@ const walker = {
       return CIRCULAR_REF
     }
 
+    if (depth >= MAX_DEPTH) {
+      return DEPTH_TEXT
+    }
+
+    // These types expose their contents only through iteration or toJSON(),
+    // so the key walk below would return them unchanged.
+    if (value instanceof Headers) {
+      return redactHeaders(value, extraKeys)
+    }
+
+    if (value instanceof URLSearchParams) {
+      return redactSearchParams(value, extraKeys)
+    }
+
+    if (value instanceof URL) {
+      try {
+        return new URL(redactRequestUrl(value.href, extraKeys))
+      } catch {
+        return REDACTED_TEXT
+      }
+    }
+
+    if (value instanceof Map) {
+      return withReentrancyGuard(value, inProgress, () =>
+        walker.map(value, inProgress, extraKeys)
+      )
+    }
+
+    if (value instanceof Set) {
+      return withReentrancyGuard(value, inProgress, () =>
+        walker.set(value, inProgress, extraKeys)
+      )
+    }
+
     if (value instanceof Error) {
       return withReentrancyGuard(value, inProgress, () =>
         walker.error(value, inProgress, extraKeys)
+      )
+    }
+
+    if (ArrayBuffer.isView(value) || value instanceof ArrayBuffer) {
+      return value
+    }
+
+    const toJSON = readToJson(value)
+    if (toJSON === UNREADABLE) {
+      return UNSERIALIZABLE_TEXT
+    }
+    if (typeof toJSON === 'function') {
+      return withReentrancyGuard(value, inProgress, () =>
+        walker.toJson(value as { toJSON: () => unknown }, inProgress, extraKeys)
       )
     }
 
@@ -349,19 +596,14 @@ const walker = {
   }
 }
 
-/**
- * Apart from a circular reference, which becomes the marker string, the walk
- * keeps each value's shape: a string stays a string, an array an array, an
- * Error an Error. The input type therefore still describes the output.
- */
 export const redact = <T>(value: T, extraKeys?: readonly string[]): T =>
   walker.value(value, new WeakSet(), extraKeys) as T
 
 /**
  * Clone request URL, method and headers for logging with the same string redaction as {@link redact}.
- * The returned request is a logging-only artifact carrying url/method/headers/signal; it intentionally
- * omits the body so it never re-uses the original (possibly already-consumed) request stream. The
- * original request is left untouched and remains usable.
+ * When nothing needed redacting the original request is returned. Otherwise the result is a
+ * logging-only artifact carrying url/method/headers/signal and no body, so it never re-uses the
+ * original (possibly already-consumed) request stream. The original request is left untouched.
  */
 export const redactRequest = (
   request: Request,
@@ -372,9 +614,7 @@ export const redactRequest = (
   let headersChanged = false
 
   for (const [name, value] of request.headers.entries()) {
-    const redacted = isSensitiveKey(name, extraKeys)
-      ? REDACTED_TEXT
-      : redactString(value)
+    const redacted = redactHeaderValue(name, value, extraKeys)
     if (redacted !== value) {
       headersChanged = true
     }

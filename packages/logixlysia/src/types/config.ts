@@ -112,17 +112,19 @@ export type LogPreset = 'dev' | 'prod' | 'json'
 /** Context passed to {@link Options.config.onError} when a sink fails. */
 export interface SinkErrorContext {
   error: unknown
-  sink: 'enricher' | 'file' | 'rotation' | 'shutdown' | 'transport'
+  sink: 'enricher' | 'file' | 'format' | 'rotation' | 'shutdown' | 'transport'
 }
 
 export interface RequestIdConfig {
   /**
-   * Enable request ID generation.
-   * When used as a boolean on `Options.config.requestId`, `true` enables with defaults.
+   * Set to `false` to turn request IDs off while keeping the object form.
+   * @default true
    */
   enabled?: boolean
   /**
-   * Custom ID generator function.
+   * Custom ID generator function. Its result must be 1-128 characters of
+   * `A-Z a-z 0-9 . _ -`; anything else is reported through `onError` and
+   * replaced with `crypto.randomUUID()`.
    * @default crypto.randomUUID()
    */
   generator?: () => string
@@ -185,9 +187,11 @@ export interface OutputConfig {
   logFilePath?: string
   logRotation?: LogRotationConfig
   /**
-   * Called when a sink (transport, file, rotation) or an enricher fails.
-   * Errors thrown by the hook itself are swallowed. When absent, failures go
-   * to stderr (rate-limited for transports and enrichers).
+   * Called when a sink (transport, file, rotation) or an enricher fails, or
+   * when building or printing a log record fails (`sink: 'format'`). Errors
+   * thrown by the hook itself are swallowed. When absent, failures go to
+   * stderr (rate-limited for transports, file writes, rotation, enrichers
+   * and formatting).
    */
   onError?: (context: SinkErrorContext) => void
   transports?: Transport[]
@@ -243,8 +247,8 @@ export interface RequestTrackingConfig {
    * - `RequestIdConfig` object: Enable with custom header name and/or generator.
    *
    * When enabled, the plugin will:
-   * 1. Read `X-Request-Id` (or custom header) from the incoming request — honoring IDs set by upstream proxies.
-   * 2. Generate a new UUID if no header is present.
+   * 1. Read `X-Request-Id` (or custom header) from the incoming request, honoring an upstream ID that is 1-128 characters of `A-Z a-z 0-9 . _ -`.
+   * 2. Generate a new UUID when the header is absent or fails that check. A `generator` result is held to the same check and replaced with a UUID when it fails.
    * 3. Merge `{ requestId }` into the request context (appears in logs and context tree).
    * 4. Set the header on the outgoing response for client-side tracing.
    */
@@ -252,7 +256,8 @@ export interface RequestTrackingConfig {
 
   /**
    * Enable request-scoped logger propagation via AsyncLocalStorage.
-   * When enabled, a request-scoped logger `log` is also derived on the Elysia context.
+   * When enabled, `useLogger()` returns the current request's logger anywhere in the request's async call chain.
+   * The handler context's `log` is available either way.
    * @default false
    */
   useAsyncLocalStorage?: boolean

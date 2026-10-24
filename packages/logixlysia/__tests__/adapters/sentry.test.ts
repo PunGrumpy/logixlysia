@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test'
+import { DEFAULT_MAX_BATCH_SIZE } from '../../src/adapters/shared'
 import { createSentryTransport } from '../../src/sentry'
 import { stubEnv, stubFetch } from './helpers'
 
@@ -135,4 +136,52 @@ describe('logixlysia/sentry', () => {
       restoreEnv()
     }
   })
+
+  test('a throwing getter in the meta does not reject the flush', async () => {
+    const restoreEnv = stubEnv(CLEAR_ENV)
+    const stub = stubFetch()
+    try {
+      const transport = createSentryTransport({ dsn: DSN })
+      transport.log('INFO', 'x', {
+        a: {
+          get b() {
+            throw new Error('g')
+          }
+        }
+      })
+      await expect(transport.flush()).resolves.toBeUndefined()
+
+      expect(stub.calls).toHaveLength(1)
+      const { items } = parseEnvelope(stub.calls[0]?.body ?? '')
+      expect(items[0]?.attributes.a).toEqual({
+        type: 'string',
+        value: '[Unserializable]'
+      })
+    } finally {
+      stub.restore()
+      restoreEnv()
+    }
+  })
+
+  test.each([{}, { maxEntriesPerRequest: undefined }])(
+    'sends at most 100 logs per envelope with the options %p',
+    async options => {
+      const restoreEnv = stubEnv(CLEAR_ENV)
+      const stub = stubFetch()
+      try {
+        const transport = createSentryTransport({ dsn: DSN, ...options })
+        for (let index = 0; index < 121; index += 1) {
+          transport.log('INFO', `log ${index}`)
+        }
+        await transport.flush()
+
+        expect(
+          stub.calls.map(call => parseEnvelope(call.body).items.length)
+        ).toEqual([DEFAULT_MAX_BATCH_SIZE, 100, 1])
+      } finally {
+        stub.restore()
+        restoreEnv()
+      }
+    }
+  )
 })

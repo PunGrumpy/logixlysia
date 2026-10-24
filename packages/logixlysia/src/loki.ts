@@ -12,6 +12,7 @@ import type {
   LogEntry
 } from './adapters/shared'
 import type { LogLevel } from './interfaces'
+import { stringifyForLog } from './utils/json'
 
 export interface LokiTransportOptions extends BatchTransportOptions {
   /**
@@ -105,11 +106,11 @@ export const createLokiTransport = (
       },
       values: levelEntries.map(entry => [
         toUnixNanos(entry.timestamp),
-        JSON.stringify({ ...entry.meta, message: defaultBody(entry) })
+        stringifyForLog({ ...entry.meta, message: defaultBody(entry) })
       ])
     }))
 
-    return JSON.stringify({ streams })
+    return stringifyForLog({ streams })
   }
 
   return createHttpTransport({

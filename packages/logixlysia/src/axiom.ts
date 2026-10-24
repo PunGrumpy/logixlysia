@@ -5,6 +5,7 @@ import {
   transportError
 } from './adapters/shared'
 import type { AdapterTransport, BatchTransportOptions } from './adapters/shared'
+import { stringifyForLog } from './utils/json'
 
 const DEFAULT_BASE_URL = 'https://api.axiom.co'
 
@@ -71,8 +72,7 @@ export const createAxiomTransport = (
 
   return createHttpTransport({
     body: entries =>
-      JSON.stringify(
-        // Meta first so the adapter-owned fields below always win on collision.
+      stringifyForLog(
         entries.map(entry => ({
           ...entry.meta,
           _time: entry.timestamp.toISOString(),

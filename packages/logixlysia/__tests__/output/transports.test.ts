@@ -1,4 +1,4 @@
-import { describe, expect, mock, test } from 'bun:test'
+import { describe, expect, mock, setSystemTime, test } from 'bun:test'
 import type { Options } from '../../src/interfaces'
 import { logToTransports } from '../../src/output'
 import { spyConsole } from '../_helpers/console'
@@ -8,14 +8,10 @@ import { sleep } from '../_helpers/sleep'
 describe('logToTransports', () => {
   test('calls all transports with level/message/meta', () => {
     const t1 = mock<(lvl: unknown, msg: unknown, metaArg?: unknown) => void>(
-      () => {
-        /* noop */
-      }
+      () => {}
     )
     const t2 = mock<(lvl: unknown, msg: unknown, metaArg?: unknown) => void>(
-      () => {
-        /* noop */
-      }
+      () => {}
     )
 
     const options: Options = {
@@ -60,9 +56,7 @@ describe('logToTransports', () => {
 
   test('computes durationMs from store.beforeTime', () => {
     const t1 = mock<(lvl: unknown, msg: unknown, metaArg?: unknown) => void>(
-      () => {
-        /* noop */
-      }
+      () => {}
     )
     const options: Options = { config: { transports: [{ log: t1 }] } }
     const request = createMockRequest('http://localhost/hello')
@@ -84,9 +78,7 @@ describe('logToTransports', () => {
     expect(Number.isFinite(meta.durationMs as number)).toBe(true)
 
     const t2 = mock<(lvl: unknown, msg: unknown, metaArg?: unknown) => void>(
-      () => {
-        /* noop */
-      }
+      () => {}
     )
     const zeroOptions: Options = { config: { transports: [{ log: t2 }] } }
     const zeroStore = { beforeTime: 0n }
@@ -103,13 +95,9 @@ describe('logToTransports', () => {
     expect(zeroMeta.durationMs).toBe(0)
   })
 
-  // This test must run before any other test that triggers a transport
-  // failure (e.g. the "never throws"/"swallows async rejections" tests
-  // below): `reportTransportError`'s rate limit is module-scoped state that
-  // persists across tests in this file, so it must observe the very first
-  // failure to reliably assert both the log and the rate limit.
   test('reports a throwing transport to stderr, rate-limited', () => {
     const { spies, restore } = spyConsole(['error'])
+    setSystemTime(new Date(Date.now() + 6000))
 
     try {
       const throwing = mock<
@@ -134,7 +122,6 @@ describe('logToTransports', () => {
       const [firstErrorCall] = spies.error.mock.calls
       expect(firstErrorCall?.[0]).toContain('transport failed')
 
-      // A second immediate failure must not log again (rate limit).
       logToTransports({
         data: { message: 'ignored again' },
         level: 'INFO',
@@ -145,6 +132,7 @@ describe('logToTransports', () => {
 
       expect(spies.error).toHaveBeenCalledTimes(1)
     } finally {
+      setSystemTime()
       restore()
     }
   })
@@ -188,7 +176,6 @@ describe('logToTransports', () => {
       store
     })
 
-    // Let promise microtasks run; rejections should be caught internally.
     await sleep(0)
 
     expect(rejecting).toHaveBeenCalledTimes(1)
@@ -229,8 +216,6 @@ describe('logToTransports', () => {
     expect(sink).toBe('transport')
     expect(error).toBeDefined()
 
-    // A second immediate failure still invokes the hook (unlike the stderr
-    // fallback, onError is not rate-limited: the hook owns its own policy).
     logToTransports({
       data: { message: 'ignored again' },
       level: 'INFO',

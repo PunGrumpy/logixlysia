@@ -1,7 +1,7 @@
 import { describe, expect, mock, test } from 'bun:test'
 import { Elysia } from 'elysia'
 import { logixlysia } from '../../src'
-import type { Options } from '../../src/interfaces'
+import type { Options, SinkErrorContext } from '../../src/interfaces'
 
 const UUID_V4_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu
@@ -10,9 +10,7 @@ describe('request ID plugin integration', () => {
   test('auto-merges requestId into log context', async () => {
     const transport = mock<
       (lvl: unknown, msg: unknown, meta?: unknown) => void
-    >(() => {
-      /* noop */
-    })
+    >(() => {})
     const options: Options = {
       config: {
         disableFileLogging: true,
@@ -32,7 +30,6 @@ describe('request ID plugin integration', () => {
       | undefined
     expect(meta?.context?.requestId).toBeDefined()
     expect(typeof meta?.context?.requestId).toBe('string')
-    // UUID v4 format
     expect(meta?.context?.requestId).toMatch(UUID_V4_REGEX)
   })
 
@@ -57,9 +54,7 @@ describe('request ID plugin integration', () => {
   test('honors incoming X-Request-Id header', async () => {
     const transport = mock<
       (lvl: unknown, msg: unknown, meta?: unknown) => void
-    >(() => {
-      /* noop */
-    })
+    >(() => {})
     const options: Options = {
       config: {
         disableFileLogging: true,
@@ -78,10 +73,8 @@ describe('request ID plugin integration', () => {
       })
     )
 
-    // Response header should reflect the incoming ID
     expect(response.headers.get('X-Request-Id')).toBe(incomingId)
 
-    // Transport should also receive the incoming ID
     const meta = transport.mock.calls[0]?.[2] as
       | { context?: { requestId?: string } }
       | undefined
@@ -91,9 +84,7 @@ describe('request ID plugin integration', () => {
   test('disabled by default — no requestId in context', async () => {
     const transport = mock<
       (lvl: unknown, msg: unknown, meta?: unknown) => void
-    >(() => {
-      /* noop */
-    })
+    >(() => {})
     const options: Options = {
       config: {
         disableFileLogging: true,
@@ -106,10 +97,8 @@ describe('request ID plugin integration', () => {
 
     const response = await app.handle(new Request('http://localhost/test'))
 
-    // No X-Request-Id header on response
     expect(response.headers.get('X-Request-Id')).toBeNull()
 
-    // No requestId in log context
     const meta = transport.mock.calls[0]?.[2] as
       | { context?: { requestId?: string } }
       | undefined
@@ -129,9 +118,7 @@ describe('request ID plugin integration', () => {
 
     const response = await app.handle(new Request('http://localhost/test'))
 
-    // Should use the custom header name
     expect(response.headers.get('X-Correlation-Id')).toBeDefined()
-    // Default header should not be set
     expect(response.headers.get('X-Request-Id')).toBeNull()
   })
 
@@ -149,9 +136,7 @@ describe('request ID plugin integration', () => {
         },
         transports: [
           {
-            log: () => {
-              /* noop */
-            }
+            log: () => {}
           }
         ]
       }
@@ -166,12 +151,79 @@ describe('request ID plugin integration', () => {
     expect(res2.headers.get('X-Request-Id')).toBe('custom-2')
   })
 
+  test('falls back to a generated id when the generator throws', async () => {
+    const transport = mock<
+      (lvl: unknown, msg: unknown, meta?: unknown) => void
+    >(() => {})
+    const onError = mock<(context: SinkErrorContext) => void>(() => {})
+    const options: Options = {
+      config: {
+        disableFileLogging: true,
+        disableInternalLogger: true,
+        onError,
+        requestId: {
+          generator: () => {
+            throw new Error('no span')
+          }
+        },
+        transports: [{ log: transport }]
+      }
+    }
+
+    const app = new Elysia().use(logixlysia(options)).get('/test', () => 'ok')
+
+    const response = await app.handle(new Request('http://localhost/test'))
+
+    expect(response.status).toBe(200)
+    expect(transport).toHaveBeenCalledTimes(1)
+    expect(transport.mock.calls[0]?.[0]).toBe('INFO')
+    const meta = transport.mock.calls[0]?.[2] as
+      | { context?: { requestId?: string }; status?: number }
+      | undefined
+    expect(meta?.status).toBe(200)
+    expect(meta?.context?.requestId).toMatch(UUID_V4_REGEX)
+    expect(onError).toHaveBeenCalledTimes(1)
+    const reported = onError.mock.calls[0]?.[0]
+    expect(reported?.sink).toBe('enricher')
+    expect((reported?.error as Error | undefined)?.message).toBe('no span')
+  })
+
+  test('replaces an invalid generated id', async () => {
+    const transport = mock<
+      (lvl: unknown, msg: unknown, meta?: unknown) => void
+    >(() => {})
+    const onError = mock<(context: SinkErrorContext) => void>(() => {})
+    const options: Options = {
+      config: {
+        disableFileLogging: true,
+        disableInternalLogger: true,
+        onError,
+        requestId: { generator: () => 'bad id with spaces' },
+        transports: [{ log: transport }]
+      }
+    }
+
+    const app = new Elysia().use(logixlysia(options)).get('/test', () => 'ok')
+
+    const response = await app.handle(new Request('http://localhost/test'))
+
+    const meta = transport.mock.calls[0]?.[2] as
+      | { context?: { requestId?: string } }
+      | undefined
+    expect(meta?.context?.requestId).toMatch(UUID_V4_REGEX)
+    expect(response.headers.get('X-Request-Id')).toMatch(UUID_V4_REGEX)
+    expect(onError).toHaveBeenCalledTimes(1)
+    const reported = onError.mock.calls[0]?.[0]
+    expect(reported?.sink).toBe('enricher')
+    expect((reported?.error as Error | undefined)?.message).toBe(
+      'generated request id is not valid: bad id with spaces'
+    )
+  })
+
   test('{requestId} token works in customLogFormat', async () => {
     const transport = mock<
       (lvl: unknown, msg: unknown, meta?: unknown) => void
-    >(() => {
-      /* noop */
-    })
+    >(() => {})
     const options: Options = {
       config: {
         customLogFormat: '{method} {pathname} {requestId}',
@@ -185,9 +237,6 @@ describe('request ID plugin integration', () => {
 
     await app.handle(new Request('http://localhost/test'))
 
-    // The transport receives unformatted data, but the internal logger
-    // uses the format string. We verify via the transport that requestId
-    // is in the context.
     const meta = transport.mock.calls[0]?.[2] as
       | { context?: { requestId?: string } }
       | undefined
@@ -197,9 +246,7 @@ describe('request ID plugin integration', () => {
   test('prod preset enables requestId by default', async () => {
     const transport = mock<
       (lvl: unknown, msg: unknown, meta?: unknown) => void
-    >(() => {
-      /* noop */
-    })
+    >(() => {})
     const options: Options = {
       config: {
         disableFileLogging: true,

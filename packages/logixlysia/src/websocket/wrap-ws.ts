@@ -1,8 +1,10 @@
+import { keyOf } from '../context/request-context'
 import type { RequestContextStore } from '../context/request-context'
 import type { Logger, Options, StoreData } from '../interfaces'
 
 export interface WebSocketLike {
   readonly id?: string
+  readonly raw?: object
   readonly store?: { logger?: Logger }
 }
 
@@ -10,13 +12,11 @@ export interface WsHandlerHooks<
   TMessage = unknown,
   TWs extends WebSocketLike = WebSocketLike
 > {
-  close?: (ws: TWs, code?: number, reason?: string) => void
-  message?: (ws: TWs, message: TMessage) => void
-  open?: (ws: TWs) => void
+  close?: (ws: TWs, code?: number, reason?: string) => unknown
+  message?: (ws: TWs, message: TMessage) => unknown
+  open?: (ws: TWs) => unknown
 }
 
-// Synthetic requests are only read (method/url) by the log pipeline, never mutated, so caching
-// one per path avoids allocating a fresh Request on every WS open/message/close log event.
 const wsRequestCache = new Map<string, Request>()
 
 const wsSyntheticRequest = (path: string): Request => {
@@ -38,6 +38,35 @@ const payloadTypeOf = (message: unknown): string => {
   return typeof message
 }
 
+const settleHook = async (
+  pending: Promise<unknown>,
+  done: () => void
+): Promise<unknown> => {
+  let value: unknown
+  try {
+    value = await pending
+  } catch (error) {
+    done()
+    throw error
+  }
+  done()
+  return value
+}
+
+/**
+ * Hands the hook's result back to Elysia untouched, so a returned value is
+ * sent, a generator is iterated and a rejection reaches Elysia's catch. The
+ * lifecycle line is written once the result has settled. The `instanceof
+ * Promise` test is the one Elysia itself uses (`ws/index.mjs:116`).
+ */
+const afterHook = (result: unknown, done: () => void): unknown => {
+  if (result instanceof Promise) {
+    return settleHook(result, done)
+  }
+  done()
+  return result
+}
+
 export const createWsHandlerWrapper = (
   options: Options,
   logger: Logger,
@@ -52,11 +81,9 @@ export const createWsHandlerWrapper = (
     message: string,
     extra?: Record<string, unknown>
   ): void => {
-    const key = ws as object
-    const beforeTime = wsTimings.get(key) ?? process.hrtime.bigint()
+    const beforeTime = wsTimings.get(keyOf(ws)) ?? process.hrtime.bigint()
     const store: StoreData = { beforeTime }
-    // Read-only: immediately spread below into a new object, never retained or mutated.
-    const accumulated = contextStore.peekContext(key)
+    const accumulated = contextStore.peekContext(ws)
     const context =
       Object.keys(accumulated).length > 0 || extra
         ? { ...accumulated, ...extra, wsId: ws.id }
@@ -77,13 +104,16 @@ export const createWsHandlerWrapper = (
   >(
     path: string,
     hooks: THooks
-  ): THooks =>
-    ({
+  ): THooks => {
+    if (typeof path !== 'string') {
+      throw new TypeError(
+        "logixlysia: wrapWs(path, hooks) expects the route path first, e.g. plugin.wrapWs('/chat', { open(ws) {} })"
+      )
+    }
+    return {
       ...hooks,
       close(ws, code, reason) {
-        try {
-          hooks.close?.(ws, code, reason)
-        } finally {
+        const done = (): void => {
           if (options.config?.disableWebSocketLogging !== true) {
             const extra: Record<string, unknown> = {}
             if (code !== undefined) {
@@ -100,30 +130,51 @@ export const createWsHandlerWrapper = (
               Object.keys(extra).length > 0 ? extra : undefined
             )
           }
-          contextStore.clearContext(ws as object)
-          wsTimings.delete(ws as object)
+          contextStore.clearContext(ws)
+          wsTimings.delete(keyOf(ws))
         }
+        let result: unknown
+        try {
+          result = hooks.close?.(ws, code, reason)
+        } catch (error) {
+          done()
+          throw error
+        }
+        return afterHook(result, done)
       },
       message(ws, message) {
-        try {
-          hooks.message?.(ws, message)
-        } finally {
+        const done = (): void => {
           if (options.config?.disableWebSocketLogging !== true) {
             logWs('INFO', ws, path, 'WebSocket message', {
               payloadType: payloadTypeOf(message)
             })
           }
         }
+        let result: unknown
+        try {
+          result = hooks.message?.(ws, message)
+        } catch (error) {
+          done()
+          throw error
+        }
+        return afterHook(result, done)
       },
       open(ws) {
-        wsTimings.set(ws as object, process.hrtime.bigint())
-        try {
-          hooks.open?.(ws)
-        } finally {
+        wsTimings.set(keyOf(ws), process.hrtime.bigint())
+        const done = (): void => {
           if (options.config?.disableWebSocketLogging !== true) {
             logWs('INFO', ws, path, 'WebSocket opened')
           }
         }
+        let result: unknown
+        try {
+          result = hooks.open?.(ws)
+        } catch (error) {
+          done()
+          throw error
+        }
+        return afterHook(result, done)
       }
-    }) as THooks
+    } as THooks
+  }
 }

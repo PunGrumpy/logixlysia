@@ -4,7 +4,8 @@ import {
   envString,
   flattenMeta,
   getPath,
-  transportError
+  transportError,
+  tryParseUrl
 } from './adapters/shared'
 import type {
   AdapterTransport,
@@ -85,16 +86,6 @@ interface ParsedDsn {
   publicKey: string
 }
 
-// URL.canParse is missing on Node.js < 18.17, which this package still supports.
-const tryParseUrl = (value: string): URL | undefined => {
-  try {
-    return new URL(value)
-  } catch {
-    // Malformed URL: fall through to undefined so parseDsn reports the DSN.
-  }
-}
-
-/** Names what's wrong with a DSN without echoing the DSN itself (it carries a secret key). */
 const describeDsnProblem = (
   url: URL | undefined,
   projectId: string | undefined
@@ -197,7 +188,10 @@ export const createSentryTransport = (
       'X-Sentry-Auth': `Sentry sentry_version=7, sentry_client=logixlysia, sentry_key=${publicKey}`
     },
     name: 'Sentry',
-    options,
+    options: {
+      ...options,
+      maxEntriesPerRequest: options.maxEntriesPerRequest ?? 100
+    },
     url: envelopeUrl
   })
 }

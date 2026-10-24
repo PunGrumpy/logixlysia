@@ -6,6 +6,7 @@ import {
   transportError
 } from './adapters/shared'
 import type { AdapterTransport, BatchTransportOptions } from './adapters/shared'
+import { stringifyForLog } from './utils/json'
 
 const DEFAULT_ENDPOINT = 'https://in.logs.betterstack.com'
 
@@ -45,8 +46,7 @@ export const createBetterStackTransport = (
 
   return createHttpTransport({
     body: entries =>
-      JSON.stringify(
-        // Meta first so the adapter-owned fields below always win on collision.
+      stringifyForLog(
         entries.map(entry => ({
           ...entry.meta,
           dt: entry.timestamp.toISOString(),

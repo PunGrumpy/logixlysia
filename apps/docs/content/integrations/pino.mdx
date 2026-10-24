@@ -59,7 +59,7 @@ export const logixlysiaIns = logixlysia({
 export const logger = logixlysiaIns.store.pino
 ```
 
-```ts
+```ts check=skip
 // services/order.service.ts
 import { logger } from '../logger'
 
@@ -78,7 +78,7 @@ export class OrderService {
 }
 ```
 
-```ts
+```ts check=skip
 // index.ts
 import { Elysia } from 'elysia'
 import { logixlysiaIns } from './logger'
@@ -370,7 +370,7 @@ logixlysia({
    pino.info({ duration: 150, operation: 'db_query' }, 'Query completed')
    ```
 
-4. **Redact Sensitive Data** - Always redact sensitive information
+4. **Redact sensitive data** - `pino.redact` masks `store.pino` records only; the plugin's own lines are masked by `autoRedact` (see [configuration](/docs/configuration#autoredact))
 
    ```ts
    logixlysia({
@@ -407,7 +407,7 @@ logixlysia({
 
 7. **Export Pino for Standalone Use** - Use in services, jobs, and utilities
 
-   ```ts
+   ```ts check=skip
    // logger.ts
    export const logger = logixlysiaIns.store.pino
 

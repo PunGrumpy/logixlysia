@@ -29,6 +29,22 @@ export interface HttpErrorInit {
 }
 
 /**
+ * Statuses the Fetch spec forbids a body on — `Response.json` throws for
+ * these, as it does for anything outside 200-599.
+ */
+const NULL_BODY_STATUSES = new Set([101, 103, 204, 205, 304])
+const MIN_RESPONSE_STATUS = 200
+const MAX_RESPONSE_STATUS = 599
+const FALLBACK_RESPONSE_STATUS = 500
+
+const responseStatus = (status: number): number =>
+  status >= MIN_RESPONSE_STATUS &&
+  status <= MAX_RESPONSE_STATUS &&
+  !NULL_BODY_STATUSES.has(status)
+    ? status
+    : FALLBACK_RESPONSE_STATUS
+
+/**
  * An HTTP error carrying the context that makes a failure actionable.
  *
  * `code`, `why`, `fix`, and `link` appear in both the log and the response.
@@ -45,31 +61,13 @@ export interface HttpErrorInit {
  * })
  * ```
  *
- * A bare `new HttpError(404, 'Not found')` behaves exactly as before: the
- * response body is the plain message. Only an error that carries at least one
- * client-facing field responds as JSON.
+ * A bare `new HttpError(404, 'Not found')` responds with the plain message.
+ * Only an error that carries at least one client-facing field responds as
+ * JSON.
  */
-/**
- * Statuses the Fetch spec forbids a body on — `Response.json` throws for
- * these, as it does for anything outside 200-599.
- */
-const NULL_BODY_STATUSES = new Set([101, 103, 204, 205, 304])
-const MIN_RESPONSE_STATUS = 200
-const MAX_RESPONSE_STATUS = 599
-const FALLBACK_RESPONSE_STATUS = 500
-
-/** Falls back to 500 for a status `Response.json` would reject. */
-const responseStatus = (status: number): number =>
-  status >= MIN_RESPONSE_STATUS &&
-  status <= MAX_RESPONSE_STATUS &&
-  !NULL_BODY_STATUSES.has(status)
-    ? status
-    : FALLBACK_RESPONSE_STATUS
-
 export class HttpError extends Error {
   readonly code?: string
   readonly fix?: string
-  /** Log-only diagnostics; see the class doc. */
   declare readonly internal?: unknown
   readonly link?: string
   readonly status: number
@@ -89,15 +87,9 @@ export class HttpError extends Error {
     this.link = init.link
     this.why = init.why
 
-    // Set explicitly — a native subclass otherwise reports the generic
-    // "Error", and the constructor-name fallback breaks under minification.
-    // Then made non-enumerable to match `Error.prototype.name`.
     this.name = 'HttpError'
     Object.defineProperty(this, 'name', { enumerable: false })
 
-    // Non-enumerable so `JSON.stringify`, spreads, and framework serializers
-    // that walk own keys cannot pick it up. Property access still works, which
-    // is all the log pipeline needs.
     Object.defineProperty(this, 'internal', {
       configurable: true,
       enumerable: false,
@@ -105,10 +97,6 @@ export class HttpError extends Error {
       writable: false
     })
 
-    // Elysia renders a thrown error with `toResponse()` when it has one, and
-    // falls back to the plain message otherwise. Defining it only when there
-    // is something structured to say keeps plain errors byte-identical to
-    // their pre-`HttpErrorInit` behaviour.
     const hasClientFields =
       init.code !== undefined ||
       init.why !== undefined ||

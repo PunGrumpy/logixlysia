@@ -104,4 +104,34 @@ describe('logixlysia/better-stack', () => {
       restoreEnv()
     }
   })
+
+  test('serializes BigInts and circular references instead of dropping the batch', async () => {
+    const restoreEnv = stubEnv({
+      ...CLEAR_ENV,
+      BETTER_STACK_SOURCE_TOKEN: 'bs-token'
+    })
+    const stub = stubFetch()
+    try {
+      const transport = createBetterStackTransport()
+      const node: Record<string, unknown> = { name: 'n' }
+      node.self = node
+      transport.log('INFO', 'a', { id: 1n })
+      transport.log('INFO', 'b', { ok: true })
+      transport.log('INFO', 'c', { node })
+      await transport.flush()
+
+      expect(stub.calls).toHaveLength(1)
+      const events = JSON.parse(stub.calls[0]?.body ?? '[]') as Record<
+        string,
+        unknown
+      >[]
+      expect(events).toHaveLength(3)
+      expect(events[0]?.id).toBe('1')
+      expect(events[1]?.ok).toBe(true)
+      expect(events[2]?.node).toMatchObject({ self: '[Circular]' })
+    } finally {
+      stub.restore()
+      restoreEnv()
+    }
+  })
 })

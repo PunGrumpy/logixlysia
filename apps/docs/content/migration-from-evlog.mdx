@@ -7,7 +7,8 @@ description: Map evlog wide events to Logixlysia request context and access logs
 
 **evlog**
 
-```ts
+```ts check=skip
+import { Elysia } from 'elysia'
 import { evlog } from 'evlog/elysia'
 
 new Elysia().use(evlog({ drain: myDrain }))
@@ -16,6 +17,7 @@ new Elysia().use(evlog({ drain: myDrain }))
 **Logixlysia**
 
 ```ts
+import { Elysia } from 'elysia'
 import logixlysia from 'logixlysia'
 
 new Elysia().use(logixlysia({ preset: 'prod' }))
@@ -23,30 +25,23 @@ new Elysia().use(logixlysia({ preset: 'prod' }))
 
 ## Context accumulation
 
-With `useAsyncLocalStorage: true`, prefer the derived `log` on the handler context:
+`log` is always on the handler context; outside a handler, `store.logger` takes the `request` explicitly, and `useLogger()` needs `useAsyncLocalStorage: true` (it is a no-op without it).
 
-| evlog | Logixlysia |
-| --- | --- |
-| `log.set({ userId: 'x' })` | `({ log }) => log.mergeContext({ userId: 'x' })` |
-| `log.set({ cart: { total: 99 } })` | `({ log }) => log.mergeContext({ cart: { total: 99 } })` |
-| `useLogger()` | `useLogger()` from `logixlysia` |
-
-Without `useAsyncLocalStorage`, use `store.logger` and pass `request` explicitly:
-
-| evlog | Logixlysia |
-| --- | --- |
-| `log.set({ userId: 'x' })` | `store.logger.mergeContext(request, { userId: 'x' })` |
-| `log.set({ cart: { total: 99 } })` | `store.logger.mergeContext(request, { cart: { total: 99 } })` |
+| evlog | Logixlysia, in a handler | Logixlysia, with a `request` in hand |
+| --- | --- | --- |
+| `log.set({ userId: 'x' })` | `({ log }) => log.mergeContext({ userId: 'x' })` | `store.logger.mergeContext(request, { userId: 'x' })` |
+| `log.set({ cart: { total: 99 } })` | `({ log }) => log.mergeContext({ cart: { total: 99 } })` | `store.logger.mergeContext(request, { cart: { total: 99 } })` |
+| `useLogger()` | `useLogger()` from `logixlysia` | `useLogger()` from `logixlysia` |
 
 ## Emitting the request log
 
 evlog:
 
-```ts
+```ts check=skip
 log.emit({ status: 200 })
 ```
 
-Logixlysia emits the access log automatically in `afterHandle`. Use a custom log only when you need to skip the default line:
+Logixlysia emits the access log automatically once Elysia has produced the response. Use a custom log only when you need to skip the default line:
 
 ```ts
 store.logger.info(request, 'handled manually')
@@ -71,7 +66,7 @@ mergeAIMetrics(store.logger, request, {
 
 ## Tracing
 
-Use `injectTraceContext` from `logixlysia/otel` in the `request` hook (see [OpenTelemetry](/docs/integrations/otel)).
+Use `injectTraceContext` from `logixlysia/otel` in `onRequest` (see [OpenTelemetry](/docs/integrations/otel)).
 
 ## Drains vs transports
 
@@ -90,6 +85,7 @@ evlog **drains** map to Logixlysia **adapters**, which are transports:
 | `evlog/sentry` | `createSentryTransport()` from `logixlysia/sentry` |
 
 ```ts
+import logixlysia from 'logixlysia'
 import { createAxiomTransport } from 'logixlysia/axiom'
 
 logixlysia({
@@ -139,6 +135,7 @@ See [Sampling](/docs/features/sampling).
 `config.enrichers` runs contributors on every request and merges their output into the request context. `logixlysia/enrichers` ships `traceparentEnricher`, `userAgentEnricher`, `geoEnricher`, and `sizeEnricher`.
 
 ```ts
+import logixlysia from 'logixlysia'
 import { geoEnricher, traceparentEnricher } from 'logixlysia/enrichers'
 
 logixlysia({

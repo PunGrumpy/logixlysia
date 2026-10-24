@@ -89,6 +89,22 @@ describe('logixlysia/posthog', () => {
     }
   })
 
+  test('maps a BigInt user id to distinct_id', async () => {
+    const restoreEnv = stubEnv(CLEAR_ENV)
+    const stub = stubFetch()
+    try {
+      const transport = createPostHogTransport({ apiKey: 'phc_test' })
+      transport.log('INFO', 'x', { context: { userId: 42n } })
+      await transport.flush()
+
+      const payload = JSON.parse(stub.calls[0]?.body ?? '{}') as CaptureBatch
+      expect(payload.batch[0]?.distinct_id).toBe('42')
+    } finally {
+      stub.restore()
+      restoreEnv()
+    }
+  })
+
   test('supports EU host and custom event name and identity field', async () => {
     const restoreEnv = stubEnv(CLEAR_ENV)
     const stub = stubFetch()

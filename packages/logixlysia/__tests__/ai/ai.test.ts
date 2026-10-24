@@ -7,9 +7,7 @@ describe('logixlysia/ai', () => {
   test('mergeAIMetrics adds ai object to access log context', async () => {
     const transport = mock<
       (lvl: unknown, msg: unknown, meta?: unknown) => void
-    >(() => {
-      /* noop */
-    })
+    >(() => {})
 
     const app = new Elysia()
       .use(
@@ -45,9 +43,7 @@ describe('logixlysia/ai', () => {
   test('all AIMetrics fields are preserved in context', async () => {
     const transport = mock<
       (lvl: unknown, msg: unknown, meta?: unknown) => void
-    >(() => {
-      /* noop */
-    })
+    >(() => {})
 
     const allMetrics = {
       calls: 3,
@@ -89,9 +85,7 @@ describe('logixlysia/ai', () => {
   test('empty metrics object is a no-op', async () => {
     const transport = mock<
       (lvl: unknown, msg: unknown, meta?: unknown) => void
-    >(() => {
-      /* noop */
-    })
+    >(() => {})
 
     const app = new Elysia()
       .use(

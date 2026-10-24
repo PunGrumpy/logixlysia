@@ -12,9 +12,7 @@ interface CapturedMeta {
 
 const createCaptureTransport = (config: Options['config'] = {}) => {
   const transport = mock<(lvl: unknown, msg: unknown, meta?: unknown) => void>(
-    () => {
-      /* noop */
-    }
+    () => {}
   )
   const options: Options = {
     config: {
@@ -100,7 +98,7 @@ describe('logixlysia plugin - request lifecycle', () => {
     expect(transport).toHaveBeenCalledTimes(1)
   })
 
-  test('an error thrown in afterHandle yields one success line and one error line with real duration and context', async () => {
+  test('an error thrown in afterHandle yields one error line with real duration and context', async () => {
     const { options, transport } = createCaptureTransport({ requestId: true })
 
     const app = new Elysia().use(logixlysia(options)).get(
@@ -116,10 +114,12 @@ describe('logixlysia plugin - request lifecycle', () => {
 
     await app.handle(new Request('http://localhost/boom'))
 
-    expect(transport).toHaveBeenCalledTimes(2)
-    const errorRecord = recordAt(transport, 1)
-    expect(errorRecord.meta.durationMs).toBeGreaterThan(0)
-    expect(errorRecord.meta.context?.requestId).toBeDefined()
+    expect(transport).toHaveBeenCalledTimes(1)
+    const { level, meta } = recordAt(transport, 0)
+    expect(level).toBe('ERROR')
+    expect(meta.status).toBe(500)
+    expect(meta.durationMs).toBeGreaterThanOrEqual(10)
+    expect(meta.context?.requestId).toBeDefined()
   })
 
   test('custom logs report elapsed request time', async () => {

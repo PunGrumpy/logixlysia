@@ -75,14 +75,21 @@ ip: true
 1. `x-forwarded-for` — uses the first (leftmost) IP in the comma-separated list (the original client when behind proxies)
 2. `x-real-ip` — fallback when `x-forwarded-for` is not present
 
+Both headers are set by whoever sends the request unless a proxy in front of the app overwrites them, so treat the value as a hint for dashboards, not as an identity.
+
 These headers are typically set by reverse proxies (nginx, Caddy, Cloudflare, etc.) and load balancers. When testing locally (localhost or LAN) without a proxy, these headers are usually absent, so the `{ip}` placeholder will be empty. To test IP logging locally, you can pass a header manually, e.g. `curl -H 'x-real-ip: 1.2.3.4' http://localhost:3000/`.
 
 ### `autoRedact`
 
-Automatically redacts sensitive data from log messages, context objects, errors, and request headers before they are outputted. Redaction runs in two ways:
+Automatically redacts sensitive data from log messages, context objects, errors, and request headers before they are outputted. Redaction runs in three ways:
 
 1. **By key/header name** — a built-in, case-insensitive denylist (`authorization`, `cookie`, `x-api-key`, `password`, `secret`, `token`, `session`, and more) wholly redacts the value of any matching object key or request header, regardless of what the value looks like. `-`, `_`, and camelCase variants (`x-api-key`, `x_api_key`, `xApiKey`) all match.
-2. **By value pattern** — emails, IP addresses, Luhn-valid payment card numbers, and JWTs are redacted wherever they appear in strings, even in fields not covered by the key denylist.
+2. **By value pattern** — emails, IP addresses, Luhn-valid payment card numbers, JWTs, the password part of a URL, and `Bearer`/`Basic` credentials are redacted wherever they appear in strings, even in fields not covered by the key denylist.
+3. **Through `toJSON`** — a value with a `toJSON` method (Bun's `CookieMap`, your own classes) is redacted as what it serializes to. Errors keep their class.
+
+Redaction also applies inside `Headers`, `URL`, `URLSearchParams`, `Map`, and `Set` values, not only plain objects and arrays.
+
+The query of an absolute URL in a `referer`, `location` or `content-location` header is checked by key like a request URL. Values nested deeper than 64 levels are replaced by `"[Depth]"`, and a value whose `toJSON` throws by `"[Unserializable]"`.
 
 Value-pattern redaction is best-effort — it only catches values matching those specific shapes. Always prefer key-based redaction (`redactKeys`) for known sensitive fields instead of relying on their value happening to match a pattern. For free-text PII that has no fixed shape — names, street addresses, phone numbers, national IDs — see [neural PII redaction](/docs/integrations/desertant), which runs an on-device model over records on their way to a transport.
 
@@ -96,6 +103,8 @@ autoRedact: true
 ### `redactKeys`
 
 Additional key/header names to redact when `autoRedact` is enabled, extending the built-in denylist. Matching is case-insensitive and normalizes `-`, `_`, and camelCase variants. The same key-name matching also applies to query-string parameter names, since transports receive the full request URL.
+
+Keys containing the whole word `password`, `passwd`, or `secret`, or ending in `token`, are always sensitive, whether written in camelCase, `snake_case`, or `kebab-case`. For example, `newPassword` and `X-CSRF-Token` match. `tokenizer` and `maxTokens` don't.
 
 - **Type:** `string[]`
 - **Default:** `undefined`
@@ -172,7 +181,7 @@ Custom log message format using placeholders.
 - **Default:** `undefined`
 
 ```ts
-customLogFormat: '{now} {level} {duration}ms {method} {pathname} {status}'
+customLogFormat: '{now} {level} {duration} {method} {pathname} {status}'
 ```
 
 When `customLogFormat` is omitted, Logixlysia uses a built-in default that includes `{now}`, `{service}`, `{icon}`, `{method}`, `{pathname}`, `{status}`, `{duration}`, `{message}`, and `{speed}`.
@@ -184,14 +193,18 @@ Available placeholders:
 - `{duration}` - Request duration (formatted, e.g. `12ms`, `1.5s`)
 - `{method}` - HTTP method
 - `{pathname}` - Request path
+- `{path}` - Alias of `{pathname}`
+- `{query}` - Raw query string (e.g. `?id=123`)
 - `{status}` - Response status code
 - `{statusText}` - HTTP status text from Node’s `http.STATUS_CODES` (e.g. `Not Found` for 404)
 - `{message}` - Custom message
 - `{icon}` - Logixlysia fox (`🦊`); with colors enabled, a level-colored background chip around the emoji
 - `{speed}` - When duration is at or above `verySlowThreshold`, appends `⚡ slow` (yellow when colors are on)
 - `{service}` - Service label from the `service` config option, shown as `[name] ` (dim when colors are on); empty if unset
+- `{context}` - Request context as JSON when `showContextTree` is off; empty while the context tree shows it
 - `{ip}` - Client IP (from `x-forwarded-for` or `x-real-ip`; see `ip` option)
-- `{epoch}` - Unix timestamp
+- `{epoch}` - Unix time in milliseconds
+- `{requestId}` - Request ID when `requestId` is on; empty otherwise
 
 ### `service`
 
@@ -278,6 +291,23 @@ Use only transports, disable console and file logging.
 useTransportsOnly: true
 ```
 
+`useTransportsOnly: true` requires at least one entry in `transports`. If `transports` is empty or missing, the plugin throws `logixlysia: invalid output config` when you construct it. This includes a conditional list that can end up empty, such as `token ? [createAxiomTransport({ apiKey: token })] : []`. Set `useTransportsOnly` only when a transport is present:
+
+```ts
+const token = process.env.AXIOM_API_KEY
+
+const app = new Elysia().use(
+  logixlysia({
+    config: {
+      transports: token ? [createAxiomTransport({ apiKey: token })] : [],
+      useTransportsOnly: Boolean(token)
+    }
+  })
+)
+```
+
+To turn every sink off, set `disableInternalLogger: true` and `disableFileLogging: true` instead.
+
 ### `disableInternalLogger`
 
 Disable console logging.
@@ -302,9 +332,9 @@ disableFileLogging: true
 
 ### `onError`
 
-Called when a sink (transport, file, or rotation) or an [enricher](/docs/features/enrichers) fails, and when a shutdown flush runs out of time (`sink: 'shutdown'`). Errors thrown by the hook itself are swallowed. When absent, failures go to stderr (rate-limited for transports and enrichers).
+Called when a sink (transport, file, or rotation) or an [enricher](/docs/features/enrichers) fails, and when a shutdown flush runs out of time (`sink: 'shutdown'`). `sink: 'format'` means building or printing a log record failed. The request itself is unaffected. Errors thrown by the hook itself are swallowed. When absent, failures go to stderr (rate-limited for transports, file writes, rotation, enrichers, and formatting).
 
-- **Type:** `(context: { sink: 'transport' | 'file' | 'rotation' | 'shutdown' | 'enricher'; error: unknown }) => void`
+- **Type:** `(context: { sink: 'transport' | 'file' | 'rotation' | 'shutdown' | 'enricher' | 'format'; error: unknown }) => void`
 - **Default:** `undefined`
 
 ```ts
@@ -319,6 +349,8 @@ How long the plugin waits for transports and the file sink to flush when the app
 
 - **Type:** `number`
 - **Default:** `5000`
+
+The value must be a finite number at or above `0`. `Infinity`, `NaN`, and negative values make the plugin throw `logixlysia: invalid output config` when you construct it.
 
 ```ts
 flushTimeoutMs: 2000
@@ -341,6 +373,43 @@ enrichers: [
 ]
 ```
 
+### `requestId`
+
+Reads the request id from the configured header or generates one, and echoes it on the response; see [request IDs](/docs/features/request-id).
+
+- **Type:** `boolean | RequestIdConfig`
+- **Default:** `undefined`
+
+```ts
+requestId: true
+```
+
+`requestId.header` must be a valid HTTP header name: letters, digits, and ``!#$%&'*+.^_`|~-``, with no spaces. A value such as `'X Request Id'` makes the plugin throw `logixlysia: invalid requestId config` when you construct it. An empty or blank header falls back to `X-Request-Id`.
+
+If a custom `requestId.generator` throws or returns an id that does not match `^[A-Za-z0-9._-]{1,128}$`, the plugin uses a random UUID for that request instead. It reports the failure through `onError` with `sink: 'enricher'`. Without `onError`, it writes the failure to stderr at most once every 5 seconds.
+
+### `useAsyncLocalStorage`
+
+Makes `useLogger()` return the current request's logger from anywhere in the call stack; without it `useLogger()` is a no-op. See [request context](/docs/features/request-context).
+
+- **Type:** `boolean`
+- **Default:** `false`
+
+```ts
+useAsyncLocalStorage: true
+```
+
+### `disableWebSocketLogging`
+
+Turns off the open, message and close lines that `wrapWs` writes; see [WebSocket logging](/docs/features/websocket).
+
+- **Type:** `boolean`
+- **Default:** `false`
+
+```ts
+disableWebSocketLogging: true
+```
+
 ## Filtering Options
 
 ### `logFilter`
@@ -349,6 +418,8 @@ Restricts which log levels get processed. See [Filtering](/docs/features/filteri
 
 - **Type:** `{ level?: LogLevel[] }`
 - **Default:** all levels
+
+`level` must be an array containing only `'DEBUG'`, `'INFO'`, `'WARNING'`, or `'ERROR'`. Any other value, such as `'WARN'`, makes the plugin throw `logixlysia: invalid logFilter config` when you construct it.
 
 ```ts
 logFilter: {
@@ -392,6 +463,28 @@ Path to the log file.
 logFilePath: './logs/app.log'
 ```
 
+### `logDirMode`
+
+Mode for the directories the file sink creates.
+
+- **Type:** `number`
+- **Default:** `0o700`
+
+```ts
+logDirMode: 0o750
+```
+
+### `logFileMode`
+
+Mode for the log files the sink creates. Compressed rotation archives use it too.
+
+- **Type:** `number`
+- **Default:** `0o600`
+
+```ts
+logFileMode: 0o640
+```
+
 ### `logRotation`
 
 Log rotation configuration.
@@ -415,7 +508,9 @@ Maximum file size before rotation.
 - **Format:** `'1k'`, `'1m'`, `'1g'` or bytes
 
 ```ts
-maxSize: '10m'
+logRotation: {
+  maxSize: '10m'
+}
 ```
 
 #### `logRotation.interval`
@@ -433,7 +528,9 @@ Maximum number of files or retention period.
 - **Format:** Number or `'7d'`, `'30d'`
 
 ```ts
-maxFiles: '7d' // or 10
+logRotation: {
+  maxFiles: '7d' // or 10
+}
 ```
 
 #### `logRotation.compress`
@@ -444,7 +541,9 @@ Enable compression for rotated logs.
 - **Default:** `false`
 
 ```ts
-compress: true
+logRotation: {
+  compress: true
+}
 ```
 
 #### `logRotation.compression`
@@ -455,7 +554,9 @@ Compression algorithm.
 - **Default:** `'gzip'`
 
 ```ts
-compression: 'gzip'
+logRotation: {
+  compression: 'gzip'
+}
 ```
 
 ## Pino Options
@@ -481,9 +582,11 @@ pino: {
 
 ### Common Pino Options
 
+Every `pino.*` option configures the pino instance exposed as `store.pino`; none of them changes what the plugin logs for a request.
+
 #### `pino.level`
 
-Minimum log level.
+Minimum level for `store.pino` only. The plugin's own lines are filtered by `logFilter`.
 
 - **Type:** `'fatal' | 'error' | 'warn' | 'info' | 'debug' | 'trace'`
 - **Default:** `'info'`
@@ -536,7 +639,7 @@ See [pino-pretty documentation](https://github.com/pinojs/pino-pretty#options) f
 
 #### `pino.redact`
 
-Redact sensitive fields from logs.
+Redact paths for `store.pino` only. The plugin's own console, file and transport output is masked by `autoRedact` and `redactKeys`; setting `pino.redact` also replaces the automatic paths `autoRedact` would give `store.pino`.
 
 - **Type:** `string[] | object`
 - **Default:** `undefined`
@@ -560,7 +663,7 @@ pino: {
 
 #### `pino.base`
 
-Base fields added to all logs.
+Base fields added to every `store.pino` record. They do not appear on the plugin's own lines.
 
 - **Type:** `object`
 - **Default:** `undefined`
@@ -594,7 +697,7 @@ logixlysia({
     timestamp: {
       translateTime: 'yyyy-mm-dd HH:MM:ss'
     },
-    customLogFormat: '{now} {level} {duration}ms {method} {pathname} {status}',
+    customLogFormat: '{now} {level} {duration} {method} {pathname} {status}',
 
     // File Logging
     logFilePath: './logs/app.log',

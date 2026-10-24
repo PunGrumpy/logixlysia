@@ -1,9 +1,15 @@
+import { STATUS_CODES } from 'node:http'
+import { isStatusResponse } from '../helpers/status'
+import { toText } from './sanitize'
+
+// Elysia copies a `status(code, body)` body into `error.message`, so a message
+// is not always a string.
 export const parseError = (error: unknown): string => {
   if (error instanceof Error) {
-    return error.message
+    return toText(error.message)
   }
   if (error && typeof error === 'object' && 'message' in error) {
-    return error.message as string
+    return toText(error.message)
   }
   return String(error)
 }
@@ -28,9 +34,7 @@ export const isStructuredError = (
     'internal' in value)
 
 export interface NormalizedLoggedError {
-  /** Safe structured representation for data/transport meta. */
   error: Record<string, unknown>
-  /** Safe one-line message for the log line. */
   message: string
 }
 
@@ -103,6 +107,17 @@ export const normalizeLoggedError = (
   error: unknown,
   logErrorPayload: boolean
 ): NormalizedLoggedError => {
+  if (isStatusResponse(error)) {
+    const message =
+      typeof error.response === 'string' && error.response !== ''
+        ? error.response
+        : (STATUS_CODES[error.status] ?? `HTTP ${error.status}`)
+    return {
+      error: { message, name: 'StatusResponse', status: error.status },
+      message
+    }
+  }
+
   if (isValidationErrorLike(error)) {
     const failures = Array.isArray(error.all) ? error.all : []
     const paths = failures.flatMap(failurePaths)

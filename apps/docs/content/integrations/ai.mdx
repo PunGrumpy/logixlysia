@@ -6,6 +6,7 @@ description: Attach LLM usage metrics to request logs
 Import from the `logixlysia/ai` subpath (no required peer dependency):
 
 ```ts
+import { Elysia } from 'elysia'
 import logixlysia from 'logixlysia'
 import { mergeAIMetrics } from 'logixlysia/ai'
 
@@ -28,4 +29,4 @@ const app = new Elysia()
   })
 ```
 
-The final access log `context.ai` object mirrors evlog’s wide-event `ai` field for easier migration.
+The final access log `context.ai` object mirrors evlog’s wide-event `ai` field for easier migration. If the handler made a custom log before `mergeAIMetrics` ran, that log replaces the access line and the `ai` fields reach no sink.

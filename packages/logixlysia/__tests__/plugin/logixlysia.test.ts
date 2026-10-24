@@ -6,9 +6,7 @@ import type { Options } from '../../src/interfaces'
 
 const createCaptureTransport = () => {
   const transport = mock<(lvl: unknown, msg: unknown, meta?: unknown) => void>(
-    () => {
-      /* noop */
-    }
+    () => {}
   )
   const options: Options = {
     config: {
@@ -24,9 +22,7 @@ describe('logixlysia plugin', () => {
   test('auto-logs once when no custom log was emitted', async () => {
     const transport = mock<
       (lvl: unknown, msg: unknown, meta?: unknown) => void
-    >(() => {
-      /* noop */
-    })
+    >(() => {})
     const options: Options = {
       config: {
         disableFileLogging: true,
@@ -47,9 +43,7 @@ describe('logixlysia plugin', () => {
   test('does not duplicate logs when a custom log is emitted', async () => {
     const transport = mock<
       (lvl: unknown, msg: unknown, meta?: unknown) => void
-    >(() => {
-      /* noop */
-    })
+    >(() => {})
     const options: Options = {
       config: {
         disableFileLogging: true,
@@ -79,9 +73,7 @@ describe('logixlysia plugin', () => {
   test('logs errors through transports on exceptions', async () => {
     const transport = mock<
       (lvl: unknown, msg: unknown, meta?: unknown) => void
-    >(() => {
-      /* noop */
-    })
+    >(() => {})
     const options: Options = {
       config: {
         disableFileLogging: true,
@@ -103,9 +95,7 @@ describe('logixlysia plugin', () => {
   test('filters logs by level when logFilter is configured', async () => {
     const transport = mock<
       (lvl: unknown, msg: unknown, meta?: unknown) => void
-    >(() => {
-      /* noop */
-    })
+    >(() => {})
     const options: Options = {
       config: {
         disableFileLogging: true,
@@ -121,16 +111,13 @@ describe('logixlysia plugin', () => {
 
     await app.handle(new Request('http://localhost/test'))
 
-    // Should not log INFO level requests when filter only allows ERROR and WARNING
     expect(transport).toHaveBeenCalledTimes(0)
   })
 
   test('allows all log levels when logFilter is not configured', async () => {
     const transport = mock<
       (lvl: unknown, msg: unknown, meta?: unknown) => void
-    >(() => {
-      /* noop */
-    })
+    >(() => {})
     const options: Options = {
       config: {
         disableFileLogging: true,
@@ -143,7 +130,6 @@ describe('logixlysia plugin', () => {
 
     await app.handle(new Request('http://localhost/test'))
 
-    // Should log INFO level when no filter is applied
     expect(transport).toHaveBeenCalledTimes(1)
     const [levelValue] = transport.mock.calls[0] ?? [undefined]
     expect(levelValue).toBe('INFO')
@@ -152,9 +138,7 @@ describe('logixlysia plugin', () => {
   test('filters custom logs by level', async () => {
     const transport = mock<
       (lvl: unknown, msg: unknown, meta?: unknown) => void
-    >(() => {
-      /* noop */
-    })
+    >(() => {})
     const options: Options = {
       config: {
         disableFileLogging: true,
@@ -169,9 +153,7 @@ describe('logixlysia plugin', () => {
     const app = new Elysia()
       .use(logixlysia(options))
       .get('/test', ({ request, store }) => {
-        // Should be filtered out
         store.logger.info(request, 'custom info')
-        // Should be allowed
         store.logger.error(request, 'custom error')
         return 'ok'
       })
@@ -186,9 +168,7 @@ describe('logixlysia plugin', () => {
   test('allows all levels when logFilter.level is empty', async () => {
     const transport = mock<
       (lvl: unknown, msg: unknown, meta?: unknown) => void
-    >(() => {
-      /* noop */
-    })
+    >(() => {})
     const options: Options = {
       config: {
         disableFileLogging: true,
@@ -204,7 +184,6 @@ describe('logixlysia plugin', () => {
 
     await app.handle(new Request('http://localhost/test'))
 
-    // Should log INFO level when filter level array is empty
     expect(transport).toHaveBeenCalledTimes(1)
     const [levelValue] = transport.mock.calls[0] ?? [undefined]
     expect(levelValue).toBe('INFO')
@@ -213,9 +192,7 @@ describe('logixlysia plugin', () => {
   test('logFilter suppresses HTTP error logs when ERROR level is excluded', async () => {
     const transport = mock<
       (lvl: unknown, msg: unknown, meta?: unknown) => void
-    >(() => {
-      /* noop */
-    })
+    >(() => {})
     const options: Options = {
       config: {
         disableFileLogging: true,
@@ -233,16 +210,13 @@ describe('logixlysia plugin', () => {
 
     await app.handle(new Request('http://localhost/boom'))
 
-    // ERROR-level HTTP exceptions must be suppressed when filtered out
     expect(transport).toHaveBeenCalledTimes(0)
   })
 
   test('logFilter allows HTTP error logs when ERROR level is included', async () => {
     const transport = mock<
       (lvl: unknown, msg: unknown, meta?: unknown) => void
-    >(() => {
-      /* noop */
-    })
+    >(() => {})
     const options: Options = {
       config: {
         disableFileLogging: true,
@@ -260,7 +234,6 @@ describe('logixlysia plugin', () => {
 
     await app.handle(new Request('http://localhost/boom'))
 
-    // ERROR-level HTTP exceptions must be logged when ERROR is in the allowed levels
     expect(transport).toHaveBeenCalledTimes(1)
     const [levelValue] = transport.mock.calls[0] ?? [undefined]
     expect(levelValue).toBe('ERROR')
