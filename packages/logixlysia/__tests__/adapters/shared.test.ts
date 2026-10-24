@@ -647,8 +647,6 @@ describe('createBatchQueue', () => {
     for (const message of ['a', 'b', 'c', 'd']) {
       queue.push(entry({ message }))
     }
-    // Clears the timer, as the timer firing would, so `e` lands in a full
-    // batch with no timer armed.
     const flushing = queue.flush()
     queue.push(entry({ message: 'e' }))
     slow.resolve()
@@ -984,8 +982,6 @@ describe('createBatchQueue', () => {
       name: 'Test',
       onError: () => {
         failures += 1
-        // Logs only the first failure, so that a queue which starts a
-        // request per failure fails this test instead of looping forever.
         if (failures === 1) {
           queue.push(entry({ message: 'failure logged' }))
         }

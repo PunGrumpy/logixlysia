@@ -86,7 +86,6 @@ interface ParsedDsn {
   publicKey: string
 }
 
-/** Names what's wrong with a DSN without echoing it, since error messages reach logs and the DSN carries the project's key. */
 const describeDsnProblem = (
   url: URL | undefined,
   projectId: string | undefined
