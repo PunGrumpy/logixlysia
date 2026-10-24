@@ -4,11 +4,10 @@ import { execSync } from 'node:child_process'
 const SKIP = 0
 const BUILD = 1
 
-// Everything the docs build reads. `lib/version.ts` imports the package's
-// version and the homepage renders it, so a release must rebuild the docs.
+const VERSION_SOURCE = 'packages/logixlysia/package.json'
 const WATCHED = [
   'apps/docs',
-  'packages/logixlysia/package.json',
+  VERSION_SOURCE,
   'packages/typescript-config',
   'bun.lock',
   'turbo.json'
