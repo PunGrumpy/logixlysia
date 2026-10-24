@@ -122,7 +122,9 @@ export interface RequestIdConfig {
    */
   enabled?: boolean
   /**
-   * Custom ID generator function.
+   * Custom ID generator function. Its result must be 1-128 characters of
+   * `A-Z a-z 0-9 . _ -`; anything else is reported through `onError` and
+   * replaced with `crypto.randomUUID()`.
    * @default crypto.randomUUID()
    */
   generator?: () => string
@@ -245,8 +247,8 @@ export interface RequestTrackingConfig {
    * - `RequestIdConfig` object: Enable with custom header name and/or generator.
    *
    * When enabled, the plugin will:
-   * 1. Read `X-Request-Id` (or custom header) from the incoming request — honoring IDs set by upstream proxies.
-   * 2. Generate a new UUID if no header is present.
+   * 1. Read `X-Request-Id` (or custom header) from the incoming request, honoring an upstream ID that is 1-128 characters of `A-Z a-z 0-9 . _ -`.
+   * 2. Generate a new UUID when the header is absent or fails that check. A `generator` result is held to the same check and replaced with a UUID when it fails.
    * 3. Merge `{ requestId }` into the request context (appears in logs and context tree).
    * 4. Set the header on the outgoing response for client-side tracing.
    */
