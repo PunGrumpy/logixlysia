@@ -13,10 +13,10 @@ import { createKeyedMutex } from './keyed-mutex'
 
 const gzipAsync = promisify(gzip)
 
-// Prevents concurrent compression of the same file (keyed by filePath).
+const DEFAULT_FILE_MODE = 0o600
+
 const compressionLock = createKeyedMutex()
 
-/** Reports a sink failure; when omitted, the caller falls back to stderr. */
 export type RotationErrorReporter = (error: unknown) => void
 
 const reportRotationError = (
@@ -62,21 +62,20 @@ export const rotateFile = async (filePath: string): Promise<string> => {
 
 export const compressFile = async (
   filePath: string,
-  onError?: RotationErrorReporter
+  onError?: RotationErrorReporter,
+  fileMode = DEFAULT_FILE_MODE
 ): Promise<void> => {
   const release = await compressionLock.acquire(filePath)
   try {
-    // Check if file still exists (might have been compressed by another process)
     try {
       await fs.access(filePath)
     } catch {
-      // File doesn't exist, already compressed or deleted
       return
     }
 
     const content = await fs.readFile(filePath)
     const compressed = await gzipAsync(content)
-    await fs.writeFile(`${filePath}.gz`, compressed)
+    await fs.writeFile(`${filePath}.gz`, compressed, { mode: fileMode })
     await fs.rm(filePath, { force: true })
   } catch (error) {
     reportRotationError(
@@ -84,7 +83,6 @@ export const compressFile = async (
       error,
       onError
     )
-    throw error
   } finally {
     release()
   }
@@ -110,12 +108,6 @@ const isFulfilled = <T>(
   result: PromiseSettledResult<T>
 ): result is PromiseFulfilledResult<T> => result.status === 'fulfilled'
 
-/**
- * Deletes rotated files beyond `retention`: for `'count'`, keeps the newest
- * `retention.value` files (by mtime); for `'time'`, deletes files older than
- * `retention.value` ms. Individual stat/delete failures are tolerated (via
- * `allSettled`) so one bad file never blocks cleanup of the rest.
- */
 const cleanupRotated = async (
   filePath: string,
   retention: { type: 'count' | 'time'; value: number },
@@ -129,12 +121,10 @@ const cleanupRotated = async (
     return
   }
 
-  // Use Promise.allSettled to handle individual file stat failures gracefully
   const statsResults = await Promise.allSettled(
     rotated.map(async p => ({ path: p, stat: await fs.stat(p) }))
   )
 
-  // Extract successful stats, ignore files that were deleted concurrently
   const stats = statsResults.filter(isFulfilled<FileStat>).map(r => r.value)
 
   let toDelete: FileStat[]
@@ -149,12 +139,10 @@ const cleanupRotated = async (
     toDelete = stats.filter(({ stat }) => now - stat.mtimeMs > retention.value)
   }
 
-  // Delete files individually, continuing even if some fail
   const deleteResults = await Promise.allSettled(
     toDelete.map(({ path }) => fs.rm(path, { force: true }))
   )
 
-  // Log failures but don't crash
   for (const [idx, result] of deleteResults.entries()) {
     if (result.status === 'rejected') {
       reportRotationError(
@@ -169,7 +157,8 @@ const cleanupRotated = async (
 export const performRotation = async (
   filePath: string,
   config: LogRotationConfig,
-  onError?: RotationErrorReporter
+  onError?: RotationErrorReporter,
+  fileMode = DEFAULT_FILE_MODE
 ): Promise<void> => {
   const rotated = await rotateFile(filePath)
   if (!rotated) {
@@ -180,13 +169,7 @@ export const performRotation = async (
   if (shouldCompress) {
     const algo = config.compression ?? 'gzip'
     if (algo === 'gzip') {
-      try {
-        await compressFile(rotated, onError)
-      } catch {
-        // compressFile already reported this error via onError/console.error;
-        // swallow the rethrow here so retention cleanup below still runs and
-        // the failure isn't reported a second time by the caller's catch.
-      }
+      await compressFile(rotated, onError, fileMode)
     }
   }
 
@@ -194,8 +177,4 @@ export const performRotation = async (
     const retention = parseRetention(config.maxFiles)
     await cleanupRotated(filePath, retention, onError)
   }
-
-  // Interval-based triggering lives in `FileSinkImpl.maybeRotate`
-  // (file-sink.ts); performRotation is trigger-agnostic — it renames,
-  // compresses, and cleans up regardless of why rotation fired.
 }

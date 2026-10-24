@@ -57,7 +57,7 @@ export interface Logger {
   ) => void
 }
 
-/** The shape of a request's context bag. Widen it per app to type your fields. */
+/** The default shape of a request's context bag. Pass your own interface to `logixlysia<TFields>()` to type your fields. */
 export type LogFields = Record<string, unknown>
 
 /**

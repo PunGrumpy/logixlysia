@@ -66,9 +66,6 @@ export const routers = new Elysia()
       tags: ['websocket']
     },
     ...logging.wrapWs('/ws', {
-      close() {
-        /* wrapWs logs close automatically */
-      },
       message(ws, message: unknown) {
         ;(ws as unknown as DemoWs).send(message)
       },

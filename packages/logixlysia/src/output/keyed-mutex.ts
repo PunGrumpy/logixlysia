@@ -7,11 +7,6 @@ export interface KeyedMutex {
   acquire: (key: string) => Promise<() => void>
 }
 
-/**
- * Creates an independent keyed mutex: acquisitions for different keys never
- * block each other, while acquisitions for the same key are serialized in
- * FIFO order.
- */
 export const createKeyedMutex = (): KeyedMutex => {
   const locks = new Map<string, Promise<void>>()
 

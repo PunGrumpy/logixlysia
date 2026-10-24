@@ -18,6 +18,10 @@
       ],
       "outputs": ["dist/**", ".vercel/output/**"]
     },
+    "docs#typecheck": {
+      "dependsOn": ["^build", "^typecheck"],
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/packages/logixlysia/src/**"]
+    },
     "dev": {
       "cache": false,
       "persistent": true

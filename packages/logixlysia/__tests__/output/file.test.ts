@@ -3,11 +3,10 @@ import { promises as fs } from 'node:fs'
 import path from 'node:path'
 import type { Options, SinkErrorContext } from '../../src/interfaces'
 import { logToFile } from '../../src/output/file'
+import { spyConsole } from '../_helpers/console'
+import { permBits } from '../_helpers/perm-bits'
 import { createMockRequest } from '../_helpers/request'
 import { createTempDir, removeTempDir } from '../_helpers/tmp'
-
-/** Owner/group/other permission bits as a 3-digit octal string, e.g. '600'. */
-const permBits = (mode: number): string => mode.toString(8).slice(-3)
 
 const MESSAGE_ID_REGEX = /msg-(?<id>\d+)$/u
 
@@ -164,7 +163,6 @@ describe('logToFile', () => {
       const options: Options = { config: {} }
       const total = 50
 
-      // No awaits between calls: all 50 land in the same microtask batch.
       const writes = Array.from({ length: total }, (_, i) =>
         logToFile({
           data: { message: `msg-${i}` },
@@ -176,8 +174,6 @@ describe('logToFile', () => {
         })
       )
 
-      // Every caller's own promise must resolve, proving per-caller
-      // resolution semantics survive batching.
       await Promise.all(writes)
 
       const content = await fs.readFile(filePath, 'utf-8')
@@ -206,7 +202,6 @@ describe('logToFile', () => {
         config: { logRotation: { maxSize: 100 } }
       }
 
-      // This single line already exceeds maxSize, so it rotates on its own.
       await logToFile({
         data: { message: 'x'.repeat(90) },
         filePath,
@@ -216,8 +211,6 @@ describe('logToFile', () => {
         store: { beforeTime: 0n }
       })
 
-      // Small enough to stay under maxSize: proves the live file was
-      // reopened and writes keep landing in it (not the rotated one).
       await logToFile({
         data: { message: 'y' },
         filePath,
@@ -253,7 +246,6 @@ describe('logToFile', () => {
         config: { logRotation: { maxSize: 100 } }
       }
 
-      // Triggers rotation on its own.
       await logToFile({
         data: { message: 'x'.repeat(90) },
         filePath,
@@ -263,9 +255,6 @@ describe('logToFile', () => {
         store: { beforeTime: 0n }
       })
 
-      // Two small writes after the reset: if bytesWritten leaked across the
-      // rotation instead of resetting to 0, these would spuriously rotate
-      // again.
       await logToFile({
         data: { message: 'a' },
         filePath,
@@ -330,9 +319,6 @@ describe('logToFile', () => {
   test('invokes config.onError with sink "file" when the write fails, and swallows a throwing hook', async () => {
     const dir = await createTempDir()
     try {
-      // A regular file where a directory is expected: mkdir(..., {recursive:
-      // true}) fails with ENOTDIR, giving a deterministic, permission-model-
-      // independent write failure.
       const blocker = path.join(dir, 'not-a-directory')
       await fs.writeFile(blocker, 'x')
       const filePath = path.join(blocker, 'nested', 'app.log')
@@ -342,8 +328,6 @@ describe('logToFile', () => {
       })
       const options: Options = { config: { onError } }
 
-      // The hook throwing must not crash the caller; logToFile still
-      // rejects with the original error (callers already .catch() this).
       await expect(
         logToFile({
           data: { message: 'hello' },
@@ -359,6 +343,73 @@ describe('logToFile', () => {
       const [context] = onError.mock.calls[0] ?? [undefined]
       expect(context?.sink).toBe('file')
       expect(context?.error).toBeDefined()
+    } finally {
+      await removeTempDir(dir)
+    }
+  })
+
+  test('reports repeated write failures on stderr at most once per interval', async () => {
+    const dir = await createTempDir()
+    const console = spyConsole(['error'])
+    try {
+      const blocker = path.join(dir, 'blocker')
+      await fs.writeFile(blocker, 'x')
+      const options: Options = { config: {} }
+
+      const writeAndFail = async (): Promise<void> => {
+        await expect(
+          logToFile({
+            data: { message: 'hello' },
+            filePath: path.join(blocker, 'app.log'),
+            level: 'INFO',
+            options,
+            request: createMockRequest('http://localhost/test'),
+            store: { beforeTime: 0n }
+          })
+        ).rejects.toThrow()
+      }
+
+      await writeAndFail()
+      await writeAndFail()
+      await writeAndFail()
+
+      expect(console.spies.error).toHaveBeenCalledTimes(1)
+      expect(console.spies.error.mock.calls[0]?.[0]).toBe(
+        '[logixlysia] failed to write to log file:'
+      )
+    } finally {
+      console.restore()
+      await removeTempDir(dir)
+    }
+  })
+
+  test('creates the compressed archive with the configured logFileMode', async () => {
+    const dir = await createTempDir()
+    try {
+      const filePath = path.join(dir, 'logs', 'archive-mode.log')
+      const options: Options = {
+        config: {
+          logFileMode: 0o640,
+          logRotation: { compress: true, compression: 'gzip', maxSize: 1 }
+        }
+      }
+
+      await logToFile({
+        data: { message: 'x'.repeat(50) },
+        filePath,
+        level: 'INFO',
+        options,
+        request: createMockRequest('http://localhost/test'),
+        store: { beforeTime: 0n }
+      })
+
+      const files = await fs.readdir(path.join(dir, 'logs'))
+      const archives = files.filter(
+        name => name.startsWith('archive-mode.log.') && name.endsWith('.gz')
+      )
+      expect(archives).toHaveLength(1)
+      const { mode } = await fs.stat(path.join(dir, 'logs', archives[0]))
+      expect(permBits(mode)).toBe('640')
     } finally {
       await removeTempDir(dir)
     }

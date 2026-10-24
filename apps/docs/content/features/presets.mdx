@@ -22,11 +22,11 @@ const app = new Elysia().use(
 
 ## Available presets
 
-| Preset | Startup banner | Pretty print | Context tree | `autoRedact` |
-| ------ | -------------- | ------------ | ------------ | ------------ |
-| `dev`  | Yes (banner)   | Yes          | Yes          | No           |
-| `prod` | No             | No           | No           | Yes          |
-| `json` | No             | No           | No           | No           |
+| Preset | Startup banner | Pretty print | Context tree | `autoRedact` | Request ID | Colors |
+| --- | --- | --- | --- | --- | --- | --- |
+| `dev` | Yes (banner) | Yes | Yes | No | No | Yes |
+| `prod` | No | No | No | Yes | Yes | No |
+| `json` | No | No | No | No | No | No |
 
 ## Override example
 

@@ -3,10 +3,6 @@
 // extensions/banner.ts and the default log format from logger/create-logger.ts
 // ({now} {service}{icon} {method} {pathname} {status} {duration} {message}{speed}),
 // including chalk colors, method padding, duration rounding, and the ⚡ slow badge.
-//
-// The terminal is interactive, à la vercel.com/home: the route chips below it
-// append a freshly timestamped log line. The first click stops the scripted
-// replay and the terminal becomes an append-only session.
 import RouteButton from './route-button.astro'
 import RouteTemplate from './route-template.astro'
 import TermLine from './term-line.astro'
@@ -15,12 +11,10 @@ type TermPart = [cls: string, text: string, hook?: string]
 
 interface TermLineData {
   cls?: string
-  /** Pause in ms before this line prints during the replay animation. */
-  delay?: number
+  delayMs?: number
   parts: TermPart[]
 }
 
-// Dual-mode terminal palette: muted ink colors in light mode, vesper in dark.
 const c = {
   banner: 'text-black/55 dark:text-white/60',
   blue: 'text-[#0550AE] dark:text-[#a5d6ff]',
@@ -50,7 +44,7 @@ const banner: TermPart[][] = [
 
 const bannerLines: TermLineData[] = banner.map((parts, index) => ({
   cls: index === banner.length - 1 ? `${c.banner} mb-4` : c.banner,
-  delay: 35,
+  delayMs: 35,
   parts
 }))
 
@@ -62,7 +56,7 @@ const prefix = (time: string): TermPart => [
 const termLines: TermLineData[] = [
   ...bannerLines,
   {
-    delay: 500,
+    delayMs: 500,
     parts: [
       prefix('31.804'),
       [c.foxInfo, ' 🦊 '],
@@ -77,7 +71,7 @@ const termLines: TermLineData[] = [
     ]
   },
   {
-    delay: 350,
+    delayMs: 350,
     parts: [
       prefix('32.108'),
       [c.foxInfo, ' 🦊 '],
@@ -92,7 +86,7 @@ const termLines: TermLineData[] = [
     ]
   },
   {
-    delay: 650,
+    delayMs: 650,
     parts: [
       prefix('33.020'),
       [c.foxWarn, ' 🦊 '],
@@ -107,7 +101,7 @@ const termLines: TermLineData[] = [
     ]
   },
   {
-    delay: 400,
+    delayMs: 400,
     parts: [
       prefix('33.412'),
       [c.foxInfo, ' 🦊 '],
@@ -122,7 +116,7 @@ const termLines: TermLineData[] = [
     ]
   },
   {
-    delay: 600,
+    delayMs: 600,
     parts: [
       prefix('34.001'),
       [c.foxInfo, ' 🦊 '],
@@ -138,7 +132,7 @@ const termLines: TermLineData[] = [
     ]
   },
   {
-    delay: 850,
+    delayMs: 850,
     parts: [
       prefix('35.219'),
       [c.foxError, ' 🦊 '],
@@ -153,7 +147,7 @@ const termLines: TermLineData[] = [
     ]
   },
   {
-    delay: 90,
+    delayMs: 90,
     parts: [
       ['', '  └─ '],
       [c.mint, 'error'],
@@ -163,13 +157,11 @@ const termLines: TermLineData[] = [
   },
   {
     cls: blink,
-    delay: 250,
+    delayMs: 250,
     parts: [[c.muted, '▌']]
   }
 ]
 
-// Routes the visitor can fire into the terminal. `min`/`max` bound the
-// randomized duration; the ts/dur hooks are filled by the script on click.
 const interactiveRoutes = [
   {
     id: 'home',
@@ -340,7 +332,7 @@ const interactiveRoutes = [
         ><span data-term-caret class:list={[c.muted, blink]}>▌</span>
       </div>
       {termLines.map(line => (
-        <TermLine cls={line.cls} delay={line.delay} parts={line.parts} />
+        <TermLine cls={line.cls} delayMs={line.delayMs} parts={line.parts} />
       ))}
     </div>
   </div>
@@ -371,6 +363,8 @@ const interactiveRoutes = [
 </section>
 
 <script>
+  const MAX_TERMINAL_LINES = 28
+
   const sleep = (ms: number): Promise<void> =>
     new Promise(resolve => {
       setTimeout(resolve, ms)
@@ -383,30 +377,23 @@ const interactiveRoutes = [
   const pauseButton =
     terminal?.querySelector<HTMLElement>('[data-term-pause]') ?? null
   const lines = body
-    ? [...body.querySelectorAll<HTMLElement>('[data-delay]')]
+    ? [...body.querySelectorAll<HTMLElement>('[data-delay-ms]')]
     : []
   const command = cmd?.textContent ?? ''
   const reduceMotion = window.matchMedia(
     '(prefers-reduced-motion: reduce)'
   ).matches
 
-  // Flips on the first user-sent request: the scripted replay parks itself
-  // and the terminal becomes an append-only session.
   let interactive = false
 
   if (terminal && body && cmd && caret && !reduceMotion) {
-    // Reserve the final height up front so the replay never shifts layout.
     body.style.minHeight = `${body.offsetHeight}px`
     cmd.textContent = ''
     for (const line of lines) {
       line.style.display = 'none'
     }
 
-    // Replay only while the terminal is on screen, not paused by the user,
-    // and not taken over by the interactive buttons (the visible pause
-    // control keeps this indefinite replay WCAG 2.2.2 compliant). One
-    // consumer awaits the gate at a time, so a single `onReady` slot is
-    // enough.
+    // The visible pause control keeps this indefinite replay WCAG 2.2.2 compliant.
     let visible = false
     let paused = false
     let onReady: (() => void) | undefined
@@ -448,8 +435,6 @@ const interactiveRoutes = [
       })
     }
 
-    // setTimeout chains instead of awaited loops keep each frame's timing
-    // identical while staying sequential.
     const typeCommand = () =>
       new Promise<void>(resolve => {
         let index = 0
@@ -486,14 +471,13 @@ const interactiveRoutes = [
           setTimeout(() => {
             line.style.display = ''
             tick()
-          }, Number(line.dataset.delay) || 40)
+          }, Number(line.dataset.delayMs) || 40)
         }
         tick()
       })
 
     const playRound = async () => {
       await waitUntilReady()
-      // Clear the screen, then replay the whole session.
       cmd.textContent = ''
       caret.style.display = ''
       for (const line of lines) {
@@ -504,7 +488,6 @@ const interactiveRoutes = [
       await sleep(350)
       caret.style.display = 'none'
       await revealLines()
-      // Hold the finished session before clearing for the next run.
       await sleep(3200)
     }
 
@@ -517,7 +500,6 @@ const interactiveRoutes = [
     play()
   }
 
-  // — Interactive demo: the route chips append real log lines. —
   const statusRegion = document.querySelector<HTMLElement>('[data-demo-status]')
 
   const pad = (value: number, length = 2) => String(value).padStart(length, '0')
@@ -531,7 +513,6 @@ const interactiveRoutes = [
       return
     }
     interactive = true
-    // Land the terminal in its finished state: full command, every line shown.
     if (cmd) {
       cmd.textContent = command
     }
@@ -544,8 +525,6 @@ const interactiveRoutes = [
     if (pauseButton) {
       pauseButton.hidden = true
     }
-    // Freeze the height: from here new lines scroll inside the terminal
-    // instead of growing the page on every click.
     const height = body.style.minHeight || `${body.offsetHeight}px`
     body.style.minHeight = height
     body.style.maxHeight = height
@@ -575,15 +554,13 @@ const interactiveRoutes = [
     if (duration) {
       duration.textContent = durationText
     }
-    // Keep the blinking block cursor as the last line.
     const cursor = lines.at(-1)
     if (cursor && cursor.parentElement === body) {
       cursor.before(fragment)
     } else {
       body.append(fragment)
     }
-    // Bounded backlog: the oldest lines scroll away like a real terminal.
-    while (body.childElementCount > 28) {
+    while (body.childElementCount > MAX_TERMINAL_LINES) {
       body.firstElementChild?.remove()
     }
     body.scrollTop = body.scrollHeight

@@ -9,12 +9,6 @@ import { mono, ringDark, sans, sec } from '../lib/theme'
 import { BlockWipe, Glass, Grain, Halftone, Pop, progress } from '../lib/ui'
 import { NoiseField } from './act1-scatter'
 
-/**
- * Act 2: the noisy terminal. Over the halftone field a dark terminal window
- * drifts in (the reference's product-on-halftone shot) and fills with the
- * scattered lines nobody can read at 3 AM. A frosted pill labels the moment.
- */
-
 const LINES = [
   ['12:03:41.002', 'info', 'Request received'],
   ['12:03:41.004', 'debug', 'Resolving session'],
@@ -40,7 +34,6 @@ const FIRST_LINE_DELAY = 0.35
 const LINE_GAP = 0.19
 const WIPE_SECONDS = 1
 
-/** The hot field the wipe reveals and Act 3 opens on. */
 export const HotField = ({ dots = 1 }: { dots?: number }) => (
   <AbsoluteFill
     style={{

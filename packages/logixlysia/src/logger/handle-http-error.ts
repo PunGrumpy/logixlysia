@@ -1,9 +1,10 @@
 import type { RequestContextStore } from '../context/request-context'
+import { isStatusResponse, levelForStatus } from '../helpers/status'
 import type { LogLevel, Options, RequestInfo, StoreData } from '../interfaces'
 import type { SamplingRuntime } from '../sampling'
 import { normalizeLoggedError } from '../utils/error'
 import type { FormatContext } from './create-logger'
-import { emit, shouldLog } from './emit'
+import { emit, isSuppressed, reportFormatError } from './emit'
 import type { Sinks } from './emit'
 
 const isErrorWithStatus = (
@@ -14,9 +15,12 @@ const isErrorWithStatus = (
   'status' in value &&
   typeof (value as { status?: unknown }).status === 'number'
 
-/** The status a thrown value maps to; anything without one is a 500. */
-export const errorStatus = (error: unknown): number =>
-  isErrorWithStatus(error) ? error.status : 500
+export const errorStatus = (error: unknown): number => {
+  if (isStatusResponse(error)) {
+    return error.status
+  }
+  return isErrorWithStatus(error) ? error.status : 500
+}
 
 export const handleHttpError = (
   request: RequestInfo,
@@ -30,33 +34,34 @@ export const handleHttpError = (
 ): void => {
   const { config } = options
 
-  const status = errorStatus(error)
-  const level: LogLevel = status >= 400 && status < 500 ? 'WARNING' : 'ERROR'
+  const status = store.status ?? errorStatus(error)
+  const level: LogLevel =
+    isStatusResponse(error) || status >= 400 ? levelForStatus(status) : 'ERROR'
 
-  // Mirrors emit()'s own gate check, but performed *before* normalizing the
-  // error so a filtered-out/disabled logger never pays for that work.
-  // emit() re-checks the same gate, which is cheap and keeps this function a
-  // thin, provably-correct wrapper around the shared pipeline.
-  if (sinks.isEffectivelyDisabled || !shouldLog(level, config?.logFilter)) {
+  if (isSuppressed(sinks, level, config?.logFilter)) {
     return
   }
 
-  const { error: safeError, message } = normalizeLoggedError(
-    error,
-    config?.logErrorPayload === true
-  )
+  try {
+    const { error: safeError, message } = normalizeLoggedError(
+      error,
+      config?.logErrorPayload === true
+    )
 
-  const data: Record<string, unknown> = { error: safeError, message, status }
+    const data: Record<string, unknown> = { error: safeError, message, status }
 
-  emit({
-    contextStore,
-    data,
-    formatContext,
-    level,
-    options,
-    request,
-    sampling,
-    sinks,
-    store
-  })
+    emit({
+      contextStore,
+      data,
+      formatContext,
+      level,
+      options,
+      request,
+      sampling,
+      sinks,
+      store
+    })
+  } catch (failure) {
+    reportFormatError(failure, config?.onError)
+  }
 }

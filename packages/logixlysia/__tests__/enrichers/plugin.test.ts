@@ -150,9 +150,7 @@ describe('enrichers through the plugin', () => {
 
   test('a throwing enricher is reported and does not break the request', async () => {
     const { events, transport } = createCaptureTransport()
-    const onError = mock((_context: { error: unknown; sink: string }) => {
-      /* noop */
-    })
+    const onError = mock((_context: { error: unknown; sink: string }) => {})
     const app = buildApp(
       {
         enrichers: [
@@ -209,7 +207,7 @@ describe('enrichers through the plugin', () => {
     expect(contextOf(events[0])).toMatchObject({ responseBytes: 4 })
   })
 
-  test('set.headers wins over a header of the same name on the Response', async () => {
+  test('a header on the returned Response wins over set.headers, as on the wire', async () => {
     const { events, transport } = createCaptureTransport()
     const app = new Elysia()
       .use(
@@ -227,10 +225,114 @@ describe('enrichers through the plugin', () => {
         return new Response('body', { headers: { 'content-length': '4' } })
       })
 
-    await app.handle(new Request('http://localhost/precedence'))
+    const response = await app.handle(
+      new Request('http://localhost/precedence')
+    )
 
-    // Elysia applies set.headers last, so the log must agree with the wire.
-    expect(contextOf(events[0])).toMatchObject({ responseBytes: 99 })
+    expect(response.headers.get('content-length')).toBe('4')
+    expect(contextOf(events[0])).toMatchObject({ responseBytes: 4 })
+  })
+
+  test('set-cookie from the returned Response and set.headers both reach the enricher, as on the wire', async () => {
+    const { events, transport } = createCaptureTransport()
+    const app = new Elysia()
+      .use(
+        logixlysia({
+          config: {
+            disableFileLogging: true,
+            disableInternalLogger: true,
+            enrichers: [
+              {
+                response: ({ headers }) => ({
+                  cookies: headers['set-cookie']
+                })
+              }
+            ],
+            transports: [{ log: transport }]
+          }
+        })
+      )
+      .get('/cookies', ({ set }) => {
+        set.headers['set-cookie'] = 'b=2'
+        return new Response('body', { headers: { 'set-cookie': 'a=1' } })
+      })
+
+    const response = await app.handle(new Request('http://localhost/cookies'))
+
+    expect(response.headers.getSetCookie()).toEqual(['a=1', 'b=2'])
+    expect(contextOf(events[0])).toMatchObject({ cookies: ['a=1', 'b=2'] })
+  })
+
+  const cases: [string, () => unknown, string[]][] = [
+    [
+      'an array set-cookie is sent next to the returned Response cookie',
+      () => new Response('body', { headers: { 'set-cookie': 'a=1' } }),
+      ['a=1', 'b=2', 'c=3']
+    ],
+    [
+      'an array set-cookie is split without a Response',
+      () => 'body',
+      ['b=2', 'c=3']
+    ]
+  ]
+  for (const [name, returned, expected] of cases) {
+    test(`${name}, as on the wire`, async () => {
+      const { events, transport } = createCaptureTransport()
+      const app = new Elysia()
+        .use(
+          logixlysia({
+            config: {
+              disableFileLogging: true,
+              disableInternalLogger: true,
+              enrichers: [
+                {
+                  response: ({ headers }) => ({
+                    cookies: headers['set-cookie']
+                  })
+                }
+              ],
+              transports: [{ log: transport }]
+            }
+          })
+        )
+        .get('/cookies', ({ set }) => {
+          set.headers['set-cookie'] = ['b=2', 'c=3']
+          return returned()
+        })
+
+      const response = await app.handle(new Request('http://localhost/cookies'))
+
+      expect(response.headers.getSetCookie()).toEqual(expected)
+      expect(contextOf(events[0])).toMatchObject({
+        cookies: expected.length === 1 ? expected[0] : expected
+      })
+    })
+  }
+
+  test('set.headers fills in a header the returned Response lacks', async () => {
+    const { events, transport } = createCaptureTransport()
+    const app = new Elysia()
+      .use(
+        logixlysia({
+          config: {
+            disableFileLogging: true,
+            disableInternalLogger: true,
+            enrichers: [
+              { response: ({ headers }) => ({ source: headers['x-source'] }) }
+            ],
+            transports: [{ log: transport }]
+          }
+        })
+      )
+      .get('/fill', ({ set }) => {
+        set.headers['x-source'] = 'set-headers'
+        return new Response('body')
+      })
+
+    const response = await app.handle(new Request('http://localhost/fill'))
+
+    expect(response.headers.get('x-source')).toBe('set-headers')
+    expect(contextOf(events[0])).toMatchObject({ source: 'set-headers' })
   })
 
   test('the request id still reaches the response when a Response is returned', async () => {

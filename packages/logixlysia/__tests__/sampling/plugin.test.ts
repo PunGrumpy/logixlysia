@@ -138,15 +138,9 @@ describe('sampling through the plugin', () => {
       }
     })
     const hooks = plugin.wrapWs('/ws', {
-      close(_ws) {
-        /* noop */
-      },
-      message(_ws, _message) {
-        /* noop */
-      },
-      open(_ws) {
-        /* noop */
-      }
+      close(_ws) {},
+      message(_ws, _message) {},
+      open(_ws) {}
     })
     const ws = { id: 'ws-1' }
 

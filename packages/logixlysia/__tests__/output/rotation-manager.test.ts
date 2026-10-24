@@ -6,6 +6,7 @@ import {
   performRotation,
   shouldRotate
 } from '../../src/output/rotation-manager'
+import { permBits } from '../_helpers/perm-bits'
 import { createTempDir, removeTempDir } from '../_helpers/tmp'
 
 const DAY_MS = 86_400_000
@@ -72,7 +73,6 @@ describe('performRotation retention', () => {
       `${filePath}.2026-01-04-00-00-00-000`
     ]
 
-    // Stagger mtimes: index 0 is oldest, index 3 is newest.
     await Promise.all(
       rotatedPaths.map(async (rotatedPath, index) => {
         await fs.writeFile(rotatedPath, `rotated-${index}`)
@@ -81,18 +81,14 @@ describe('performRotation retention', () => {
       })
     )
 
-    // performRotation rotates the live file first, producing a 5th rotated
-    // file (the newest of all), then cleans up down to maxFiles.
     await performRotation(filePath, { maxFiles: 2 })
 
     const entries = await fs.readdir(dir)
     const remainingRotated = entries.filter(name => name.startsWith('app.log.'))
 
     expect(remainingRotated).toHaveLength(2)
-    // The two oldest pre-existing rotated files must be gone.
     expect(remainingRotated).not.toContain('app.log.2026-01-01-00-00-00-000')
     expect(remainingRotated).not.toContain('app.log.2026-01-02-00-00-00-000')
-    // The newest pre-existing rotated file survives.
     expect(remainingRotated).toContain('app.log.2026-01-04-00-00-00-000')
   })
 
@@ -149,12 +145,6 @@ describe('performRotation retention', () => {
       })
     )
 
-    // The rotated file's exact name includes an unpredictable
-    // process.hrtime.bigint() suffix, so it can't be pre-created as a
-    // directory before performRotation picks the name itself. Instead,
-    // spy on the shared fs.promises.writeFile (the same object instance
-    // rotation-manager.ts imports) to fail only the `.gz` write, which
-    // reproduces the same EISDIR-class failure compressFile would hit.
     const originalWriteFile = fs.writeFile.bind(fs)
     const writeFileSpy = spyOn(fs, 'writeFile').mockImplementation(
       async (target, ...args) => {
@@ -181,5 +171,43 @@ describe('performRotation retention', () => {
     const entries = await fs.readdir(dir)
     const remainingRotated = entries.filter(name => name.startsWith('app.log.'))
     expect(remainingRotated).toHaveLength(1)
+  })
+})
+
+describe('performRotation compression', () => {
+  let dir: string
+
+  beforeEach(async () => {
+    dir = await createTempDir()
+  })
+
+  afterEach(async () => {
+    await removeTempDir(dir)
+  })
+
+  test('creates the archive with the given file mode', async () => {
+    const filePath = path.join(dir, 'app.log')
+    await fs.writeFile(filePath, 'live content')
+
+    await performRotation(filePath, { compress: true }, undefined, 0o640)
+
+    const entries = await fs.readdir(dir)
+    const archives = entries.filter(name => name.endsWith('.gz'))
+    expect(archives).toHaveLength(1)
+    const { mode } = await fs.stat(path.join(dir, archives[0]))
+    expect(permBits(mode)).toBe('640')
+  })
+
+  test('defaults the archive mode to 0o600 when none is given', async () => {
+    const filePath = path.join(dir, 'app.log')
+    await fs.writeFile(filePath, 'live content')
+
+    await performRotation(filePath, { compress: true })
+
+    const entries = await fs.readdir(dir)
+    const archives = entries.filter(name => name.endsWith('.gz'))
+    expect(archives).toHaveLength(1)
+    const { mode } = await fs.stat(path.join(dir, archives[0]))
+    expect(permBits(mode)).toBe('600')
   })
 })

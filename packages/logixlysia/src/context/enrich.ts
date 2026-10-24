@@ -12,13 +12,11 @@ const reportEnricherError = createErrorReporter('enricher', 'enricher failed')
 type RequestPhase = (request: Request) => EnricherFields
 type ResponsePhase = (input: EnricherResponseInput) => EnricherFields
 
-/** Enricher phases split so each request only walks the hooks that exist. */
 export interface ResolvedEnrichers {
   request: RequestPhase[]
   response: ResponsePhase[]
 }
 
-/** Splits configured enrichers by phase, or `undefined` when there are none. */
 export const resolveEnrichers = (
   enrichers?: EnricherLike[]
 ): ResolvedEnrichers | undefined => {
@@ -47,11 +45,6 @@ export const resolveEnrichers = (
     : { request, response }
 }
 
-/**
- * Runs one phase and merges what it returns into the request context. A hook
- * that throws is reported and skipped: enrichment is decoration, and must
- * never take a request down with it.
- */
 const runPhase = <TInput>(
   hooks: ((input: TInput) => EnricherFields)[],
   input: TInput,

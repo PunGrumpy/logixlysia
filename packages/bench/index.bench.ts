@@ -11,10 +11,6 @@ import type { BenchFn, BenchRegistration } from 'vitest'
 import { test } from 'vitest'
 import winston from 'winston'
 
-// BENCH_BASELINE=write stores every result under .baseline/, and
-// BENCH_BASELINE=compare adds those stored results to each table as
-// "<name> (base)" rows. The bench workflow runs the two in turn on one runner
-// to compare two commits. Unset, each suite just compares its own cases.
 const baselineMode = process.env.BENCH_BASELINE
 
 const slug = (text: string): string =>
@@ -33,8 +29,6 @@ type Case = readonly [name: string, fn: BenchFn]
 // yields, so a longer synchronous run exhausts the heap.
 const RUN_OPTIONS = { time: 500 }
 
-// Cases stay in the order given, so logixlysia leads each table; the
-// comparison sorts rows by speed anyway.
 const suite = (name: string, cases: readonly Case[]): void => {
   test(name, async ({ bench }) => {
     const registrations: BenchRegistration<string>[] = []
@@ -62,12 +56,8 @@ const suite = (name: string, cases: readonly Case[]): void => {
 // pretty-formatted in dev, or JSON.stringify'd once `pretty` is off (see
 // `emitWideEvent` in evlog's dist: the console branch is gated on
 // `state.silent`, not `state.pretty`; `pretty` only chooses the format).
-// `silent` only suppresses that console branch — the elysia plugin's own
-// `drain` option flows through `options.drain ?? getGlobalDrain()` in its
-// request middleware, independent of `state.drain`/`state.silent` — so this
-// does not disable the drains configured below. Silencing it here makes the
-// drain evlog's only sink, matching logixlysia's noop transport in the
-// structured-sink suite.
+// `silent` only suppresses that console branch, not the drains configured
+// below, so silencing it here makes the drain evlog's only sink.
 initLogger({ pretty: false, silent: true })
 
 const mockRequest = new Request('http://localhost:3000/')
@@ -111,7 +101,6 @@ suite('Logger Creation', [
   ]
 ])
 
-// Initialize loggers with output disabled for fair comparison of overhead
 const logix = createLogger({
   config: {
     disableInternalLogger: true,
@@ -274,7 +263,8 @@ const logixlysiaApp = new Elysia()
   .use(logixlysia({ config: silentLogixConfig }))
   .get('/', () => 'ok')
 
-// evlog and bogeychan have no Elysia 2 plugin yet, so only logixlysia runs here.
+// evlog's and bogeychan's Elysia plugins are typed for Elysia 1, so only
+// logixlysia runs in the Elysia suites.
 suite('Elysia plugin request path — overhead floor (all sinks disabled)', [
   [
     'logixlysia',
@@ -284,10 +274,6 @@ suite('Elysia plugin request path — overhead floor (all sinks disabled)', [
   ]
 ])
 
-// A no-op transport still exercises data assembly, context merge, meta
-// construction, and dispatch — unlike the floor suite above, this is real
-// work, just with a sink that discards the result instead of writing it
-// anywhere.
 const noopTransport = {
   log: () => {
     /* consume */
@@ -327,9 +313,6 @@ const logixlysiaFileApp = new Elysia()
   )
   .get('/', () => 'ok')
 
-// `logToFile` is fire-and-forget from `log()` (`.catch(() => {})`), so this
-// suite measures enqueue cost per request plus amortized write cost — not a
-// guarantee that each write has completed by the time `handle()` resolves.
 suite('Elysia plugin request path — file sink', [
   [
     'logixlysia (logFilePath)',

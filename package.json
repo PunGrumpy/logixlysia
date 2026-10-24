@@ -23,13 +23,13 @@
     "typecheck": "turbo run typecheck"
   },
   "devDependencies": {
-    "@changesets/cli": "^3.0.1",
+    "@changesets/cli": "^3.0.3",
     "exact-mirror": "^1.2.6",
-    "oxfmt": "^0.70.0",
-    "oxlint": "^1.83.0",
-    "turbo": "^2.11.2",
+    "oxfmt": "^0.71.0",
+    "oxlint": "^1.86.0",
+    "turbo": "^2.11.5",
     "typescript": "6.0.3",
-    "ultracite": "7.12.0"
+    "ultracite": "7.12.1"
   },
   "devEngines": {
     "packageManager": [

@@ -9,16 +9,12 @@ import {
 import { black, fox, mono, sans, sec } from '../lib/theme'
 import { Glass, Grain, progress, useFade, useFadeOut } from '../lib/ui'
 
-/**
- * Act 4: black outro. Tagline, three glass feature cards with gradient blobs,
- * then the wordmark, install line and URL, mirroring the reference's ending.
- */
-
 const TAGLINE_AT = sec(0.2)
 const CARDS_AT = sec(1.6)
 const LOGO_AT = sec(4.6)
 const CARD_STAGGER = sec(0.1)
 const LOGO_STAGGER = sec(0.1)
+const ENTER_RISE_PX = 30
 const EXIT_RISE_PX = 8
 
 interface Card {
@@ -58,8 +54,7 @@ const CardEl = ({ c, i }: { c: Card; i: number }) => {
   if (frame < at) {
     return null
   }
-  // Enter rises 30px; the exit lifts only 8px so it reads softer than the enter.
-  const y = (1 - s) * 30 - (1 - out) * EXIT_RISE_PX
+  const y = (1 - s) * ENTER_RISE_PX - (1 - out) * EXIT_RISE_PX
   return (
     <div style={{ opacity: s * out, transform: `translateY(${y}px)` }}>
       <Glass
@@ -123,7 +118,6 @@ export const Act4Outro = () => {
     fps,
     frame: frame - LOGO_AT
   })
-  // The outro is split into four chunks that land 100 ms apart.
   const subtitleIn = progress(
     frame,
     LOGO_AT + LOGO_STAGGER,

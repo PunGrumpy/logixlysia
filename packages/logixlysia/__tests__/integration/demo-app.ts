@@ -6,7 +6,6 @@ import { injectTraceContext } from '../../src/otel'
 
 export type TransportLog = (lvl: unknown, msg: unknown, meta?: unknown) => void
 
-/** Mirrors apps/elysia demo routes for integration tests (no cross-package import). */
 export const createDemoApp = (options: Options) => {
   const logging = logixlysia(options)
 
@@ -27,7 +26,7 @@ export const createDemoApp = (options: Options) => {
       })
       return { ok: true }
     })
-    .request(({ request, store }) => {
+    .onRequest(({ request, store }) => {
       injectTraceContext(store.logger, request)
     })
     .get('/trace', () => ({ ok: true }))
@@ -38,7 +37,6 @@ export const createDemoApp = (options: Options) => {
       return { status: set.status }
     })
     .get('/status/name/:name', ({ params, set }) => {
-      // e.g. "Not Found" — exercises string statuses
       set.status = decodeURIComponent(params.name) as never
       return { status: set.status }
     })

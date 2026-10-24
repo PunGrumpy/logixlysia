@@ -7,9 +7,7 @@ describe('logixlysia request context', () => {
   test('merges accumulated context into auto access log', async () => {
     const transport = mock<
       (lvl: unknown, msg: unknown, meta?: unknown) => void
-    >(() => {
-      /* noop */
-    })
+    >(() => {})
     const options: Options = {
       config: {
         disableFileLogging: true,
@@ -37,9 +35,7 @@ describe('logixlysia request context', () => {
   test('custom log merges accumulated context; explicit context wins on collision', async () => {
     const transport = mock<
       (lvl: unknown, msg: unknown, meta?: unknown) => void
-    >(() => {
-      /* noop */
-    })
+    >(() => {})
     const options: Options = {
       config: {
         disableFileLogging: true,
@@ -71,9 +67,7 @@ describe('logixlysia request context', () => {
   test('autoRedact applies to merged request context', async () => {
     const transport = mock<
       (lvl: unknown, msg: unknown, meta?: unknown) => void
-    >(() => {
-      /* noop */
-    })
+    >(() => {})
     const options: Options = {
       config: {
         autoRedact: true,
@@ -103,9 +97,7 @@ describe('logixlysia request context', () => {
   test('does not allocate context field when bag is empty', async () => {
     const transport = mock<
       (lvl: unknown, msg: unknown, meta?: unknown) => void
-    >(() => {
-      /* noop */
-    })
+    >(() => {})
     const options: Options = {
       config: {
         disableFileLogging: true,

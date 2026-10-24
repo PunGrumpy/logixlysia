@@ -152,4 +152,90 @@ describe('logixlysia/axiom', () => {
       restoreEnv()
     }
   })
+
+  test('serializes BigInts and circular references instead of dropping the batch', async () => {
+    const restoreEnv = stubEnv(CLEAR_ENV)
+    const stub = stubFetch()
+    try {
+      const transport = createAxiomTransport({
+        apiKey: 'xaat-test',
+        dataset: 'my-logs'
+      })
+      const node: Record<string, unknown> = { name: 'n' }
+      node.self = node
+      transport.log('INFO', 'a', { id: 1n })
+      transport.log('INFO', 'b', { ok: true })
+      transport.log('INFO', 'c', { node })
+      await transport.flush()
+
+      expect(stub.calls).toHaveLength(1)
+      const events = JSON.parse(stub.calls[0]?.body ?? '[]') as Record<
+        string,
+        unknown
+      >[]
+      expect(events).toHaveLength(3)
+      expect(events[0]?.id).toBe('1')
+      expect(events[1]?.ok).toBe(true)
+      expect(events[2]?.node).toMatchObject({ self: '[Circular]' })
+    } finally {
+      stub.restore()
+      restoreEnv()
+    }
+  })
+
+  test('serializes each record on its own, so one bad value does not take the batch', async () => {
+    const restoreEnv = stubEnv(CLEAR_ENV)
+    const stub = stubFetch()
+    try {
+      const transport = createAxiomTransport({
+        apiKey: 'xaat-test',
+        dataset: 'my-logs'
+      })
+      transport.log('INFO', 'a', { ok: 1 })
+      transport.log('INFO', 'b', {
+        bad: {
+          toJSON: () => {
+            throw new Error('x')
+          }
+        }
+      })
+      transport.log('INFO', 'c', { ok: 2 })
+      await transport.flush()
+
+      const events = JSON.parse(stub.calls[0]?.body ?? '[]') as Record<
+        string,
+        unknown
+      >[]
+      expect(events).toHaveLength(3)
+      expect(events[1]?.bad).toBe('[Unserializable]')
+      expect(events[0]?.ok).toBe(1)
+      expect(events[2]?.ok).toBe(2)
+    } finally {
+      stub.restore()
+      restoreEnv()
+    }
+  })
+
+  test('ships the record as it was when logged', async () => {
+    const restoreEnv = stubEnv(CLEAR_ENV)
+    const stub = stubFetch()
+    try {
+      const transport = createAxiomTransport({
+        apiKey: 'xaat-test',
+        dataset: 'my-logs'
+      })
+      const cart = { total: 1 }
+      transport.log('INFO', 'cart', { context: { cart } })
+      cart.total = 2
+      await transport.flush()
+
+      const [event] = JSON.parse(stub.calls[0]?.body ?? '[]') as {
+        context?: { cart?: { total?: number } }
+      }[]
+      expect(event?.context?.cart?.total).toBe(1)
+    } finally {
+      stub.restore()
+      restoreEnv()
+    }
+  })
 })

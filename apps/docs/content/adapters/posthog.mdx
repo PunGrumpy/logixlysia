@@ -60,7 +60,7 @@ const posthog = createPostHogTransport({
 | `distinctIdField` | `string` | `context.userId` | Meta path resolved per log to `distinct_id` |
 | `distinctId` | `string` | `logixlysia-server` | Static fallback when the field resolves to nothing |
 
-Plus the shared batching options: `maxBatchSize`, `flushIntervalMs`, `timeout`, `retries` — see the [overview](/docs/adapters/overview#shared-behavior).
+Plus the shared options in the [overview table](/docs/adapters/overview#shared-behavior).
 
 ## Payload
 
@@ -82,7 +82,8 @@ PostHog processes events asynchronously — expect them to appear within about a
 Merge a user ID into the request context and the log's `distinct_id` resolves to it:
 
 ```ts
-app.get('/profile', ({ log, userId }) => {
+app.get('/profile', ({ log, headers }) => {
+  const userId = headers['x-user-id'] ?? 'anonymous'
   log.mergeContext({ userId })
   return getProfile(userId)
 })

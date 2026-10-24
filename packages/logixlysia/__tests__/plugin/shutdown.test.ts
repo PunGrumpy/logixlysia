@@ -6,32 +6,15 @@ import { flushLogixlysia, logixlysia } from '../../src'
 import type { Options } from '../../src/interfaces'
 import { getFileSink } from '../../src/output/file-sink'
 import { spyConsole } from '../_helpers/console'
+import { neverSettles } from '../_helpers/never-settles'
 import { sleep } from '../_helpers/sleep'
 import { createTempDir, removeTempDir } from '../_helpers/tmp'
+import { waitFor } from '../_helpers/wait-for'
 
-const POLL_TIMEOUT_MS = 200
-const POLL_INTERVAL_MS = 5
+// `app.stop()` does not await async hooks, so the tests below poll with
+// `waitFor` for the hook's observable effect.
 const NO_WAIT_SETTLE_MS = 30
-
-/** `app.stop()` does not await async hooks, so poll for the observable effect. */
-const waitFor = (predicate: () => boolean): Promise<void> => {
-  const { promise, resolve }: PromiseWithResolvers<void> =
-    Promise.withResolvers()
-  const deadline = Date.now() + POLL_TIMEOUT_MS
-  const timer = setInterval(() => {
-    if (predicate() || Date.now() >= deadline) {
-      clearInterval(timer)
-      resolve()
-    }
-  }, POLL_INTERVAL_MS)
-  return promise
-}
-
-/** A flush that never settles, to exercise the shutdown timeout. */
-const neverSettles = (): Promise<void> => {
-  const { promise }: PromiseWithResolvers<void> = Promise.withResolvers()
-  return promise
-}
+const SLOW_TRANSPORT_MS = 40
 
 const startApp = (options: Options) => {
   const app = new Elysia().use(logixlysia(options))
@@ -148,5 +131,34 @@ describe('plugin shutdown', () => {
     } finally {
       await removeTempDir(dir)
     }
+  })
+
+  test('flushLogixlysia waits for an in-flight log() and a slow flush()', async () => {
+    let delivered = false
+    let flushed = false
+    const options: Options = {
+      config: {
+        ...baseConfig,
+        transports: [
+          {
+            flush: async () => {
+              await sleep(SLOW_TRANSPORT_MS)
+              flushed = true
+            },
+            log: async () => {
+              await sleep(SLOW_TRANSPORT_MS)
+              delivered = true
+            }
+          }
+        ]
+      }
+    }
+    const app = new Elysia().use(logixlysia(options))
+
+    await app.handle(new Request('http://localhost/x'))
+    await flushLogixlysia(options)
+
+    expect(delivered).toBe(true)
+    expect(flushed).toBe(true)
   })
 })

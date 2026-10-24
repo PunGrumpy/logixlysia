@@ -11,12 +11,6 @@ import {
 import AdapterCard from './adapter-card.astro'
 import SectionLabel from './section-label.astro'
 
-// Nine built-in observability adapters (content/adapters/*.mdx), presented as
-// an integrations grid. Names and one-line descriptors mirror the "best for"
-// column in the adapters overview. Brand marks come from simple-icons (CC0),
-// rendered monochrome; Axiom and HyperDX have no entry there, so they fall
-// back to monogram chips. Loki uses the Grafana mark — it is a Grafana Labs
-// product.
 interface Adapter {
   blurb: string
   href: string
@@ -30,9 +24,7 @@ interface Adapter {
 const axiomPath =
   'm12.12 7.27-2.48-4.3a.8.8 0 0 0-.62-.37H7.48c-.36 0-.5-.25-.33-.56L8 .57A.38.38 0 0 0 7.67 0H5.52a.8.8 0 0 0-.62.36L.7 7.6a.8.8 0 0 0 0 .72l1.08 1.86c.18.31.47.32.65 0l.84-1.44c.18-.31.48-.31.66 0l.76 1.32c.11.2.4.36.62.36h4.98a.8.8 0 0 0 .62-.36l1.2-2.07a.8.8 0 0 0 0-.72m-3.34-.2c.18.3.03.56-.33.56H4.58c-.36 0-.5-.26-.33-.57L6.2 3.71c.18-.31.47-.31.65 0z'
 
-// HyperDX's hexagon-and-bolt mark (hyperdx.io brand asset); the two paths are
-// merged so the even-odd rule punches the bolt out of the hexagon and the
-// whole mark renders in currentColor.
+// HyperDX's hexagon-and-bolt mark (hyperdx.io brand asset); not in simple-icons.
 const hyperdxPath =
   'm256 0 221.7 128v256L256 512 34.3 384V128z M311.4 84.5c3.5 2.5 5.1 7.7 3.9 12.5l-30.9 126.6h57.1c3.4 0 6.5 2.6 7.9 6.5 1.4 4 .7 8.6-1.6 11.7L210.2 425.6c-2.7 3.7-7.1 4.5-10.6 1.9-3.5-2.5-5.1-7.7-3.9-12.5l30.9-126.6h-57.1c-3.4 0-6.5-2.6-7.9-6.5-1.4-4-.7-8.6 1.6-11.7L300.8 86.4c2.7-3.7 7.1-4.5 10.6-1.9'
 

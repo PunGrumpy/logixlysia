@@ -14,14 +14,7 @@ const mockJwt = () => {
   return `${header}.${payload}.mockEd25519SignatureForDemo`
 }
 
-/** 4111111111111111 (Luhn-valid) via char codes — avoids literal known-test-PAN in source. */
-const mockCreditCard = () =>
-  [
-    0x34, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31,
-    0x31, 0x31, 0x31, 0x31
-  ]
-    .map(c => String.fromCodePoint(c))
-    .join('')
+const mockCreditCard = (): string => `4${'1'.repeat(15)}`
 
 export const autoRedactRouter = <App extends Logixlysia>(app: App) =>
   app.get(

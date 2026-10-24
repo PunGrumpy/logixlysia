@@ -3,15 +3,14 @@ import { createRequestContextStore } from '../../src/context/request-context'
 import { createLogger } from '../../src/logger'
 import { createWsHandlerWrapper } from '../../src/websocket/wrap-ws'
 import type { WebSocketLike, WsHandlerHooks } from '../../src/websocket/wrap-ws'
+import { sleep } from '../_helpers/sleep'
 
 type TransportMock = ReturnType<
   typeof mock<(lvl: unknown, msg: unknown, meta?: unknown) => void>
 >
 
 const setup = () => {
-  const transport: TransportMock = mock(() => {
-    /* noop */
-  })
+  const transport: TransportMock = mock(() => {})
   const contextStore = createRequestContextStore()
   const logger = createLogger(
     {
@@ -41,21 +40,25 @@ const contextFrom = (
   return meta?.context ?? {}
 }
 
+interface LogRecord {
+  context?: Record<string, unknown>
+  durationMs?: number
+}
+
+const recordFrom = (transport: TransportMock, message: string): LogRecord => {
+  const call = transport.mock.calls.find(entry => entry[1] === message)
+  return (call?.[2] as LogRecord | undefined) ?? {}
+}
+
 describe('wrapWs', () => {
   test('logs WebSocket open and close through transports', () => {
     const { transport, wrapWs } = setup()
     const ws = { id: 'ws-1' }
 
     const hooks = wrapWs('/chat', {
-      close(_ws) {
-        /* noop */
-      },
-      message(_ws, _message) {
-        /* noop */
-      },
-      open(_ws) {
-        /* noop */
-      }
+      close(_ws) {},
+      message(_ws, _message) {},
+      open(_ws) {}
     })
 
     hooks.open(ws)
@@ -74,9 +77,7 @@ describe('wrapWs', () => {
     const ws = { id: 'ws-1' }
     const closeHook = mock<
       (ws: WebSocketLike, code?: number, reason?: string) => void
-    >(() => {
-      /* noop */
-    })
+    >(() => {})
 
     const hooks = wrapWs('/chat', { close: closeHook })
 
@@ -136,5 +137,57 @@ describe('wrapWs', () => {
       (_call, index) => contextFrom(transport, index).payloadType
     )
     expect(payloadTypes).toEqual(['binary', 'binary', 'string', 'object'])
+  })
+
+  test('keeps context across distinct per-event wrappers and clears it on close', () => {
+    const { contextStore, transport, wrapWs } = setup()
+    const raw = {}
+    const first = { id: 'ws-1', raw }
+    const second = { id: 'ws-1', raw }
+    const third = { id: 'ws-1', raw }
+
+    const hooks = wrapWs<unknown, WebSocketLike, WsHandlerHooks>('/chat', {})
+
+    hooks.open?.(first)
+    contextStore.mergeContext(first, { room: 'lobby' })
+    hooks.message?.(second, 'hi')
+    hooks.close?.(third)
+
+    expect(recordFrom(transport, 'WebSocket message').context?.room).toBe(
+      'lobby'
+    )
+    expect(recordFrom(transport, 'WebSocket closed').context?.room).toBe(
+      'lobby'
+    )
+    expect(contextStore.getContext(raw)).toEqual({})
+  })
+
+  test('times message and close lines from the open of the same connection', async () => {
+    const { transport, wrapWs } = setup()
+    const raw = {}
+    const first = { id: 'ws-1', raw }
+    const second = { id: 'ws-1', raw }
+    const third = { id: 'ws-1', raw }
+
+    const hooks = wrapWs<unknown, WebSocketLike, WsHandlerHooks>('/chat', {})
+
+    hooks.open?.(first)
+    await sleep(25)
+    hooks.message?.(second, 'hi')
+    await sleep(25)
+    hooks.close?.(third)
+
+    expect(
+      recordFrom(transport, 'WebSocket message').durationMs
+    ).toBeGreaterThanOrEqual(20)
+    expect(
+      recordFrom(transport, 'WebSocket closed').durationMs
+    ).toBeGreaterThanOrEqual(40)
+  })
+
+  test('rejects a first argument that is not the route path', () => {
+    const { wrapWs } = setup()
+
+    expect(() => wrapWs({ open() {} } as never, {} as never)).toThrow(TypeError)
   })
 })

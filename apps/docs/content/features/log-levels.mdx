@@ -7,13 +7,44 @@ Control the verbosity of your logging output with Logixlysia's log level system.
 
 ## Available Levels
 
-Log levels follow a hierarchy from most to least verbose:
+Logixlysia has four log levels, from most to least verbose:
 
 ```
 DEBUG > INFO > WARNING > ERROR
 ```
 
-When you set a log level, all higher levels will also be logged. For example, setting the level to `WARNING` will log both `WARNING` and `ERROR` messages.
+`logFilter.level` is the list of levels to keep. It is not a minimum level, so `['WARNING']` keeps `WARNING` lines and drops `ERROR` lines. List every level you want.
+
+## Levels for request logs
+
+Logixlysia writes each access line once, from the final response, and picks its level from the status the client received:
+
+| Status          | Level     |
+| --------------- | --------- |
+| `500` and above | `ERROR`   |
+| `400` to `499`  | `WARNING` |
+| Below `400`     | `INFO`    |
+
+This includes responses from Elysia's `status()` helper, whether a handler returns it, throws it, or returns it from `beforeHandle`:
+
+```ts
+app
+  .get('/missing', ({ status }) => status(404, 'Item not found'))
+  .post('/items', ({ status }) => {
+    throw status(409, { reason: 'duplicate' })
+  })
+```
+
+The first route logs a `WARNING` with status `404` and an empty message, because a returned `status()` is not an error. Only a thrown `status()` sets the message. A string body becomes the message, so `throw status(404, 'Item not found')` logs `Item not found`. Any other body is replaced by the status text, so the second route logs `Conflict` and keeps the response payload out of the log.
+
+If a handler returns a `Response`, Logixlysia logs the `Response` status. When that status is `200`, `set.status` applies instead.
+
+The final status also covers a status set with `set.status` before a throw, a status chosen by a later `onError` hook, and a `mapResponse` rewrite. A few exits follow different rules:
+
+- A thrown error that reached the client as a 2xx or 3xx is still an `ERROR` line. This happens when an `onError` hook turns a failure into a redirect, or when a streamed body fails after the headers went out. A thrown 2xx or 3xx `status()` result is the exception. It logs at `INFO` as an access line, without its message.
+- When an app-wide `onError` registered before Logixlysia answers an error, Logixlysia never sees the thrown value. The line is an access line at the level of the status sent, with an empty message and no error payload.
+
+The same status drives the `{status}` format token, the `status` field sent to transports, and [tail sampling](/docs/features/sampling).
 
 ## Configuration
 
@@ -23,7 +54,7 @@ When you set a log level, all higher levels will also be logged. For example, se
 logixlysia({
   config: {
     logFilter: {
-      level: 'ERROR'
+      level: ['ERROR']
     }
   }
 })
@@ -72,10 +103,10 @@ logixlysia({
 
 ## Best Practices
 
-- **Development**: Use `DEBUG` for detailed debugging
-- **Staging**: Use `INFO` for normal operation
-- **Production**: Use `WARNING` or `ERROR` for normal operation
-- **Monitoring**: Set up alerts for `ERROR` level
+- **Development**: keep all four levels
+- **Staging**: keep `INFO`, `WARNING`, and `ERROR`
+- **Production**: keep `WARNING` and `ERROR`
+- **Monitoring**: keep `ERROR` and alert on it
 
 ## Example Configurations
 

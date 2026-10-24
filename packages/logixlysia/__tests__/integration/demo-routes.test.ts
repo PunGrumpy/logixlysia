@@ -5,10 +5,7 @@ import { logixlysia } from '../../src'
 import { createDemoApp, silentTestOptions } from './demo-app'
 import type { TransportLog } from './demo-app'
 
-const mockTransport = () =>
-  mock<TransportLog>(() => {
-    /* noop */
-  })
+const mockTransport = () => mock<TransportLog>(() => {})
 
 describe('demo routes (Bun)', () => {
   test('GET / returns 200', async () => {

@@ -8,8 +8,8 @@
     "typecheck": "tsc --noEmit --emitDeclarationOnly false"
   },
   "dependencies": {
-    "@elysia/openapi": "2.0.0-beta.4",
-    "elysia": "2.0.0-beta.19",
+    "@elysia/openapi": "2.0.0-beta.6",
+    "elysia": "2.0.0-beta.32",
     "logixlysia": "workspace:*"
   },
   "devDependencies": {

@@ -21,8 +21,8 @@ const ZERO_TRACE_ID = '0'.repeat(32)
 const ZERO_SPAN_ID = '0'.repeat(16)
 const INVALID_VERSION = 'ff'
 const CURRENT_VERSION = '00'
-/** `00-` + 32 + `-` + 16 + `-` + 2: version 00 is exactly these four fields. */
-const VERSION_00_LENGTH = 55
+const VERSION_00_LENGTH =
+  `${CURRENT_VERSION}-${ZERO_TRACE_ID}-${ZERO_SPAN_ID}-00`.length
 
 export interface TraceparentEnricherOptions {
   /**
@@ -67,8 +67,6 @@ export const traceparentEnricher = (
 
       const [, version, traceId, spanId, flags] = match
 
-      // `ff` is reserved, all-zero ids are invalid, and a version-00 header
-      // carrying extra fields is malformed rather than forward-compatible.
       if (
         version === INVALID_VERSION ||
         traceId === ZERO_TRACE_ID ||
@@ -178,7 +176,6 @@ export const userAgentEnricher = (): Enricher => ({
   }
 })
 
-/** Header candidates per geo field, in priority order across platforms. */
 const GEO_HEADERS: readonly [field: string, headers: readonly string[]][] = [
   ['city', ['x-vercel-ip-city', 'cf-ipcity']],
   ['country', ['x-vercel-ip-country', 'cf-ipcountry']],
@@ -198,7 +195,6 @@ const GEO_NUMERIC_HEADERS: readonly [
 const NETLIFY_GEO_HEADER = 'x-nf-geo'
 const GEO_STRING_MAX = 128
 const GEO_RAW_HEADER_MAX = 2048
-/** ISO-3166-ish country/region codes: short alphanumeric tokens, never free text. */
 const GEO_CODE_REGEX = /^[A-Za-z0-9-]{1,10}$/u
 
 const firstHeader = (
@@ -234,6 +230,14 @@ interface NetlifyGeo {
   timezone?: string
 }
 
+const geoText = (value: unknown): string | undefined =>
+  typeof value === 'string' && value.length > 0
+    ? value.slice(0, GEO_STRING_MAX)
+    : undefined
+
+const geoCode = (value: unknown): string | undefined =>
+  typeof value === 'string' && GEO_CODE_REGEX.test(value) ? value : undefined
+
 const readNetlifyGeo = (
   request: Request
 ): Record<string, unknown> | undefined => {
@@ -255,17 +259,21 @@ const readNetlifyGeo = (
 
   const data = parsed as NetlifyGeo
   const geo: Record<string, unknown> = {}
-  if (data.city) {
-    geo.city = data.city.slice(0, GEO_STRING_MAX)
+  const city = geoText(data.city)
+  if (city !== undefined) {
+    geo.city = city
   }
-  if (data.country?.code && GEO_CODE_REGEX.test(data.country.code)) {
-    geo.country = data.country.code
+  const country = geoCode(data.country?.code)
+  if (country !== undefined) {
+    geo.country = country
   }
-  if (data.subdivision?.code && GEO_CODE_REGEX.test(data.subdivision.code)) {
-    geo.region = data.subdivision.code
+  const region = geoCode(data.subdivision?.code)
+  if (region !== undefined) {
+    geo.region = region
   }
-  if (data.timezone) {
-    geo.timezone = data.timezone.slice(0, GEO_STRING_MAX)
+  const timezone = geoText(data.timezone)
+  if (timezone !== undefined) {
+    geo.timezone = timezone
   }
   if (typeof data.latitude === 'number' && isInRange(data.latitude, -90, 90)) {
     geo.latitude = data.latitude
@@ -280,7 +288,6 @@ const readNetlifyGeo = (
   return Object.keys(geo).length > 0 ? geo : undefined
 }
 
-/** Fields whose value must look like a short country/region code, not free text. */
 const GEO_CODE_FIELDS = new Set(['country', 'region'])
 
 const readGeoStringFields = (

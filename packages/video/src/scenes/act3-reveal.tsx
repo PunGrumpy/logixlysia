@@ -19,15 +19,10 @@ import {
 } from '../lib/ui'
 import { HotField } from './act2-noise'
 
-/**
- * Act 3: the reveal. The hot field collapses into an orb with rings
- * ("Until now." in the reference), the fox appears inside it, and the orb
- * gives way to a blurred stage where one logixlysia access line types out
- * with its context tree: the single line that replaces the ten.
- */
-
 const ORB_SIZE = 360
 const ORB_COLLAPSE_AT = sec(0.2)
+const HANDOFF_FRAMES = 12
+const FIELD_FADE_FRAMES = 6
 const TEXT_AT = sec(0.9)
 const FOX_AT = sec(3)
 const STAGE_AT = sec(4.6)
@@ -63,7 +58,6 @@ const Ring = ({ scale, index }: { scale: number; index: number }) => {
     fps,
     frame: frame - start
   })
-  // Rings keep expanding slowly after they land, like ripples.
   const growth = 1 + Math.max(0, frame - start) * RING_GROWTH
   const size = ORB_SIZE * scale
   return (
@@ -111,13 +105,10 @@ const Orb = ({ exitAt }: { exitAt: number }) => {
     ORB_COLLAPSE_AT + sec(0.4),
     ORB_COLLAPSE_AT + sec(1.4)
   )
-  // Act 2 ends on the full-bleed field; hold it while the orb takes over so
-  // the two gradients cross-fade instead of cutting.
-  const handoff = progress(frame, ORB_COLLAPSE_AT, ORB_COLLAPSE_AT + 12)
-  // The field stays opaque until the orb fully covers it, so no frame shows
-  // two half-transparent layers over black.
+  const handoffEnd = ORB_COLLAPSE_AT + HANDOFF_FRAMES
+  const handoff = progress(frame, ORB_COLLAPSE_AT, handoffEnd)
   const fieldOut =
-    1 - progress(frame, ORB_COLLAPSE_AT + 12, ORB_COLLAPSE_AT + 18)
+    1 - progress(frame, handoffEnd, handoffEnd + FIELD_FADE_FRAMES)
   return (
     <AbsoluteFill style={{ opacity: exit }}>
       <AbsoluteFill style={{ opacity: fieldOut }}>

@@ -1,6 +1,6 @@
 import type { Logixlysia } from 'logixlysia'
 // `useLogger` is logixlysia's AsyncLocalStorage lookup, not a React hook; the
-// alias keeps the React hook rules from treating this helper as a component.
+// alias keeps `rules-of-hooks` from flagging a `use` call inside a plain helper.
 import { useLogger as currentRequestLogger } from 'logixlysia'
 
 const dbQueryHelper = async () => {

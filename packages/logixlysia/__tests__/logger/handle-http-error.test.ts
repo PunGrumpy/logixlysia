@@ -126,10 +126,6 @@ describe('handleHttpError', () => {
     expect(() => JSON.stringify(errorEvent?.meta)).not.toThrow()
   })
 
-  // Elysia route handlers may only throw Error instances (enforced by lint),
-  // but `onError` can still receive a plain object thrown elsewhere (e.g. by
-  // third-party code). Exercise that branch directly against
-  // `normalizeLoggedError` rather than through a full request.
   test('preserves structured-error fields (why/fix) from a plain-object error', () => {
     const thrown = {
       fix: 'set the config value',
@@ -144,11 +140,6 @@ describe('handleHttpError', () => {
     expect(metaError.message).toBe('bad config')
   })
 
-  // Class names (and thus `.name`/`.constructor.name`) are mangled under
-  // bundler minification (e.g. `bun build --minify`, esbuild). Elysia's
-  // `code === 'validation'` is the minification-safe discriminant; simulate
-  // a mangled class to prove detection still works: neither `.name` nor
-  // `.constructor.name` is `'ValidationError'`, only `code` identifies it.
   test('detects a validation error by code when class names are minified', () => {
     class MangledError extends Error {
       constructor(message: string) {
@@ -212,15 +203,15 @@ describe('handleHttpError', () => {
     })
   })
 
-  // Pins decided drift #2 from plans/017: the error path now honors the same
-  // sink gates as the success path, so `useTransportsOnly` with zero
-  // transports configured is "effectively disabled" end to end — no
-  // transport call (none configured) and no console output either.
-  test('useTransportsOnly with no transports configured emits nothing at all', async () => {
+  test('an effectively disabled logger emits nothing on the error path', async () => {
     const { spies, restore } = spyConsole()
     try {
       const app = new Elysia()
-        .use(logixlysia({ config: { useTransportsOnly: true } }))
+        .use(
+          logixlysia({
+            config: { disableFileLogging: true, disableInternalLogger: true }
+          })
+        )
         .get('/down', () => {
           throw new HttpError(503, 'downstream')
         })
@@ -238,9 +229,6 @@ describe('handleHttpError', () => {
     }
   })
 
-  // Pins decided drift #3 from plans/017: console output is chosen by level
-  // on both paths now, so a 4xx (WARNING) error prints via console.warn
-  // instead of the previously hardcoded console.error.
   test('a 4xx error prints via console.warn, not console.error', async () => {
     const { spies, restore } = spyConsole()
     try {
