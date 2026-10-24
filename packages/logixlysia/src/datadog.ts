@@ -47,7 +47,11 @@ export interface DatadogTransportOptions extends BatchTransportOptions {
 /**
  * Creates a transport that ships logs to Datadog via the v2 logs intake API.
  * The log level lands in the `status` attribute (Datadog's default status
- * remapper), and the full meta object rides along as searchable attributes.
+ * remapper). Meta fields ride along as searchable attributes, except that
+ * `ddsource`, `message`, `service`, `status` and `timestamp` are reserved.
+ * `tags` overwrite `meta.ddtags`, `hostname` (or `DD_HOSTNAME`) overwrites
+ * `meta.hostname`, and a numeric `meta.status` is moved to `http.status_code`,
+ * replacing `meta.http`.
  *
  * @throws {Error} When no API key is configured.
  */
