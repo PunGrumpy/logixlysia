@@ -311,6 +311,29 @@ describe('logixlysia/desertant', () => {
     expect(sink.records).toHaveLength(2)
   })
 
+  test('calls a loader that throws synchronously only once', async () => {
+    const sink = createSink()
+    const errors: unknown[] = []
+    let loads = 0
+    const transport = withRedaction(
+      sink,
+      () => {
+        loads += 1
+        throw new Error('no model')
+      },
+      { onError: error => errors.push(error) }
+    )
+
+    transport.log('INFO', 'Anna Müller')
+    transport.log('INFO', 'Anna Müller')
+    await transport.flush()
+
+    expect(loads).toBe(1)
+    expect(sink.records).toHaveLength(0)
+    expect(errors).toHaveLength(2)
+    expect((errors[0] as Error).message).toBe('no model')
+  })
+
   test('reports a failed load without forwarding the record', async () => {
     const sink = createSink()
     const errors: unknown[] = []
