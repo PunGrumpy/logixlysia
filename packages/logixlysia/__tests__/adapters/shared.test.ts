@@ -1200,7 +1200,15 @@ describe('createHttpTransport', () => {
     try {
       const badValues: Record<string, number[]> = {
         flushIntervalMs: [-1, 2 ** 31, Number.NaN, Number.POSITIVE_INFINITY],
-        timeout: [0, -5, 1.5, 2 ** 32, Number.NaN, Number.POSITIVE_INFINITY]
+        timeout: [
+          0,
+          -5,
+          1.5,
+          2 ** 31,
+          2 ** 32,
+          Number.NaN,
+          Number.POSITIVE_INFINITY
+        ]
       }
       for (const [name, values] of Object.entries(badValues)) {
         for (const value of values) {
@@ -1218,7 +1226,7 @@ describe('createHttpTransport', () => {
 
       const validOptions = [
         { flushIntervalMs: 0, maxPendingBatches: 1, retries: 0, timeout: 1 },
-        { flushIntervalMs: 2_147_483_647, timeout: 4_294_967_295 },
+        { flushIntervalMs: 2_147_483_647, timeout: 2_147_483_647 },
         { flushIntervalMs: 0.5 }
       ]
       for (const options of validOptions) {

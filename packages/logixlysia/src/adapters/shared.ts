@@ -20,8 +20,6 @@ const DEFAULT_TIMEOUT_MS = 5000
 const RETRY_BASE_DELAY_MS = 250
 const RETRY_JITTER_MIN = 0.5
 const MAX_RETRY_AFTER_MS = 30_000
-/** The largest value `AbortSignal.timeout` accepts, 2^32 - 1. */
-const MAX_ABORT_TIMEOUT_MS = 4_294_967_295
 /** `setTimeout` runs a timer above 2^31 - 1 ms after 1 ms. */
 const MAX_TIMER_DELAY_MS = 2_147_483_647
 const MILLIS_PER_SECOND = 1000
@@ -512,7 +510,7 @@ export const createHttpTransport = (
     'timeout',
     input.options.timeout ?? DEFAULT_TIMEOUT_MS,
     1,
-    MAX_ABORT_TIMEOUT_MS,
+    MAX_TIMER_DELAY_MS,
     { integer: true }
   )
   const flushIntervalMs = millisecondsInRange(
