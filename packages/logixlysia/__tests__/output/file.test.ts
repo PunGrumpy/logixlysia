@@ -202,7 +202,6 @@ describe('logToFile', () => {
         config: { logRotation: { maxSize: 100 } }
       }
 
-      // This single line already exceeds maxSize, so it rotates on its own.
       await logToFile({
         data: { message: 'x'.repeat(90) },
         filePath,
@@ -247,7 +246,6 @@ describe('logToFile', () => {
         config: { logRotation: { maxSize: 100 } }
       }
 
-      // Triggers rotation on its own.
       await logToFile({
         data: { message: 'x'.repeat(90) },
         filePath,
@@ -321,9 +319,6 @@ describe('logToFile', () => {
   test('invokes config.onError with sink "file" when the write fails, and swallows a throwing hook', async () => {
     const dir = await createTempDir()
     try {
-      // A regular file where a directory is expected: mkdir(..., {recursive:
-      // true}) fails with ENOTDIR, giving a deterministic, permission-model-
-      // independent write failure.
       const blocker = path.join(dir, 'not-a-directory')
       await fs.writeFile(blocker, 'x')
       const filePath = path.join(blocker, 'nested', 'app.log')

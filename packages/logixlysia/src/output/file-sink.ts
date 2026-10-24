@@ -99,7 +99,6 @@ class FileSinkImpl implements FileSink {
 
   private async flushBatch(batch: PendingBatch): Promise<void> {
     const options = this.latestOptions
-    // Lines already carry their own trailing newline; join needs no separator.
     const text = batch.lines.join('')
 
     try {
@@ -114,10 +113,6 @@ class FileSinkImpl implements FileSink {
       return
     }
 
-    // Rotation (if triggered) is awaited before resolving so callers observe
-    // a consistent on-disk state: the line's write plus any rotation it
-    // caused. maybeRotate() catches and reports its own errors, so it never
-    // rejects this chain.
     await this.maybeRotate(options)
 
     for (const resolver of batch.resolvers) {
@@ -177,7 +172,6 @@ class FileSinkImpl implements FileSink {
         options.logFileMode
       )
     } catch (error) {
-      // A rotation failure must not fail the caller's write.
       if (options.onRotationError) {
         options.onRotationError(error)
       } else {
