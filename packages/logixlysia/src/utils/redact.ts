@@ -193,7 +193,8 @@ export const redactString = (text: string): string => {
 }
 
 /**
- * Host and userinfo cannot contain `[REDACTED]` — `[` begins an IPv6 literal in URLs and breaks parsing.
+ * The host cannot hold `[REDACTED]`: `[` opens an IPv6 literal. Userinfo would
+ * percent-encode it, so one bracket-free token serves both.
  */
 const URL_SAFE_REDACT = 'redacted'
 
@@ -610,9 +611,9 @@ export const redact = <T>(value: T, extraKeys?: readonly string[]): T =>
 
 /**
  * Clone request URL, method and headers for logging with the same string redaction as {@link redact}.
- * The returned request is a logging-only artifact carrying url/method/headers/signal; it intentionally
- * omits the body so it never re-uses the original (possibly already-consumed) request stream. The
- * original request is left untouched and remains usable.
+ * When nothing needed redacting the original request is returned. Otherwise the result is a
+ * logging-only artifact carrying url/method/headers/signal and no body, so it never re-uses the
+ * original (possibly already-consumed) request stream. The original request is left untouched.
  */
 export const redactRequest = (
   request: Request,
