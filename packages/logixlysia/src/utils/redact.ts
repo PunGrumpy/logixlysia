@@ -22,16 +22,13 @@ const JWT_REGEX = /(?<![\w-])eyJ[\w-]+\.eyJ[\w-]+\.[\w-]+/gu
 const URL_PASSWORD_REGEX = /(?<prefix>:\/\/[^\s/?#@:]*:)[^\s/?#@]+@/gu
 const URL_SCHEME_LETTER_REGEX = /[a-z]/iu
 const URL_SCHEME_MARK_REGEX = /[\d+.-]/u
-/**
- * An HTTP credential after its scheme word. Only a token with a digit, a
- * URL-safe punctuation mark or an uppercase letter after a word character is
- * masked, so prose such as "Basic authentication failed" is left alone.
- */
 const HTTP_CREDENTIAL_REGEX =
   /\b(?<scheme>[Bb]earer|[Bb]asic)\s+(?<token>[\w\-.~+/]{8,}=*)/gu
 const CREDENTIAL_MARK_REGEX = /[\d\-.~+/]/u
 /** No `i` flag, under which `[A-Z]` would match every lowercase letter too. */
 const INNER_CAPITAL_REGEX = /\w[A-Z]/u
+const looksLikeCredential = (token: string): boolean =>
+  CREDENTIAL_MARK_REGEX.test(token) || INNER_CAPITAL_REGEX.test(token)
 
 const PAN_MIN_LEN = 13
 const PAN_MAX_LEN = 19
@@ -184,9 +181,7 @@ export const redactString = (text: string): string => {
   result = result.replace(
     HTTP_CREDENTIAL_REGEX,
     (match: string, scheme: string, token: string) =>
-      CREDENTIAL_MARK_REGEX.test(token) || INNER_CAPITAL_REGEX.test(token)
-        ? `${scheme} ${REDACTED_TEXT}`
-        : match
+      looksLikeCredential(token) ? `${scheme} ${REDACTED_TEXT}` : match
   )
 
   return result
