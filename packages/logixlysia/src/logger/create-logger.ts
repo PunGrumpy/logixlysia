@@ -17,8 +17,32 @@ const MAX_KEY_LENGTH = 256
 const DEFAULT_LOG_FORMAT =
   '{now} {service}{icon} {method} {pathname} {status} {duration} {message}{speed}'
 
-const LOG_FORMAT_REGEX =
-  /\{(?:now|epoch|level|icon|duration|method|pathname|path|query|status|statusText|message|ip|context|service|speed|requestId)\}/gu
+const FORMAT_TOKENS = [
+  'now',
+  'epoch',
+  'level',
+  'icon',
+  'duration',
+  'method',
+  'pathname',
+  'path',
+  'query',
+  'status',
+  'statusText',
+  'message',
+  'ip',
+  'context',
+  'service',
+  'speed',
+  'requestId'
+] as const
+
+type FormatToken = `{${(typeof FORMAT_TOKENS)[number]}}`
+
+const LOG_FORMAT_REGEX = new RegExp(
+  `\\{(?:${FORMAT_TOKENS.join('|')})\\}`,
+  'gu'
+)
 
 export interface FormattedLogOutput {
   contextLines: string[]
@@ -285,14 +309,6 @@ export interface FormatContext {
   verySlowThreshold: number
 }
 
-/**
- * Resolves colors/format/thresholds/service once per logger instance instead of per log line.
- * Safe to hoist: TTY-ness and config don't change across a process's lifetime, so freezing the
- * colors decision at construction time matches real process lifecycles.
- *
- * NOTE: adding a new format token requires adding it both to {@link LOG_FORMAT_REGEX} and to the
- * token-gating checks in {@link formatLogOutput} below.
- */
 export const createFormatContext = (options: Options): FormatContext => {
   const { config } = options
   const useColors = shouldUseColors(options)
@@ -677,7 +693,7 @@ export const formatLogOutput = ({
   const icon = tokens.has('{icon}') ? getLevelIcon(level, useColors) : ''
   const requestId = getRequestIdToken(tokens, data)
 
-  const tokenMap: Record<string, string> = {
+  const tokenMap: Record<FormatToken, string> = {
     '{context}': ctxString,
     '{duration}': coloredDuration,
     '{epoch}': epoch,
@@ -699,7 +715,7 @@ export const formatLogOutput = ({
 
   const main = format.replace(
     LOG_FORMAT_REGEX,
-    match => tokenMap[match] ?? match
+    match => tokenMap[match as FormatToken]
   )
 
   const contextLines = buildContextTreeLines(level, data, options, useColors)
