@@ -281,6 +281,17 @@ const evlogApp = new Elysia()
   )
   .get('/', () => 'ok')
 
+const evlogFloorApp = new Elysia()
+  .use(
+    evlog({
+      drain: () => {
+        /* benchmark noop */
+      },
+      exclude: ['/**']
+    })
+  )
+  .get('/', () => 'ok')
+
 const bogeychanApp = new Elysia()
   .use(
     bogeychanLogger({
@@ -289,11 +300,6 @@ const bogeychanApp = new Elysia()
   )
   .get('/', () => 'ok')
 
-// evlog can only be switched off process-wide (`initLogger({ enabled: false })`),
-// which would also silence the other evlog suites, so its "floor" case
-// (evlogApp) still assembles and drains a wide event per request and is not a
-// pure dispatch floor. bogeychan (`enabled: false`) and logixlysia (all sinks
-// disabled) are true floors.
 suite('Elysia plugin request path — overhead floor (all sinks disabled)', [
   [
     'logixlysia',
@@ -304,7 +310,7 @@ suite('Elysia plugin request path — overhead floor (all sinks disabled)', [
   [
     'evlog',
     async () => {
-      await evlogApp.handle(new Request('http://localhost/'))
+      await evlogFloorApp.handle(new Request('http://localhost/'))
     }
   ],
   [
