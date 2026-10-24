@@ -15,10 +15,6 @@ import type { BenchFn, BenchRegistration } from 'vitest'
 import { test } from 'vitest'
 import winston from 'winston'
 
-// BENCH_BASELINE=write stores every result under .baseline/, and
-// BENCH_BASELINE=compare adds those stored results to each table as
-// "<name> (base)" rows. The bench workflow runs the two in turn on one runner
-// to compare two commits. Unset, each suite just compares its own cases.
 const baselineMode = process.env.BENCH_BASELINE
 
 const slug = (text: string): string =>
@@ -319,13 +315,6 @@ suite('Elysia plugin request path — overhead floor (all sinks disabled)', [
   ]
 ])
 
-// A no-op transport still exercises data assembly, context merge, meta
-// construction, and dispatch — unlike the floor suite above, this is real
-// work, just with a sink that discards the result instead of writing it
-// anywhere. evlog's noop `drain` (reused from `evlogApp` above) is its
-// equivalent structured sink, so this comparison is apples-to-apples.
-// bogeychan has no comparable noop-sink mode (its `enabled: false` fully
-// short-circuits, same as the floor suite), so it's left out here.
 const noopTransport = {
   log: () => {
     /* consume */
@@ -371,9 +360,6 @@ const logixlysiaFileApp = new Elysia()
   )
   .get('/', () => 'ok')
 
-// `logToFile` is fire-and-forget from `log()` (through `settle()`), so this
-// suite measures enqueue cost per request plus amortized write cost — not a
-// guarantee that each write has completed by the time `handle()` resolves.
 suite('Elysia plugin request path — file sink', [
   [
     'logixlysia (logFilePath)',

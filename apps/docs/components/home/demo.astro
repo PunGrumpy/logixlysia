@@ -555,7 +555,6 @@ const interactiveRoutes = [
     if (duration) {
       duration.textContent = durationText
     }
-    // Keep the blinking block cursor as the last line.
     const cursor = lines.at(-1)
     if (cursor && cursor.parentElement === body) {
       cursor.before(fragment)

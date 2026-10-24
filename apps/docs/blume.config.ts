@@ -3,8 +3,6 @@ import { databuddy, script } from 'blume/analytics'
 import { vercel } from 'blume/deploy'
 import { filesystem, githubReleases } from 'blume/sources'
 
-// The old Fumadocs site served docs from the root (/introduction). Those URLs
-// are indexed and linked elsewhere, so each one redirects to /docs/<path>.
 const legacyDocsPaths = [
   'api-reference',
   'comparison',
@@ -31,9 +29,6 @@ const legacyDocsPaths = [
   'integrations/pino'
 ]
 
-// Optional Mintlify AI chat widget. Without MINTLIFY_WIDGET_ID nothing is
-// injected. The ID goes into an inline script, so the build rejects any
-// character Mintlify does not issue.
 const mintlifyWidgetId = process.env.MINTLIFY_WIDGET_ID?.trim()
 
 if (mintlifyWidgetId && !/^[\w-]+$/u.test(mintlifyWidgetId)) {
