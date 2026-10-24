@@ -435,7 +435,7 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
       beforeTime: records.get(request)?.startedAt ?? 0n
     }
 
-    if (enrichers) {
+    if (enrichers && enrichers.response.length > 0) {
       applyResponseEnrichers(
         enrichers,
         contextStore,
