@@ -498,9 +498,8 @@ const walker = {
     } catch {
       return UNSERIALIZABLE_TEXT
     }
-    if (plain === value) {
-      // A toJSON that returns its own object: the guard already holds it,
-      // so walk its keys directly instead of answering "[Circular]".
+    const toJsonReturnedItself = plain === value
+    if (toJsonReturnedItself) {
       return walker.record(
         value as unknown as Record<string, unknown>,
         inProgress,

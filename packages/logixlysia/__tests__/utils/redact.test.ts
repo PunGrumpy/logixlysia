@@ -317,6 +317,17 @@ describe('redact', () => {
     expect(out).toEqual({ vault: { apiKey: '[REDACTED]' } })
   })
 
+  test('walks a toJSON that returns its own object instead of reporting a cycle', () => {
+    const self = {
+      apiKey: 'k-1',
+      toJSON() {
+        return this
+      }
+    }
+    const out = redact({ self }) as { self: { apiKey: string } }
+    expect(out.self.apiKey).toBe('[REDACTED]')
+  })
+
   test('walks a CookieMap through toJSON', () => {
     const out: unknown = redact({
       jar: new Bun.CookieMap('token=abc; theme=dark')
