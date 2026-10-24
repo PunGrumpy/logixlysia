@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test'
+import { DEFAULT_MAX_BATCH_SIZE } from '../../src/adapters/shared'
 import { createSentryTransport } from '../../src/sentry'
 import { stubEnv, stubFetch } from './helpers'
 
@@ -174,11 +175,9 @@ describe('logixlysia/sentry', () => {
         }
         await transport.flush()
 
-        // The 20th log fills the first batch; the 101 logged while it is in
-        // flight go out in envelopes of at most 100.
         expect(
           stub.calls.map(call => parseEnvelope(call.body).items.length)
-        ).toEqual([20, 100, 1])
+        ).toEqual([DEFAULT_MAX_BATCH_SIZE, 100, 1])
       } finally {
         stub.restore()
         restoreEnv()
