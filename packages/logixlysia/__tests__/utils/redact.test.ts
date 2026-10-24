@@ -260,6 +260,14 @@ describe('redact', () => {
     expect(original.user.email).toBe('test@example.com')
   })
 
+  test('a redacted Error is never the original instance, even when nothing changed', () => {
+    const original = new Error('nothing sensitive')
+    const result = redact({ error: original }) as { error: Error }
+    expect(result.error).not.toBe(original)
+    expect(result.error).toBeInstanceOf(Error)
+    expect(result.error.message).toBe('nothing sensitive')
+  })
+
   test('only clones the branch containing a change; sibling branches keep their reference', () => {
     const unrelated = { safe: true }
     const original = { a: unrelated, b: { email: 'x@example.com' } }

@@ -346,9 +346,6 @@ const walker = {
     return result ?? value
   },
 
-  // Errors are exempt from the identity fast path: a redacted Error is always constructed
-  // fresh (even when nothing changed) so consumers never receive the original, potentially
-  // stack-trace-carrying instance by reference.
   error: (
     originalError: Error,
     inProgress: WeakSet<object>,
