@@ -8,10 +8,9 @@ import { ensureDir } from './fs'
 import { performRotation } from './rotation-manager'
 
 /**
- * The live file's creation time when the filesystem reports one;
- * some filesystems report 0/absent birthtime — fall back to `now`
- * (losing restart-survival for the interval clock, but never wrong
- * by more than the process lifetime).
+ * The live file's creation time when the filesystem reports one. Some
+ * filesystems report 0 or no birthtime; then `now` is used, so the interval
+ * clock restarts at open and rotation can run late by the file's age.
  */
 export const resolveOpenedAt = (
   birthtimeMs: number | undefined,
