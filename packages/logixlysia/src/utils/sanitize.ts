@@ -1,9 +1,5 @@
 import { stringifyForLog } from './json'
 
-/**
- * True for C0 controls other than tab and LF (0x00-0x08, 0x0B-0x1F), DEL
- * (0x7F), and C1 controls (0x80-0x9F).
- */
 const isControlCodePoint = (code: number): boolean =>
   code <= 8 || (code >= 11 && code <= 31) || (code >= 127 && code <= 159)
 

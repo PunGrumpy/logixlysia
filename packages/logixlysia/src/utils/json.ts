@@ -30,6 +30,11 @@ const toJsonShape = (value: object): object => {
   return value
 }
 
+interface OpenLevel {
+  origin: unknown
+  plain: unknown
+}
+
 /**
  * `JSON.stringify` for log output that never throws. A BigInt becomes its
  * decimal string and a reference back to one of the value's own ancestors
@@ -42,10 +47,7 @@ const toJsonShape = (value: object): object => {
  * (`undefined`, a function, a symbol).
  */
 export const stringifyForLog = (value: unknown): string => {
-  // The object each open level serializes (what `this` is for its children),
-  // beside the value it came from, which is what a cycle refers back to.
-  const ancestors: unknown[] = []
-  const origins: unknown[] = []
+  const levels: OpenLevel[] = []
   const seen = new Set<unknown>()
   try {
     return (
@@ -63,19 +65,17 @@ export const stringifyForLog = (value: unknown): string => {
           if (typeof current !== 'object' || current === null) {
             return current
           }
-          while (ancestors.length > 0 && ancestors.at(-1) !== this) {
-            ancestors.pop()
-            seen.delete(origins.pop())
+          while (levels.length > 0 && levels.at(-1)?.plain !== this) {
+            seen.delete(levels.pop()?.origin)
           }
           if (seen.has(current)) {
             return CIRCULAR_REF
           }
-          if (ancestors.length >= MAX_DEPTH) {
+          if (levels.length >= MAX_DEPTH) {
             return DEPTH_TEXT
           }
           const plain = toJsonShape(current)
-          ancestors.push(plain)
-          origins.push(current)
+          levels.push({ origin: current, plain })
           seen.add(current)
           return plain
         }

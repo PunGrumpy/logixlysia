@@ -3,12 +3,6 @@ const EMAIL_REGEX =
   /[a-zA-Z0-9._%+-]{1,64}@[a-zA-Z0-9.-]{1,253}\.[a-zA-Z]{2,63}/gu
 const IPV4_REGEX =
   /(?<![\w/.])(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(?![\w.])/gu
-/**
- * Bounded IPv6: either all 8 groups, or a single `::` compression. Requiring
- * one of those shapes (rather than "2+ colon-separated hex groups") keeps
- * clock times (`12:30:45`) and MAC addresses (`aa:bb:cc:dd:ee:ff`) from
- * matching.
- */
 const IPV6_REGEX =
   /(?<![\w:])(?:(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}|(?:[0-9a-fA-F]{1,4}:){1,7}:(?:[0-9a-fA-F]{1,4}(?::[0-9a-fA-F]{1,4}){0,6})?|::(?:[0-9a-fA-F]{1,4}(?::[0-9a-fA-F]{1,4}){0,6}))(?![\w:])/gu
 const CREDIT_CARD_CANDIDATE_REGEX = /\b(?:\d[ -]*?){13,19}\b/gu
@@ -28,16 +22,13 @@ const JWT_REGEX = /(?<![\w-])eyJ[\w-]+\.eyJ[\w-]+\.[\w-]+/gu
 const URL_PASSWORD_REGEX = /(?<prefix>:\/\/[^\s/?#@:]*:)[^\s/?#@]+@/gu
 const URL_SCHEME_LETTER_REGEX = /[a-z]/iu
 const URL_SCHEME_MARK_REGEX = /[\d+.-]/u
-/**
- * An HTTP credential after its scheme word. Only a token with a digit, a
- * URL-safe punctuation mark or an uppercase letter after a word character is
- * masked, so prose such as "Basic authentication failed" is left alone.
- */
 const HTTP_CREDENTIAL_REGEX =
   /\b(?<scheme>[Bb]earer|[Bb]asic)\s+(?<token>[\w\-.~+/]{8,}=*)/gu
 const CREDENTIAL_MARK_REGEX = /[\d\-.~+/]/u
 /** No `i` flag, under which `[A-Z]` would match every lowercase letter too. */
 const INNER_CAPITAL_REGEX = /\w[A-Z]/u
+const looksLikeCredential = (token: string): boolean =>
+  CREDENTIAL_MARK_REGEX.test(token) || INNER_CAPITAL_REGEX.test(token)
 
 const PAN_MIN_LEN = 13
 const PAN_MAX_LEN = 19
@@ -176,7 +167,6 @@ const endsWithUrlScheme = (text: string, end: number): boolean => {
 export const redactString = (text: string): string => {
   let result = text
 
-  // Before the email pass, which would otherwise eat `password@host.tld`.
   result = result.replace(
     URL_PASSWORD_REGEX,
     (match: string, prefix: string, offset: number, whole: string) =>
@@ -190,16 +180,15 @@ export const redactString = (text: string): string => {
   result = result.replace(
     HTTP_CREDENTIAL_REGEX,
     (match: string, scheme: string, token: string) =>
-      CREDENTIAL_MARK_REGEX.test(token) || INNER_CAPITAL_REGEX.test(token)
-        ? `${scheme} ${REDACTED_TEXT}`
-        : match
+      looksLikeCredential(token) ? `${scheme} ${REDACTED_TEXT}` : match
   )
 
   return result
 }
 
 /**
- * Host and userinfo cannot contain `[REDACTED]` — `[` begins an IPv6 literal in URLs and breaks parsing.
+ * The host cannot hold `[REDACTED]`: `[` opens an IPv6 literal. Userinfo would
+ * percent-encode it, so one bracket-free token serves both.
  */
 const URL_SAFE_REDACT = 'redacted'
 
@@ -357,9 +346,6 @@ const walker = {
     return result ?? value
   },
 
-  // Errors are exempt from the identity fast path: a redacted Error is always constructed
-  // fresh (even when nothing changed) so consumers never receive the original, potentially
-  // stack-trace-carrying instance by reference.
   error: (
     originalError: Error,
     inProgress: WeakSet<object>,
@@ -512,9 +498,8 @@ const walker = {
     } catch {
       return UNSERIALIZABLE_TEXT
     }
-    if (plain === value) {
-      // A toJSON that returns its own object: the guard already holds it,
-      // so walk its keys directly instead of answering "[Circular]".
+    const toJsonReturnedItself = plain === value
+    if (toJsonReturnedItself) {
       return walker.record(
         value as unknown as Record<string, unknown>,
         inProgress,
@@ -616,9 +601,9 @@ export const redact = <T>(value: T, extraKeys?: readonly string[]): T =>
 
 /**
  * Clone request URL, method and headers for logging with the same string redaction as {@link redact}.
- * The returned request is a logging-only artifact carrying url/method/headers/signal; it intentionally
- * omits the body so it never re-uses the original (possibly already-consumed) request stream. The
- * original request is left untouched and remains usable.
+ * When nothing needed redacting the original request is returned. Otherwise the result is a
+ * logging-only artifact carrying url/method/headers/signal and no body, so it never re-uses the
+ * original (possibly already-consumed) request stream. The original request is left untouched.
  */
 export const redactRequest = (
   request: Request,

@@ -70,6 +70,12 @@ describe('redactString', () => {
     )
   })
 
+  test('masks a URL password before the email pass can eat it, even with a dotted host', () => {
+    expect(
+      redactString('dsn postgres://app:hunter2@db.internal.example/main')
+    ).toBe('dsn postgres://app:[REDACTED]@db.internal.example/main')
+  })
+
   test('masks Bearer and Basic credentials', () => {
     expect(redactString('got Bearer abcdefghijklmnop.qrs')).toBe(
       'got Bearer [REDACTED]'
@@ -254,6 +260,14 @@ describe('redact', () => {
     expect(original.user.email).toBe('test@example.com')
   })
 
+  test('a redacted Error is never the original instance, even when nothing changed', () => {
+    const original = new Error('nothing sensitive')
+    const result = redact({ error: original }) as { error: Error }
+    expect(result.error).not.toBe(original)
+    expect(result.error).toBeInstanceOf(Error)
+    expect(result.error.message).toBe('nothing sensitive')
+  })
+
   test('only clones the branch containing a change; sibling branches keep their reference', () => {
     const unrelated = { safe: true }
     const original = { a: unrelated, b: { email: 'x@example.com' } }
@@ -301,6 +315,17 @@ describe('redact', () => {
     }
     const out: unknown = redact({ vault })
     expect(out).toEqual({ vault: { apiKey: '[REDACTED]' } })
+  })
+
+  test('walks a toJSON that returns its own object instead of reporting a cycle', () => {
+    const self = {
+      apiKey: 'k-1',
+      toJSON() {
+        return this
+      }
+    }
+    const out = redact({ self }) as { self: { apiKey: string } }
+    expect(out.self.apiKey).toBe('[REDACTED]')
   })
 
   test('walks a CookieMap through toJSON', () => {
@@ -529,10 +554,6 @@ describe('redactRequest', () => {
 
     const out = redactRequest(req)
     expect(out.headers.get('x-forwarded-for')).toBe('[REDACTED]')
-    // The logging-only clone must not carry the original (already-consumed)
-    // stream — re-attaching it is what threw "ReadableStream has already been
-    // used" on Bun <=1.2.x. Asserting a null body guards the fix on every Bun
-    // version, not just the ones where the reuse happens to throw.
     expect(out.body).toBeNull()
   })
 
