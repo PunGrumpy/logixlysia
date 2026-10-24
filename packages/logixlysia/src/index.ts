@@ -495,10 +495,9 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
     }
     record.phase = 'closed'
     const owner = lineOwners.get(request)
-    if (record.seenByWrap && owner !== undefined && owner !== instance) {
-      // Another instance's route hooks wrote this request's line. Still
-      // resolve this instance's tail sampling, or what it buffered for the
-      // request (a `useLogger()` call, say) is never kept or dropped.
+    const lineWrittenByAnotherInstance =
+      record.seenByWrap && owner !== undefined && owner !== instance
+    if (lineWrittenByAnotherInstance) {
       try {
         logger.finalizeRequest(
           request,
@@ -666,9 +665,8 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
       const timeoutMs =
         options.config?.flushTimeoutMs ?? DEFAULT_FLUSH_TIMEOUT_MS
       const timedOut = await raceWithTimeout(flushAll(options), timeoutMs)
-      // A zero timeout means the caller opted out of waiting, so the flush
-      // "timing out" is expected and not worth reporting.
-      if (timedOut && timeoutMs > 0) {
+      const waitWasRequested = timeoutMs > 0
+      if (timedOut && waitWasRequested) {
         reportShutdownTimeout(options.config?.onError, timeoutMs)
       }
     })
