@@ -49,7 +49,6 @@ afterAll(() => {
   process.off('unhandledRejection', onRejection)
 })
 
-/** Serves `hooks` through `wrapWs` and returns the socket URL of the route. */
 const serve = (path: string, hooks: WsHandlerHooks): string => {
   app = new Elysia()
     .use(plugin)
@@ -66,10 +65,6 @@ const serve = (path: string, hooks: WsHandlerHooks): string => {
   return `ws://localhost:${port}${path}`
 }
 
-/**
- * Opens a socket, sends `message` when given and collects what the client
- * receives for a while, then closes the socket.
- */
 const exchange = async (
   url: string,
   message?: string

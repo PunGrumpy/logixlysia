@@ -68,7 +68,6 @@ const responseStatus = (status: number): number =>
 export class HttpError extends Error {
   readonly code?: string
   readonly fix?: string
-  /** Log-only diagnostics; see the class doc. */
   declare readonly internal?: unknown
   readonly link?: string
   readonly status: number

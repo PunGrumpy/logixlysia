@@ -242,7 +242,6 @@ export interface LogixlysiaSingleton<TFields extends object = LogFields> {
   store: LogixlysiaStore
 }
 
-// Elysia's `SingletonBase` slots are `Record<string, unknown>`; ours are intentionally closed (see #220).
 export type Logixlysia<TFields extends object = LogFields> = Elysia<
   '',
   // @ts-expect-error — closed slots are correct at runtime and for merged `ws.data` inference.
@@ -456,11 +455,6 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
 
   const useAsyncLocalStorage = options.config?.useAsyncLocalStorage === true
 
-  /**
-   * Restores the no-op logger once a request is over, so a promise that
-   * outlives it and calls `useLogger()` writes nowhere instead of into
-   * whichever request happened to run last.
-   */
   const exitRequestScope = (): void => {
     if (useAsyncLocalStorage) {
       loggerStorage.enterWith(noopRequestLogger)
