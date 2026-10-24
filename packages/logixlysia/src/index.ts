@@ -678,8 +678,9 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
       if (requestIdConfig) {
         const requestId = getOrCreateRequestId(request, requestIdConfig)
         contextStore.mergeContext(request, { requestId })
-        // Written now, not when the line is written: the wrap runs after
-        // the Response exists, and a short-circuit never reaches the hooks.
+        // Set at the start as well as at close: a short-circuited request
+        // never reaches the later hooks, and the wrap runs after the Response
+        // exists.
         set.headers[requestIdConfig.header] = requestId
       }
 

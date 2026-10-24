@@ -57,8 +57,8 @@ const shouldUseColors = (options: Options): boolean => {
   return enabledByConfig && isTty
 }
 
-// pino-pretty's shorthand for `yyyy-mm-dd HH:MM:ss.SSS` (minus the `o`
-// timezone-offset token, which this formatter does not support).
+// pino-pretty's `standard` expands to `yyyy-mm-dd HH:MM:ss.l o`; this
+// formatter has no `l` or `o` token, so it uses `SSS` and drops the offset.
 const STANDARD_TIMESTAMP_PATTERN = 'yyyy-mm-dd HH:MM:ss.SSS'
 const TIMESTAMP_PREFIX_LENGTH = 'sys:'.length
 
