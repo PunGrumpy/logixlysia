@@ -51,11 +51,6 @@ describe('logixlysia plugin - per-request timing under concurrency', () => {
     const slowDurationMs = durationFor('/slow')
     const fastDurationMs = durationFor('/fast')
 
-    // Pre-fix, the request start time was mutated in Elysia's app-global
-    // state: the `/fast` request (started ~30ms after `/slow`) overwrites the
-    // single shared slot before `/slow`'s `onAfterHandle` reads it, so
-    // `/slow`'s logged duration collapses to roughly `120 - 30 = 90ms`
-    // instead of reflecting its true ~120ms runtime.
     expect(slowDurationMs).toBeGreaterThanOrEqual(100)
     expect(fastDurationMs).toBeLessThan(100)
   })

@@ -2,11 +2,6 @@ import { describe, expect, mock, test } from 'bun:test'
 import { Elysia } from 'elysia'
 import { logixlysia, useLogger } from '../../src'
 
-/**
- * These assertions are checked by `tsc --noEmit` as much as by the runtime:
- * every `@ts-expect-error` below fails the typecheck if the field typing stops
- * rejecting what it should.
- */
 interface CheckoutFields {
   cartId: string
   itemCount: number

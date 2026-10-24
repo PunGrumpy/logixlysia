@@ -242,7 +242,6 @@ export interface LogixlysiaSingleton<TFields extends object = LogFields> {
   store: LogixlysiaStore
 }
 
-// Elysia's `SingletonBase` slots are `Record<string, unknown>`; ours are intentionally closed (see #220).
 export type Logixlysia<TFields extends object = LogFields> = Elysia<
   '',
   // @ts-expect-error — closed slots are correct at runtime and for merged `ws.data` inference.
@@ -436,7 +435,7 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
       beforeTime: records.get(request)?.startedAt ?? 0n
     }
 
-    if (enrichers) {
+    if (enrichers && enrichers.response.length > 0) {
       applyResponseEnrichers(
         enrichers,
         contextStore,
@@ -456,11 +455,6 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
 
   const useAsyncLocalStorage = options.config?.useAsyncLocalStorage === true
 
-  /**
-   * Restores the no-op logger once a request is over, so a promise that
-   * outlives it and calls `useLogger()` writes nowhere instead of into
-   * whichever request happened to run last.
-   */
   const exitRequestScope = (): void => {
     if (useAsyncLocalStorage) {
       loggerStorage.enterWith(noopRequestLogger)
@@ -501,10 +495,9 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
     }
     record.phase = 'closed'
     const owner = lineOwners.get(request)
-    if (record.seenByWrap && owner !== undefined && owner !== instance) {
-      // Another instance's route hooks wrote this request's line. Still
-      // resolve this instance's tail sampling, or what it buffered for the
-      // request (a `useLogger()` call, say) is never kept or dropped.
+    const lineWrittenByAnotherInstance =
+      record.seenByWrap && owner !== undefined && owner !== instance
+    if (lineWrittenByAnotherInstance) {
       try {
         logger.finalizeRequest(
           request,
@@ -672,9 +665,8 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
       const timeoutMs =
         options.config?.flushTimeoutMs ?? DEFAULT_FLUSH_TIMEOUT_MS
       const timedOut = await raceWithTimeout(flushAll(options), timeoutMs)
-      // A zero timeout means the caller opted out of waiting, so the flush
-      // "timing out" is expected and not worth reporting.
-      if (timedOut && timeoutMs > 0) {
+      const waitWasRequested = timeoutMs > 0
+      if (timedOut && waitWasRequested) {
         reportShutdownTimeout(options.config?.onError, timeoutMs)
       }
     })
@@ -686,8 +678,9 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
       if (requestIdConfig) {
         const requestId = getOrCreateRequestId(request, requestIdConfig)
         contextStore.mergeContext(request, { requestId })
-        // Written now, not when the line is written: the wrap runs after
-        // the Response exists, and a short-circuit never reaches the hooks.
+        // Set at the start as well as at close: a short-circuited request
+        // never reaches the later hooks, and the wrap runs after the Response
+        // exists.
         set.headers[requestIdConfig.header] = requestId
       }
 

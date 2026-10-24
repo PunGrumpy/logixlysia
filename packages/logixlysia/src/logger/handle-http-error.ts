@@ -35,9 +35,6 @@ export const handleHttpError = (
   const { config } = options
 
   const status = store.status ?? errorStatus(error)
-  // A thrown status() is logged at its own code's level. Any other thrown
-  // value is an error, even when the client already got a 2xx or 3xx: that
-  // is a body that failed after the headers went out.
   const level: LogLevel =
     isStatusResponse(error) || status >= 400 ? levelForStatus(status) : 'ERROR'
 

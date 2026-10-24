@@ -58,11 +58,6 @@ const createLazyPino = (
       : {})
   }
 
-  // Pino (and, when configured, its pino-pretty transform stream) is expensive to construct
-  // and is only ever needed when a caller explicitly reads store.pino/logger.pino or configures
-  // config.pino — the plugin's own log path writes via console.* and never touches it. Building
-  // it lazily behind a stable Proxy keeps `store.pino === logger.pino` identity while deferring
-  // the cost until first access.
   const prettyStream = (): ReturnType<typeof pretty> =>
     pretty({
       colorize: process.stdout?.isTTY === true,
