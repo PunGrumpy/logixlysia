@@ -83,7 +83,6 @@ export const compressFile = async (
       error,
       onError
     )
-    throw error
   } finally {
     release()
   }
@@ -170,13 +169,7 @@ export const performRotation = async (
   if (shouldCompress) {
     const algo = config.compression ?? 'gzip'
     if (algo === 'gzip') {
-      try {
-        await compressFile(rotated, onError, fileMode)
-      } catch {
-        // compressFile already reported this error via onError/console.error;
-        // swallow the rethrow here so retention cleanup below still runs and
-        // the failure isn't reported a second time by the caller's catch.
-      }
+      await compressFile(rotated, onError, fileMode)
     }
   }
 
