@@ -3,7 +3,7 @@ title: Datadog
 description: Ship logs to Datadog via the v2 logs intake API
 ---
 
-Send logs to [Datadog](https://www.datadoghq.com) Log Management. Logs arrive with `service` and `source` facets, the level mapped to Datadog's `status`, and the full meta object as searchable attributes.
+Send logs to [Datadog](https://www.datadoghq.com) Log Management. Logs arrive with `service` and `source` facets, the level mapped to Datadog's `status`, and meta fields as searchable attributes.
 
 ## Setup
 
@@ -72,7 +72,8 @@ Logs post to `https://http-intake.logs.{site}/api/v2/logs`:
 
 - **`status`** — the log level lowercased (`info`, `warning`, `error`), which Datadog's default status remapper picks up for severity coloring.
 - **`http.status_code`** — the HTTP response status from access logs, following Datadog's standard attribute so response-code facets work out of the box.
-- **Attributes** — the full meta object rides along nested (`request.method`, `context.requestId`, `durationMs`, …), searchable with `@request.method:GET` style queries.
+- **Attributes** — meta fields ride along nested (`request.method`, `context.requestId`, `durationMs`, …), searchable with `@request.method:GET` style queries.
+- **Reserved attributes** — the event reserves `ddsource`, `message`, `service`, `status`, and `timestamp`. Meta fields with these names are overwritten. A numeric `meta.status` moves to `http.status_code` and replaces any `meta.http` object. `tags` overwrite `meta.ddtags`, and `hostname` (or `DD_HOSTNAME`) overwrites `meta.hostname`.
 
 ## Troubleshooting
 
