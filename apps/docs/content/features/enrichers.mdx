@@ -109,6 +109,22 @@ Return `undefined` to add nothing.
 
 The response phase runs before the request's final log line on both the success and the error path, so its fields are on the access log and on the error log alike. Request-phase fields, being merged at the start, also reach any `log.info()` you make inside the handler. When a custom log replaces the access line, the response-phase fields reach no sink.
 
+### Response headers
+
+`headers` holds the headers the client received. When a handler returns a `Response` and also sets `set.headers`, the `Response`'s value wins. `set.headers` only fills in headers the `Response` lacks. This matches what Elysia sends, so `sizeEnricher`'s `responseBytes` matches the wire.
+
+`headers['set-cookie']` holds the cookies from both sources, except that a `set.headers` array of cookies is dropped when the `Response` sets its own, as Elysia does. It is a string for one cookie and an array for several, so a custom enricher that reads it must handle both:
+
+```ts
+const cookieEnricher = {
+  response: ({ headers }) => {
+    const raw = headers['set-cookie']
+    const cookies = raw === undefined ? [] : Array.isArray(raw) ? raw : [raw]
+    return { cookiesSet: cookies.length }
+  }
+}
+```
+
 ## Failure Handling
 
 Enrichment is decoration and must never take a request down. A hook that throws is caught, reported, and skipped — the remaining enrichers still run and the request completes normally.
