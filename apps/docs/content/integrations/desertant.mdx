@@ -83,11 +83,13 @@ A failed load is not retried, because retrying per record would hammer the model
 **Only plain data is walked.** Strings inside plain objects, arrays and errors are redacted, down to `maxDepth` levels of `meta`. Any other object, such as a `Date`, a `Map`, a `Set` or a class instance, is delivered as it is. Flatten anything that can carry free-text PII into plain fields before you log it:
 
 ```ts
+const profile = new Map([['name', 'Jane Doe']])
+
 // Not redacted: the Map is forwarded untouched
-logger.info(request, 'Signup', { profile: new Map([['name', 'Jane Doe']]) })
+logger.info(request, 'Signup', { profile })
 
 // Redacted: plain object fields are walked
-logger.info(request, 'Signup', { profile: Object.fromEntries(profileMap) })
+logger.info(request, 'Signup', { profile: Object.fromEntries(profile) })
 ```
 
 **Errors are rebuilt, not mutated.** An `Error` in `meta` gets a redacted copy — message, stack and own fields — while the original instance is left untouched for the rest of the pipeline.
