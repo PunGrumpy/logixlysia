@@ -113,7 +113,7 @@ The response phase runs before the request's final log line on both the success 
 
 `headers` holds the headers the client received. When a handler returns a `Response` and also sets `set.headers`, the `Response`'s value wins. `set.headers` only fills in headers the `Response` lacks. This matches what Elysia sends, so `sizeEnricher`'s `responseBytes` matches the wire.
 
-`headers['set-cookie']` holds every cookie from both sources. It is a string for one cookie and an array for several, so a custom enricher that reads it must handle both:
+`headers['set-cookie']` holds the cookies from both sources, except that a `set.headers` array of cookies is dropped when the `Response` sets its own, as Elysia does. It is a string for one cookie and an array for several, so a custom enricher that reads it must handle both:
 
 ```ts
 const cookieEnricher = {
