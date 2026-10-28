@@ -79,10 +79,10 @@ The adapter factory validates these options when you call it. An invalid value t
 | --- | --- |
 | `maxBatchSize`, `maxEntriesPerRequest`, `maxPendingBatches` | A positive integer (`1` or more) |
 | `retries` | An integer at or above `0` |
-| `timeout` | A whole number of milliseconds from `1` to `4294967295` |
+| `timeout` | A whole number of milliseconds from `1` to `2147483647` (2^31 - 1) |
 | `flushIntervalMs` | A number of milliseconds from `0` to `2147483647` |
 
-For example, `retries: Infinity`, `timeout: 0`, `timeout: 1.5`, and `maxPendingBatches: NaN` all throw at startup. `retries: 0` and `flushIntervalMs: 0` stay valid.
+For example, `retries: Infinity`, `timeout: 0`, `timeout: 1.5`, `timeout: 2 ** 31`, and `maxPendingBatches: NaN` all throw at startup. The `timeout` ceiling matches the largest delay a timer honors. Node clamps a longer timer to 1 ms, which would abort every request. `retries: 0` and `flushIntervalMs: 0` stay valid.
 
 Requests are sent one at a time, so entries arrive in the order they were logged. Under load, the entries that arrived during a send go out together in the next request, up to `maxEntriesPerRequest`, so a slow backend does not limit delivery to one batch per round trip. Once `maxPendingBatches × maxBatchSize` entries are waiting, new entries are dropped and reported rather than buffered forever. To see every failure in one place, including those of requests no caller is awaiting, forward the adapter's `onError` to the function you give [`config.onError`](/docs/features/transports): `onError: error => handle({ error, sink: 'transport' })`, where `handle` is that function.
 
