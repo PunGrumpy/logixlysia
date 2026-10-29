@@ -13,6 +13,7 @@ import type { SamplingRuntime } from '../sampling'
 import { elapsedMs } from '../utils/duration'
 import { redact, redactRequest } from '../utils/redact'
 import { createErrorReporter } from '../utils/report'
+import type { ErrorReporter } from '../utils/report'
 import { settle } from '../utils/settle'
 import { formatLogOutput } from './create-logger'
 import type { FormatContext, PrecomputedLogParts } from './create-logger'
@@ -125,7 +126,7 @@ export interface EmitInput {
 /** What became of a record: written now, held for the tail verdict, or neither. */
 export type EmitOutcome = 'buffered' | 'dropped' | 'written'
 
-export const reportFormatError = createErrorReporter(
+export const reportFormatError: ErrorReporter = createErrorReporter(
   'format',
   'failed to build a log record'
 )
