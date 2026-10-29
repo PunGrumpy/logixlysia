@@ -1,5 +1,16 @@
 # Changelog
 
+## 6.10.5
+
+### Patch Changes
+
+- eebf9a6: `withRedaction` now redacts a `DOMException`, such as the `TimeoutError` or `AbortError` that `AbortSignal.timeout()` and an aborted `fetch` reject with. Copying one threw `TypeError: Attempted to assign to readonly property.`, because its `name` and `message` are getter-only accessors on the prototype. The record was then dropped, or, with `onFailure: 'forward'`, shipped unredacted.
+- eebf9a6: `createLogger` now applies `preset` and validates its options, as the plugin does. It ignored the preset, so `createLogger({ preset: 'prod' })` shipped records without `autoRedact`, and an unknown preset was accepted.
+  
+  A custom log that head sampling drops no longer takes the request's access line with it. The access line was suppressed as soon as the custom log passed `logFilter`, so with `sampling.head: { INFO: 0 }` a handler that called `log.info()` and returned a 503 logged nothing at all. A custom log now replaces the access line only when it is written, or when the tail verdict replays it.
+- eebf9a6: The OTLP and HyperDX transports now send a whole number outside the safe-integer range as `doubleValue`. As `intValue` it became a string such as `"1e+21"` that the collector cannot parse as an int64, which failed the whole request.
+- eebf9a6: Rotation retention now deletes only the log's own archives. A file counted as an archive of `app` whenever its name started with `app.` and ended in a rotation timestamp, so with `maxFiles` set, rotating `logs/app` deleted the archives of `logs/app.error` in the same directory, and user files such as `app.bak.<timestamp>`. The whole suffix after the log's name must now be the timestamp.
+
 ## 6.10.4
 
 ### Patch Changes
