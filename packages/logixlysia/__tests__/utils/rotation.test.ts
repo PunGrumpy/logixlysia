@@ -151,6 +151,24 @@ describe('getRotatedFiles', () => {
     }
   })
 
+  test('leaves out the archives of a log whose name extends this one', async () => {
+    const dir = await createTempDir()
+    try {
+      const filePath = path.join(dir, 'app')
+
+      await fs.writeFile(`${filePath}.2026-01-02-03-04-05`, 'own')
+      await fs.writeFile(`${filePath}.error.2026-01-02-03-04-05`, 'sibling')
+      await fs.writeFile(`${filePath}.bak.2026-01-02-03-04-05.gz`, 'user file')
+
+      const rotated = await getRotatedFiles(filePath)
+      expect(rotated.map(p => p.slice(dir.length + 1))).toEqual([
+        'app.2026-01-02-03-04-05'
+      ])
+    } finally {
+      await removeTempDir(dir)
+    }
+  })
+
   test('returns an empty array when the directory is missing', async () => {
     const rotated = await getRotatedFiles('/nonexistent-dir-xyz/app.log')
     expect(rotated).toEqual([])

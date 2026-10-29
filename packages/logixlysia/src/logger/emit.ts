@@ -13,6 +13,7 @@ import type { SamplingRuntime } from '../sampling'
 import { elapsedMs } from '../utils/duration'
 import { redact, redactRequest } from '../utils/redact'
 import { createErrorReporter } from '../utils/report'
+import type { ErrorReporter } from '../utils/report'
 import { settle } from '../utils/settle'
 import { formatLogOutput } from './create-logger'
 import type { FormatContext, PrecomputedLogParts } from './create-logger'
@@ -122,7 +123,10 @@ export interface EmitInput {
   store: StoreData
 }
 
-export const reportFormatError = createErrorReporter(
+/** What became of a record: written now, held for the tail verdict, or neither. */
+export type EmitOutcome = 'buffered' | 'dropped' | 'written'
+
+export const reportFormatError: ErrorReporter = createErrorReporter(
   'format',
   'failed to build a log record'
 )
@@ -207,7 +211,7 @@ const writeRecord = ({
   consoleForLevel(level)(message)
 }
 
-export const emit = (input: EmitInput): void => {
+export const emit = (input: EmitInput): EmitOutcome => {
   const {
     bypassSampling,
     data,
@@ -221,13 +225,13 @@ export const emit = (input: EmitInput): void => {
   const { config } = options
 
   if (isSuppressed(sinks, level, config?.logFilter)) {
-    return
+    return 'dropped'
   }
 
   if (sampling && !bypassSampling) {
     const decision = sampling.decide(level, request)
     if (decision === 'drop') {
-      return
+      return 'dropped'
     }
     if (decision === 'buffer') {
       sampling.buffer(request, {
@@ -235,7 +239,7 @@ export const emit = (input: EmitInput): void => {
         durationMs: elapsedMs(store.beforeTime),
         level
       })
-      return
+      return 'buffered'
     }
   }
 
@@ -244,4 +248,5 @@ export const emit = (input: EmitInput): void => {
   } catch (error) {
     reportFormatError(error, config?.onError)
   }
+  return 'written'
 }

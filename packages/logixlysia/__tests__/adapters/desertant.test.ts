@@ -146,6 +146,26 @@ describe('logixlysia/desertant', () => {
     expect((original.errors[0] as Error).message).toBe('Anna Müller failed')
   })
 
+  test('redacts a DOMException, whose name and message are prototype getters', async () => {
+    const sink = createSink()
+    const reported: unknown[] = []
+    const original = new DOMException('Anna Müller timed out', 'TimeoutError')
+    const transport = withRedaction(sink, createStubRedactor(), {
+      onError: error => reported.push(error)
+    })
+
+    transport.log('ERROR', 'upstream call failed', { error: original })
+    await transport.flush()
+
+    expect(reported).toEqual([])
+    const { error } = metaOf(sink.records) as { error: DOMException }
+    expect(error).toBeInstanceOf(DOMException)
+    expect(error.name).toBe('TimeoutError')
+    expect(error.message).toBe('[GIVEN_NAME_1] timed out')
+    expect(error.code).toBe(original.code)
+    expect(original.message).toBe('Anna Müller timed out')
+  })
+
   test('passes non-plain objects such as Date through by reference', async () => {
     const sink = createSink()
     const at = new Date('2026-01-01T00:00:00.000Z')
