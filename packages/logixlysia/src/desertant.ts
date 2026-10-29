@@ -159,10 +159,24 @@ const walker = {
     const clone = Object.create(
       Object.getPrototypeOf(original) as object
     ) as Error & Record<string, unknown>
-    clone.name = original.name
-    clone.message = await redactText(original.message, context)
+    // Defined, not assigned: DOMException's name and message are getter-only
+    // accessors on the prototype, and assigning through them throws.
+    const defineOwn = (key: string, value: unknown): void => {
+      Object.defineProperty(clone, key, {
+        configurable: true,
+        enumerable: false,
+        value,
+        writable: true
+      })
+    }
+    defineOwn('name', original.name)
+    defineOwn('message', await redactText(original.message, context))
     if (original.stack !== undefined) {
-      clone.stack = await redactText(original.stack, context)
+      defineOwn('stack', await redactText(original.stack, context))
+    }
+    if (original instanceof DOMException) {
+      // The clone has no DOMException internal slot for the `code` getter.
+      defineOwn('code', original.code)
     }
 
     const record = original as unknown as Record<string, unknown>
