@@ -3,8 +3,8 @@ import path from 'node:path'
 
 const SIZE_REGEX = /^(?<amount>\d+(?:\.\d+)?)(?<unit>[GKMgkm][Bb]?)$/u
 const INTERVAL_REGEX = /^(?<amount>\d+)(?<unit>[dhw])$/iu
-const ROTATED_REGEX =
-  /\.\d{4}-\d{2}-\d{2}-\d{2}-\d{2}-\d{2}(?:-\d{3})?(?:-\d+)?(?:\.gz)?$/u
+const ROTATED_SUFFIX_REGEX =
+  /^\.\d{4}-\d{2}-\d{2}-\d{2}-\d{2}-\d{2}(?:-\d{3})?(?:-\d+)?(?:\.gz)?$/u
 
 export const parseSize = (value: number | string): number => {
   if (typeof value === 'number') {
@@ -104,7 +104,13 @@ export const getRotatedFiles = async (filePath: string): Promise<string[]> => {
     return []
   }
 
+  // The whole suffix must be the timestamp, so `app.error.<timestamp>` is not
+  // an archive of `app`.
   return entries
-    .filter(name => name.startsWith(`${base}.`) && ROTATED_REGEX.test(name))
+    .filter(
+      name =>
+        name.startsWith(base) &&
+        ROTATED_SUFFIX_REGEX.test(name.slice(base.length))
+    )
     .map(name => `${dir}/${name}`)
 }
