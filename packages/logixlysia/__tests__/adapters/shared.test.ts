@@ -229,28 +229,6 @@ describe('resolveEndpoint', () => {
       'http or https'
     )
   })
-
-  test('rejects credentials in the URL without echoing them', () => {
-    // fetch drops userinfo instead of sending it, and its errors carry the
-    // full URL, so the credentials would be ignored and then leaked.
-    const cases = [
-      { input: 'http://default:ch-s3cret@127.0.0.1:8123', secret: 'ch-s3cret' },
-      { input: 'https://123456@logs.example/loki', secret: '123456' },
-      { input: 'https://:glc_s3cret@logs.example/loki', secret: 'glc_s3cret' }
-    ]
-    for (const { input, secret } of cases) {
-      let thrown: Error | undefined
-      try {
-        resolveEndpoint('Loki', input)
-      } catch (error) {
-        thrown = error as Error
-      }
-      expect(thrown?.message).toBe(
-        "[logixlysia] Loki transport: endpoint URL must not contain credentials; pass them through the adapter's options instead"
-      )
-      expect(Bun.inspect(thrown)).not.toContain(secret)
-    }
-  })
 })
 
 describe('postWithRetry', () => {

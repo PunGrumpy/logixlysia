@@ -157,12 +157,6 @@ export const resolveEndpoint = (name: string, url: string): string => {
       `endpoint must use http or https, got '${parsed.protocol}'`
     )
   }
-  if (parsed.username !== '' || parsed.password !== '') {
-    throw transportError(
-      name,
-      "endpoint URL must not contain credentials; pass them through the adapter's options instead"
-    )
-  }
   return parsed.toString()
 }
 
