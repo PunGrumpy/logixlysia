@@ -72,6 +72,32 @@ describe('logixlysia/otlp', () => {
     }
   })
 
+  test('sends a whole number past the safe-integer range as doubleValue', async () => {
+    // The collector parses intValue as an int64 string, so "1e+21" or a
+    // value past 2^63 fails the whole request.
+    const restoreEnv = stubEnv(CLEAR_ENV)
+    const stub = stubFetch()
+    try {
+      const transport = createOtlpTransport({
+        endpoint: 'http://collector:4318'
+      })
+      transport.log('INFO', 'hi', { big: 1e21, count: 42, huge: 2 ** 64 })
+      await transport.flush()
+
+      const payload = JSON.parse(stub.calls[0]?.body ?? '{}') as OtlpPayload
+      const attributes =
+        payload.resourceLogs[0]?.scopeLogs[0]?.logRecords[0]?.attributes
+      const valueOf = (key: string) =>
+        attributes?.find(attribute => attribute.key === key)?.value
+      expect(valueOf('count')).toEqual({ intValue: '42' })
+      expect(valueOf('big')).toEqual({ doubleValue: 1e21 })
+      expect(valueOf('huge')).toEqual({ doubleValue: 2 ** 64 })
+    } finally {
+      stub.restore()
+      restoreEnv()
+    }
+  })
+
   test('throws for an invalid endpoint', () => {
     const restoreEnv = stubEnv(CLEAR_ENV)
     try {

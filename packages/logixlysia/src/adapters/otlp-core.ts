@@ -24,7 +24,7 @@ const toOtlpValue = (value: FlatValue): OtlpAnyValue => {
     return { boolValue: value }
   }
   if (typeof value === 'number') {
-    return Number.isInteger(value)
+    return Number.isSafeInteger(value)
       ? { intValue: String(value) }
       : { doubleValue: value }
   }
