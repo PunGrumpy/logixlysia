@@ -61,7 +61,7 @@ function flushLogixlysia(
 
 ### `createLogger`
 
-Builds a `Logger` from `Options` without registering the plugin. It keeps its own request context, separate from any plugin instance's.
+Builds a `Logger` from `Options` without registering the plugin. It applies the preset and validates the options as `resolveOptions` does. It keeps its own request context, separate from any plugin instance's.
 
 ```ts check=skip
 function createLogger(options?: Options): Logger

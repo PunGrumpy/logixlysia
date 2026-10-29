@@ -86,6 +86,7 @@ const lineOwners = new WeakMap<Request, symbol>()
 
 interface RequestRecord {
   accessLineReplaced: boolean
+  customLogBuffered: boolean
   error?: unknown
   phase: 'open' | 'streaming' | 'closed'
   seenByWrap: boolean
@@ -321,6 +322,7 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
     }
     const record: RequestRecord = {
       accessLineReplaced: false,
+      customLogBuffered: false,
       phase: 'open',
       seenByWrap: false,
       startedAt,
@@ -352,13 +354,19 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
     }
 
     const record = openRecord(request)
-    record.accessLineReplaced = true
-    baseLogger.log(
+    const outcome = baseLogger.log(
       level,
       request,
       { context, message },
       { beforeTime: record.startedAt }
     )
+    // Only a custom line that reaches the output stands in for the access
+    // line; a buffered one does if the tail verdict replays it.
+    if (outcome === 'written') {
+      record.accessLineReplaced = true
+    } else if (outcome === 'buffered') {
+      record.customLogBuffered = true
+    }
   }
 
   const logger = {
@@ -431,8 +439,9 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
       }
     }
 
+    const record = records.get(request)
     const store: StoreData = {
-      beforeTime: records.get(request)?.startedAt ?? 0n
+      beforeTime: record?.startedAt ?? 0n
     }
 
     if (enrichers && enrichers.response.length > 0) {
@@ -449,7 +458,10 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
       )
     }
 
-    logger.finalizeRequest(request, store, status)
+    const replayed = logger.finalizeRequest(request, store, status)
+    if (record?.customLogBuffered && replayed > 0) {
+      record.accessLineReplaced = true
+    }
     return store
   }
 

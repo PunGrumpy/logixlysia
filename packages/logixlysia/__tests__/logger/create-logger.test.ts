@@ -94,6 +94,34 @@ describe('createLogger', () => {
     await sleep(0)
   })
 
+  test('applies a preset, as the plugin does', async () => {
+    const transport = mock<
+      (lvl: unknown, msg: unknown, meta?: unknown) => void
+    >(() => {})
+    const logger = createLogger({
+      config: {
+        disableFileLogging: true,
+        disableInternalLogger: true,
+        transports: [{ log: transport }]
+      },
+      preset: 'prod'
+    })
+
+    logger.info(createMockRequest('http://localhost/signup'), 'signup', {
+      password: 'hunter2'
+    })
+
+    const meta = transport.mock.calls[0]?.[2] as
+      | { context?: Record<string, unknown> }
+      | undefined
+    expect(meta?.context?.password).toBe('[REDACTED]')
+    expect(() =>
+      createLogger({ preset: 'staging' as unknown as 'prod' })
+    ).toThrow('invalid preset')
+
+    await sleep(0)
+  })
+
   test('delivers the record when a context value has a throwing getter under autoRedact', async () => {
     const transport = mock<
       (lvl: unknown, msg: unknown, meta?: unknown) => void

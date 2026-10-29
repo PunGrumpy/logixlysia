@@ -1,5 +1,6 @@
 import pino from 'pino'
 import pretty from 'pino-pretty'
+import { resolveOptions } from '../config/resolve-options'
 import { createRequestContextStore } from '../context/request-context'
 import type { RequestContextStore } from '../context/request-context'
 import type {
@@ -15,6 +16,7 @@ import { elapsedMs } from '../utils/duration'
 import { buildPinoRedactPaths } from '../utils/redact'
 import { createFormatContext } from './create-logger'
 import { emit, isSuppressed, parseRequestUrlOnce, resolveSinks } from './emit'
+import type { EmitOutcome } from './emit'
 import { handleHttpError } from './handle-http-error'
 
 const ZERO_STORE: StoreData = { beforeTime: 0n }
@@ -110,11 +112,27 @@ const createLazyPino = (
   return lazyPino
 }
 
-export const createLogger = (
-  options: Options = {},
-  pinoFactory: typeof pino = pino,
+/** The logger the plugin builds on: it also learns what sampling did. */
+export interface PluginLogger extends Logger {
+  /** Returns the number of buffered records the tail verdict replayed. */
+  finalizeRequest: (
+    request: RequestInfo,
+    store: StoreData,
+    status: number
+  ) => number
+  log: (
+    level: LogLevel,
+    request: RequestInfo,
+    data: Record<string, unknown>,
+    store: StoreData
+  ) => EmitOutcome
+}
+
+const buildLogger = (
+  options: Options,
+  pinoFactory: typeof pino,
   externalContextStore?: RequestContextStore
-): Logger => {
+): PluginLogger => {
   const contextStore = externalContextStore ?? createRequestContextStore()
   const { config } = options
   const formatContext = createFormatContext(options)
@@ -129,7 +147,7 @@ export const createLogger = (
     request: RequestInfo,
     data: Record<string, unknown>,
     store: StoreData
-  ): void => {
+  ): EmitOutcome =>
     emit({
       contextStore,
       data,
@@ -141,15 +159,14 @@ export const createLogger = (
       sinks,
       store
     })
-  }
 
   const finalizeRequest = (
     request: RequestInfo,
     store: StoreData,
     status: number
-  ): void => {
+  ): number => {
     if (!sampling) {
-      return
+      return 0
     }
 
     const outcome = {
@@ -158,7 +175,8 @@ export const createLogger = (
       status
     }
 
-    for (const record of sampling.finalize(request, outcome)) {
+    const replayed = sampling.finalize(request, outcome)
+    for (const record of replayed) {
       emit({
         bypassSampling: true,
         contextStore,
@@ -175,6 +193,7 @@ export const createLogger = (
         store: ZERO_STORE
       })
     }
+    return replayed.length
   }
 
   const logWithContext = (
@@ -228,8 +247,19 @@ export const createLogger = (
   }
 }
 
-/** Plugin entry: shares one request-context store across the Elysia lifecycle. */
+/** Applies the preset and validates `options`, as the plugin does. */
+export const createLogger = (
+  options: Options = {},
+  pinoFactory: typeof pino = pino,
+  externalContextStore?: RequestContextStore
+): Logger =>
+  buildLogger(resolveOptions(options), pinoFactory, externalContextStore)
+
+/**
+ * Plugin entry: shares one request-context store across the Elysia lifecycle.
+ * Takes options the plugin has already passed through `resolveOptions`.
+ */
 export const createPluginLogger = (
   options: Options,
   contextStore: RequestContextStore
-): Logger => createLogger(options, pino, contextStore)
+): PluginLogger => buildLogger(options, pino, contextStore)

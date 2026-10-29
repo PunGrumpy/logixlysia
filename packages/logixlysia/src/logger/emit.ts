@@ -122,6 +122,9 @@ export interface EmitInput {
   store: StoreData
 }
 
+/** What became of a record: written now, held for the tail verdict, or neither. */
+export type EmitOutcome = 'buffered' | 'dropped' | 'written'
+
 export const reportFormatError = createErrorReporter(
   'format',
   'failed to build a log record'
@@ -207,7 +210,7 @@ const writeRecord = ({
   consoleForLevel(level)(message)
 }
 
-export const emit = (input: EmitInput): void => {
+export const emit = (input: EmitInput): EmitOutcome => {
   const {
     bypassSampling,
     data,
@@ -221,13 +224,13 @@ export const emit = (input: EmitInput): void => {
   const { config } = options
 
   if (isSuppressed(sinks, level, config?.logFilter)) {
-    return
+    return 'dropped'
   }
 
   if (sampling && !bypassSampling) {
     const decision = sampling.decide(level, request)
     if (decision === 'drop') {
-      return
+      return 'dropped'
     }
     if (decision === 'buffer') {
       sampling.buffer(request, {
@@ -235,7 +238,7 @@ export const emit = (input: EmitInput): void => {
         durationMs: elapsedMs(store.beforeTime),
         level
       })
-      return
+      return 'buffered'
     }
   }
 
@@ -244,4 +247,5 @@ export const emit = (input: EmitInput): void => {
   } catch (error) {
     reportFormatError(error, config?.onError)
   }
+  return 'written'
 }

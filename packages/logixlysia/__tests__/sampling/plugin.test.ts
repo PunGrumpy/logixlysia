@@ -51,6 +51,14 @@ const buildApp = (
       log.info('cart read')
       return 'ok'
     })
+    .get('/logged-503', ({ log, status }) => {
+      log.info('calling upstream')
+      return status(503, 'down')
+    })
+    .get('/debug-404', ({ log, status }) => {
+      log.debug('looking up the order')
+      return status(404, 'no order')
+    })
 
 const get = (app: ReturnType<typeof buildApp>, path: string) =>
   app.handle(new Request(`http://localhost${path}`))
@@ -104,6 +112,29 @@ describe('sampling through the plugin', () => {
 
     await get(app, '/checkout/cart')
     expect(events.map(event => event.message)).toEqual(['cart read'])
+  })
+
+  test('a head-dropped custom log does not take the access line with it', async () => {
+    const { events, transport } = createCaptureTransport()
+    const app = buildApp({ sampling: { head: { INFO: 0 } } }, transport)
+
+    await get(app, '/logged-503')
+    expect(events.map(event => [event.level, event.meta.status])).toEqual([
+      ['ERROR', 503]
+    ])
+  })
+
+  test('a buffered custom log the tail verdict discards leaves the access line', async () => {
+    const { events, transport } = createCaptureTransport()
+    const app = buildApp(
+      { sampling: { head: { DEBUG: 0 }, tail: { status: 500 } } },
+      transport
+    )
+
+    await get(app, '/debug-404')
+    expect(events.map(event => [event.level, event.meta.status])).toEqual([
+      ['WARNING', 404]
+    ])
   })
 
   test('a replayed record keeps the duration it had when captured', async () => {

@@ -22,7 +22,7 @@ const app = new Elysia()
 
 The final `INFO` access log includes a `context` object with `userId` and `cartTotal` (and renders as a context tree when `showContextTree` is enabled).
 
-A custom log that passes `logFilter` (`log.info`, `store.logger.info(request, …)`, `useLogger().info`) replaces that request's access line, so the request's status, its `durationMs` and the response-phase enricher fields are not logged on a separate line.
+A custom log that passes `logFilter` and sampling (`log.info`, `store.logger.info(request, …)`, `useLogger().info`) replaces that request's access line, so the request's status, its `durationMs` and the response-phase enricher fields are not logged on a separate line. A custom log that head sampling holds back counts only if the tail verdict replays it; one it drops leaves the access line in place.
 
 ## Precedence
 
