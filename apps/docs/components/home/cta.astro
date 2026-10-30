@@ -1,0 +1,30 @@
+---
+import InstallCommand from './install-command.astro'
+---
+
+<section aria-labelledby="hp-cta">
+  <div
+    class="hp-frame relative mx-auto max-w-7xl overflow-hidden border-border border-x bg-signal text-ink"
+  >
+    <div
+      aria-hidden="true"
+      class="pointer-events-none absolute -right-20 -bottom-36 size-136 bg-ink/10 mask-[url(/icon.png)] mask-contain mask-center mask-no-repeat max-lg:hidden"
+    ></div>
+    <div
+      class="relative flex flex-col items-start gap-8 px-4 py-20 sm:px-6 lg:px-10 lg:py-28"
+    >
+      <h2
+        class="max-w-[14ch] font-medium text-5xl tracking-[-0.045em] text-balance sm:text-6xl lg:text-7xl"
+        id="hp-cta"
+      >
+        Log every request in one line
+      </h2>
+      <p class="max-w-[44ch] text-ink/80 text-lg/8 text-pretty">
+        One plugin, one <code class="font-mono text-base">.use()</code> call.
+        Readable lines in your terminal, rotated files on disk, and the platform
+        you already pay for.
+      </p>
+      <InstallCommand command="bun add logixlysia" tone="inverse" />
+    </div>
+  </div>
+</section>
