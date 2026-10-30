@@ -1,5 +1,21 @@
 # Changelog
 
+## 6.11.0
+
+### Minor Changes
+
+- 6a63c83: The error line now carries `error.cause` for an error thrown with `{ cause }`, normalized the same way as the error itself and cut at three levels. `HttpError` accepts `cause` in its init object; like `internal`, it is logged and never serialized into the response.
+- 0d64086: The OTLP and HyperDX adapters now set the log record's native `traceId`, `spanId` and `flags` from `context.trace_id`, `context.span_id` and `context.trace_flags`, so backends join logs to their traces; the attributes are kept too. `logixlysia/otel` gains `otelEnricher()`, so active-span ids can be attached through `config.enrichers` instead of a hand-written `onRequest` hook.
+
+### Patch Changes
+
+- ffd2a30: An awaited adapter `flush()` or `close()` now keeps the retry backoff timer alive, so a process whose only pending work is that call no longer exits in the middle of a retry and loses the batch. A background retry still lets the process exit. An error response body is now read to 1 KB at most instead of in full.
+- 98b7487: `mergeAIMetrics` now keeps a running total per request: token counts, `msToFinish` and `calls` are summed across calls, and `model`, `provider` and `finishReason` keep the last call's values. Before, each call replaced the previous one on the access line.
+- 7f2ce8d: A tail-sampling glob with more than two single `*` wildcards in one path segment is now rejected at startup, and path rules skip pathnames longer than 2048 characters, so a crafted URL can no longer pin the event loop in the matcher. `userAgentEnricher` parses at most the first 512 characters of the header.
+- cf52f7b: Transports now receive the request URL without its query string unless `logQueryParams` is `true`, the same rule the console and file sinks already follow. Before, query parameters such as OAuth codes and signed-URL tokens reached every adapter even with the option off.
+- 2a4d281: With `aot: false`, an error that a later `onError` hook maps to another status (for example 418 with a body) now logs that status and level, the same as the `aot: true` path. Before, the line carried the thrown error's own status, usually 500.
+- 0ad5167: `withRedaction` no longer waits for the wrapped transport to send its batch before redacting the next record, so wrapping a batching adapter no longer caps throughput at one batch per round trip and no longer drops records as "queue full" during a slow send. `flush()` and `close()` still wait for every delivery that was handed over.
+
 ## 6.10.7
 
 ### Patch Changes
