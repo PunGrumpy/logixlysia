@@ -1,5 +1,11 @@
 # Changelog
 
+## 6.10.6
+
+### Patch Changes
+
+- 2df1822: `logger.pino` writes messages under pino's default `msg` and `err` keys again when `messageKey` or `errorKey` is not set, instead of an `"undefined"` key.
+
 ## 6.10.5
 
 ### Patch Changes
