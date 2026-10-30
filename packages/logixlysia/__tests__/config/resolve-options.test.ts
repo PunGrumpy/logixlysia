@@ -23,6 +23,31 @@ describe('resolveOptions', () => {
     expect(resolved.config?.showStartupMessage).toBe(true)
   })
 
+  test('undefined config keys keep the preset value', () => {
+    const resolved = resolveOptions({
+      config: { autoRedact: undefined, requestId: undefined },
+      preset: 'prod'
+    })
+
+    expect(resolved.config?.autoRedact).toBe(true)
+    expect(resolved.config?.requestId).toBe(true)
+  })
+
+  test('undefined config keys no preset defines stay absent', () => {
+    const resolved = resolveOptions({
+      config: { logFilePath: undefined },
+      preset: 'dev'
+    })
+
+    expect(Object.keys(resolved.config ?? {})).not.toContain('logFilePath')
+  })
+
+  test('without a preset the config is returned as given', () => {
+    const resolved = resolveOptions({ config: { autoRedact: undefined } })
+
+    expect(resolved.config?.autoRedact).toBeUndefined()
+  })
+
   test('dev preset enables pretty print', () => {
     const resolved = resolveOptions({ preset: 'dev' })
 
@@ -242,6 +267,25 @@ describe('resolveOptions', () => {
     expect(() => resolveOptions({ config: { flushTimeoutMs: -1 } })).toThrow(
       'flushTimeoutMs'
     )
+  })
+
+  test('accepts flushTimeoutMs at the timer ceiling', () => {
+    expect(
+      resolveOptions({ config: { flushTimeoutMs: 2_147_483_647 } }).config
+        ?.flushTimeoutMs
+    ).toBe(2_147_483_647)
+  })
+
+  test('throws on a flushTimeoutMs above the timer ceiling', () => {
+    expect(() =>
+      resolveOptions({ config: { flushTimeoutMs: 2_147_483_648 } })
+    ).toThrow('flushTimeoutMs')
+  })
+
+  test('throws on a flushTimeoutMs of Number.MAX_SAFE_INTEGER', () => {
+    expect(() =>
+      resolveOptions({ config: { flushTimeoutMs: Number.MAX_SAFE_INTEGER } })
+    ).toThrow('flushTimeoutMs')
   })
 
   test('accepts flushTimeoutMs of 0 and a positive number', () => {
