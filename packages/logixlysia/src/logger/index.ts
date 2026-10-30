@@ -44,12 +44,17 @@ const createLazyPino = (
     pinoOptions.messageKey
   const errorKey =
     (prettyPrintOptions?.errorKey as string | undefined) ?? pinoOptions.errorKey
+  // Only pass keys that are set: an explicit `undefined` overrides pino's
+  // `msg`/`err` defaults and writes messages under an "undefined" key.
+  const outputKeys = {
+    ...(errorKey === undefined ? {} : { errorKey }),
+    ...(messageKey === undefined ? {} : { messageKey })
+  }
 
   const basePinoOptions = {
     ...pinoOptions,
-    errorKey,
+    ...outputKeys,
     level: pinoOptions.level ?? 'info',
-    messageKey,
     ...(config?.autoRedact === true && pinoOptions.redact === undefined
       ? {
           redact: {
@@ -65,8 +70,7 @@ const createLazyPino = (
       colorize: process.stdout?.isTTY === true,
       translateTime: config?.timestamp?.translateTime,
       ...prettyPrintOptions,
-      errorKey,
-      messageKey
+      ...outputKeys
     } as Record<string, unknown>)
 
   let realPino: Pino | undefined
