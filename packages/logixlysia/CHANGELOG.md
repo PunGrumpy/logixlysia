@@ -1,5 +1,16 @@
 # Changelog
 
+## 6.10.7
+
+### Patch Changes
+
+- 79cba59: Relative and absolute spellings of the same `logFilePath` now share one file sink, so rotation by one can no longer strand the other. After a failed size rotation the sink waits for another `maxSize` of writes before trying again, instead of retrying and reporting the error on every batch.
+- 8cbb7dc: Fixed a request whose URL cannot be parsed rendering differently on the console and in the log file. Both now show the same sanitized path.
+- ae5a345: A `preset` value was lost when the same `config` key was set to `undefined`, for example `autoRedact: env.REDACT ? true : undefined` under `preset: 'prod'`; the preset value now stays. A `flushTimeoutMs` above 2147483647 made the shutdown flush give up after a millisecond; it is now rejected at startup.
+- 6d15192: `autoRedact` now masks keys ending in `api-key`, `access-key`, `private-key` or `signing-key` under any prefix (such as `x-goog-api-key` or `stripeApiKey`) and keys containing `authorization` or `jwt`; a logged object or merged context with an own `__proto__` key keeps it as a key instead of re-parenting the copy.
+- c67433f: Fixed an adapter waiting out a retry backoff, including a `Retry-After` delay of up to 30 seconds, keeping the process alive on its own. A pending retry no longer delays exit, matching the queue's flush timer.
+- 6a242bc: A transport wrapped with `withRedaction` dropped the wrapped transport's `close`, so closing logixlysia left its sockets and timers open. The wrapper now exposes `close`, which drains the queued records, closes the wrapped transport and drops later records.
+
 ## 6.10.6
 
 ### Patch Changes
