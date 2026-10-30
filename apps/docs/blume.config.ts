@@ -140,14 +140,18 @@ export default defineConfig({
     { from: '/rss.xml', to: '/changelog/rss.xml' },
     { from: '/2025', to: '/2026' }
   ],
+  // Paper and ink with the fox's orange. The accent is the text-safe orange
+  // for links and active states; `action` is the full-strength signal orange
+  // from the logo, for fills only. The warm neutrals live in theme.css.
   theme: {
     accent: {
       dark: 'oklch(0.68 0.15 45.2)',
       light: 'oklch(0.54 0.15 45.2)'
     },
+    action: '#ff671e',
     background: {
-      dark: 'oklch(0.14 0 0)',
-      light: 'oklch(1 0 0)'
+      dark: '#131311',
+      light: '#f5f4f0'
     },
     fonts: {
       body: 'geist',
