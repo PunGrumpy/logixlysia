@@ -51,7 +51,14 @@ export const createRequestContextStore = (): RequestContextStore => {
         return
       }
       const bag = getOrCreate(key)
-      Object.assign(bag, partial)
+      for (const [field, value] of Object.entries(partial)) {
+        Object.defineProperty(bag, field, {
+          configurable: true,
+          enumerable: true,
+          value,
+          writable: true
+        })
+      }
     },
     peekContext(key) {
       return bags.get(keyOf(key)) ?? EMPTY_CONTEXT
