@@ -7,6 +7,12 @@ import packageJson from '../../package.json'
 const packageRoot = path.join(import.meta.dir, '..', '..')
 const distReady = existsSync(path.join(packageRoot, 'dist', 'index.js'))
 
+if (!distReady && process.env.CI) {
+  throw new Error(
+    'dist/index.js is missing: run `bun run build` before `bun test` (or use `bun run test`)'
+  )
+}
+
 const SRC_PREFIX = /^src\//u
 const TS_EXTENSION = /\.ts$/u
 
@@ -52,13 +58,12 @@ const resolveSurface = (): Record<string, string[]> => {
 }
 
 describe('published API surface', () => {
-  test('every exports subpath resolves and its named exports match the snapshot', () => {
-    if (!distReady) {
-      return
+  test.skipIf(!distReady)(
+    'every exports subpath resolves and its named exports match the snapshot',
+    () => {
+      expect(resolveSurface()).toMatchSnapshot()
     }
-
-    expect(resolveSurface()).toMatchSnapshot()
-  })
+  )
 
   test('every bunup entry has an exports subpath and vice versa', async () => {
     const bunupModule = await import('../../bunup.config')

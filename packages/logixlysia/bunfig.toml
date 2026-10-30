@@ -3,4 +3,4 @@ coverage = true
 # Build config that the API-surface test imports, not library code.
 coveragePathIgnorePatterns = ["bunup.config.ts"]
 coverageSkipTestFiles = true
-coverageThreshold = { lines = 0.51, functions = 0.48 }
+coverageThreshold = { lines = 0.80, functions = 0.70 }
