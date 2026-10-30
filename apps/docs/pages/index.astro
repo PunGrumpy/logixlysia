@@ -4,7 +4,6 @@ import PageLayout from 'blume/components/layout/PageLayout.astro'
 import '../styles/home.css'
 
 import Adapters from '../components/home/adapters.astro'
-import Demo from '../components/home/demo.astro'
 import Faq from '../components/home/faq.astro'
 import Features from '../components/home/features.astro'
 import Footer from '../components/home/footer.astro'
@@ -40,24 +39,9 @@ const description =
   siteUrl={config.site}
   themeMode={config.theme.mode}
 >
-  <div
-    class="mx-auto mt-16 grid max-w-7xl gap-16 px-4 sm:mt-24 sm:gap-24 md:gap-32"
-  >
-    <div class="grid gap-8 sm:gap-20">
-      <Hero releaseUrl={releaseUrl} version={version} />
-      <Demo />
-    </div>
-    <div
-      aria-hidden="true"
-      class="-my-8 sm:-my-12 md:-my-16 h-px w-full bg-linear-to-r from-transparent via-border to-transparent"
-    ></div>
-    <Features />
-    <Adapters />
-    <div
-      aria-hidden="true"
-      class="-my-8 sm:-my-12 md:-my-16 h-px w-full bg-linear-to-r from-transparent via-border to-transparent"
-    ></div>
-    <Faq />
-  </div>
+  <Hero releaseUrl={releaseUrl} version={version} />
+  <Features />
+  <Adapters />
+  <Faq />
   <Footer slot="footer" />
 </PageLayout>

@@ -1,0 +1,54 @@
+---
+// The left-aligned heading group at the top of each homepage section. The
+// lead paragraph goes in the default slot.
+interface Props {
+  eyebrow?: string
+  href?: string
+  id: string
+  linkLabel?: string
+  tag?: string
+  title: string
+}
+
+const { eyebrow, href, id, linkLabel, tag, title } = Astro.props
+---
+
+<div
+  class="flex flex-col items-start gap-5 px-4 pt-20 pb-12 sm:px-6 lg:px-10 lg:pt-28 lg:pb-16"
+>
+  {eyebrow ? (
+    <p class="flex items-center gap-2.5 font-mono text-muted-foreground text-xs/5 uppercase tracking-wider">
+      {eyebrow}
+      {tag ? (
+        <span class="rounded-sm px-1.5 text-accent ring-1 ring-current ring-inset">
+          {tag}
+        </span>
+      ) : null}
+    </p>
+  ) : null}
+  <h2
+    class="max-w-[20ch] font-medium text-4xl tracking-[-0.04em] text-balance sm:text-5xl lg:text-6xl"
+    id={id}
+  >
+    {title}
+  </h2>
+  {Astro.slots.has('default') ? (
+    <p class="max-w-[54ch] text-lg/8 text-muted-foreground text-pretty">
+      <slot />
+    </p>
+  ) : null}
+  {href && linkLabel ? (
+    <a
+      class="group -my-2.5 inline-flex items-center gap-1.5 py-2.5 font-medium text-[15px] text-foreground hover:text-accent"
+      href={href}
+    >
+      {linkLabel}
+      <span
+        aria-hidden="true"
+        class="inline-block transition-transform duration-150 ease-out group-hover:translate-x-0.5 motion-reduce:transition-none"
+      >
+        →
+      </span>
+    </a>
+  ) : null}
+</div>

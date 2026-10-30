@@ -3,9 +3,10 @@
 import ContextRow from './context-row.astro'
 import FieldRow from './field-row.astro'
 import FileRow from './file-row.astro'
+import FeatureFigure from './feature-figure.astro'
 import FilterRow from './filter-row.astro'
 import SamplingRow from './sampling-row.astro'
-import SectionLabel from './section-label.astro'
+import SectionHeading from './section-heading.astro'
 
 const c = {
   barMint: 'bg-[#067647] dark:bg-[#99ffe4]',
@@ -13,16 +14,16 @@ const c = {
   barRed: 'bg-[#C9303C] dark:bg-[#ff8080]',
   blue: 'text-[#0550AE] dark:text-[#a5d6ff]',
   bold: 'font-semibold',
-  fg: 'text-[#2D2D2D] dark:text-[#DADADA]',
+  fg: 'text-foreground',
   foxInfo: 'rounded-sm bg-[#0550AE]/10 dark:bg-[#a5d6ff]/15',
   mint: 'text-[#067647] dark:text-[#99ffe4]',
-  muted: 'text-black/45 dark:text-white/40',
+  muted: 'text-muted-foreground',
   orange: 'text-[#B26A00] dark:text-[#ffc799]',
   red: 'text-[#C9303C] dark:text-[#ff8080]'
 }
 
 const th =
-  'border-[#EBEBEB] border-b pb-2 pr-6 text-left font-normal text-[11px] text-muted-foreground uppercase tracking-[0.08em] transition-opacity duration-300 dark:border-white/8'
+  'border-border border-b pb-2 pr-6 text-left font-normal text-[11px] text-muted-foreground uppercase tracking-wider'
 
 const contextRows = [
   {
@@ -231,430 +232,188 @@ const files = [
 ]
 ---
 
-<section class="mx-auto grid w-full max-w-5xl gap-16 sm:gap-24">
-  <div class="grid gap-8">
-    <div class="grid justify-items-start gap-4">
-      <SectionLabel name="Request context">
-        <svg
-          aria-hidden="true"
-          class="size-4"
-          fill="none"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="1.5"
-          viewBox="0 0 24 24"
-        >
-          <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"></path>
-        </svg>
-      </SectionLabel>
-      <div class="grid w-full gap-4 lg:grid-cols-2 lg:gap-12">
-        <h2
-          class="text-balance font-medium text-[25px] text-foreground leading-[130%] lg:text-[32px]"
-        >
-          See every request, end to end
-        </h2>
-        <div
-          class="grid justify-items-start gap-1 lg:max-w-md lg:justify-self-end"
-        >
-          <p
-            class="text-pretty text-[15px] text-muted-foreground leading-[160%] lg:text-[17px]"
-          >
-            Method, path, status, duration, and client IP land on one readable
-            line — captured automatically for every request, with no wrappers
-            and no middleware chains.
-          </p>
-          <a
-            class="group -my-2.5 py-2.5 font-medium text-[15px] text-foreground transition-colors hover:text-muted-foreground"
-            href="/docs/features/request-context"
-          >
-            Explore request context
-            <span
-              aria-hidden="true"
-              class="inline-block transition-[translate] group-hover:translate-x-0.5"
-              >→</span
-            >
-          </a>
-        </div>
-      </div>
-    </div>
-    <div
-      class="min-w-0 rounded-2xl bg-white shadow-[0_0_0_1px_rgb(0_0_0/0.06),0_1px_2px_-1px_rgb(0_0_0/0.06),0_2px_4px_0_rgb(0_0_0/0.04)] dark:bg-[#131313] dark:shadow-[0_0_0_1px_rgb(255_255_255/0.08)]"
-      data-tail
+<section aria-labelledby="hp-context" class="border-border border-b">
+  <div class="hp-frame mx-auto max-w-7xl border-border border-x">
+    <SectionHeading
+      eyebrow="Request context"
+      href="/docs/features/request-context"
+      id="hp-context"
+      linkLabel="Explore request context"
+      title="See every request, end to end"
     >
-      <div
-        class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-[#EBEBEB] border-b p-4 dark:border-white/8"
+      Method, path, status, duration, and client IP land on one readable line —
+      captured automatically for every request, with no wrappers and no
+      middleware chains.
+    </SectionHeading>
+    <FeatureFigure data-tail label="Access log">
+      <span class="whitespace-nowrap rounded-sm px-2 py-0.5 font-mono text-[11px] text-foreground ring-1 ring-border ring-inset" slot="chips">.use(logixlysia())</span>
+      <table
+        aria-label="Example access log: five requests, each with its time, method, path, status, duration, and client IP"
+        class="w-full border-separate border-spacing-0 font-mono text-[0.8rem] leading-relaxed"
       >
-        <span class="font-medium text-[#6E6E6E] text-sm dark:text-[#888888]">
-          Access log
-        </span>
-        <span
-          class="whitespace-nowrap rounded-full px-2 py-0.5 font-mono text-[#2D2D2D] text-[11px] shadow-[0_0_0_1px_rgb(0_0_0/0.08)] dark:text-[#DADADA] dark:shadow-[0_0_0_1px_rgb(255_255_255/0.1)]"
-        >
-          .use(logixlysia())
-        </span>
-      </div>
-      <div class="overflow-x-auto px-3 py-5">
-        <table
-          aria-label="Example access log: five requests, each with its time, method, path, status, duration, and client IP"
-          class="w-full border-separate border-spacing-0 font-mono text-[0.8rem] leading-relaxed"
-        >
-          <thead>
-            <tr class="[&>th:first-child]:pl-2 [&>th:last-child]:pr-2">
-              <th class={th} scope="col">Time</th>
-              <th class={th} scope="col">Method</th>
-              <th class={th} scope="col">Path</th>
-              <th class={th} scope="col">Status</th>
-              <th class={th} scope="col">Duration</th>
-              <th scope="col" class:list={[th, 'pr-0']}>IP</th>
-            </tr>
-          </thead>
-          <tbody>
-            {contextRows.map(row => (
-              <ContextRow {...row} />
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
+        <thead>
+          <tr class="[&>th:first-child]:pl-2 [&>th:last-child]:pr-2">
+            <th class={th} scope="col">Time</th>
+            <th class={th} scope="col">Method</th>
+            <th class={th} scope="col">Path</th>
+            <th class={th} scope="col">Status</th>
+            <th class={th} scope="col">Duration</th>
+            <th scope="col" class:list={[th, 'pr-0']}>IP</th>
+          </tr>
+        </thead>
+        <tbody>
+          {contextRows.map(row => (
+            <ContextRow {...row} />
+          ))}
+        </tbody>
+      </table>
+    </FeatureFigure>
   </div>
+</section>
 
-  <div class="grid gap-8">
-    <div class="grid justify-items-start gap-4">
-      <SectionLabel name="Filtering">
-        <svg
-          aria-hidden="true"
-          class="size-4"
-          fill="none"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="1.5"
-          viewBox="0 0 24 24"
-        >
-          <path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"></path>
-        </svg>
-      </SectionLabel>
-      <div class="grid w-full gap-4 lg:grid-cols-2 lg:gap-12">
-        <h2
-          class="text-balance font-medium text-[25px] text-foreground leading-[130%] lg:text-[32px]"
-        >
-          Keep the noise out
-        </h2>
-        <div
-          class="grid justify-items-start gap-1 lg:max-w-md lg:justify-self-end"
-        >
-          <p
-            class="text-pretty text-[15px] text-muted-foreground leading-[160%] lg:text-[17px]"
-          >
-            Filter by level, HTTP method, or status code. Health checks and
-            favicons fade away — warnings and errors stay loud.
-          </p>
-          <a
-            class="group -my-2.5 py-2.5 font-medium text-[15px] text-foreground transition-colors hover:text-muted-foreground"
-            href="/docs/features/filtering"
-          >
-            Explore filtering
-            <span
-              aria-hidden="true"
-              class="inline-block transition-[translate] group-hover:translate-x-0.5"
-              >→</span
-            >
-          </a>
-        </div>
-      </div>
-    </div>
-    <div
-      class="min-w-0 rounded-2xl bg-white shadow-[0_0_0_1px_rgb(0_0_0/0.06),0_1px_2px_-1px_rgb(0_0_0/0.06),0_2px_4px_0_rgb(0_0_0/0.04)] dark:bg-[#131313] dark:shadow-[0_0_0_1px_rgb(255_255_255/0.08)]"
-      data-filter-demo
+<section aria-labelledby="hp-filtering" class="border-border border-b">
+  <div class="hp-frame mx-auto max-w-7xl border-border border-x">
+    <SectionHeading
+      eyebrow="Filtering"
+      href="/docs/features/filtering"
+      id="hp-filtering"
+      linkLabel="Explore filtering"
+      title="Keep the noise out"
     >
-      <div
-        class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-[#EBEBEB] border-b p-4 dark:border-white/8"
+      Filter by level, HTTP method, or status code. Health checks and favicons
+      fade away — warnings and errors stay loud.
+    </SectionHeading>
+    <FeatureFigure data-filter-demo label="Console">
+      <span class="whitespace-nowrap rounded-sm px-2 py-0.5 font-mono text-[11px] text-foreground ring-1 ring-border ring-inset" data-filter-chip slot="chips">
+        filter: &lbrace; level: ['warn', 'error'] &rbrace;
+      </span>
+      <table
+        aria-label="Example filter config keeping only warnings and errors; filtered-out request logs appear dimmed"
+        class="w-full border-separate border-spacing-0 font-mono text-[0.8rem] leading-relaxed"
       >
-        <span class="font-medium text-[#6E6E6E] text-sm dark:text-[#888888]">
-          Console
-        </span>
-        <span
-          class="whitespace-nowrap rounded-full px-2 py-0.5 font-mono text-[#2D2D2D] text-[11px] shadow-[0_0_0_1px_rgb(0_0_0/0.08)] transition-[background-color] duration-300 dark:text-[#DADADA] dark:shadow-[0_0_0_1px_rgb(255_255_255/0.1)]"
-          data-filter-chip
-        >
-          filter: &lbrace; level: ['warn', 'error'] &rbrace;
-        </span>
-      </div>
-      <div class="overflow-x-auto px-3 py-5">
-        <table
-          aria-label="Example filter config keeping only warnings and errors; filtered-out request logs appear dimmed"
-          class="w-full border-separate border-spacing-0 font-mono text-[0.8rem] leading-relaxed"
-        >
-          <thead>
-            <tr class="[&>th:first-child]:pl-2 [&>th:last-child]:pr-2">
-              <th class={th} scope="col">Method</th>
-              <th class={th} scope="col">Path</th>
-              <th class={th} scope="col">Status</th>
-              <th class={th} scope="col">Duration</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filterRows.map(row => (
-              <FilterRow {...row} />
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
+        <thead>
+          <tr class="[&>th:first-child]:pl-2 [&>th:last-child]:pr-2">
+            <th class={th} scope="col">Method</th>
+            <th class={th} scope="col">Path</th>
+            <th class={th} scope="col">Status</th>
+            <th class={th} scope="col">Duration</th>
+          </tr>
+        </thead>
+        <tbody>
+          {filterRows.map(row => (
+            <FilterRow {...row} />
+          ))}
+        </tbody>
+      </table>
+    </FeatureFigure>
   </div>
+</section>
 
-  <div class="grid gap-8">
-    <div class="grid justify-items-start gap-4">
-      <SectionLabel badge="New" name="Sampling">
-        <svg
-          aria-hidden="true"
-          class="size-4"
-          fill="none"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="1.5"
-          viewBox="0 0 24 24"
-        >
-          <path d="M19 5L5 19"></path>
-          <circle cx="6.5" cy="6.5" r="2.5"></circle>
-          <circle cx="17.5" cy="17.5" r="2.5"></circle>
-        </svg>
-      </SectionLabel>
-      <div class="grid w-full gap-4 lg:grid-cols-2 lg:gap-12">
-        <h2
-          class="text-balance font-medium text-[25px] text-foreground leading-[130%] lg:text-[32px]"
-        >
-          Keep the bill flat
-        </h2>
-        <div
-          class="grid justify-items-start gap-1 lg:max-w-md lg:justify-self-end"
-        >
-          <p
-            class="text-pretty text-[15px] text-muted-foreground leading-[160%] lg:text-[17px]"
-          >
-            Head sampling keeps a percentage of high-volume levels. Tail
-            sampling replays the dropped lines the moment a request errors or
-            runs slow — routine traffic costs almost nothing, interesting
-            requests stay complete.
-          </p>
-          <a
-            class="group -my-2.5 py-2.5 font-medium text-[15px] text-foreground transition-colors hover:text-muted-foreground"
-            href="/docs/features/sampling"
-          >
-            Explore sampling
-            <span
-              aria-hidden="true"
-              class="inline-block transition-[translate] group-hover:translate-x-0.5"
-              >→</span
-            >
-          </a>
-        </div>
-      </div>
-    </div>
-    <div
-      class="min-w-0 rounded-2xl bg-white shadow-[0_0_0_1px_rgb(0_0_0/0.06),0_1px_2px_-1px_rgb(0_0_0/0.06),0_2px_4px_0_rgb(0_0_0/0.04)] dark:bg-[#131313] dark:shadow-[0_0_0_1px_rgb(255_255_255/0.08)]"
-      data-sampling-demo
+<section aria-labelledby="hp-sampling" class="border-border border-b">
+  <div class="hp-frame mx-auto max-w-7xl border-border border-x">
+    <SectionHeading
+      eyebrow="Sampling"
+      href="/docs/features/sampling"
+      id="hp-sampling"
+      linkLabel="Explore sampling"
+      tag="New"
+      title="Keep the bill flat"
     >
-      <div
-        class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-[#EBEBEB] border-b p-4 dark:border-white/8"
+      Head sampling keeps a percentage of high-volume levels. Tail sampling
+      replays the dropped lines the moment a request errors or runs slow —
+      routine traffic costs almost nothing, interesting requests stay complete.
+    </SectionHeading>
+    <FeatureFigure data-sampling-demo label="Console">
+      <span class="whitespace-nowrap rounded-sm px-2 py-0.5 font-mono text-[11px] text-foreground ring-1 ring-border ring-inset" data-head-chip slot="chips">
+        head: &lbrace; INFO: 10 &rbrace;
+      </span>
+      <span class="whitespace-nowrap rounded-sm px-2 py-0.5 font-mono text-[11px] text-foreground ring-1 ring-border ring-inset" data-tail-chip slot="chips">
+        tail: &lbrace; status: 400 &rbrace;
+      </span>
+      <table
+        aria-label="Example sampling config: routine request logs dim as head sampling drops them, then a 500 response replays every line from that request"
+        class="w-full border-separate border-spacing-0 font-mono text-[0.8rem] leading-relaxed"
       >
-        <span class="font-medium text-[#6E6E6E] text-sm dark:text-[#888888]">
-          Console
-        </span>
-        <div class="flex flex-wrap gap-1.5">
-          <span
-            class="whitespace-nowrap rounded-full px-2 py-0.5 font-mono text-[#2D2D2D] text-[11px] shadow-[0_0_0_1px_rgb(0_0_0/0.08)] transition-[background-color] duration-300 dark:text-[#DADADA] dark:shadow-[0_0_0_1px_rgb(255_255_255/0.1)]"
-            data-head-chip
-          >
-            head: &lbrace; INFO: 10 &rbrace;
-          </span>
-          <span
-            class="whitespace-nowrap rounded-full px-2 py-0.5 font-mono text-[#2D2D2D] text-[11px] shadow-[0_0_0_1px_rgb(0_0_0/0.08)] transition-[background-color] duration-300 dark:text-[#DADADA] dark:shadow-[0_0_0_1px_rgb(255_255_255/0.1)]"
-            data-tail-chip
-          >
-            tail: &lbrace; status: 400 &rbrace;
-          </span>
-        </div>
-      </div>
-      <div class="overflow-x-auto px-3 py-5">
-        <table
-          aria-label="Example sampling config: routine request logs dim as head sampling drops them, then a 500 response replays every line from that request"
-          class="w-full border-separate border-spacing-0 font-mono text-[0.8rem] leading-relaxed"
-        >
-          <thead>
-            <tr class="[&>th:first-child]:pl-2 [&>th:last-child]:pr-2">
-              <th class={th} scope="col">Method</th>
-              <th class={th} scope="col">Path</th>
-              <th class={th} scope="col">Status</th>
-              <th class={th} scope="col">Duration</th>
-              <th scope="col" class:list={[th, 'pr-0 text-right']}>Sampling</th>
-            </tr>
-          </thead>
-          <tbody>
-            {samplingRows.map(row => (
-              <SamplingRow {...row} />
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
+        <thead>
+          <tr class="[&>th:first-child]:pl-2 [&>th:last-child]:pr-2">
+            <th class={th} scope="col">Method</th>
+            <th class={th} scope="col">Path</th>
+            <th class={th} scope="col">Status</th>
+            <th class={th} scope="col">Duration</th>
+            <th scope="col" class:list={[th, 'pr-0 text-right']}>Sampling</th>
+          </tr>
+        </thead>
+        <tbody>
+          {samplingRows.map(row => (
+            <SamplingRow {...row} />
+          ))}
+        </tbody>
+      </table>
+    </FeatureFigure>
   </div>
+</section>
 
-  <div class="grid gap-8">
-    <div class="grid justify-items-start gap-4">
-      <SectionLabel badge="New" name="Enrichers">
-        <svg
-          aria-hidden="true"
-          class="size-4"
-          fill="none"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="1.5"
-          viewBox="0 0 24 24"
-        >
-          <circle cx="12" cy="12" r="10"></circle>
-          <path d="M12 8v8M8 12h8"></path>
-        </svg>
-      </SectionLabel>
-      <div class="grid w-full gap-4 lg:grid-cols-2 lg:gap-12">
-        <h2
-          class="text-balance font-medium text-[25px] text-foreground leading-[130%] lg:text-[32px]"
-        >
-          Add context once, see it everywhere
-        </h2>
-        <div
-          class="grid justify-items-start gap-1 lg:max-w-md lg:justify-self-end"
-        >
-          <p
-            class="text-pretty text-[15px] text-muted-foreground leading-[160%] lg:text-[17px]"
-          >
-            Enrichers contribute fields to every request — trace ids from the
-            traceparent header, geo from your platform's headers, parsed user
-            agents. Set them up once and the fields reach the console, files,
-            and every adapter.
-          </p>
-          <a
-            class="group -my-2.5 py-2.5 font-medium text-[15px] text-foreground transition-colors hover:text-muted-foreground"
-            href="/docs/features/enrichers"
-          >
-            Explore enrichers
-            <span
-              aria-hidden="true"
-              class="inline-block transition-[translate] group-hover:translate-x-0.5"
-              >→</span
-            >
-          </a>
-        </div>
-      </div>
-    </div>
-    <div
-      class="min-w-0 rounded-2xl bg-white shadow-[0_0_0_1px_rgb(0_0_0/0.06),0_1px_2px_-1px_rgb(0_0_0/0.06),0_2px_4px_0_rgb(0_0_0/0.04)] dark:bg-[#131313] dark:shadow-[0_0_0_1px_rgb(255_255_255/0.08)]"
+<section aria-labelledby="hp-enrichers" class="border-border border-b">
+  <div class="hp-frame mx-auto max-w-7xl border-border border-x">
+    <SectionHeading
+      eyebrow="Enrichers"
+      href="/docs/features/enrichers"
+      id="hp-enrichers"
+      linkLabel="Explore enrichers"
+      tag="New"
+      title="Add context once, see it everywhere"
     >
-      <div
-        class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-[#EBEBEB] border-b p-4 dark:border-white/8"
+      Enrichers contribute fields to every request — trace ids from the
+      traceparent header, geo from your platform's headers, parsed user agents.
+      Set them up once and the fields reach the console, files, and every
+      adapter.
+    </SectionHeading>
+    <FeatureFigure label="Enriched request">
+      <span class="whitespace-nowrap rounded-sm px-2 py-0.5 font-mono text-[11px] text-foreground ring-1 ring-border ring-inset" slot="chips">
+        enrichers: [traceparentEnricher(), geoEnricher()]
+      </span>
+      <table
+        aria-label="Example enricher config: a table of fields attached to one request — trace id, geo city and country, browser, and device"
+        class="w-full border-separate border-spacing-0 font-mono text-[0.8rem] leading-relaxed"
       >
-        <span class="font-medium text-[#6E6E6E] text-sm dark:text-[#888888]">
-          Enriched request
-        </span>
-        <span
-          class="whitespace-nowrap rounded-full px-2 py-0.5 font-mono text-[#2D2D2D] text-[11px] shadow-[0_0_0_1px_rgb(0_0_0/0.08)] dark:text-[#DADADA] dark:shadow-[0_0_0_1px_rgb(255_255_255/0.1)]"
-        >
-          enrichers: [traceparentEnricher(), geoEnricher()]
-        </span>
-      </div>
-      <div class="overflow-x-auto px-3 py-5">
-        <table
-          aria-label="Example enricher config: a table of fields attached to one request — trace id, geo city and country, browser, and device"
-          class="w-full border-separate border-spacing-0 font-mono text-[0.8rem] leading-relaxed"
-        >
-          <thead>
-            <tr class="[&>th:first-child]:pl-2 [&>th:last-child]:pr-2">
-              <th class={th} scope="col">Field</th>
-              <th class={th} scope="col">Value</th>
-            </tr>
-          </thead>
-          <tbody>
-            {enricherFields.map(field => (
-              <FieldRow cls={field.cls} name={field.name} value={field.value} />
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
+        <thead>
+          <tr class="[&>th:first-child]:pl-2 [&>th:last-child]:pr-2">
+            <th class={th} scope="col">Field</th>
+            <th class={th} scope="col">Value</th>
+          </tr>
+        </thead>
+        <tbody>
+          {enricherFields.map(field => (
+            <FieldRow cls={field.cls} name={field.name} value={field.value} />
+          ))}
+        </tbody>
+      </table>
+    </FeatureFigure>
   </div>
+</section>
 
-  <div class="grid gap-8">
-    <div class="grid justify-items-start gap-4">
-      <SectionLabel name="File rotation">
-        <svg
-          aria-hidden="true"
-          class="size-4"
-          fill="none"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="1.5"
-          viewBox="0 0 24 24"
-        >
-          <path
-            d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"
-          ></path>
-          <path d="M14 2v6h6"></path>
-        </svg>
-      </SectionLabel>
-      <div class="grid w-full gap-4 lg:grid-cols-2 lg:gap-12">
-        <h2
-          class="text-balance font-medium text-[25px] text-foreground leading-[130%] lg:text-[32px]"
-        >
-          Outlive the terminal
-        </h2>
-        <div
-          class="grid justify-items-start gap-1 lg:max-w-md lg:justify-self-end"
-        >
-          <p
-            class="text-pretty text-[15px] text-muted-foreground leading-[160%] lg:text-[17px]"
-          >
-            Write logs to disk with size- and time-based rotation built in —
-            yesterday's file compresses and rotates away on its own.
-          </p>
-          <a
-            class="group -my-2.5 py-2.5 font-medium text-[15px] text-foreground transition-colors hover:text-muted-foreground"
-            href="/docs/features/file-logging"
-          >
-            Explore file logging
-            <span
-              aria-hidden="true"
-              class="inline-block transition-[translate] group-hover:translate-x-0.5"
-              >→</span
-            >
-          </a>
-        </div>
-      </div>
-    </div>
-    <div
+<section aria-labelledby="hp-files" class="border-border border-b">
+  <div class="hp-frame mx-auto max-w-7xl border-border border-x">
+    <SectionHeading
+      eyebrow="File rotation"
+      href="/docs/features/file-logging"
+      id="hp-files"
+      linkLabel="Explore file logging"
+      title="Outlive the terminal"
+    >
+      Write logs to disk with size- and time-based rotation built in —
+      yesterday's file compresses and rotates away on its own.
+    </SectionHeading>
+    <FeatureFigure
       aria-label="Example rotation config: the live log file's size meter grows to the 10 MB cap, then rotates while older files compress"
-      class="min-w-0 rounded-2xl bg-white shadow-[0_0_0_1px_rgb(0_0_0/0.06),0_1px_2px_-1px_rgb(0_0_0/0.06),0_2px_4px_0_rgb(0_0_0/0.04)] dark:bg-[#131313] dark:shadow-[0_0_0_1px_rgb(255_255_255/0.08)]"
       data-rotation
+      label="Log directory"
       role="img"
     >
-      <div
-        class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-[#EBEBEB] border-b p-4 dark:border-white/8"
-      >
-        <span class="font-medium text-[#6E6E6E] text-sm dark:text-[#888888]">
-          Log directory
-        </span>
-        <span
-          class="whitespace-nowrap rounded-full px-2 py-0.5 font-mono text-[#2D2D2D] text-[11px] shadow-[0_0_0_1px_rgb(0_0_0/0.08)] dark:text-[#DADADA] dark:shadow-[0_0_0_1px_rgb(255_255_255/0.1)]"
-        >
-          rotation: &lbrace; size: '10m', interval: '1d' &rbrace;
-        </span>
-      </div>
-      <div
-        class="grid gap-1 overflow-x-auto p-5 font-mono text-[0.8rem] leading-relaxed"
-      >
+      <span class="whitespace-nowrap rounded-sm px-2 py-0.5 font-mono text-[11px] text-foreground ring-1 ring-border ring-inset" slot="chips">
+        rotation: &lbrace; size: '10m', interval: '1d' &rbrace;
+      </span>
+      <div class="grid gap-1 px-2 font-mono text-[0.8rem] leading-relaxed">
         {files.map(file => (
           <FileRow
             live={file.live}
@@ -664,7 +423,7 @@ const files = [
           />
         ))}
       </div>
-    </div>
+    </FeatureFigure>
   </div>
 </section>
 
@@ -769,14 +528,14 @@ const files = [
       await sleep(500)
       await revealLines()
       await sleep(800)
-      chip?.classList.add('bg-black/5', 'dark:bg-white/10')
+      chip?.classList.add('bg-signal/20')
       for (const line of lines) {
         if (line.dataset.kept === undefined) {
           line.classList.add('opacity-35')
         }
       }
       await sleep(600)
-      chip?.classList.remove('bg-black/5', 'dark:bg-white/10')
+      chip?.classList.remove('bg-signal/20')
       await sleep(2800)
     }
     let rounds = 0
@@ -801,19 +560,19 @@ const files = [
     const round = async () => {
       await waitUntilVisible()
       await sleep(600)
-      headChip?.classList.add('bg-black/5', 'dark:bg-white/10')
+      headChip?.classList.add('bg-signal/20')
       for (const row of sampled) {
         row.classList.add('opacity-35')
       }
       await sleep(1000)
-      headChip?.classList.remove('bg-black/5', 'dark:bg-white/10')
+      headChip?.classList.remove('bg-signal/20')
       await sleep(700)
-      tailChip?.classList.add('bg-black/5', 'dark:bg-white/10')
+      tailChip?.classList.add('bg-signal/20')
       for (const row of sampled) {
         row.classList.remove('opacity-35')
       }
       await sleep(1000)
-      tailChip?.classList.remove('bg-black/5', 'dark:bg-white/10')
+      tailChip?.classList.remove('bg-signal/20')
       await sleep(2400)
     }
     let rounds = 0
@@ -843,7 +602,7 @@ const files = [
               return
             }
             size.textContent = `${megabytes.toFixed(1)} MB`
-            bar.style.width = `${megabytes * 10}%`
+            bar.style.scale = `${megabytes / 10} 1`
             megabytes += 0.3
             setTimeout(tick, 120)
           }
@@ -853,13 +612,13 @@ const files = [
         await waitUntilVisible()
         await growFile()
         size.textContent = '10.0 MB'
-        bar.style.width = '100%'
+        bar.style.scale = '1 1'
         row.classList.add('bg-[#067647]/10', 'dark:bg-[#99ffe4]/10')
         await sleep(700)
         row.classList.remove('bg-[#067647]/10', 'dark:bg-[#99ffe4]/10')
       }
       const initialSize = size.textContent
-      const initialWidth = bar.style.width
+      const initialScale = bar.style.scale
       let rounds = 0
       const loop = async () => {
         await round()
@@ -869,7 +628,7 @@ const files = [
           return
         }
         size.textContent = initialSize
-        bar.style.width = initialWidth
+        bar.style.scale = initialScale
       }
       loop()
     }

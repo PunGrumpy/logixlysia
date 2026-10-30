@@ -16,12 +16,12 @@ const { live, name, pct, size } = Astro.props
   class:list={[
     'flex w-max items-center justify-between gap-4',
     live &&
-      '-mx-1.5 min-w-[calc(100%+0.75rem)] rounded-md px-1.5 transition-[background-color] duration-500',
+      '-mx-1.5 min-w-[calc(100%+0.75rem)] rounded-md px-1.5',
     !live && 'min-w-full opacity-45'
   ]}
 >
   <span class="flex items-center gap-2">
-    <span class="whitespace-nowrap text-[#2D2D2D] dark:text-[#DADADA]">
+    <span class="whitespace-nowrap text-foreground">
       {name}
     </span>
     {live ? <LiveBadge /> : null}
@@ -29,16 +29,16 @@ const { live, name, pct, size } = Astro.props
   <span class="flex items-center gap-3">
     <span
       aria-hidden="true"
-      class="inline-block h-1 w-24 overflow-hidden rounded-full bg-black/6 dark:bg-white/10"
+      class="inline-block h-1 w-24 overflow-hidden rounded-full bg-foreground/8"
     >
       <span
-        class="block h-full rounded-full bg-[#067647] transition-[width] duration-150 ease-out dark:bg-[#99ffe4]"
+        class="block h-full w-full origin-left rounded-full bg-[#067647] transition-[scale] duration-150 ease-out motion-reduce:transition-none dark:bg-[#99ffe4]"
         data-live-bar={live ? '' : undefined}
-        style={`width: ${pct}%`}
+        style={`scale: ${pct / 100} 1`}
       ></span>
     </span>
     <span
-      class="w-[7ch] whitespace-nowrap text-right text-black/45 tabular-nums dark:text-white/40"
+      class="w-[7ch] whitespace-nowrap text-right text-muted-foreground tabular-nums"
       data-live-size={live ? '' : undefined}
     >
       {size}

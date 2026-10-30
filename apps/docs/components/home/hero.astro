@@ -1,4 +1,6 @@
 ---
+import { NEW_TAB_HINT_ID } from 'blume/core/new-tab.ts'
+import Demo from './demo.astro'
 import InstallCommand from './install-command.astro'
 
 interface Props {
@@ -9,51 +11,59 @@ interface Props {
 const { version, releaseUrl } = Astro.props
 ---
 
-<section class="relative grid gap-8 sm:gap-20">
-  <div
-    aria-hidden="true"
-    class="-top-32 -translate-x-1/2 -z-10 pointer-events-none absolute left-1/2 h-72 w-xl max-w-full rounded-full bg-[radial-gradient(closest-side,oklch(70%_0.14_50/0.14),transparent)] blur-3xl dark:hidden"
-  ></div>
-  <div class="grid justify-items-center gap-4 text-center">
-    <div>
+<section class="border-border border-y">
+  <div class="hp-frame mx-auto max-w-7xl border-border border-x">
+    <div class="px-4 pt-14 pb-12 sm:px-6 sm:pt-20 lg:px-10 lg:pt-24 lg:pb-14">
       <a
-        class="group -my-2.5 flex w-fit items-center gap-2 py-2.5 text-muted-foreground text-sm transition-colors hover:text-foreground"
+        aria-describedby={NEW_TAB_HINT_ID}
+        class="group -my-2 inline-flex items-center gap-3 py-2 text-muted-foreground text-sm/6 hover:text-foreground"
         href={releaseUrl}
         rel="noopener noreferrer"
         target="_blank"
       >
         <span
+          class="rounded-sm bg-foreground px-1.5 py-0.5 font-mono text-background text-xs/5 tabular-nums"
+        >
+          v{version}
+        </span>
+        <span>Read the latest release notes</span>
+        <span
           aria-hidden="true"
-          class="size-2 shrink-0 rounded-full bg-emerald-500"
-        ></span>
-        <span>Latest update — v{version} released</span>
+          class="inline-block transition-transform duration-150 ease-out group-hover:translate-x-0.5 motion-reduce:transition-none"
+        >
+          →
+        </span>
       </a>
-    </div>
-
-    <div class="flex flex-col items-center gap-1.5">
       <h1
-        class="text-[27px] lg:text-[34px] leading-[145%] text-balance text-center w-full lg:w-fit font-medium flex justify-center flex-wrap"
+        class="mt-8 max-w-[17ch] font-medium text-5xl tracking-[-0.045em] text-balance sm:text-6xl lg:text-7xl xl:text-8xl"
       >
         Understand every request your app serves
       </h1>
-      <p
-        class="text-[17px] leading-[145%] text-pretty text-center w-full lg:w-193.25 max-w-193.25 font-medium [font-variation-settings:'opsz'_26] flex justify-center flex-wrap text-muted-foreground"
+      <div
+        class="mt-10 grid gap-8 lg:mt-12 lg:grid-cols-12 lg:items-end lg:gap-10"
       >
-        Logixlysia turns Elysia traffic into structured, colorful log lines —
-        then filters the noise, samples the volume, and ships the rest to the
-        platform you already use.
-      </p>
+        <p
+          class="max-w-[46ch] text-lg/8 text-muted-foreground text-pretty lg:col-span-6"
+        >
+          Logixlysia turns Elysia traffic into structured, colorful log lines —
+          then filters the noise, samples the volume, and ships the rest to the
+          platform you already use.
+        </p>
+        <div
+          class="flex flex-col gap-3 sm:flex-row lg:col-span-6 lg:justify-end"
+        >
+          <InstallCommand command="bun add logixlysia" />
+          <a
+            class="inline-flex h-14 shrink-0 items-center justify-center rounded-lg bg-foreground px-6 font-medium text-background text-sm transition-transform duration-150 ease-out [-webkit-tap-highlight-color:transparent] hover:bg-foreground/90 active:scale-[0.97] motion-reduce:transition-none"
+            href="/docs/introduction"
+          >
+            Read the docs
+          </a>
+        </div>
+      </div>
     </div>
-
-    <div
-      class="flex flex-col lg:flex-row mt-8 items-center gap-3 lg:gap-4.5 w-full lg:w-auto"
-    >
-      <InstallCommand command="bun add logixlysia" />
-      <a
-        class="inline-flex h-12.25 items-center justify-center rounded-[7px] bg-linear-to-b from-[oklch(56%_0.16_48)] to-[oklch(50%_0.16_44)] px-6 font-medium text-sm text-white shadow-[inset_0_0_1px_1px_rgb(255_255_255/0.12),0_1.5px_2px_rgb(0_0_0/0.1),0_0_0_1px_oklch(44%_0.15_45)] transition-[filter,scale] duration-150 ease-out hover:brightness-105 active:scale-[0.96]"
-        href="/docs/introduction"
-        >Read the docs</a
-      >
+    <div class="border-border border-t bg-signal p-2 sm:p-6 lg:p-10">
+      <Demo />
     </div>
   </div>
 </section>

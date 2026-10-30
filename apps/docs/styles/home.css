@@ -27,3 +27,14 @@
     block-size: auto;
   }
 }
+
+/* The frame's side borders mark the 1280px column against the margin around
+   it. When the window is no wider than the column, they'd sit on the window's
+   edge, so they go. Plain CSS outranks Tailwind's layered utilities. Zero
+   width rather than a transparent color, so the slabs and hairline grids
+   inside reach the window's edge without a 1px sliver of page. */
+@media (max-width: 1295.98px) {
+  .hp-frame {
+    border-inline-width: 0;
+  }
+}

@@ -9,7 +9,7 @@ import {
   siSentry
 } from 'simple-icons'
 import AdapterCard from './adapter-card.astro'
-import SectionLabel from './section-label.astro'
+import SectionHeading from './section-heading.astro'
 
 interface Adapter {
   blurb: string
@@ -89,63 +89,34 @@ const adapters: Adapter[] = [
 ]
 ---
 
-<section class="mx-auto grid w-full max-w-5xl gap-8">
-  <div class="grid justify-items-start gap-4">
-    <SectionLabel badge="9 platforms" name="Adapters">
-      <svg
-        aria-hidden="true"
-        class="size-4"
-        fill="none"
-        stroke="currentColor"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        stroke-width="1.5"
-        viewBox="0 0 24 24"
-      >
-        <path d="m22 2-7 20-4-9-9-4Z"></path>
-        <path d="M22 2 11 13"></path>
-      </svg>
-    </SectionLabel>
-    <div class="grid w-full gap-4 lg:grid-cols-2 lg:gap-12">
-      <h2
-        class="text-balance font-medium text-[25px] text-foreground leading-[130%] lg:text-[32px]"
-      >
-        Ship logs where you already look
-      </h2>
-      <div
-        class="grid justify-items-start gap-1 lg:max-w-md lg:justify-self-end"
-      >
-        <p
-          class="text-pretty text-[15px] text-muted-foreground leading-[160%] lg:text-[17px]"
-        >
-          Every adapter is a regular transport — batched, retried, and
-          non-blocking — so a slow sink never delays a response. Mix them with
-          console and file logging, or run them exclusively.
-        </p>
-        <a
-          class="group -my-2.5 py-2.5 font-medium text-[15px] text-foreground transition-colors hover:text-muted-foreground"
-          href="/docs/adapters/overview"
-        >
-          Explore adapters
-          <span
-            aria-hidden="true"
-            class="inline-block transition-[translate] group-hover:translate-x-0.5"
-            >→</span
-          >
-        </a>
-      </div>
-    </div>
+<section aria-labelledby="hp-adapters" class="border-border border-b">
+  <div class="hp-frame mx-auto max-w-7xl border-border border-x">
+    <SectionHeading
+      eyebrow="Adapters"
+      href="/docs/adapters/overview"
+      id="hp-adapters"
+      linkLabel="Explore adapters"
+      tag={`${adapters.length} platforms`}
+      title="Ship logs where you already look"
+    >
+      Every adapter is a regular transport — batched, retried, and non-blocking
+      — so a slow sink never delays a response. Mix them with console and file
+      logging, or run them exclusively.
+    </SectionHeading>
+    <ul
+      class="grid list-none grid-cols-2 gap-px border-border border-t bg-border sm:grid-cols-3"
+      role="list"
+    >
+      {adapters.map(adapter => (
+        <AdapterCard
+          blurb={adapter.blurb}
+          href={adapter.href}
+          icon={adapter.icon}
+          iconFillRule={adapter.iconFillRule}
+          iconViewBox={adapter.iconViewBox}
+          name={adapter.name}
+        />
+      ))}
+    </ul>
   </div>
-  <ul class="grid list-none grid-cols-2 gap-3 sm:grid-cols-3">
-    {adapters.map(adapter => (
-      <AdapterCard
-        blurb={adapter.blurb}
-        href={adapter.href}
-        icon={adapter.icon}
-        iconFillRule={adapter.iconFillRule}
-        iconViewBox={adapter.iconViewBox}
-        name={adapter.name}
-      />
-    ))}
-  </ul>
 </section>

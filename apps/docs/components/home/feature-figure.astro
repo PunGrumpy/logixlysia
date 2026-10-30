@@ -1,0 +1,28 @@
+---
+import type { HTMLAttributes } from 'astro/types'
+
+// The demo under a feature heading: a hairline-framed figure with a mono
+// label and the config chips that drive the demo. Extra attributes (the
+// data-* hooks the demo scripts look for, aria labels) land on the figure.
+interface Props extends HTMLAttributes<'figure'> {
+  label: string
+}
+
+const { label, ...attrs } = Astro.props
+---
+
+<figure class="m-0 min-w-0 border-border border-t" {...attrs}>
+  <div
+    class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-border border-b px-4 py-4 sm:px-6 lg:px-10"
+  >
+    <span class="font-mono text-muted-foreground text-xs/5 uppercase tracking-wider">
+      {label}
+    </span>
+    <div class="flex flex-wrap gap-1.5">
+      <slot name="chips" />
+    </div>
+  </div>
+  <div class="overflow-x-auto px-2 py-6 sm:px-4 lg:px-8 lg:py-8">
+    <slot />
+  </div>
+</figure>
