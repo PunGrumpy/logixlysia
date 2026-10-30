@@ -23,13 +23,13 @@ const {
   statusCls
 } = Astro.props
 
-const cell = 'whitespace-nowrap py-2 pr-6 transition-opacity duration-300'
+const cell = 'whitespace-nowrap py-2 pr-6'
 ---
 
 <td data-col="method" class:list={[cell, 'font-semibold', methodCls]}>
   {method}
 </td>
-<td data-col="path" class:list={[cell, 'text-[#2D2D2D] dark:text-[#DADADA]']}>
+<td data-col="path" class:list={[cell, 'text-foreground']}>
   {path}
 </td>
 <td data-col="status" class:list={[cell, 'tabular-nums', statusCls]}>
@@ -40,7 +40,7 @@ const cell = 'whitespace-nowrap py-2 pr-6 transition-opacity duration-300'
     {duration}
     <span
       aria-hidden="true"
-      class="inline-block h-1 w-16 overflow-hidden rounded-full bg-black/6 dark:bg-white/10"
+      class="inline-block h-1 w-16 overflow-hidden rounded-full bg-foreground/8"
     >
       <span
         style={`width: ${barPct}%`}

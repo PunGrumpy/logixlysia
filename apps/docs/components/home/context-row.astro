@@ -22,12 +22,12 @@ const { errorRow, ip, time, ...cells } = Astro.props
 <tr
   data-log
   class:list={[
-    'transition-opacity duration-300 [&>td:first-child]:rounded-l-md [&>td:first-child]:pl-2 [&>td:last-child]:rounded-r-md [&>td:last-child]:pr-2',
+    'transition-[opacity,translate] duration-250 ease-out-strong data-hidden:translate-y-1 data-hidden:opacity-0 [&>td:first-child]:rounded-l-md [&>td:first-child]:pl-2 [&>td:last-child]:rounded-r-md [&>td:last-child]:pr-2',
     errorRow && '[&>td]:bg-[#C9303C]/6 dark:[&>td]:bg-[#ff8080]/10'
   ]}
 >
   <td
-    class="whitespace-nowrap py-2 pr-6 text-black/45 tabular-nums dark:text-white/40"
+    class="whitespace-nowrap py-2 pr-6 text-muted-foreground tabular-nums"
   >
     {time}
   </td>

@@ -1,5 +1,6 @@
 ---
 import FaqItem from './faq-item.astro'
+import SectionHeading from './section-heading.astro'
 
 const faqs = [
   {
@@ -40,13 +41,23 @@ const faqs = [
 ]
 ---
 
-<section class="mx-auto w-full max-w-2xl">
-  <h2
-    class="text-balance text-center font-medium text-[21px] text-foreground leading-[145%] lg:text-[25px]"
+<section aria-labelledby="hp-faq" class="border-border border-b">
+  <div
+    class="hp-frame mx-auto grid max-w-7xl border-border border-x lg:grid-cols-12"
   >
-    Frequently asked questions
-  </h2>
-  <div class="mt-6 grid">
-    {faqs.map(faq => <FaqItem answer={faq.answer} question={faq.question} />)}
+    <div class="lg:col-span-5">
+      <SectionHeading
+        eyebrow="FAQ"
+        href="/docs/faq"
+        id="hp-faq"
+        linkLabel="Read the full FAQ"
+        title="Frequently asked questions"
+      />
+    </div>
+    <div
+      class="border-border border-t lg:col-span-7 lg:border-t-0 lg:border-l lg:py-20"
+    >
+      {faqs.map(faq => <FaqItem answer={faq.answer} question={faq.question} />)}
+    </div>
   </div>
 </section>

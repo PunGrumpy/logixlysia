@@ -22,5 +22,7 @@ const { id, lines, max, method, min, path, status } = Astro.props
   data-route-template={id}
   data-status={status}
 >
-  {lines.map(parts => <TermLine parts={parts} />)}
+  {lines.map(parts => (
+    <TermLine cls="term-request -mx-4 px-4 sm:-mx-6 sm:px-6" parts={parts} />
+  ))}
 </template>

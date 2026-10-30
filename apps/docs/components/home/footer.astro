@@ -1,52 +1,138 @@
 ---
-import FooterColumn from './footer-column.astro'
+import { NEW_TAB_HINT_ID } from 'blume/core/new-tab.ts'
+import { siGithub, siNpm } from 'simple-icons'
+import BrandIcon from './brand-icon.astro'
 
-const columns = [
-  [
-    { href: '/docs/introduction', label: 'Documentation' },
-    { href: '/changelog', label: 'Changelog' }
-  ],
-  [
-    { href: '/docs/features/request-context', label: 'Request context' },
-    { href: '/docs/features/filtering', label: 'Filtering' },
-    { href: '/docs/features/sampling', label: 'Sampling' },
-    { href: '/docs/features/enrichers', label: 'Enrichers' },
-    { href: '/docs/features/file-logging', label: 'File logging' },
-    { href: '/docs/adapters/overview', label: 'Adapters' }
-  ],
-  [
-    { href: 'https://github.com/PunGrumpy/logixlysia', label: 'GitHub' },
-    { href: 'https://www.npmjs.com/package/logixlysia', label: 'npm' },
-    { href: 'https://elysiajs.com', label: 'Elysia.js' }
-  ]
+// Rendered into PageLayout's `footer` slot, after <main>, so it is the page's
+// contentinfo landmark. It stays dark in both themes, like the terminal.
+const footerNav = [
+  {
+    links: [
+      { href: '/docs/introduction', label: 'Introduction' },
+      { href: '/docs/usage', label: 'Usage' },
+      { href: '/docs/configuration', label: 'Configuration' },
+      { href: '/docs/examples', label: 'Examples' },
+      { href: '/docs/migration-from-evlog', label: 'Migrate from evlog' }
+    ],
+    title: 'Getting started'
+  },
+  {
+    links: [
+      { href: '/docs/features/request-context', label: 'Request context' },
+      { href: '/docs/features/filtering', label: 'Filtering' },
+      { href: '/docs/features/sampling', label: 'Sampling' },
+      { href: '/docs/features/enrichers', label: 'Enrichers' },
+      { href: '/docs/features/file-logging', label: 'File logging' }
+    ],
+    title: 'Features'
+  },
+  {
+    links: [
+      { href: '/docs/adapters/overview', label: 'Overview' },
+      { href: '/docs/adapters/axiom', label: 'Axiom' },
+      { href: '/docs/adapters/datadog', label: 'Datadog' },
+      { href: '/docs/adapters/sentry', label: 'Sentry' },
+      { href: '/docs/adapters/otlp', label: 'OpenTelemetry' }
+    ],
+    title: 'Adapters'
+  },
+  {
+    links: [
+      { href: '/docs/api-reference', label: 'API reference' },
+      { href: '/docs/comparison', label: 'Comparison' },
+      { href: '/docs/faq', label: 'FAQ' },
+      { href: '/docs/contributing', label: 'Contributing' },
+      { href: '/changelog', label: 'Changelog' }
+    ],
+    title: 'More'
+  }
+]
+
+const socials = [
+  {
+    href: 'https://github.com/PunGrumpy/logixlysia',
+    icon: siGithub.path,
+    label: 'Logixlysia on GitHub'
+  },
+  {
+    href: 'https://www.npmjs.com/package/logixlysia',
+    icon: siNpm.path,
+    label: 'Logixlysia on npm'
+  }
 ]
 ---
 
-<footer class="relative mt-16 overflow-clip sm:mt-24 md:mt-32">
-  <div class="mx-auto max-w-7xl px-4 pt-16 pb-[18vw] lg:pt-24 lg:pb-56">
-    <div class="flex flex-col items-start justify-between gap-10 lg:flex-row">
-      <p class="text-muted-foreground text-sm">
-        🦊 Logixlysia, Built by{' '}
-        <a
-          class="text-foreground transition-colors hover:text-muted-foreground"
-          href="https://www.pungrumpy.com"
-          rel="noopener"
-          target="_blank"
-          >Noppakorn Kaewsalabnil</a
-        >
-      </p>
+<footer class="bg-panel text-panel-foreground">
+  <div class="hp-frame mx-auto max-w-7xl border-panel-border border-x">
+    <div class="grid gap-12 px-4 py-16 sm:px-6 lg:grid-cols-12 lg:px-10">
+      <div class="flex flex-col items-start gap-5 lg:col-span-4">
+        <a class="flex items-center gap-2.5" href="/">
+          <img
+            alt=""
+            class="size-6 shrink-0"
+            height="24"
+            src="/icon.png"
+            width="24"
+          />
+          <span class="font-semibold text-lg tracking-[-0.02em]">
+            Logixlysia
+          </span>
+        </a>
+        <p class="max-w-[34ch] text-panel-muted text-sm/6">
+          The logger for Elysia.js: structured request logs, from your terminal
+          to your observability platform.
+        </p>
+        <p class="text-panel-muted text-sm/6">
+          Built by{' '}
+          <a
+            aria-describedby={NEW_TAB_HINT_ID}
+            class="text-panel-foreground underline decoration-panel-foreground/30 underline-offset-4 hover:decoration-panel-foreground"
+            href="https://www.pungrumpy.com"
+            rel="noopener"
+            target="_blank"
+          >
+            Noppakorn Kaewsalabnil
+          </a>
+        </p>
+        <div class="-ml-2.5 flex items-center gap-1">
+          {socials.map(social => (
+            <a
+              aria-describedby={NEW_TAB_HINT_ID}
+              aria-label={social.label}
+              class="grid size-10 place-items-center rounded-md text-panel-muted hover:bg-panel-raised hover:text-panel-foreground"
+              href={social.href}
+              rel="noopener"
+              target="_blank"
+            >
+              <BrandIcon path={social.icon} />
+            </a>
+          ))}
+        </div>
+      </div>
       <nav
         aria-label="Footer"
-        class="flex flex-col gap-10 sm:flex-row sm:gap-16 lg:gap-24"
+        class="grid grid-cols-2 gap-x-8 gap-y-10 sm:grid-cols-4 lg:col-span-8"
       >
-        {columns.map(column => <FooterColumn links={column} />)}
+        {footerNav.map(section => (
+          <div class="flex flex-col gap-3">
+            <p class="font-mono text-panel-muted text-xs/5 uppercase tracking-wider">
+              {section.title}
+            </p>
+            <ul class="flex flex-col gap-2 text-sm/6" role="list">
+              {section.links.map(link => (
+                <li>
+                  <a
+                    class="text-panel-foreground/85 hover:text-panel-foreground"
+                    href={link.href}
+                  >
+                    {link.label}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
       </nav>
     </div>
   </div>
-  <span
-    aria-hidden="true"
-    class="-translate-x-1/2 bottom-[-0.24em] pointer-events-none absolute left-1/2 select-none whitespace-nowrap font-medium text-[20vw] text-black/4 leading-none tracking-tight lg:text-[18rem] dark:text-white/4"
-  >
-    Logixlysia
-  </span>
 </footer>

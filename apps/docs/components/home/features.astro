@@ -3,9 +3,10 @@
 import ContextRow from './context-row.astro'
 import FieldRow from './field-row.astro'
 import FileRow from './file-row.astro'
+import FeatureFigure from './feature-figure.astro'
 import FilterRow from './filter-row.astro'
 import SamplingRow from './sampling-row.astro'
-import SectionLabel from './section-label.astro'
+import SectionHeading from './section-heading.astro'
 
 const c = {
   barMint: 'bg-[#067647] dark:bg-[#99ffe4]',
@@ -13,16 +14,16 @@ const c = {
   barRed: 'bg-[#C9303C] dark:bg-[#ff8080]',
   blue: 'text-[#0550AE] dark:text-[#a5d6ff]',
   bold: 'font-semibold',
-  fg: 'text-[#2D2D2D] dark:text-[#DADADA]',
+  fg: 'text-foreground',
   foxInfo: 'rounded-sm bg-[#0550AE]/10 dark:bg-[#a5d6ff]/15',
   mint: 'text-[#067647] dark:text-[#99ffe4]',
-  muted: 'text-black/45 dark:text-white/40',
+  muted: 'text-muted-foreground',
   orange: 'text-[#B26A00] dark:text-[#ffc799]',
   red: 'text-[#C9303C] dark:text-[#ff8080]'
 }
 
 const th =
-  'border-[#EBEBEB] border-b pb-2 pr-6 text-left font-normal text-[11px] text-muted-foreground uppercase tracking-[0.08em] transition-opacity duration-300 dark:border-white/8'
+  'border-border border-b pb-2 pr-6 text-left font-normal text-[11px] text-muted-foreground uppercase tracking-wider'
 
 const contextRows = [
   {
@@ -225,435 +226,206 @@ const enricherFields = [
 ]
 
 const files = [
-  { live: true, name: 'logs/api-2026-07-21.log', pct: 21, size: '2.1 MB' },
-  { live: false, name: 'logs/api-2026-07-20.log', pct: 100, size: '10.0 MB' },
-  { live: false, name: 'logs/api-2026-07-19.log.gz', pct: 12, size: '1.2 MB' }
+  { live: true, name: 'logs/api.log', pct: 21, size: '2.1 MB' },
+  {
+    live: false,
+    name: 'logs/api.log.2026-07-21-09-47-03-271-66425271402958.gz',
+    pct: 12,
+    size: '1.2 MB'
+  },
+  {
+    live: false,
+    name: 'logs/api.log.2026-07-21-08-52-19-604-63141604183217.gz',
+    pct: 11,
+    size: '1.1 MB'
+  }
 ]
 ---
 
-<section class="mx-auto grid w-full max-w-5xl gap-16 sm:gap-24">
-  <div class="grid gap-8">
-    <div class="grid justify-items-start gap-4">
-      <SectionLabel name="Request context">
-        <svg
-          aria-hidden="true"
-          class="size-4"
-          fill="none"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="1.5"
-          viewBox="0 0 24 24"
-        >
-          <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"></path>
-        </svg>
-      </SectionLabel>
-      <div class="grid w-full gap-4 lg:grid-cols-2 lg:gap-12">
-        <h2
-          class="text-balance font-medium text-[25px] text-foreground leading-[130%] lg:text-[32px]"
-        >
-          See every request, end to end
-        </h2>
-        <div
-          class="grid justify-items-start gap-1 lg:max-w-md lg:justify-self-end"
-        >
-          <p
-            class="text-pretty text-[15px] text-muted-foreground leading-[160%] lg:text-[17px]"
-          >
-            Method, path, status, duration, and client IP land on one readable
-            line — captured automatically for every request, with no wrappers
-            and no middleware chains.
-          </p>
-          <a
-            class="group -my-2.5 py-2.5 font-medium text-[15px] text-foreground transition-colors hover:text-muted-foreground"
-            href="/docs/features/request-context"
-          >
-            Explore request context
-            <span
-              aria-hidden="true"
-              class="inline-block transition-[translate] group-hover:translate-x-0.5"
-              >→</span
-            >
-          </a>
-        </div>
-      </div>
-    </div>
-    <div
-      class="min-w-0 rounded-2xl bg-white shadow-[0_0_0_1px_rgb(0_0_0/0.06),0_1px_2px_-1px_rgb(0_0_0/0.06),0_2px_4px_0_rgb(0_0_0/0.04)] dark:bg-[#131313] dark:shadow-[0_0_0_1px_rgb(255_255_255/0.08)]"
-      data-tail
+<section aria-labelledby="hp-context" class="border-border border-b">
+  <div class="hp-frame mx-auto max-w-7xl border-border border-x">
+    <SectionHeading
+      eyebrow="Request context"
+      href="/docs/features/request-context"
+      id="hp-context"
+      linkLabel="Explore request context"
+      title="See every request, end to end"
     >
-      <div
-        class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-[#EBEBEB] border-b p-4 dark:border-white/8"
+      Method, path, status, duration, and client IP land on one readable line —
+      captured automatically for every request, with no wrappers and no
+      middleware chains.
+    </SectionHeading>
+    <FeatureFigure data-tail label="Access log">
+      <span class="whitespace-nowrap rounded-sm px-2 py-0.5 font-mono text-[11px] text-foreground ring-1 ring-border ring-inset" slot="chips">.use(logixlysia())</span>
+      <table
+        aria-label="Example access log: five requests, each with its time, method, path, status, duration, and client IP"
+        class="w-full border-separate border-spacing-0 font-mono text-[0.8rem] leading-relaxed"
       >
-        <span class="font-medium text-[#6E6E6E] text-sm dark:text-[#888888]">
-          Access log
-        </span>
-        <span
-          class="whitespace-nowrap rounded-full px-2 py-0.5 font-mono text-[#2D2D2D] text-[11px] shadow-[0_0_0_1px_rgb(0_0_0/0.08)] dark:text-[#DADADA] dark:shadow-[0_0_0_1px_rgb(255_255_255/0.1)]"
-        >
-          .use(logixlysia())
-        </span>
-      </div>
-      <div class="overflow-x-auto px-3 py-5">
-        <table
-          aria-label="Example access log: five requests, each with its time, method, path, status, duration, and client IP"
-          class="w-full border-separate border-spacing-0 font-mono text-[0.8rem] leading-relaxed"
-        >
-          <thead>
-            <tr class="[&>th:first-child]:pl-2 [&>th:last-child]:pr-2">
-              <th class={th} scope="col">Time</th>
-              <th class={th} scope="col">Method</th>
-              <th class={th} scope="col">Path</th>
-              <th class={th} scope="col">Status</th>
-              <th class={th} scope="col">Duration</th>
-              <th scope="col" class:list={[th, 'pr-0']}>IP</th>
-            </tr>
-          </thead>
-          <tbody>
-            {contextRows.map(row => (
-              <ContextRow {...row} />
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
+        <thead>
+          <tr class="[&>th:first-child]:pl-2 [&>th:last-child]:pr-2">
+            <th class={th} scope="col">Time</th>
+            <th class={th} scope="col">Method</th>
+            <th class={th} scope="col">Path</th>
+            <th class={th} scope="col">Status</th>
+            <th class={th} scope="col">Duration</th>
+            <th scope="col" class:list={[th, 'pr-0']}>IP</th>
+          </tr>
+        </thead>
+        <tbody>
+          {contextRows.map(row => (
+            <ContextRow {...row} />
+          ))}
+        </tbody>
+      </table>
+    </FeatureFigure>
   </div>
+</section>
 
-  <div class="grid gap-8">
-    <div class="grid justify-items-start gap-4">
-      <SectionLabel name="Filtering">
-        <svg
-          aria-hidden="true"
-          class="size-4"
-          fill="none"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="1.5"
-          viewBox="0 0 24 24"
-        >
-          <path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"></path>
-        </svg>
-      </SectionLabel>
-      <div class="grid w-full gap-4 lg:grid-cols-2 lg:gap-12">
-        <h2
-          class="text-balance font-medium text-[25px] text-foreground leading-[130%] lg:text-[32px]"
-        >
-          Keep the noise out
-        </h2>
-        <div
-          class="grid justify-items-start gap-1 lg:max-w-md lg:justify-self-end"
-        >
-          <p
-            class="text-pretty text-[15px] text-muted-foreground leading-[160%] lg:text-[17px]"
-          >
-            Filter by level, HTTP method, or status code. Health checks and
-            favicons fade away — warnings and errors stay loud.
-          </p>
-          <a
-            class="group -my-2.5 py-2.5 font-medium text-[15px] text-foreground transition-colors hover:text-muted-foreground"
-            href="/docs/features/filtering"
-          >
-            Explore filtering
-            <span
-              aria-hidden="true"
-              class="inline-block transition-[translate] group-hover:translate-x-0.5"
-              >→</span
-            >
-          </a>
-        </div>
-      </div>
-    </div>
-    <div
-      class="min-w-0 rounded-2xl bg-white shadow-[0_0_0_1px_rgb(0_0_0/0.06),0_1px_2px_-1px_rgb(0_0_0/0.06),0_2px_4px_0_rgb(0_0_0/0.04)] dark:bg-[#131313] dark:shadow-[0_0_0_1px_rgb(255_255_255/0.08)]"
-      data-filter-demo
+<section aria-labelledby="hp-filtering" class="border-border border-b">
+  <div class="hp-frame mx-auto max-w-7xl border-border border-x">
+    <SectionHeading
+      eyebrow="Filtering"
+      href="/docs/features/filtering"
+      id="hp-filtering"
+      linkLabel="Explore filtering"
+      title="Keep the noise out"
     >
-      <div
-        class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-[#EBEBEB] border-b p-4 dark:border-white/8"
+      Filter by level, HTTP method, or status code. Health checks and favicons
+      fade away — warnings and errors stay loud.
+    </SectionHeading>
+    <FeatureFigure data-filter-demo label="Console">
+      <span class="whitespace-nowrap rounded-sm px-2 py-0.5 font-mono text-[11px] text-foreground ring-1 ring-border ring-inset transition-[background-color] duration-200 ease-[ease]" data-filter-chip slot="chips">
+        filter: &lbrace; level: ['warn', 'error'] &rbrace;
+      </span>
+      <table
+        aria-label="Example filter config keeping only warnings and errors; filtered-out request logs appear dimmed"
+        class="w-full border-separate border-spacing-0 font-mono text-[0.8rem] leading-relaxed"
       >
-        <span class="font-medium text-[#6E6E6E] text-sm dark:text-[#888888]">
-          Console
-        </span>
-        <span
-          class="whitespace-nowrap rounded-full px-2 py-0.5 font-mono text-[#2D2D2D] text-[11px] shadow-[0_0_0_1px_rgb(0_0_0/0.08)] transition-[background-color] duration-300 dark:text-[#DADADA] dark:shadow-[0_0_0_1px_rgb(255_255_255/0.1)]"
-          data-filter-chip
-        >
-          filter: &lbrace; level: ['warn', 'error'] &rbrace;
-        </span>
-      </div>
-      <div class="overflow-x-auto px-3 py-5">
-        <table
-          aria-label="Example filter config keeping only warnings and errors; filtered-out request logs appear dimmed"
-          class="w-full border-separate border-spacing-0 font-mono text-[0.8rem] leading-relaxed"
-        >
-          <thead>
-            <tr class="[&>th:first-child]:pl-2 [&>th:last-child]:pr-2">
-              <th class={th} scope="col">Method</th>
-              <th class={th} scope="col">Path</th>
-              <th class={th} scope="col">Status</th>
-              <th class={th} scope="col">Duration</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filterRows.map(row => (
-              <FilterRow {...row} />
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
+        <thead>
+          <tr class="[&>th:first-child]:pl-2 [&>th:last-child]:pr-2">
+            <th class={th} scope="col">Method</th>
+            <th class={th} scope="col">Path</th>
+            <th class={th} scope="col">Status</th>
+            <th class={th} scope="col">Duration</th>
+          </tr>
+        </thead>
+        <tbody>
+          {filterRows.map(row => (
+            <FilterRow {...row} />
+          ))}
+        </tbody>
+      </table>
+    </FeatureFigure>
   </div>
+</section>
 
-  <div class="grid gap-8">
-    <div class="grid justify-items-start gap-4">
-      <SectionLabel badge="New" name="Sampling">
-        <svg
-          aria-hidden="true"
-          class="size-4"
-          fill="none"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="1.5"
-          viewBox="0 0 24 24"
-        >
-          <path d="M19 5L5 19"></path>
-          <circle cx="6.5" cy="6.5" r="2.5"></circle>
-          <circle cx="17.5" cy="17.5" r="2.5"></circle>
-        </svg>
-      </SectionLabel>
-      <div class="grid w-full gap-4 lg:grid-cols-2 lg:gap-12">
-        <h2
-          class="text-balance font-medium text-[25px] text-foreground leading-[130%] lg:text-[32px]"
-        >
-          Keep the bill flat
-        </h2>
-        <div
-          class="grid justify-items-start gap-1 lg:max-w-md lg:justify-self-end"
-        >
-          <p
-            class="text-pretty text-[15px] text-muted-foreground leading-[160%] lg:text-[17px]"
-          >
-            Head sampling keeps a percentage of high-volume levels. Tail
-            sampling replays the dropped lines the moment a request errors or
-            runs slow — routine traffic costs almost nothing, interesting
-            requests stay complete.
-          </p>
-          <a
-            class="group -my-2.5 py-2.5 font-medium text-[15px] text-foreground transition-colors hover:text-muted-foreground"
-            href="/docs/features/sampling"
-          >
-            Explore sampling
-            <span
-              aria-hidden="true"
-              class="inline-block transition-[translate] group-hover:translate-x-0.5"
-              >→</span
-            >
-          </a>
-        </div>
-      </div>
-    </div>
-    <div
-      class="min-w-0 rounded-2xl bg-white shadow-[0_0_0_1px_rgb(0_0_0/0.06),0_1px_2px_-1px_rgb(0_0_0/0.06),0_2px_4px_0_rgb(0_0_0/0.04)] dark:bg-[#131313] dark:shadow-[0_0_0_1px_rgb(255_255_255/0.08)]"
-      data-sampling-demo
+<section aria-labelledby="hp-sampling" class="border-border border-b">
+  <div class="hp-frame mx-auto max-w-7xl border-border border-x">
+    <SectionHeading
+      eyebrow="Sampling"
+      href="/docs/features/sampling"
+      id="hp-sampling"
+      linkLabel="Explore sampling"
+      tag="New"
+      title="Keep the bill flat"
     >
-      <div
-        class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-[#EBEBEB] border-b p-4 dark:border-white/8"
+      Head sampling keeps a percentage of high-volume levels. Tail sampling
+      replays the dropped lines the moment a request errors or runs slow —
+      routine traffic costs almost nothing, interesting requests stay complete.
+    </SectionHeading>
+    <FeatureFigure data-sampling-demo label="Console">
+      <span class="whitespace-nowrap rounded-sm px-2 py-0.5 font-mono text-[11px] text-foreground ring-1 ring-border ring-inset transition-[background-color] duration-200 ease-[ease]" data-head-chip slot="chips">
+        head: &lbrace; INFO: 10 &rbrace;
+      </span>
+      <span class="whitespace-nowrap rounded-sm px-2 py-0.5 font-mono text-[11px] text-foreground ring-1 ring-border ring-inset transition-[background-color] duration-200 ease-[ease]" data-tail-chip slot="chips">
+        tail: &lbrace; status: 400 &rbrace;
+      </span>
+      <table
+        aria-label="Example sampling config: routine request logs dim as head sampling drops them, then a 500 response replays every line from that request"
+        class="w-full border-separate border-spacing-0 font-mono text-[0.8rem] leading-relaxed"
       >
-        <span class="font-medium text-[#6E6E6E] text-sm dark:text-[#888888]">
-          Console
-        </span>
-        <div class="flex flex-wrap gap-1.5">
-          <span
-            class="whitespace-nowrap rounded-full px-2 py-0.5 font-mono text-[#2D2D2D] text-[11px] shadow-[0_0_0_1px_rgb(0_0_0/0.08)] transition-[background-color] duration-300 dark:text-[#DADADA] dark:shadow-[0_0_0_1px_rgb(255_255_255/0.1)]"
-            data-head-chip
-          >
-            head: &lbrace; INFO: 10 &rbrace;
-          </span>
-          <span
-            class="whitespace-nowrap rounded-full px-2 py-0.5 font-mono text-[#2D2D2D] text-[11px] shadow-[0_0_0_1px_rgb(0_0_0/0.08)] transition-[background-color] duration-300 dark:text-[#DADADA] dark:shadow-[0_0_0_1px_rgb(255_255_255/0.1)]"
-            data-tail-chip
-          >
-            tail: &lbrace; status: 400 &rbrace;
-          </span>
-        </div>
-      </div>
-      <div class="overflow-x-auto px-3 py-5">
-        <table
-          aria-label="Example sampling config: routine request logs dim as head sampling drops them, then a 500 response replays every line from that request"
-          class="w-full border-separate border-spacing-0 font-mono text-[0.8rem] leading-relaxed"
-        >
-          <thead>
-            <tr class="[&>th:first-child]:pl-2 [&>th:last-child]:pr-2">
-              <th class={th} scope="col">Method</th>
-              <th class={th} scope="col">Path</th>
-              <th class={th} scope="col">Status</th>
-              <th class={th} scope="col">Duration</th>
-              <th scope="col" class:list={[th, 'pr-0 text-right']}>Sampling</th>
-            </tr>
-          </thead>
-          <tbody>
-            {samplingRows.map(row => (
-              <SamplingRow {...row} />
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
+        <thead>
+          <tr class="[&>th:first-child]:pl-2 [&>th:last-child]:pr-2">
+            <th class={th} scope="col">Method</th>
+            <th class={th} scope="col">Path</th>
+            <th class={th} scope="col">Status</th>
+            <th class={th} scope="col">Duration</th>
+            <th scope="col" class:list={[th, 'pr-0 text-right']}>Sampling</th>
+          </tr>
+        </thead>
+        <tbody>
+          {samplingRows.map(row => (
+            <SamplingRow {...row} />
+          ))}
+        </tbody>
+      </table>
+    </FeatureFigure>
   </div>
+</section>
 
-  <div class="grid gap-8">
-    <div class="grid justify-items-start gap-4">
-      <SectionLabel badge="New" name="Enrichers">
-        <svg
-          aria-hidden="true"
-          class="size-4"
-          fill="none"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="1.5"
-          viewBox="0 0 24 24"
-        >
-          <circle cx="12" cy="12" r="10"></circle>
-          <path d="M12 8v8M8 12h8"></path>
-        </svg>
-      </SectionLabel>
-      <div class="grid w-full gap-4 lg:grid-cols-2 lg:gap-12">
-        <h2
-          class="text-balance font-medium text-[25px] text-foreground leading-[130%] lg:text-[32px]"
-        >
-          Add context once, see it everywhere
-        </h2>
-        <div
-          class="grid justify-items-start gap-1 lg:max-w-md lg:justify-self-end"
-        >
-          <p
-            class="text-pretty text-[15px] text-muted-foreground leading-[160%] lg:text-[17px]"
-          >
-            Enrichers contribute fields to every request — trace ids from the
-            traceparent header, geo from your platform's headers, parsed user
-            agents. Set them up once and the fields reach the console, files,
-            and every adapter.
-          </p>
-          <a
-            class="group -my-2.5 py-2.5 font-medium text-[15px] text-foreground transition-colors hover:text-muted-foreground"
-            href="/docs/features/enrichers"
-          >
-            Explore enrichers
-            <span
-              aria-hidden="true"
-              class="inline-block transition-[translate] group-hover:translate-x-0.5"
-              >→</span
-            >
-          </a>
-        </div>
-      </div>
-    </div>
-    <div
-      class="min-w-0 rounded-2xl bg-white shadow-[0_0_0_1px_rgb(0_0_0/0.06),0_1px_2px_-1px_rgb(0_0_0/0.06),0_2px_4px_0_rgb(0_0_0/0.04)] dark:bg-[#131313] dark:shadow-[0_0_0_1px_rgb(255_255_255/0.08)]"
+<section aria-labelledby="hp-enrichers" class="border-border border-b">
+  <div class="hp-frame mx-auto max-w-7xl border-border border-x">
+    <SectionHeading
+      eyebrow="Enrichers"
+      href="/docs/features/enrichers"
+      id="hp-enrichers"
+      linkLabel="Explore enrichers"
+      tag="New"
+      title="Add context once, see it everywhere"
     >
-      <div
-        class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-[#EBEBEB] border-b p-4 dark:border-white/8"
+      Enrichers contribute fields to every request — trace ids from the
+      traceparent header, geo from your platform's headers, parsed user agents.
+      Set them up once and the fields reach the console, files, and every
+      adapter.
+    </SectionHeading>
+    <FeatureFigure data-enrichers-demo label="Enriched request">
+      <span class="whitespace-nowrap rounded-sm px-2 py-0.5 font-mono text-[11px] text-foreground ring-1 ring-border ring-inset transition-[background-color] duration-200 ease-[ease]" data-enrichers-chip slot="chips">
+        enrichers: [traceparentEnricher(), geoEnricher()]
+      </span>
+      <table
+        aria-label="Example enricher config: a table of fields attached to one request — trace id, geo city and country, browser, and device"
+        class="w-full border-separate border-spacing-0 font-mono text-[0.8rem] leading-relaxed"
       >
-        <span class="font-medium text-[#6E6E6E] text-sm dark:text-[#888888]">
-          Enriched request
-        </span>
-        <span
-          class="whitespace-nowrap rounded-full px-2 py-0.5 font-mono text-[#2D2D2D] text-[11px] shadow-[0_0_0_1px_rgb(0_0_0/0.08)] dark:text-[#DADADA] dark:shadow-[0_0_0_1px_rgb(255_255_255/0.1)]"
-        >
-          enrichers: [traceparentEnricher(), geoEnricher()]
-        </span>
-      </div>
-      <div class="overflow-x-auto px-3 py-5">
-        <table
-          aria-label="Example enricher config: a table of fields attached to one request — trace id, geo city and country, browser, and device"
-          class="w-full border-separate border-spacing-0 font-mono text-[0.8rem] leading-relaxed"
-        >
-          <thead>
-            <tr class="[&>th:first-child]:pl-2 [&>th:last-child]:pr-2">
-              <th class={th} scope="col">Field</th>
-              <th class={th} scope="col">Value</th>
-            </tr>
-          </thead>
-          <tbody>
-            {enricherFields.map(field => (
-              <FieldRow cls={field.cls} name={field.name} value={field.value} />
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
+        <thead>
+          <tr class="[&>th:first-child]:pl-2 [&>th:last-child]:pr-2">
+            <th class={th} scope="col">Field</th>
+            <th class={th} scope="col">Value</th>
+          </tr>
+        </thead>
+        <tbody>
+          {enricherFields.map(field => (
+            <FieldRow cls={field.cls} name={field.name} value={field.value} />
+          ))}
+        </tbody>
+      </table>
+    </FeatureFigure>
   </div>
+</section>
 
-  <div class="grid gap-8">
-    <div class="grid justify-items-start gap-4">
-      <SectionLabel name="File rotation">
-        <svg
-          aria-hidden="true"
-          class="size-4"
-          fill="none"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="1.5"
-          viewBox="0 0 24 24"
-        >
-          <path
-            d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"
-          ></path>
-          <path d="M14 2v6h6"></path>
-        </svg>
-      </SectionLabel>
-      <div class="grid w-full gap-4 lg:grid-cols-2 lg:gap-12">
-        <h2
-          class="text-balance font-medium text-[25px] text-foreground leading-[130%] lg:text-[32px]"
-        >
-          Outlive the terminal
-        </h2>
-        <div
-          class="grid justify-items-start gap-1 lg:max-w-md lg:justify-self-end"
-        >
-          <p
-            class="text-pretty text-[15px] text-muted-foreground leading-[160%] lg:text-[17px]"
-          >
-            Write logs to disk with size- and time-based rotation built in —
-            yesterday's file compresses and rotates away on its own.
-          </p>
-          <a
-            class="group -my-2.5 py-2.5 font-medium text-[15px] text-foreground transition-colors hover:text-muted-foreground"
-            href="/docs/features/file-logging"
-          >
-            Explore file logging
-            <span
-              aria-hidden="true"
-              class="inline-block transition-[translate] group-hover:translate-x-0.5"
-              >→</span
-            >
-          </a>
-        </div>
-      </div>
-    </div>
-    <div
+<section aria-labelledby="hp-files" class="border-border border-b">
+  <div class="hp-frame mx-auto max-w-7xl border-border border-x">
+    <SectionHeading
+      eyebrow="File rotation"
+      href="/docs/features/file-logging"
+      id="hp-files"
+      linkLabel="Explore file logging"
+      title="Outlive the terminal"
+    >
+      Write logs to disk with size- and time-based rotation built in —
+      yesterday's file compresses and rotates away on its own.
+    </SectionHeading>
+    <FeatureFigure
       aria-label="Example rotation config: the live log file's size meter grows to the 10 MB cap, then rotates while older files compress"
-      class="min-w-0 rounded-2xl bg-white shadow-[0_0_0_1px_rgb(0_0_0/0.06),0_1px_2px_-1px_rgb(0_0_0/0.06),0_2px_4px_0_rgb(0_0_0/0.04)] dark:bg-[#131313] dark:shadow-[0_0_0_1px_rgb(255_255_255/0.08)]"
       data-rotation
+      label="Log directory"
       role="img"
     >
+      <span class="whitespace-nowrap rounded-sm px-2 py-0.5 font-mono text-[11px] text-foreground ring-1 ring-border ring-inset" slot="chips">
+        logRotation: &lbrace; maxSize: '10m', maxFiles: 2, compress: true &rbrace;
+      </span>
       <div
-        class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-[#EBEBEB] border-b p-4 dark:border-white/8"
-      >
-        <span class="font-medium text-[#6E6E6E] text-sm dark:text-[#888888]">
-          Log directory
-        </span>
-        <span
-          class="whitespace-nowrap rounded-full px-2 py-0.5 font-mono text-[#2D2D2D] text-[11px] shadow-[0_0_0_1px_rgb(0_0_0/0.08)] dark:text-[#DADADA] dark:shadow-[0_0_0_1px_rgb(255_255_255/0.1)]"
-        >
-          rotation: &lbrace; size: '10m', interval: '1d' &rbrace;
-        </span>
-      </div>
-      <div
-        class="grid gap-1 overflow-x-auto p-5 font-mono text-[0.8rem] leading-relaxed"
+        class="grid gap-1 px-2 font-mono text-[0.8rem] leading-relaxed transition-opacity duration-150 ease-out-strong data-resetting:opacity-0"
+        data-files
       >
         {files.map(file => (
           <FileRow
@@ -664,7 +436,7 @@ const files = [
           />
         ))}
       </div>
-    </div>
+    </FeatureFigure>
   </div>
 </section>
 
@@ -678,10 +450,16 @@ const files = [
     '(prefers-reduced-motion: reduce)'
   ).matches
 
-  const visibilityGate = (el: Element) => {
+  // Bounded replay (WCAG 2.2.2): play a few rounds, each only once the demo is
+  // on screen, then rest on the static markup.
+  const replay = (
+    demo: Element,
+    rounds: number,
+    round: (index: number) => Promise<void>
+  ): Promise<void> => {
     let visible = false
     let onVisible: (() => void) | undefined
-    new IntersectionObserver(
+    const observer = new IntersectionObserver(
       entries => {
         visible = entries.some(entry => entry.isIntersecting)
         if (visible && onVisible) {
@@ -690,188 +468,221 @@ const files = [
         }
       },
       { threshold: 0.35 }
-    ).observe(el)
-    return () =>
-      visible
-        ? Promise.resolve()
-        : new Promise<void>(resolve => {
-            onVisible = resolve
-          })
+    )
+    observer.observe(demo)
+    const play = async (index: number): Promise<void> => {
+      if (index === rounds) {
+        observer.disconnect()
+        return
+      }
+      if (!visible) {
+        await new Promise<void>(resolve => {
+          onVisible = resolve
+        })
+      }
+      await round(index)
+      await play(index + 1)
+    }
+    return play(0)
+  }
+
+  const mark = (elements: Element[], attribute: string, on: boolean) => {
+    for (const element of elements) {
+      element.toggleAttribute(attribute, on)
+    }
+  }
+
+  const reveal = async (rows: HTMLElement[], gapMs: number) => {
+    for (const [index, row] of rows.entries()) {
+      setTimeout(() => {
+        delete row.dataset.hidden
+      }, index * gapMs)
+    }
+    await sleep(rows.length * gapMs)
+  }
+
+  const light = (chip: Element | null, on: boolean) => {
+    chip?.classList.toggle('bg-signal/20', on)
+  }
+
+  const setName = (row: Element, name: string) => {
+    const label = row.querySelector('[data-file-name]')
+    if (label) {
+      label.textContent = name
+    }
   }
 
   const tailDemo = document.querySelector('[data-tail]')
   if (tailDemo && !reduceMotion) {
     const rows = [...tailDemo.querySelectorAll<HTMLElement>('[data-log]')]
-    const waitUntilVisible = visibilityGate(tailDemo)
-    const revealRows = () =>
-      new Promise<void>(resolve => {
-        let index = 0
-        const tick = () => {
-          const row = rows[index]
-          if (!row) {
-            resolve()
-            return
-          }
-          index += 1
-          row.classList.remove('opacity-0')
-          setTimeout(tick, 220)
-        }
-        tick()
-      })
-    const round = async () => {
-      await waitUntilVisible()
-      for (const row of rows) {
-        row.classList.add('opacity-0')
-      }
+    replay(tailDemo, 3, async () => {
+      mark(rows, 'data-hidden', true)
       await sleep(500)
-      await revealRows()
+      await reveal(rows, 140)
       await sleep(3200)
-    }
-    // Bounded replay (WCAG 2.2.2): stop after a few rounds instead of looping
-    // forever; the resting state matches the static markup.
-    let rounds = 0
-    const loop = async () => {
-      await round()
-      rounds += 1
-      if (rounds < 3) {
-        loop()
-      }
-    }
-    loop()
+    })
   }
 
   const filterDemo = document.querySelector('[data-filter-demo]')
   if (filterDemo && !reduceMotion) {
     const lines = [...filterDemo.querySelectorAll<HTMLElement>('[data-log]')]
-    const chip = filterDemo.querySelector<HTMLElement>('[data-filter-chip]')
-    const waitUntilVisible = visibilityGate(filterDemo)
-    const revealLines = () =>
-      new Promise<void>(resolve => {
-        let index = 0
-        const tick = () => {
-          const line = lines[index]
-          if (!line) {
-            resolve()
-            return
-          }
-          index += 1
-          line.classList.remove('opacity-0')
-          setTimeout(tick, 180)
-        }
-        tick()
-      })
-    const round = async () => {
-      await waitUntilVisible()
-      for (const line of lines) {
-        line.classList.add('opacity-0')
-        line.classList.remove('opacity-35')
-      }
+    const dropped = lines.filter(line => line.dataset.dropped !== undefined)
+    const chip = filterDemo.querySelector('[data-filter-chip]')
+    replay(filterDemo, 3, async () => {
+      mark(dropped, 'data-dropped', false)
+      mark(lines, 'data-hidden', true)
       await sleep(500)
-      await revealLines()
+      await reveal(lines, 140)
       await sleep(800)
-      chip?.classList.add('bg-black/5', 'dark:bg-white/10')
-      for (const line of lines) {
-        if (line.dataset.kept === undefined) {
-          line.classList.add('opacity-35')
-        }
-      }
+      light(chip, true)
+      mark(dropped, 'data-dropped', true)
       await sleep(600)
-      chip?.classList.remove('bg-black/5', 'dark:bg-white/10')
+      light(chip, false)
       await sleep(2800)
-    }
-    let rounds = 0
-    const loop = async () => {
-      await round()
-      rounds += 1
-      if (rounds < 3) {
-        loop()
-      }
-    }
-    loop()
+    })
   }
 
   const samplingDemo = document.querySelector('[data-sampling-demo]')
   if (samplingDemo && !reduceMotion) {
-    const sampled = [
-      ...samplingDemo.querySelectorAll<HTMLElement>('[data-sampled]')
-    ]
-    const headChip = samplingDemo.querySelector<HTMLElement>('[data-head-chip]')
-    const tailChip = samplingDemo.querySelector<HTMLElement>('[data-tail-chip]')
-    const waitUntilVisible = visibilityGate(samplingDemo)
-    const round = async () => {
-      await waitUntilVisible()
+    const sampled = [...samplingDemo.querySelectorAll('[data-sampled]')]
+    const headChip = samplingDemo.querySelector('[data-head-chip]')
+    const tailChip = samplingDemo.querySelector('[data-tail-chip]')
+    replay(samplingDemo, 3, async () => {
       await sleep(600)
-      headChip?.classList.add('bg-black/5', 'dark:bg-white/10')
-      for (const row of sampled) {
-        row.classList.add('opacity-35')
-      }
+      light(headChip, true)
+      mark(sampled, 'data-dropped', true)
       await sleep(1000)
-      headChip?.classList.remove('bg-black/5', 'dark:bg-white/10')
+      light(headChip, false)
       await sleep(700)
-      tailChip?.classList.add('bg-black/5', 'dark:bg-white/10')
-      for (const row of sampled) {
-        row.classList.remove('opacity-35')
-      }
+      light(tailChip, true)
+      mark(sampled, 'data-dropped', false)
       await sleep(1000)
-      tailChip?.classList.remove('bg-black/5', 'dark:bg-white/10')
+      light(tailChip, false)
       await sleep(2400)
-    }
-    let rounds = 0
-    const loop = async () => {
-      await round()
-      rounds += 1
-      if (rounds < 3) {
-        loop()
-      }
-    }
-    loop()
+    })
+  }
+
+  const enrichersDemo = document.querySelector('[data-enrichers-demo]')
+  if (enrichersDemo && !reduceMotion) {
+    const fields = [
+      ...enrichersDemo.querySelectorAll<HTMLElement>('tbody tr')
+    ]
+    const chip = enrichersDemo.querySelector('[data-enrichers-chip]')
+    mark(fields, 'data-hidden', true)
+    replay(enrichersDemo, 1, async () => {
+      light(chip, true)
+      await sleep(200)
+      await reveal(fields, 50)
+      await sleep(450)
+      light(chip, false)
+    })
   }
 
   const rotation = document.querySelector('[data-rotation]')
-  if (rotation && !reduceMotion) {
-    const row = rotation.querySelector<HTMLElement>('[data-live-row]')
-    const size = rotation.querySelector<HTMLElement>('[data-live-size]')
-    const bar = rotation.querySelector<HTMLElement>('[data-live-bar]')
-    const waitUntilVisible = visibilityGate(rotation)
-    if (row && size && bar) {
-      const growFile = () =>
-        new Promise<void>(resolve => {
-          let megabytes = 0.1
-          const tick = () => {
-            if (megabytes >= 10) {
-              resolve()
-              return
-            }
-            size.textContent = `${megabytes.toFixed(1)} MB`
-            bar.style.width = `${megabytes * 10}%`
-            megabytes += 0.3
-            setTimeout(tick, 120)
-          }
-          tick()
-        })
-      const round = async () => {
-        await waitUntilVisible()
-        await growFile()
-        size.textContent = '10.0 MB'
-        bar.style.width = '100%'
-        row.classList.add('bg-[#067647]/10', 'dark:bg-[#99ffe4]/10')
-        await sleep(700)
-        row.classList.remove('bg-[#067647]/10', 'dark:bg-[#99ffe4]/10')
+  const files = rotation?.querySelector<HTMLElement>('[data-files]')
+  if (rotation && files && !reduceMotion) {
+    const CAP_MEGABYTES = 10
+    const FRESH_MEGABYTES = 0.1
+    // Logixlysia renames a full file to `<path>.<YYYY-MM-DD-HH-MM-SS-SSS>-<hrtime>`
+    // and appends `.gz` once it is compressed (output/rotation-manager.ts).
+    const archives = [
+      { gzMegabytes: 1.2, suffix: '2026-07-21-11-02-44-918-70966918077342' },
+      { gzMegabytes: 1.1, suffix: '2026-07-21-12-10-37-055-75039055630481' },
+      { gzMegabytes: 1.3, suffix: '2026-07-21-13-21-58-430-79320430918764' }
+    ]
+    const staticRows = [...files.children].map(row => row.cloneNode(true))
+    const livePath =
+      files.querySelector('[data-file="live"] [data-file-name]')?.textContent
+        ?.trim() ?? ''
+    let liveMegabytes = Number(
+      files
+        .querySelector('[data-file="live"] [data-file-size]')
+        ?.textContent?.trim()
+        .replace(' MB', '')
+    )
+
+    const setSize = (row: Element, megabytes: number) => {
+      const size = row.querySelector('[data-file-size]')
+      const bar = row.querySelector<HTMLElement>('[data-file-bar]')
+      if (size) {
+        size.textContent = `${megabytes.toFixed(1)} MB`
       }
-      const initialSize = size.textContent
-      const initialWidth = bar.style.width
-      let rounds = 0
-      const loop = async () => {
-        await round()
-        rounds += 1
-        if (rounds < 3) {
-          loop()
-          return
-        }
-        size.textContent = initialSize
-        bar.style.width = initialWidth
+      if (bar) {
+        bar.style.scale = `${megabytes / CAP_MEGABYTES} 1`
       }
-      loop()
     }
+    const grow = (row: Element) =>
+      new Promise<void>(resolve => {
+        const tick = () => {
+          setSize(row, Math.min(liveMegabytes, CAP_MEGABYTES))
+          if (liveMegabytes >= CAP_MEGABYTES) {
+            resolve()
+            return
+          }
+          liveMegabytes += 0.3
+          setTimeout(tick, 120)
+        }
+        tick()
+      })
+
+    // The rows below slide down one slot (transform only) to make room for
+    // the new live file, so the list keeps its height.
+    const shiftIn = (fresh: HTMLElement, rows: HTMLElement[]) => {
+      const before = rows.map(row => row.getBoundingClientRect().top)
+      files.prepend(fresh)
+      const offsets = rows.map(
+        (row, index) => (before[index] ?? 0) - row.getBoundingClientRect().top
+      )
+      for (const [index, row] of rows.entries()) {
+        row.style.transition = 'none'
+        row.style.translate = `0 ${offsets[index]}px`
+      }
+      files.getBoundingClientRect()
+      for (const row of rows) {
+        row.style.transition = ''
+        row.style.translate = ''
+      }
+    }
+
+    const rotate = async (index: number) => {
+      const archive = archives[index]
+      const rows = [...files.querySelectorAll<HTMLElement>('[data-file]')]
+      const live = rows.at(0)
+      const oldest = rows.at(-1)
+      if (!(archive && live && oldest)) {
+        return
+      }
+      await grow(live)
+      await sleep(300)
+      oldest.dataset.file = 'exiting'
+      await sleep(150)
+      oldest.remove()
+      const fresh = live.cloneNode(true)
+      if (!(fresh instanceof HTMLElement)) {
+        return
+      }
+      liveMegabytes = FRESH_MEGABYTES
+      setSize(fresh, liveMegabytes)
+      fresh.dataset.file = 'entering'
+      shiftIn(fresh, rows.slice(0, -1))
+      live.dataset.file = 'archived'
+      live.querySelector('[data-live-badge]')?.remove()
+      setName(live, `${livePath}.${archive.suffix}`)
+      await sleep(120)
+      fresh.dataset.file = 'live'
+      await sleep(780)
+      setName(live, `${livePath}.${archive.suffix}.gz`)
+      setSize(live, archive.gzMegabytes)
+      await sleep(1600)
+    }
+
+    const play = async () => {
+      await replay(rotation, archives.length, rotate)
+      files.dataset.resetting = ''
+      await sleep(150)
+      files.replaceChildren(...staticRows)
+      delete files.dataset.resetting
+    }
+    play()
   }
 </script>

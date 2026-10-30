@@ -7,19 +7,23 @@ interface Props {
 const { answer, question } = Astro.props
 ---
 
-<details class="faq-item group border-border border-b">
+<details
+  class="faq-item group border-border border-b last:border-b-0 lg:first:border-t lg:last:border-b"
+>
   <summary
-    class="flex cursor-pointer list-none items-center justify-between gap-4 py-4 font-medium text-[15px] text-balance text-foreground [&::-webkit-details-marker]:hidden"
+    class="flex cursor-pointer list-none items-center justify-between gap-4 px-4 py-5 font-medium text-base text-balance text-foreground sm:px-6 lg:px-10 [&::-webkit-details-marker]:hidden"
   >
     {question}
     <span
       aria-hidden="true"
-      class="select-none text-muted-foreground transition-[rotate] duration-200 group-open:rotate-45"
+      class="select-none font-mono text-lg text-muted-foreground transition-transform duration-200 ease-out group-open:rotate-45 motion-reduce:transition-none"
     >
       +
     </span>
   </summary>
-  <p class="text-pretty pb-5 text-[15px] text-muted-foreground leading-[160%]">
+  <p
+    class="max-w-[60ch] px-4 pb-6 text-[15px] text-muted-foreground leading-[160%] text-pretty sm:px-6 lg:px-10"
+  >
     {answer}
   </p>
 </details>

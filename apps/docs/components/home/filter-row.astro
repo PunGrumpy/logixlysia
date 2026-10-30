@@ -19,11 +19,10 @@ const { errorRow, kept, ...cells } = Astro.props
 ---
 
 <tr
-  data-kept={kept ? '' : undefined}
+  data-dropped={kept ? undefined : ''}
   data-log
   class:list={[
-    'transition-opacity duration-300 [&>td:first-child]:rounded-l-md [&>td:first-child]:pl-2 [&>td:last-child]:rounded-r-md [&>td:last-child]:pr-2',
-    !kept && 'opacity-35',
+    'transition-[opacity,translate] duration-250 ease-out-strong data-dropped:opacity-35 data-dropped:duration-300 data-dropped:ease-[ease] data-hidden:translate-y-1 data-hidden:opacity-0 [&>td:first-child]:rounded-l-md [&>td:first-child]:pl-2 [&>td:last-child]:rounded-r-md [&>td:last-child]:pr-2',
     errorRow && '[&>td]:bg-[#C9303C]/6 dark:[&>td]:bg-[#ff8080]/10'
   ]}
 >

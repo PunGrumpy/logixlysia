@@ -23,8 +23,7 @@ const { errorRow, sampled, tag, tagCls, ...cells } = Astro.props
 <tr
   data-sampled={sampled ? '' : undefined}
   class:list={[
-    '[&>td:first-child]:rounded-l-md [&>td:first-child]:pl-2 [&>td:last-child]:rounded-r-md [&>td:last-child]:pr-2',
-    sampled && 'transition-opacity duration-500',
+    'transition-opacity duration-300 ease-[ease] data-dropped:opacity-35 [&>td:first-child]:rounded-l-md [&>td:first-child]:pl-2 [&>td:last-child]:rounded-r-md [&>td:last-child]:pr-2',
     errorRow && '[&>td]:bg-[#C9303C]/6 dark:[&>td]:bg-[#ff8080]/10'
   ]}
 >

@@ -1,28 +1,43 @@
 ---
 interface Props {
   command: string
+  /** `inverse` is the dark field that sits on the signal-orange slab. */
+  tone?: 'default' | 'inverse'
 }
 
-const { command } = Astro.props
+const { command, tone = 'default' } = Astro.props
+const inverse = tone === 'inverse'
 ---
 
 <div
-  class="flex items-center justify-between w-full max-w-94.25 lg:w-94.25 h-12.25 rounded-[7px] pl-4.25 pr-1.25 shrink-0 bg-white shadow-[0_0_0_1px_rgb(0_0_0/0.06),0_1px_2px_-1px_rgb(0_0_0/0.06),0_2px_4px_0_rgb(0_0_0/0.04)] dark:bg-[#131313] dark:shadow-[0_0_0_1px_rgb(255_255_255/0.08)]"
   data-copy={command}
+  class:list={[
+    'flex h-14 w-full min-w-0 items-center justify-between gap-3 rounded-lg pr-1.5 pl-4 sm:w-90',
+    inverse
+      ? 'bg-panel text-panel-foreground'
+      : 'border border-foreground/90 bg-code text-foreground'
+  ]}
 >
-  <div class="text-[17px] leading-[145%] font-mono inline-flex gap-2.5">
-    <span aria-hidden="true" class="select-none text-muted-foreground">$</span>
-    <code class="whitespace-nowrap">{command}</code>
+  <div class="flex min-w-0 gap-2.5 font-mono text-[15px]">
+    <span
+      aria-hidden="true"
+      class:list={['select-none', inverse ? 'text-signal' : 'text-accent']}
+      >$</span
+    >
+    <code class="truncate">{command}</code>
   </div>
   <button
     aria-label="Copy command"
-    class="group relative grid size-10 shrink-0 cursor-pointer place-items-center rounded-[3px] text-muted-foreground transition-[scale,background-color,color] duration-150 ease-out after:absolute after:-inset-1.5 hover:bg-muted hover:text-foreground active:scale-[0.96] data-copied:text-emerald-600 dark:data-copied:text-emerald-400"
     type="button"
+    class:list={[
+      'group grid size-11 shrink-0 cursor-pointer place-items-center rounded-[2px] text-ink transition-transform duration-150 ease-out-strong [-webkit-tap-highlight-color:transparent] active:scale-[0.97] motion-reduce:transition-none',
+      inverse ? 'bg-panel-foreground hover:bg-white' : 'bg-signal hover:brightness-95'
+    ]}
   >
     <span class="relative size-4">
       <svg
         aria-hidden="true"
-        class="size-4 transition-[opacity,scale,filter] duration-300 ease-[cubic-bezier(0.2,0,0,1)] group-data-copied:scale-[0.25] group-data-copied:opacity-0 group-data-copied:blur-[4px]"
+        class="size-4 transition-[opacity,scale,filter] duration-200 ease-out-strong group-data-copied:scale-50 group-data-copied:opacity-0 group-data-copied:blur-[4px]"
         fill="none"
         stroke="currentColor"
         stroke-linecap="round"
@@ -35,7 +50,7 @@ const { command } = Astro.props
       </svg>
       <svg
         aria-hidden="true"
-        class="absolute inset-0 size-4 scale-[0.25] opacity-0 blur-[4px] transition-[opacity,scale,filter] duration-300 ease-[cubic-bezier(0.2,0,0,1)] group-data-copied:scale-100 group-data-copied:opacity-100 group-data-copied:blur-0"
+        class="absolute inset-0 size-4 scale-50 opacity-0 blur-[4px] transition-[opacity,scale,filter] duration-200 ease-out-strong group-data-copied:scale-100 group-data-copied:opacity-100 group-data-copied:blur-0"
         fill="none"
         stroke="currentColor"
         stroke-linecap="round"
@@ -51,7 +66,7 @@ const { command } = Astro.props
 </div>
 
 <script>
-  for (const block of document.querySelectorAll('[data-copy]')) {
+  for (const block of document.querySelectorAll<HTMLElement>('[data-copy]')) {
     const button = block.querySelector('button')
     const status = block.querySelector('[data-copy-status]')
     if (!button) {

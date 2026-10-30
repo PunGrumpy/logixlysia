@@ -12,7 +12,7 @@
     "validate": "blume validate"
   },
   "dependencies": {
-    "blume": "^2.0.3"
+    "blume": "^2.2.6"
   },
   "devDependencies": {
     "@repo/typescript-config": "workspace:*",

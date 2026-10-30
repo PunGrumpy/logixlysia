@@ -7,6 +7,68 @@
  * import it.
  */
 
+/* Warm paper and ink. Accent, action and background are set in
+   blume.config.ts; the neutrals and the brand-only colors have no config key,
+   so they live here. */
+:root {
+  --blume-foreground: #141412;
+  --blume-muted: #ebe9e3;
+  --blume-muted-foreground: #63625b;
+  --blume-border: rgb(20 20 18 / 0.11);
+  --blume-code-background: #fbfaf7;
+  --blume-action-foreground: #141412;
+
+  /* The fox's orange: large fills only. Orange text uses the accent. */
+  --lx-signal: #ff671e;
+  /* Ink stays ink in both themes: text on signal orange. */
+  --lx-ink: #141412;
+  /* Panels stay dark in both themes: the terminal and the footer. */
+  --lx-panel: #141412;
+  --lx-panel-raised: #1d1d1a;
+  --lx-panel-hover: #2a2a26;
+  --lx-panel-foreground: #f5f4f0;
+  --lx-panel-muted: #a3a299;
+  --lx-panel-border: rgb(245 244 240 / 0.1);
+}
+
+:root[data-theme='dark'] {
+  --blume-foreground: #f5f4f0;
+  --blume-muted: #1c1c19;
+  --blume-muted-foreground: #a3a299;
+  --blume-border: rgb(245 244 240 / 0.1);
+  --blume-code-background: #181816;
+  --blume-action-foreground: #141412;
+
+  --lx-panel: #0c0c0b;
+  --lx-panel-raised: #171715;
+  --lx-panel-hover: #22221f;
+}
+
+@theme inline {
+  --color-signal: var(--lx-signal);
+  --color-ink: var(--lx-ink);
+  --color-panel: var(--lx-panel);
+  --color-panel-raised: var(--lx-panel-raised);
+  --color-panel-hover: var(--lx-panel-hover);
+  --color-panel-foreground: var(--lx-panel-foreground);
+  --color-panel-muted: var(--lx-panel-muted);
+  --color-panel-border: var(--lx-panel-border);
+}
+
+@theme {
+  --ease-out-strong: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out-strong: cubic-bezier(0.77, 0, 0.175, 1);
+}
+
+/* Diagonal hatching for regions that are dimmed or out of scope. */
+@utility hatch {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    var(--blume-border) 0 1px,
+    transparent 1px 7px
+  );
+}
+
 html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -28,20 +90,14 @@ blockquote {
   text-wrap: pretty;
 }
 
-img {
-  outline: 1px solid rgba(0, 0, 0, 0.1);
+/* Content images only: on the transparent fox logo the outline draws a box. */
+.prose img {
+  outline: 1px solid rgb(0 0 0 / 0.1);
   outline-offset: -1px;
 }
 
-.dark img,
-[data-theme='dark'] img {
-  outline-color: rgba(255, 255, 255, 0.1);
-}
-
-@media (prefers-color-scheme: dark) {
-  img {
-    outline-color: rgba(255, 255, 255, 0.1);
-  }
+:root[data-theme='dark'] .prose img {
+  outline-color: rgb(255 255 255 / 0.1);
 }
 
 /* Blume's `.prose :where(p, ul, ol)` margins aren't guarded against

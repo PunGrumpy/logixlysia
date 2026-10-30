@@ -12,16 +12,11 @@ const { live, name, pct, size } = Astro.props
 ---
 
 <div
-  data-live-row={live ? '' : undefined}
-  class:list={[
-    'flex w-max items-center justify-between gap-4',
-    live &&
-      '-mx-1.5 min-w-[calc(100%+0.75rem)] rounded-md px-1.5 transition-[background-color] duration-500',
-    !live && 'min-w-full opacity-45'
-  ]}
+  class="flex w-max min-w-full items-center justify-between gap-4 transition-[opacity,translate] duration-250 ease-out-strong data-[file=archived]:opacity-45 data-[file=entering]:-translate-y-1 data-[file=entering]:opacity-0 data-[file=exiting]:opacity-0 data-[file=exiting]:duration-150"
+  data-file={live ? 'live' : 'archived'}
 >
   <span class="flex items-center gap-2">
-    <span class="whitespace-nowrap text-[#2D2D2D] dark:text-[#DADADA]">
+    <span class="whitespace-nowrap text-foreground" data-file-name>
       {name}
     </span>
     {live ? <LiveBadge /> : null}
@@ -29,17 +24,17 @@ const { live, name, pct, size } = Astro.props
   <span class="flex items-center gap-3">
     <span
       aria-hidden="true"
-      class="inline-block h-1 w-24 overflow-hidden rounded-full bg-black/6 dark:bg-white/10"
+      class="inline-block h-1 w-24 overflow-hidden rounded-full bg-foreground/8"
     >
       <span
-        class="block h-full rounded-full bg-[#067647] transition-[width] duration-150 ease-out dark:bg-[#99ffe4]"
-        data-live-bar={live ? '' : undefined}
-        style={`width: ${pct}%`}
+        class="block h-full w-full origin-left rounded-full bg-[#067647] transition-[scale] duration-150 ease-out-strong motion-reduce:transition-none dark:bg-[#99ffe4]"
+        data-file-bar
+        style={`scale: ${pct / 100} 1`}
       ></span>
     </span>
     <span
-      class="w-[7ch] whitespace-nowrap text-right text-black/45 tabular-nums dark:text-white/40"
-      data-live-size={live ? '' : undefined}
+      class="w-[7ch] whitespace-nowrap text-right text-muted-foreground tabular-nums"
+      data-file-size
     >
       {size}
     </span>

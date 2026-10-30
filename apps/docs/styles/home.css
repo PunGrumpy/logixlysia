@@ -12,7 +12,34 @@
   animation-play-state: paused;
 }
 
+/* A line printed by the demo's "Send a request" buttons. It fades in on a
+   brief highlight so the click visibly lands somewhere; the scripted replay
+   prints instantly, like real stdout. */
+.term-request {
+  transition:
+    opacity 200ms var(--ease-out-strong),
+    translate 200ms var(--ease-out-strong),
+    background-color 600ms ease 150ms;
+}
+
+@starting-style {
+  .term-request {
+    opacity: 0;
+    background-color: color-mix(
+      in srgb,
+      var(--lx-panel-foreground) 7%,
+      transparent
+    );
+  }
+}
+
 @media (prefers-reduced-motion: no-preference) {
+  @starting-style {
+    .term-request {
+      translate: 0 4px;
+    }
+  }
+
   .faq-item {
     interpolate-size: allow-keywords;
   }
@@ -25,5 +52,16 @@
   }
   .faq-item[open]::details-content {
     block-size: auto;
+  }
+}
+
+/* The frame's side borders mark the 1280px column against the margin around
+   it. When the window is no wider than the column, they'd sit on the window's
+   edge, so they go. Plain CSS outranks Tailwind's layered utilities. Zero
+   width rather than a transparent color, so the slabs and hairline grids
+   inside reach the window's edge without a 1px sliver of page. */
+@media (max-width: 1295.98px) {
+  .hp-frame {
+    border-inline-width: 0;
   }
 }
