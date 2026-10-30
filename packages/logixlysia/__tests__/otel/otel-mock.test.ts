@@ -1,7 +1,9 @@
 import { afterEach, describe, expect, mock, test } from 'bun:test'
+import { Elysia } from 'elysia'
+import { logixlysia } from '../../src'
 import { resetOtelApi } from '../../src/helpers/otel-api'
 import { createLogger } from '../../src/logger'
-import { injectTraceContext } from '../../src/otel'
+import { injectTraceContext, otelEnricher } from '../../src/otel'
 
 const fakeSpanContext = {
   spanId: '0123456789abcdef',
@@ -68,5 +70,45 @@ describe('logixlysia/otel (mocked)', () => {
 
     expect(result).toBeUndefined()
     expect(logger.getContext(request)).toEqual({})
+  })
+
+  test('otelEnricher returns the active span ids', () => {
+    resetOtelApi()
+
+    const fields = otelEnricher().request?.(new Request('http://localhost/'))
+
+    expect(fields).toEqual({
+      span_id: fakeSpanContext.spanId,
+      trace_id: fakeSpanContext.traceId
+    })
+  })
+
+  test('otelEnricher puts the span ids on the access log context', async () => {
+    resetOtelApi()
+    const events: Record<string, unknown>[] = []
+    const capture = mock(
+      (_level: string, _message: string, meta?: Record<string, unknown>) => {
+        events.push(meta ?? {})
+      }
+    )
+    const app = new Elysia()
+      .use(
+        logixlysia({
+          config: {
+            disableFileLogging: true,
+            disableInternalLogger: true,
+            enrichers: [otelEnricher()],
+            transports: [{ log: capture }]
+          }
+        })
+      )
+      .get('/ok', () => 'ok')
+
+    await app.handle(new Request('http://localhost/ok'))
+
+    expect(events[0]?.context).toMatchObject({
+      span_id: fakeSpanContext.spanId,
+      trace_id: fakeSpanContext.traceId
+    })
   })
 })

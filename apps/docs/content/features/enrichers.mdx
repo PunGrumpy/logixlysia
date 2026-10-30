@@ -30,7 +30,7 @@ traceparentEnricher()
 // → trace_id, span_id, trace_flags, trace_sampled
 ```
 
-The `trace_id` / `span_id` naming matches what Sentry, HyperDX, and OTLP backends expect, so logs link to traces as soon as an upstream service propagates the header.
+The `trace_id` / `span_id` naming matches what Sentry, HyperDX, and OTLP backends expect, so logs link to traces as soon as an upstream service propagates the header. The OTLP and HyperDX adapters also copy these values into the log record's native `traceId`, `spanId` and `flags` fields.
 
 | Option | Type | Default | Description |
 | --- | --- | --- | --- |

@@ -22,8 +22,11 @@ interface OtlpPayload {
       logRecords: {
         attributes: OtlpAttribute[]
         body: { stringValue: string }
+        flags?: number
         severityNumber: number
         severityText: string
+        spanId?: string
+        traceId?: string
       }[]
     }[]
   }[]
@@ -92,6 +95,71 @@ describe('logixlysia/otlp', () => {
       expect(valueOf('count')).toEqual({ intValue: '42' })
       expect(valueOf('big')).toEqual({ doubleValue: 1e21 })
       expect(valueOf('huge')).toEqual({ doubleValue: 2 ** 64 })
+    } finally {
+      stub.restore()
+      restoreEnv()
+    }
+  })
+
+  test('sets traceId and spanId from context.trace_id and context.span_id', async () => {
+    const restoreEnv = stubEnv(CLEAR_ENV)
+    const stub = stubFetch()
+    try {
+      const transport = createOtlpTransport({
+        endpoint: 'http://collector:4318'
+      })
+      transport.log('INFO', 'hi', {
+        context: {
+          span_id: '00f067aa0ba902b7',
+          trace_flags: '01',
+          trace_id: '4BF92F3577B34DA6A3CE929D0E0E4736'
+        }
+      })
+      await transport.flush()
+
+      const payload = JSON.parse(stub.calls[0]?.body ?? '{}') as OtlpPayload
+      const record = payload.resourceLogs[0]?.scopeLogs[0]?.logRecords[0]
+      expect(record?.traceId).toBe('4bf92f3577b34da6a3ce929d0e0e4736')
+      expect(record?.spanId).toBe('00f067aa0ba902b7')
+      expect(record?.flags).toBe(1)
+      expect(
+        record?.attributes.some(
+          attribute => attribute.key === 'context.trace_id'
+        )
+      ).toBe(true)
+    } finally {
+      stub.restore()
+      restoreEnv()
+    }
+  })
+
+  test('leaves traceId unset for an invalid or all-zero id', async () => {
+    const restoreEnv = stubEnv(CLEAR_ENV)
+    const stub = stubFetch()
+    try {
+      const transport = createOtlpTransport({
+        endpoint: 'http://collector:4318'
+      })
+      transport.log('INFO', 'zero', {
+        context: { trace_flags: '01', trace_id: '0'.repeat(32) }
+      })
+      transport.log('INFO', 'junk', {
+        context: { trace_flags: '01', trace_id: 'not-hex' }
+      })
+      await transport.flush()
+
+      const payload = JSON.parse(stub.calls[0]?.body ?? '{}') as OtlpPayload
+      const records = payload.resourceLogs[0]?.scopeLogs[0]?.logRecords ?? []
+      expect(records).toHaveLength(2)
+      for (const record of records) {
+        expect('traceId' in record).toBe(false)
+        expect('flags' in record).toBe(false)
+        expect(
+          record.attributes.some(
+            attribute => attribute.key === 'context.trace_id'
+          )
+        ).toBe(true)
+      }
     } finally {
       stub.restore()
       restoreEnv()

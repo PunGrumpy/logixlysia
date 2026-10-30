@@ -14,6 +14,18 @@ Import from the `logixlysia/otel` subpath:
 ```ts
 import { Elysia } from 'elysia'
 import logixlysia from 'logixlysia'
+import { otelEnricher } from 'logixlysia/otel'
+
+const app = new Elysia()
+  .use(logixlysia({ config: { enrichers: [otelEnricher()] } }))
+  .get('/', () => 'ok')
+```
+
+`otelEnricher()` is a request-phase [enricher](/docs/features/enrichers), so the ids reach every sink. To merge them by hand instead, call `injectTraceContext` from `onRequest`:
+
+```ts
+import { Elysia } from 'elysia'
+import logixlysia from 'logixlysia'
 import { injectTraceContext } from 'logixlysia/otel'
 
 const plugin = logixlysia()

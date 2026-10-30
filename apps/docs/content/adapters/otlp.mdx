@@ -73,7 +73,7 @@ Plus the shared options in the [overview table](/docs/adapters/overview#shared-b
 
 Logs post to `{endpoint}/v1/logs`. Levels map to OpenTelemetry severity numbers (`DEBUG` → 5, `INFO` → 9, `WARNING` → 13, `ERROR` → 17), and meta fields flatten into dot-notation attributes (`request.method`, `status`, `durationMs`, `context.requestId`, …).
 
-Pair this with [`logixlysia/otel`](/docs/integrations/otel) to include `context.trace_id` / `context.span_id` and correlate logs with traces in your backend.
+When the request context carries a valid `trace_id` and `span_id` (32 and 16 lowercase hex characters, not all zeros), they are written to the log record's native `traceId` and `spanId` fields, and `context.trace_flags` becomes `flags`. The `context.*` attributes are kept too. Backends join logs to traces on those native fields, so pair this with [`logixlysia/otel`](/docs/integrations/otel) or `traceparentEnricher()` to fill the context.
 
 ## Vendor Examples
 
