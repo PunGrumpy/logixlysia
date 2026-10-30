@@ -20,6 +20,8 @@ import { stubFetch } from './helpers'
 
 const packageRoot = path.join(import.meta.dir, '..', '..')
 const MAX_EXIT_MS = 5000
+/** Ends the endless error body so an unbounded read fails the test instead of exhausting memory. */
+const MAX_TEST_PULLS = 256
 
 interface Deferred {
   promise: Promise<void>
@@ -385,6 +387,81 @@ describe('postWithRetry', () => {
       expect((rejection as Error).message).not.toContain('\u001B')
     } finally {
       stub.restore()
+    }
+  })
+
+  test('reads at most 1 KB of an error body', async () => {
+    const original = globalThis.fetch
+    const chunk = new Uint8Array(64 * 1024).fill(120)
+    let pulls = 0
+    globalThis.fetch = mock(() =>
+      Promise.resolve(
+        new Response(
+          new ReadableStream<Uint8Array>({
+            pull(controller) {
+              pulls += 1
+              controller.enqueue(chunk)
+              if (pulls >= MAX_TEST_PULLS) {
+                controller.close()
+              }
+            }
+          }),
+          { status: 400 }
+        )
+      )
+    ) as unknown as typeof fetch
+    try {
+      const rejection = await postWithRetry({
+        body: '{}',
+        headers: {},
+        name: 'Test',
+        retries: 0,
+        timeout: 2000,
+        url: 'https://example.com/ingest'
+      }).catch((error: Error) => error)
+      expect(rejection).toBeInstanceOf(Error)
+      expect((rejection as Error).message).toContain('HTTP 400')
+      expect(pulls).toBeLessThanOrEqual(2)
+    } finally {
+      globalThis.fetch = original
+    }
+  })
+
+  test('cancels the error body stream when reading it throws', async () => {
+    const original = globalThis.fetch
+    let cancelled = false
+    // A real errored stream never runs its source `cancel`, so the reader is faked.
+    const failingResponse = {
+      body: {
+        getReader: () => ({
+          cancel: () => {
+            cancelled = true
+            return Promise.resolve()
+          },
+          read: () => Promise.reject(new Error('read failed'))
+        })
+      },
+      headers: new Headers(),
+      ok: false,
+      status: 400
+    }
+    globalThis.fetch = mock(() =>
+      Promise.resolve(failingResponse)
+    ) as unknown as typeof fetch
+    try {
+      const rejection = await postWithRetry({
+        body: '{}',
+        headers: {},
+        name: 'Test',
+        retries: 0,
+        timeout: 2000,
+        url: 'https://example.com/ingest'
+      }).catch((error: Error) => error)
+      expect(rejection).toBeInstanceOf(Error)
+      expect((rejection as Error).message).toContain('HTTP 400')
+      expect(cancelled).toBe(true)
+    } finally {
+      globalThis.fetch = original
     }
   })
 

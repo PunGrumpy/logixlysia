@@ -26,6 +26,7 @@ const MILLIS_PER_SECOND = 1000
 const HTTP_TOO_MANY_REQUESTS = 429
 const HTTP_SERVER_ERROR_MIN = 500
 const ERROR_BODY_PREVIEW_LENGTH = 200
+const ERROR_BODY_MAX_READ = 1024
 const FLATTEN_MAX_DEPTH = 3
 
 export interface BatchTransportOptions {
@@ -219,12 +220,41 @@ export const resolveRetryDelay = (
   )
 }
 
+const readChunks = async (
+  reader: ReadableStreamDefaultReader<Uint8Array>,
+  decoder: TextDecoder,
+  text: string,
+  bytesRead: number
+): Promise<string> => {
+  if (bytesRead >= ERROR_BODY_MAX_READ) {
+    return text
+  }
+  const { done, value } = await reader.read()
+  if (done) {
+    return text
+  }
+  return readChunks(
+    reader,
+    decoder,
+    text + decoder.decode(value, { stream: true }),
+    bytesRead + value.byteLength
+  )
+}
+
 const readBodyText = async (response: Response): Promise<string> => {
-  try {
-    return await response.text()
-  } catch {
+  const reader = response.body?.getReader()
+  if (!reader) {
     return ''
   }
+  let text = ''
+  try {
+    text = await readChunks(reader, new TextDecoder(), '', 0)
+  } catch {
+    text = ''
+  } finally {
+    await settle(reader.cancel())
+  }
+  return text
 }
 
 const attemptPost = async (
