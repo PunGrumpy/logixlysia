@@ -1,8 +1,21 @@
-import { describe, expect, test } from 'bun:test'
-import { readFile } from 'node:fs/promises'
+import { describe, expect, mock, test } from 'bun:test'
+import { chmod, mkdir, readdir, readFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { flushAllFileSinks, getFileSink } from '../../src/output/file-sink'
+import type { FileSink, FileSinkOptions } from '../../src/output/file-sink'
 import { createTempDir, removeTempDir } from '../_helpers/tmp'
+
+const writeSequentially = async (
+  sink: FileSink,
+  count: number,
+  options: FileSinkOptions
+): Promise<void> => {
+  if (count === 0) {
+    return
+  }
+  await sink.write('a\n', options)
+  await writeSequentially(sink, count - 1, options)
+}
 
 describe('file sink lifecycle', () => {
   test('flush() resolves after a write issued in the same tick is on disk', async () => {
@@ -72,6 +85,79 @@ describe('file sink lifecycle', () => {
       expect(await readFile(firstPath, 'utf-8')).toContain('first')
       expect(await readFile(secondPath, 'utf-8')).toContain('second')
     } finally {
+      await removeTempDir(dir)
+    }
+  })
+
+  test('relative and absolute spellings of one path share a single sink', async () => {
+    const dir = await createTempDir()
+    const abs = path.join(dir, 'logs', 'same.log')
+    const rel = path.relative(process.cwd(), abs)
+    const sink = getFileSink(abs)
+    try {
+      expect(getFileSink(rel)).toBe(sink)
+
+      sink.write('via-absolute\n', {})
+      getFileSink(rel).write('via-relative\n', {})
+      await flushAllFileSinks()
+
+      const contents = await readFile(abs, 'utf-8')
+      const lines = contents.split('\n').filter(Boolean)
+      expect(lines.toSorted()).toEqual(['via-absolute', 'via-relative'])
+    } finally {
+      await sink.close()
+      await removeTempDir(dir)
+    }
+  })
+
+  test.skipIf(process.getuid?.() === 0)(
+    'a failed size rotation is retried after another maxSize, not on every batch',
+    async () => {
+      const dir = await createTempDir()
+      const logsDir = path.join(dir, 'logs')
+      const filePath = path.join(logsDir, 'flood.log')
+      await mkdir(logsDir)
+      await writeFile(filePath, 'x'.repeat(2048))
+      await chmod(logsDir, 0o500)
+      const sink = getFileSink(filePath)
+      const onRotationError = mock((_error: unknown) => {})
+      try {
+        const options = {
+          logRotation: { compress: false, maxSize: '1k' },
+          onRotationError
+        }
+        await writeSequentially(sink, 5, options)
+
+        expect(onRotationError).toHaveBeenCalledTimes(1)
+      } finally {
+        await chmod(logsDir, 0o700)
+        await sink.close()
+        await removeTempDir(dir)
+      }
+    }
+  )
+
+  test('a size rotation rolls the file over once it passes maxSize', async () => {
+    const dir = await createTempDir()
+    const filePath = path.join(dir, 'logs', 'roll.log')
+    const sink = getFileSink(filePath)
+    try {
+      await sink.write('x'.repeat(2048), {})
+      await sink.write('next\n', {
+        logRotation: { compress: false, maxSize: '1k' }
+      })
+      await sink.flush()
+
+      const entries = await readdir(path.join(dir, 'logs'))
+      const rotated = entries.filter(name => name !== 'roll.log')
+      expect(rotated).toHaveLength(1)
+      const archived = await readFile(
+        path.join(dir, 'logs', rotated[0] ?? ''),
+        'utf-8'
+      )
+      expect(archived).toBe(`${'x'.repeat(2048)}next\n`)
+    } finally {
+      await sink.close()
       await removeTempDir(dir)
     }
   })
