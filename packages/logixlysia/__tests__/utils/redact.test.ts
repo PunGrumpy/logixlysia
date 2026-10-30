@@ -234,6 +234,13 @@ describe('redact', () => {
     expect(result).toEqual({ user: { apiKey: '[REDACTED]', name: 'ok' } })
   })
 
+  test('redacts a vendor-prefixed API key in an object and keeps unrelated keys', () => {
+    expect(redact({ name: 'ok', stripeApiKey: 'sk_x' })).toEqual({
+      name: 'ok',
+      stripeApiKey: '[REDACTED]'
+    })
+  })
+
   test('redacts a key added via extraKeys', () => {
     expect(redact({ custom: 'v' }, ['custom'])).toEqual({
       custom: '[REDACTED]'
@@ -492,6 +499,37 @@ describe('isSensitiveKey', () => {
     }
   })
 
+  test('matches vendor-prefixed API, access and signing keys and authorization or jwt fields', () => {
+    const keys = [
+      'x-goog-api-key',
+      'stripeApiKey',
+      'openai_api_key',
+      'accessKey',
+      'X-Access-Key',
+      'signingKey',
+      'x-authorization',
+      'jwt',
+      'userJwt'
+    ]
+    for (const key of keys) {
+      expect(isSensitiveKey(key)).toBe(true)
+    }
+  })
+
+  test('does not match bare key compounds that are not credentials', () => {
+    const keys = [
+      'cache-key',
+      'idempotency-key',
+      'monkey-key',
+      'keyboard',
+      'x-request-id',
+      'session-count'
+    ]
+    for (const key of keys) {
+      expect(isSensitiveKey(key)).toBe(false)
+    }
+  })
+
   test('does not match token counters or other benign compounds', () => {
     const keys = [
       'tokenCount',
@@ -528,7 +566,7 @@ describe('redactRequest', () => {
     const req = new Request(url)
     const out = redactRequest(req)
     expect(out).not.toBe(req)
-    expect(out.url).toContain('%5BREDACTED%5D')
+    expect(out.url).toContain('jwt=redacted')
     expect(out.url).not.toContain(sampleJwt)
   })
 
@@ -587,6 +625,13 @@ describe('redactRequest', () => {
     expect(out.url).not.toContain('abc123')
     expect(out.url).toContain('email=%5BREDACTED%5D')
     expect(out.url).toContain('keep=1')
+  })
+
+  test('masks a vendor-prefixed API key query parameter and keeps the rest', () => {
+    const out = redactRequest(new Request('http://h/?x-goog-api-key=abc&q=1'))
+    const params = new URL(out.url).searchParams
+    expect(params.get('x-goog-api-key')).toBe('redacted')
+    expect(params.get('q')).toBe('1')
   })
 
   test('masks camelCase query parameter names', () => {
