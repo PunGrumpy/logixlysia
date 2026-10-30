@@ -8,7 +8,7 @@ description: How Logixlysia compares to evlog and other Elysia loggers
 | Capability | Logixlysia | [evlog](https://evlog.dev) | [@bogeychan/elysia-logger](https://github.com/bogeychan/elysia-logger) |
 | --- | --- | --- | --- |
 | Elysia plugin | Yes | Yes (`evlog/elysia`) | Yes |
-| Pino-backed | Yes | Optional drains | Yes |
+| Pino-backed | Own request logger; pino on `store.pino` | Optional drains | Yes |
 | Request context accumulation | `mergeContext`, `useLogger()` | `log.set()`, `useLogger()` | Manual |
 | Single access log per request | Auto | `log.emit()` | Auto |
 | File rotation | Yes | Via drains | Limited |
@@ -25,7 +25,7 @@ description: How Logixlysia compares to evlog and other Elysia loggers
 
 ## When to choose Logixlysia
 
-- You want **Pino** performance with Elysia-native `store.logger` ergonomics.
+- You want automatic access logs with Elysia-native `store.logger` ergonomics, and a pino instance on `store.pino` for your own logs.
 - You need **file logging and rotation** without wiring a separate drain.
 - You prefer **incremental context** (`mergeContext`) plus automatic access logs instead of migrating to a wide-event-only API.
 

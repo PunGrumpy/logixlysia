@@ -1,6 +1,6 @@
 # Elysia playground (Logixlysia demo)
 
-Canonical demo for Logixlysia on **Bun + TypeScript**. Node.js compatibility is covered by integration tests in `packages/logixlysia/__tests__/integration`.
+Canonical demo for Logixlysia on **Bun + TypeScript**. The integration suite runs the `@elysiajs/node` adapter under Bun's test runner; see `packages/logixlysia/__tests__/integration`.
 
 ![Preview](./public/preview.png)
 
@@ -80,7 +80,7 @@ bun test
 bun test __tests__/integration
 ```
 
-The integration suite mirrors these demo routes and includes a **Node adapter** smoke test (`@elysiajs/node`).
+The integration suite mirrors these demo routes and includes a smoke test that runs the `@elysiajs/node` adapter under Bun's test runner.
 
 ## Learn more
 
