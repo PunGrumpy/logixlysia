@@ -269,6 +269,25 @@ describe('resolveOptions', () => {
     )
   })
 
+  test('accepts flushTimeoutMs at the timer ceiling', () => {
+    expect(
+      resolveOptions({ config: { flushTimeoutMs: 2_147_483_647 } }).config
+        ?.flushTimeoutMs
+    ).toBe(2_147_483_647)
+  })
+
+  test('throws on a flushTimeoutMs above the timer ceiling', () => {
+    expect(() =>
+      resolveOptions({ config: { flushTimeoutMs: 2_147_483_648 } })
+    ).toThrow('flushTimeoutMs')
+  })
+
+  test('throws on a flushTimeoutMs of Number.MAX_SAFE_INTEGER', () => {
+    expect(() =>
+      resolveOptions({ config: { flushTimeoutMs: Number.MAX_SAFE_INTEGER } })
+    ).toThrow('flushTimeoutMs')
+  })
+
   test('accepts flushTimeoutMs of 0 and a positive number', () => {
     expect(
       resolveOptions({ config: { flushTimeoutMs: 0 } }).config?.flushTimeoutMs

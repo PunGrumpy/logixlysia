@@ -47,6 +47,9 @@ const isPercentage = (value: unknown): boolean =>
 const isNonNegativeNumber = (value: unknown): boolean =>
   typeof value === 'number' && Number.isFinite(value) && value >= 0
 
+/** The largest delay `setTimeout` honours; above it the timer fires after 1 ms. */
+const MAX_TIMER_DELAY_MS = 2_147_483_647
+
 const VALID_SAMPLING_LEVELS = ['DEBUG', 'INFO', 'WARNING', 'ERROR'] as const
 
 const invalidSampling = (detail: string): never => {
@@ -164,9 +167,15 @@ const validateOutput = (config: Options['config']): void => {
   }
 
   const flushTimeoutMs = config?.flushTimeoutMs
-  if (flushTimeoutMs !== undefined && !isNonNegativeNumber(flushTimeoutMs)) {
+  if (
+    flushTimeoutMs !== undefined &&
+    !(
+      isNonNegativeNumber(flushTimeoutMs) &&
+      flushTimeoutMs <= MAX_TIMER_DELAY_MS
+    )
+  ) {
     invalidOutput(
-      `flushTimeoutMs must be a finite number of milliseconds at or above 0, got ${flushTimeoutMs}`
+      `flushTimeoutMs must be a finite number of milliseconds between 0 and ${MAX_TIMER_DELAY_MS}, got ${flushTimeoutMs}`
     )
   }
 }
