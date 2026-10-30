@@ -5,7 +5,7 @@ import type {
   SinkErrorContext,
   StoreData
 } from '../interfaces'
-import { elapsedMs } from '../utils/duration'
+import type { PrecomputedLogParts } from '../logger/create-logger'
 import { createErrorReporter } from '../utils/report'
 
 const reportTransportError = createErrorReporter(
@@ -45,13 +45,13 @@ interface LogToTransportsInput {
   data: Record<string, unknown>
   level: LogLevel
   options: Options
-  precomputed?: { durationMs: number; pathname: string; search: string }
+  precomputed: PrecomputedLogParts
   request: RequestInfo
   store: StoreData
 }
 
 export const logToTransports = (input: LogToTransportsInput): void => {
-  const { level, request, data, store, options, precomputed } = input
+  const { level, request, data, options, precomputed } = input
   const transports = options.config?.transports ?? []
   if (transports.length === 0) {
     return
@@ -65,7 +65,7 @@ export const logToTransports = (input: LogToTransportsInput): void => {
       url: request.url
     },
     ...data,
-    durationMs: precomputed?.durationMs ?? elapsedMs(store.beforeTime)
+    durationMs: precomputed.durationMs
   }
 
   for (const transport of transports) {

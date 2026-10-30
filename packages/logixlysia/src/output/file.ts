@@ -1,5 +1,5 @@
 import type { LogLevel, Options, RequestInfo, StoreData } from '../interfaces'
-import { elapsedMs } from '../utils/duration'
+import type { PrecomputedLogParts } from '../logger/create-logger'
 import { createErrorReporter } from '../utils/report'
 import { sanitizeLogText } from '../utils/sanitize'
 import { getFileSink } from './file-sink'
@@ -18,30 +18,18 @@ interface LogToFileInput {
   filePath: string
   level: LogLevel
   options: Options
-  precomputed?: { durationMs: number; pathname: string; search: string }
+  precomputed: PrecomputedLogParts
   request: RequestInfo
   store: StoreData
 }
 
 const resolvePathname = (
-  request: RequestInfo,
   logQueryParams: boolean | undefined,
-  precomputed?: { pathname: string; search: string }
-): string => {
-  if (precomputed) {
-    const { pathname, search } = precomputed
-    return logQueryParams ? `${pathname}${search}` : pathname
-  }
-  try {
-    const { pathname, search } = new URL(request.url)
-    return logQueryParams ? `${pathname}${search}` : pathname
-  } catch {
-    return request.url
-  }
-}
+  { pathname, search }: PrecomputedLogParts
+): string => (logQueryParams ? `${pathname}${search}` : pathname)
 
 export const logToFile = async (input: LogToFileInput): Promise<void> => {
-  const { filePath, level, request, data, store, options, precomputed } = input
+  const { filePath, level, request, data, options, precomputed } = input
   const { config } = options
   const useTransportsOnly = config?.useTransportsOnly === true
   const disableFileLogging = config?.disableFileLogging === true
@@ -50,9 +38,9 @@ export const logToFile = async (input: LogToFileInput): Promise<void> => {
   }
 
   const message = typeof data.message === 'string' ? data.message : ''
-  const durationMs = precomputed?.durationMs ?? elapsedMs(store.beforeTime)
+  const { durationMs } = precomputed
 
-  const pathname = resolvePathname(request, config?.logQueryParams, precomputed)
+  const pathname = resolvePathname(config?.logQueryParams, precomputed)
   const line = `${level} ${durationMs.toFixed(2)}ms ${request.method} ${sanitizeLogText(pathname, 1024)} ${sanitizeLogText(message)}\n`
 
   const onRotationError = (error: unknown): void =>

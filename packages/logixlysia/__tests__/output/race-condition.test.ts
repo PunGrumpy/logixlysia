@@ -3,6 +3,7 @@ import { promises as fs } from 'node:fs'
 import path from 'node:path'
 import type { Options } from '../../src/interfaces'
 import { logToFile } from '../../src/output/file'
+import { precomputedFor } from '../_helpers/precomputed'
 import { createMockRequest } from '../_helpers/request'
 import { createTempDir, removeTempDir } from '../_helpers/tmp'
 
@@ -21,16 +22,18 @@ describe('logToFile race condition', () => {
         }
       }
 
-      const writes = Array.from({ length: 50 }, (_, i) =>
-        logToFile({
+      const writes = Array.from({ length: 50 }, (_, i) => {
+        const request = createMockRequest(`http://localhost/test${i}`)
+        return logToFile({
           data: { message: `message-${i}-${'x'.repeat(20)}` },
           filePath,
           level: 'INFO',
           options,
-          request: createMockRequest(`http://localhost/test${i}`),
+          precomputed: precomputedFor(request),
+          request,
           store: { beforeTime: 0n }
         })
-      )
+      })
 
       await Promise.all(writes)
 
@@ -78,16 +81,18 @@ describe('logToFile race condition', () => {
         }
       }
 
-      const writes = Array.from({ length: 20 }, (_, i) =>
-        logToFile({
+      const writes = Array.from({ length: 20 }, (_, i) => {
+        const request = createMockRequest(`http://localhost/test${i}`)
+        return logToFile({
           data: { message: `msg-${i}-${'x'.repeat(100)}` },
           filePath,
           level: 'INFO',
           options,
-          request: createMockRequest(`http://localhost/test${i}`),
+          precomputed: precomputedFor(request),
+          request,
           store: { beforeTime: 0n }
         })
-      )
+      })
 
       await expect(Promise.all(writes)).resolves.toBeDefined()
 
@@ -120,16 +125,18 @@ describe('logToFile race condition', () => {
 
       const total = 20
 
-      const writes = Array.from({ length: total }, (_, i) =>
-        logToFile({
+      const writes = Array.from({ length: total }, (_, i) => {
+        const request = createMockRequest(`http://localhost/test${i}`)
+        return logToFile({
           data: { message: `msg-${i}-${'x'.repeat(50)}` },
           filePath,
           level: 'INFO',
           options,
-          request: createMockRequest(`http://localhost/test${i}`),
+          precomputed: precomputedFor(request),
+          request,
           store: { beforeTime: 0n }
         })
-      )
+      })
 
       await Promise.all(writes)
 

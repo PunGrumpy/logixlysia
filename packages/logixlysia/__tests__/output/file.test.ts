@@ -1,10 +1,15 @@
 import { describe, expect, mock, test } from 'bun:test'
 import { promises as fs } from 'node:fs'
 import path from 'node:path'
-import type { Options, SinkErrorContext } from '../../src/interfaces'
+import type {
+  Options,
+  RequestInfo,
+  SinkErrorContext
+} from '../../src/interfaces'
 import { logToFile } from '../../src/output/file'
 import { spyConsole } from '../_helpers/console'
 import { permBits } from '../_helpers/perm-bits'
+import { precomputedFor } from '../_helpers/precomputed'
 import { createMockRequest } from '../_helpers/request'
 import { createTempDir, removeTempDir } from '../_helpers/tmp'
 
@@ -17,12 +22,14 @@ describe('logToFile', () => {
       const filePath = path.join(dir, 'logs', 'app.log')
       const options: Options = { config: {} }
 
+      const request = createMockRequest('http://localhost/test')
       await logToFile({
         data: { message: 'hello' },
         filePath,
         level: 'INFO',
         options,
-        request: createMockRequest('http://localhost/test'),
+        precomputed: precomputedFor(request),
+        request,
         store: { beforeTime: 0n }
       })
 
@@ -43,12 +50,14 @@ describe('logToFile', () => {
         }
       }
 
+      const request = createMockRequest('http://localhost/test')
       await logToFile({
         data: { message: 'x'.repeat(50) },
         filePath,
         level: 'INFO',
         options,
-        request: createMockRequest('http://localhost/test'),
+        precomputed: precomputedFor(request),
+        request,
         store: { beforeTime: 0n }
       })
 
@@ -70,12 +79,14 @@ describe('logToFile', () => {
         config: { logQueryParams: true }
       }
 
+      const request = createMockRequest('http://localhost/api/test?user=123')
       await logToFile({
         data: { message: 'msg' },
         filePath,
         level: 'INFO',
         options,
-        request: createMockRequest('http://localhost/api/test?user=123'),
+        precomputed: precomputedFor(request),
+        request,
         store: { beforeTime: 0n }
       })
 
@@ -92,12 +103,14 @@ describe('logToFile', () => {
       const filePath = path.join(dir, 'logs', 'inject.log')
       const options: Options = { config: {} }
 
+      const request = createMockRequest('http://localhost/test')
       await logToFile({
         data: { message: 'line1\nFAKE INFO line2' },
         filePath,
         level: 'INFO',
         options,
-        request: createMockRequest('http://localhost/test'),
+        precomputed: precomputedFor(request),
+        request,
         store: { beforeTime: 0n }
       })
 
@@ -110,18 +123,49 @@ describe('logToFile', () => {
     }
   })
 
-  test('creates log files with 0600 mode and directories with 0700 mode by default', async () => {
+  test('strips control characters from a malformed request URL', async () => {
     const dir = await createTempDir()
     try {
-      const filePath = path.join(dir, 'logs', 'perms.log')
+      const filePath = path.join(dir, 'logs', 'malformed-url.log')
       const options: Options = { config: {} }
+      const request = {
+        headers: new Headers(),
+        method: 'GET',
+        url: 'not a url\u001B[31m'
+      } as RequestInfo
 
       await logToFile({
         data: { message: 'hello' },
         filePath,
         level: 'INFO',
         options,
-        request: createMockRequest('http://localhost/test'),
+        precomputed: precomputedFor(request),
+        request,
+        store: { beforeTime: 0n }
+      })
+
+      const content = await fs.readFile(filePath, 'utf-8')
+      expect(content).toContain(' GET not a url[31m hello')
+      expect(content).not.toContain('\u001B')
+    } finally {
+      await removeTempDir(dir)
+    }
+  })
+
+  test('creates log files with 0600 mode and directories with 0700 mode by default', async () => {
+    const dir = await createTempDir()
+    try {
+      const filePath = path.join(dir, 'logs', 'perms.log')
+      const options: Options = { config: {} }
+
+      const request = createMockRequest('http://localhost/test')
+      await logToFile({
+        data: { message: 'hello' },
+        filePath,
+        level: 'INFO',
+        options,
+        precomputed: precomputedFor(request),
+        request,
         store: { beforeTime: 0n }
       })
 
@@ -140,12 +184,14 @@ describe('logToFile', () => {
       const filePath = path.join(dir, 'logs', 'custom-mode.log')
       const options: Options = { config: { logFileMode: 0o644 } }
 
+      const request = createMockRequest('http://localhost/test')
       await logToFile({
         data: { message: 'hello' },
         filePath,
         level: 'INFO',
         options,
-        request: createMockRequest('http://localhost/test'),
+        precomputed: precomputedFor(request),
+        request,
         store: { beforeTime: 0n }
       })
 
@@ -163,16 +209,18 @@ describe('logToFile', () => {
       const options: Options = { config: {} }
       const total = 50
 
-      const writes = Array.from({ length: total }, (_, i) =>
-        logToFile({
+      const writes = Array.from({ length: total }, (_, i) => {
+        const request = createMockRequest(`http://localhost/test${i}`)
+        return logToFile({
           data: { message: `msg-${i}` },
           filePath,
           level: 'INFO',
           options,
-          request: createMockRequest(`http://localhost/test${i}`),
+          precomputed: precomputedFor(request),
+          request,
           store: { beforeTime: 0n }
         })
-      )
+      })
 
       await Promise.all(writes)
 
@@ -202,21 +250,25 @@ describe('logToFile', () => {
         config: { logRotation: { maxSize: 100 } }
       }
 
+      const firstRequest = createMockRequest('http://localhost/first')
       await logToFile({
         data: { message: 'x'.repeat(90) },
         filePath,
         level: 'INFO',
         options,
-        request: createMockRequest('http://localhost/first'),
+        precomputed: precomputedFor(firstRequest),
+        request: firstRequest,
         store: { beforeTime: 0n }
       })
 
+      const secondRequest = createMockRequest('http://localhost/second')
       await logToFile({
         data: { message: 'y' },
         filePath,
         level: 'INFO',
         options,
-        request: createMockRequest('http://localhost/second'),
+        precomputed: precomputedFor(secondRequest),
+        request: secondRequest,
         store: { beforeTime: 0n }
       })
 
@@ -246,29 +298,35 @@ describe('logToFile', () => {
         config: { logRotation: { maxSize: 100 } }
       }
 
+      const firstRequest = createMockRequest('http://localhost/first')
       await logToFile({
         data: { message: 'x'.repeat(90) },
         filePath,
         level: 'INFO',
         options,
-        request: createMockRequest('http://localhost/first'),
+        precomputed: precomputedFor(firstRequest),
+        request: firstRequest,
         store: { beforeTime: 0n }
       })
 
+      const secondRequest = createMockRequest('http://localhost/second')
       await logToFile({
         data: { message: 'a' },
         filePath,
         level: 'INFO',
         options,
-        request: createMockRequest('http://localhost/second'),
+        precomputed: precomputedFor(secondRequest),
+        request: secondRequest,
         store: { beforeTime: 0n }
       })
+      const thirdRequest = createMockRequest('http://localhost/third')
       await logToFile({
         data: { message: 'b' },
         filePath,
         level: 'INFO',
         options,
-        request: createMockRequest('http://localhost/third'),
+        precomputed: precomputedFor(thirdRequest),
+        request: thirdRequest,
         store: { beforeTime: 0n }
       })
 
@@ -292,20 +350,24 @@ describe('logToFile', () => {
         config: { logRotation: { maxSize: 50 } }
       }
 
+      const firstRequest = createMockRequest('http://localhost/first')
       await logToFile({
         data: { message: 'x'.repeat(60) },
         filePath,
         level: 'INFO',
         options,
-        request: createMockRequest('http://localhost/first'),
+        precomputed: precomputedFor(firstRequest),
+        request: firstRequest,
         store: { beforeTime: 0n }
       })
+      const secondRequest = createMockRequest('http://localhost/second')
       await logToFile({
         data: { message: 'hello' },
         filePath,
         level: 'INFO',
         options,
-        request: createMockRequest('http://localhost/second'),
+        precomputed: precomputedFor(secondRequest),
+        request: secondRequest,
         store: { beforeTime: 0n }
       })
 
@@ -327,6 +389,7 @@ describe('logToFile', () => {
         throw new Error('hook boom')
       })
       const options: Options = { config: { onError } }
+      const request = createMockRequest('http://localhost/test')
 
       await expect(
         logToFile({
@@ -334,7 +397,8 @@ describe('logToFile', () => {
           filePath,
           level: 'INFO',
           options,
-          request: createMockRequest('http://localhost/test'),
+          precomputed: precomputedFor(request),
+          request,
           store: { beforeTime: 0n }
         })
       ).rejects.toBeDefined()
@@ -355,6 +419,7 @@ describe('logToFile', () => {
       const blocker = path.join(dir, 'blocker')
       await fs.writeFile(blocker, 'x')
       const options: Options = { config: {} }
+      const request = createMockRequest('http://localhost/test')
 
       const writeAndFail = async (): Promise<void> => {
         await expect(
@@ -363,7 +428,8 @@ describe('logToFile', () => {
             filePath: path.join(blocker, 'app.log'),
             level: 'INFO',
             options,
-            request: createMockRequest('http://localhost/test'),
+            precomputed: precomputedFor(request),
+            request,
             store: { beforeTime: 0n }
           })
         ).rejects.toThrow()
@@ -394,12 +460,14 @@ describe('logToFile', () => {
         }
       }
 
+      const request = createMockRequest('http://localhost/test')
       await logToFile({
         data: { message: 'x'.repeat(50) },
         filePath,
         level: 'INFO',
         options,
-        request: createMockRequest('http://localhost/test'),
+        precomputed: precomputedFor(request),
+        request,
         store: { beforeTime: 0n }
       })
 
