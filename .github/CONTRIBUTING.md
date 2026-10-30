@@ -13,6 +13,9 @@ Logixlysia is a monorepo managed with bun workspaces and Turbo:
 - `packages/logixlysia` - The main Logixlysia package
   - `src/` - Core logger implementation for Elysia
   - `__tests__/` - Unit and integration tests
+- `packages/bench` - Benchmarks (vitest)
+- `packages/video` - Video assets
+- `packages/typescript-config` - Shared TypeScript configs
 - `apps/docs` - Documentation website built with Blume
 - `apps/elysia` - Playground demo (Bun + TypeScript + Swagger)
 
@@ -23,9 +26,9 @@ Logixlysia is a monorepo managed with bun workspaces and Turbo:
 3. Install dependencies: `bun install`
 4. Create a new branch for your feature or bug fix: `git checkout -b feature/your-feature-name`
 5. Make your changes
-6. Run tests: `bun test`
-7. Build packages: `bun run build`
-8. Commit your changes with clear, descriptive commit messages
+6. Run the checks in [Verify your work](#verify-your-work)
+7. Add a changeset if you changed `packages/logixlysia/` (see [Changesets](#changesets))
+8. Commit your changes with a Conventional Commit message, for example `fix(output): handle empty log paths`
 9. Push to your fork
 10. Submit a Pull Request
 
@@ -51,45 +54,34 @@ bun dev
 
 This will start the Blume app on [http://localhost:3000](http://localhost:3000). Documentation content is in `apps/docs/content/`.
 
+## Verify your work
+
+Run these from the repository root before you open a pull request:
+
+| What | Command | Expect |
+| --- | --- | --- |
+| Lint + format check | `bun run lint` | exit 0 |
+| Auto-format | `bun run format` | exit 0 |
+| Typecheck | `bun run typecheck` | exit 0 |
+| Tests | `cd packages/logixlysia && bun test` | all pass (coverage is on by default) |
+| Build | `bun run build` | `dist/` for every entry |
+
+`bun run test` runs the tests through Turborepo and builds first. Use `cd packages/logixlysia && bun test` for the package on its own, because it enforces the coverage gate. Tests live in `packages/logixlysia/__tests__/<area>/*.test.ts`.
+
+Public API changes must update the API snapshot: `cd packages/logixlysia && bun test --update-snapshots __tests__/api`.
+
+Also check that your change works with different log levels and configurations, and think about backward compatibility for existing users. For manual QA, run `cd apps/elysia && bun run dev` (Swagger at `/swagger`).
+
 ## Changesets
 
-We use [Changesets](https://github.com/changesets/changesets) to manage versions and changelogs. When you make changes that should be released, you need to create a changeset:
+We use [Changesets](https://github.com/changesets/changesets) to manage versions and changelogs. Any change under `packages/logixlysia/` needs a changeset: a file named `.changeset/<slug>.md` with `'logixlysia': patch` or `'logixlysia': minor` in its front matter.
 
-1. Run `bun changeset` in the root directory
-2. Select the packages you've changed (use space to select, enter to confirm)
-3. Choose the appropriate version bump:
-   - `patch` - Bug fixes and minor changes
-   - `minor` - New features that don't break existing functionality
-   - `major` - Breaking changes
-4. Write a clear description of your changes (this will appear in the changelog)
-5. Commit the generated changeset file in `.changeset/` with your changes
+1. Run `bun changeset` in the root directory, or write the file by hand
+2. Select `logixlysia` and choose the version bump
+3. Write a clear description of your changes (this will appear in the changelog)
+4. Commit the generated file in `.changeset/` with your changes
 
-**When to create a changeset:**
-
-- Bug fixes
-- New features
-- Breaking changes
-- Performance improvements
-- Documentation updates that affect usage
-
-**When NOT to create a changeset:**
-
-- Internal refactoring with no user-facing changes
-- Test updates
-- Build configuration changes
-- README or contributing guide updates
-
-## Testing Your Changes
-
-When making changes to the logger:
-
-1. Test on various Elysia applications to ensure compatibility
-2. Run the test suite: `bun test`
-3. Test with different log levels and configurations
-4. Consider backward compatibility - will this break existing users' workflows?
-5. Run `bun run lint` and `bun run format` to ensure code quality
-6. Run integration tests: `cd packages/logixlysia && bun test __tests__/integration`
-7. Manual QA: `cd apps/elysia && bun run dev` (Swagger at `/swagger`)
+Commit messages follow [Conventional Commits](https://www.conventionalcommits.org), for example `fix(output): handle empty log paths`.
 
 ## Pull Request Guidelines
 
@@ -100,10 +92,10 @@ When making changes to the logger:
 - Keep changes focused and atomic
 - Follow existing code style and conventions
 - Include tests if applicable
-- **Add a changeset if your changes affect the published package**
+- **Add a changeset if you changed anything under `packages/logixlysia/`**
 - Update documentation as needed
-- Ensure all tests pass: `bun test`
-- Write clear commit messages
+- Ensure the checks in [Verify your work](#verify-your-work) pass
+- Use Conventional Commit messages
 - Keep consistency with the project's coding style
 
 ## Working in the Monorepo
@@ -112,7 +104,7 @@ When making changes to the logger:
 
 From the root directory:
 
-- `bun test` - Run all tests across all packages
+- `bun run test` - Run all tests through Turborepo (builds first)
 - `bun run build` - Build all packages
 - `bun run lint` - Run linter on the codebase
 - `bun run format` - Auto-fix linting and formatting issues
@@ -121,7 +113,7 @@ From the root directory:
 
 From a specific package (e.g., `packages/logixlysia`):
 
-- `bun test` - Run tests for that package only
+- `bun test` - Run tests for that package only (coverage gate on)
 - `bun run build` - Build that package only
 - `bun dev` - Start development server for that package
 
