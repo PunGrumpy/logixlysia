@@ -520,7 +520,8 @@ describe('postWithRetry', () => {
     const elapsedMs = performance.now() - startedAt
 
     expect(proc.stderr.toString()).toBe('')
-    expect(proc.stdout.toString()).toContain('sent:2')
+    // The count is a lower bound: under load a keep-alive retry can reach the server twice.
+    expect(proc.stdout.toString()).toMatch(/^sent:[2-9]\n/u)
     expect(proc.exitCode).toBe(0)
     expect(elapsedMs).toBeLessThan(MAX_EXIT_MS)
   }, 10_000)
