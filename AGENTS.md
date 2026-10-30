@@ -9,7 +9,7 @@ Bun 1.3.14 workspaces + Turborepo. Published package: `packages/logixlysia` (Ely
 | Lint + format check | `bun run lint` | exit 0 |
 | Auto-format | `bun run format` | exit 0 |
 | Typecheck | `bun run typecheck` | exit 0 |
-| Tests | `cd packages/logixlysia && bun test` | all pass (coverage is on by default) |
+| Tests | `cd packages/logixlysia && bun run build && bun test` | all pass (coverage is on by default; the API-snapshot test needs `dist/`) |
 | Build | `bun run build` | `dist/` for 14 entries |
 
 Tests live in `packages/logixlysia/__tests__/<area>/*.test.ts` (`bun:test`; helpers in `__tests__/_helpers/`). Any change under `packages/logixlysia/` needs a changeset: `.changeset/<slug>.md` with `'logixlysia': patch|minor`. Conventional commits (`fix(output): …`). Public API changes must update the API snapshot (`bun test --update-snapshots __tests__/api`).
