@@ -1,4 +1,6 @@
 import { describe, expect, mock, setSystemTime, test } from 'bun:test'
+import path from 'node:path'
+import { spawnSync } from 'bun'
 import {
   createBatchQueue,
   createHttpTransport,
@@ -15,6 +17,9 @@ import type { LogEntry } from '../../src/adapters/shared'
 import { spyConsole } from '../_helpers/console'
 import { sleep } from '../_helpers/sleep'
 import { stubFetch } from './helpers'
+
+const packageRoot = path.join(import.meta.dir, '..', '..')
+const MAX_EXIT_MS = 5000
 
 interface Deferred {
   promise: Promise<void>
@@ -382,6 +387,31 @@ describe('postWithRetry', () => {
       stub.restore()
     }
   })
+
+  test('a process whose only pending work is a retry backoff exits promptly', () => {
+    const script = `
+      import { postWithRetry } from './src/adapters/shared'
+      globalThis.fetch = () =>
+        Promise.resolve(
+          new Response('', { status: 429, headers: { 'retry-after': '30' } })
+        )
+      postWithRetry({
+        body: '{}',
+        headers: {},
+        name: 'test',
+        retries: 2,
+        timeout: 1000,
+        url: 'https://example.invalid/v1'
+      }).catch(() => {})
+    `
+    const startedAt = performance.now()
+    const proc = spawnSync(['bun', '-e', script], { cwd: packageRoot })
+    const elapsedMs = performance.now() - startedAt
+
+    expect(proc.stderr.toString()).toBe('')
+    expect(proc.exitCode).toBe(0)
+    expect(elapsedMs).toBeLessThan(MAX_EXIT_MS)
+  }, 10_000)
 })
 
 const retryAfterResponse = (retryAfter: string): Response =>
