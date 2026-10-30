@@ -284,7 +284,7 @@ const files = [
       fade away — warnings and errors stay loud.
     </SectionHeading>
     <FeatureFigure data-filter-demo label="Console">
-      <span class="whitespace-nowrap rounded-sm px-2 py-0.5 font-mono text-[11px] text-foreground ring-1 ring-border ring-inset" data-filter-chip slot="chips">
+      <span class="whitespace-nowrap rounded-sm px-2 py-0.5 font-mono text-[11px] text-foreground ring-1 ring-border ring-inset transition-[background-color] duration-200 ease-[ease]" data-filter-chip slot="chips">
         filter: &lbrace; level: ['warn', 'error'] &rbrace;
       </span>
       <table
@@ -324,10 +324,10 @@ const files = [
       routine traffic costs almost nothing, interesting requests stay complete.
     </SectionHeading>
     <FeatureFigure data-sampling-demo label="Console">
-      <span class="whitespace-nowrap rounded-sm px-2 py-0.5 font-mono text-[11px] text-foreground ring-1 ring-border ring-inset" data-head-chip slot="chips">
+      <span class="whitespace-nowrap rounded-sm px-2 py-0.5 font-mono text-[11px] text-foreground ring-1 ring-border ring-inset transition-[background-color] duration-200 ease-[ease]" data-head-chip slot="chips">
         head: &lbrace; INFO: 10 &rbrace;
       </span>
-      <span class="whitespace-nowrap rounded-sm px-2 py-0.5 font-mono text-[11px] text-foreground ring-1 ring-border ring-inset" data-tail-chip slot="chips">
+      <span class="whitespace-nowrap rounded-sm px-2 py-0.5 font-mono text-[11px] text-foreground ring-1 ring-border ring-inset transition-[background-color] duration-200 ease-[ease]" data-tail-chip slot="chips">
         tail: &lbrace; status: 400 &rbrace;
       </span>
       <table
@@ -368,8 +368,8 @@ const files = [
       Set them up once and the fields reach the console, files, and every
       adapter.
     </SectionHeading>
-    <FeatureFigure label="Enriched request">
-      <span class="whitespace-nowrap rounded-sm px-2 py-0.5 font-mono text-[11px] text-foreground ring-1 ring-border ring-inset" slot="chips">
+    <FeatureFigure data-enrichers-demo label="Enriched request">
+      <span class="whitespace-nowrap rounded-sm px-2 py-0.5 font-mono text-[11px] text-foreground ring-1 ring-border ring-inset transition-[background-color] duration-200 ease-[ease]" data-enrichers-chip slot="chips">
         enrichers: [traceparentEnricher(), geoEnricher()]
       </span>
       <table
@@ -437,10 +437,16 @@ const files = [
     '(prefers-reduced-motion: reduce)'
   ).matches
 
-  const visibilityGate = (el: Element) => {
+  // Bounded replay (WCAG 2.2.2): play a few rounds, each only once the demo is
+  // on screen, then rest on the static markup.
+  const replay = (
+    demo: Element,
+    rounds: number,
+    round: (index: number) => Promise<void>
+  ): Promise<void> => {
     let visible = false
     let onVisible: (() => void) | undefined
-    new IntersectionObserver(
+    const observer = new IntersectionObserver(
       entries => {
         visible = entries.some(entry => entry.isIntersecting)
         if (visible && onVisible) {
@@ -449,188 +455,143 @@ const files = [
         }
       },
       { threshold: 0.35 }
-    ).observe(el)
-    return () =>
-      visible
-        ? Promise.resolve()
-        : new Promise<void>(resolve => {
-            onVisible = resolve
-          })
+    )
+    observer.observe(demo)
+    const play = async (index: number): Promise<void> => {
+      if (index === rounds) {
+        observer.disconnect()
+        return
+      }
+      if (!visible) {
+        await new Promise<void>(resolve => {
+          onVisible = resolve
+        })
+      }
+      await round(index)
+      await play(index + 1)
+    }
+    return play(0)
+  }
+
+  const mark = (elements: Element[], attribute: string, on: boolean) => {
+    for (const element of elements) {
+      element.toggleAttribute(attribute, on)
+    }
+  }
+
+  const reveal = async (rows: HTMLElement[], gapMs: number) => {
+    for (const [index, row] of rows.entries()) {
+      setTimeout(() => {
+        delete row.dataset.hidden
+      }, index * gapMs)
+    }
+    await sleep(rows.length * gapMs)
+  }
+
+  const light = (chip: Element | null, on: boolean) => {
+    chip?.classList.toggle('bg-signal/20', on)
   }
 
   const tailDemo = document.querySelector('[data-tail]')
   if (tailDemo && !reduceMotion) {
     const rows = [...tailDemo.querySelectorAll<HTMLElement>('[data-log]')]
-    const waitUntilVisible = visibilityGate(tailDemo)
-    const revealRows = () =>
-      new Promise<void>(resolve => {
-        let index = 0
-        const tick = () => {
-          const row = rows[index]
-          if (!row) {
-            resolve()
-            return
-          }
-          index += 1
-          row.classList.remove('opacity-0')
-          setTimeout(tick, 220)
-        }
-        tick()
-      })
-    const round = async () => {
-      await waitUntilVisible()
-      for (const row of rows) {
-        row.classList.add('opacity-0')
-      }
+    replay(tailDemo, 3, async () => {
+      mark(rows, 'data-hidden', true)
       await sleep(500)
-      await revealRows()
+      await reveal(rows, 140)
       await sleep(3200)
-    }
-    // Bounded replay (WCAG 2.2.2): stop after a few rounds instead of looping
-    // forever; the resting state matches the static markup.
-    let rounds = 0
-    const loop = async () => {
-      await round()
-      rounds += 1
-      if (rounds < 3) {
-        loop()
-      }
-    }
-    loop()
+    })
   }
 
   const filterDemo = document.querySelector('[data-filter-demo]')
   if (filterDemo && !reduceMotion) {
     const lines = [...filterDemo.querySelectorAll<HTMLElement>('[data-log]')]
-    const chip = filterDemo.querySelector<HTMLElement>('[data-filter-chip]')
-    const waitUntilVisible = visibilityGate(filterDemo)
-    const revealLines = () =>
-      new Promise<void>(resolve => {
-        let index = 0
-        const tick = () => {
-          const line = lines[index]
-          if (!line) {
-            resolve()
-            return
-          }
-          index += 1
-          line.classList.remove('opacity-0')
-          setTimeout(tick, 180)
-        }
-        tick()
-      })
-    const round = async () => {
-      await waitUntilVisible()
-      for (const line of lines) {
-        line.classList.add('opacity-0')
-        line.classList.remove('opacity-35')
-      }
+    const dropped = lines.filter(line => line.dataset.dropped !== undefined)
+    const chip = filterDemo.querySelector('[data-filter-chip]')
+    replay(filterDemo, 3, async () => {
+      mark(dropped, 'data-dropped', false)
+      mark(lines, 'data-hidden', true)
       await sleep(500)
-      await revealLines()
+      await reveal(lines, 140)
       await sleep(800)
-      chip?.classList.add('bg-signal/20')
-      for (const line of lines) {
-        if (line.dataset.kept === undefined) {
-          line.classList.add('opacity-35')
-        }
-      }
+      light(chip, true)
+      mark(dropped, 'data-dropped', true)
       await sleep(600)
-      chip?.classList.remove('bg-signal/20')
+      light(chip, false)
       await sleep(2800)
-    }
-    let rounds = 0
-    const loop = async () => {
-      await round()
-      rounds += 1
-      if (rounds < 3) {
-        loop()
-      }
-    }
-    loop()
+    })
   }
 
   const samplingDemo = document.querySelector('[data-sampling-demo]')
   if (samplingDemo && !reduceMotion) {
-    const sampled = [
-      ...samplingDemo.querySelectorAll<HTMLElement>('[data-sampled]')
-    ]
-    const headChip = samplingDemo.querySelector<HTMLElement>('[data-head-chip]')
-    const tailChip = samplingDemo.querySelector<HTMLElement>('[data-tail-chip]')
-    const waitUntilVisible = visibilityGate(samplingDemo)
-    const round = async () => {
-      await waitUntilVisible()
+    const sampled = [...samplingDemo.querySelectorAll('[data-sampled]')]
+    const headChip = samplingDemo.querySelector('[data-head-chip]')
+    const tailChip = samplingDemo.querySelector('[data-tail-chip]')
+    replay(samplingDemo, 3, async () => {
       await sleep(600)
-      headChip?.classList.add('bg-signal/20')
-      for (const row of sampled) {
-        row.classList.add('opacity-35')
-      }
+      light(headChip, true)
+      mark(sampled, 'data-dropped', true)
       await sleep(1000)
-      headChip?.classList.remove('bg-signal/20')
+      light(headChip, false)
       await sleep(700)
-      tailChip?.classList.add('bg-signal/20')
-      for (const row of sampled) {
-        row.classList.remove('opacity-35')
-      }
+      light(tailChip, true)
+      mark(sampled, 'data-dropped', false)
       await sleep(1000)
-      tailChip?.classList.remove('bg-signal/20')
+      light(tailChip, false)
       await sleep(2400)
-    }
-    let rounds = 0
-    const loop = async () => {
-      await round()
-      rounds += 1
-      if (rounds < 3) {
-        loop()
-      }
-    }
-    loop()
+    })
+  }
+
+  const enrichersDemo = document.querySelector('[data-enrichers-demo]')
+  if (enrichersDemo && !reduceMotion) {
+    const fields = [
+      ...enrichersDemo.querySelectorAll<HTMLElement>('tbody tr')
+    ]
+    const chip = enrichersDemo.querySelector('[data-enrichers-chip]')
+    mark(fields, 'data-hidden', true)
+    replay(enrichersDemo, 1, async () => {
+      light(chip, true)
+      await sleep(200)
+      await reveal(fields, 50)
+      await sleep(450)
+      light(chip, false)
+    })
   }
 
   const rotation = document.querySelector('[data-rotation]')
-  if (rotation && !reduceMotion) {
-    const row = rotation.querySelector<HTMLElement>('[data-live-row]')
-    const size = rotation.querySelector<HTMLElement>('[data-live-size]')
-    const bar = rotation.querySelector<HTMLElement>('[data-live-bar]')
-    const waitUntilVisible = visibilityGate(rotation)
-    if (row && size && bar) {
-      const growFile = () =>
-        new Promise<void>(resolve => {
-          let megabytes = 0.1
-          const tick = () => {
-            if (megabytes >= 10) {
-              resolve()
-              return
-            }
-            size.textContent = `${megabytes.toFixed(1)} MB`
-            bar.style.scale = `${megabytes / 10} 1`
-            megabytes += 0.3
-            setTimeout(tick, 120)
+  const row = rotation?.querySelector<HTMLElement>('[data-live-row]')
+  const size = rotation?.querySelector<HTMLElement>('[data-live-size]')
+  const bar = rotation?.querySelector<HTMLElement>('[data-live-bar]')
+  if (rotation && row && size && bar && !reduceMotion) {
+    const growFile = () =>
+      new Promise<void>(resolve => {
+        let megabytes = 0.1
+        const tick = () => {
+          if (megabytes >= 10) {
+            resolve()
+            return
           }
-          tick()
-        })
-      const round = async () => {
-        await waitUntilVisible()
+          size.textContent = `${megabytes.toFixed(1)} MB`
+          bar.style.scale = `${megabytes / 10} 1`
+          megabytes += 0.3
+          setTimeout(tick, 120)
+        }
+        tick()
+      })
+    const initialSize = size.textContent
+    const initialScale = bar.style.scale
+    const play = async () => {
+      await replay(rotation, 3, async () => {
         await growFile()
         size.textContent = '10.0 MB'
         bar.style.scale = '1 1'
         row.classList.add('bg-[#067647]/10', 'dark:bg-[#99ffe4]/10')
         await sleep(700)
         row.classList.remove('bg-[#067647]/10', 'dark:bg-[#99ffe4]/10')
-      }
-      const initialSize = size.textContent
-      const initialScale = bar.style.scale
-      let rounds = 0
-      const loop = async () => {
-        await round()
-        rounds += 1
-        if (rounds < 3) {
-          loop()
-          return
-        }
-        size.textContent = initialSize
-        bar.style.scale = initialScale
-      }
-      loop()
+      })
+      size.textContent = initialSize
+      bar.style.scale = initialScale
     }
+    play()
   }
 </script>
