@@ -166,17 +166,21 @@ const NANOS_PER_MILLI = 1_000_000n
 export const toUnixNanos = (date: Date): string =>
   String(BigInt(date.getTime()) * NANOS_PER_MILLI)
 
-const sleep = (ms: number): Promise<void> => {
+const sleep = (ms: number, keepAlive: boolean): Promise<void> => {
   const { promise, resolve }: PromiseWithResolvers<void> =
     Promise.withResolvers()
   const timer = setTimeout(resolve, ms)
-  timer.unref?.()
+  if (!keepAlive) {
+    timer.unref?.()
+  }
   return promise
 }
 
 export interface PostWithRetryInput {
   body: string
   headers: Record<string, string>
+  /** Keeps the retry backoff timer ref'd, for a caller awaiting this send. */
+  keepAlive?: boolean
   name: string
   retries: number
   timeout: number
@@ -234,7 +238,7 @@ const attemptPost = async (
     if (attempt >= input.retries) {
       throw error
     }
-    await sleep(delayMs)
+    await sleep(delayMs, input.keepAlive ?? false)
     return attemptPost(input, attempt + 1)
   }
 
@@ -320,7 +324,7 @@ export const createBatchQueue = (input: {
   maxPendingBatches?: number
   name: string
   onError?: (error: unknown) => void
-  send: (entries: LogEntry[]) => Promise<void>
+  send: (entries: LogEntry[], keepAlive: boolean) => Promise<void>
 }): BatchQueue => {
   let buffer: LogEntry[] = []
   let timer: ReturnType<typeof setTimeout> | undefined
@@ -364,7 +368,7 @@ export const createBatchQueue = (input: {
   ): Promise<void> => {
     try {
       await Promise.resolve()
-      await input.send(entries)
+      await input.send(entries, !background)
     } catch (error) {
       if (!background) {
         throw error
@@ -533,10 +537,11 @@ export const createHttpTransport = (
     maxPendingBatches,
     name: input.name,
     onError: input.options.onError,
-    send: entries =>
+    send: (entries, keepAlive) =>
       postWithRetry({
         body: input.body(entries),
         headers: input.headers,
+        keepAlive,
         name: input.name,
         retries,
         timeout,

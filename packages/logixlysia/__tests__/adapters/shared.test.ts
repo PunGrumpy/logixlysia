@@ -412,6 +412,41 @@ describe('postWithRetry', () => {
     expect(proc.exitCode).toBe(0)
     expect(elapsedMs).toBeLessThan(MAX_EXIT_MS)
   }, 10_000)
+
+  test('an awaited flush survives a retry backoff when nothing else keeps the process alive', () => {
+    const script = `
+      import { createHttpTransport } from './src/adapters/shared'
+      let count = 0
+      const server = Bun.serve({
+        port: 0,
+        fetch() {
+          count += 1
+          return new Response('', { status: count === 1 ? 503 : 200 })
+        }
+      })
+      server.unref()
+      const transport = createHttpTransport({
+        body: entries => JSON.stringify(entries),
+        headers: {},
+        name: 'test',
+        options: { flushIntervalMs: 60_000, retries: 1 },
+        url: 'http://127.0.0.1:' + server.port + '/ingest'
+      })
+      transport.log('INFO', 'hello', {})
+      transport.flush().then(() => {
+        console.log('sent:' + count)
+        server.stop(true)
+      })
+    `
+    const startedAt = performance.now()
+    const proc = spawnSync(['bun', '-e', script], { cwd: packageRoot })
+    const elapsedMs = performance.now() - startedAt
+
+    expect(proc.stderr.toString()).toBe('')
+    expect(proc.stdout.toString()).toContain('sent:2')
+    expect(proc.exitCode).toBe(0)
+    expect(elapsedMs).toBeLessThan(MAX_EXIT_MS)
+  }, 10_000)
 })
 
 const retryAfterResponse = (retryAfter: string): Response =>
