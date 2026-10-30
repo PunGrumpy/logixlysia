@@ -73,10 +73,28 @@ const copyStructuredErrorFields = (
   return safe
 }
 
+const MAX_CAUSE_DEPTH = 3
+
 export const normalizeLoggedError = (
   error: unknown,
-  logErrorPayload: boolean
+  logErrorPayload: boolean,
+  depth = 0
 ): NormalizedLoggedError => {
+  const withCause = (
+    safe: Record<string, unknown>,
+    record: Record<string, unknown>
+  ): Record<string, unknown> => {
+    const { cause } = record
+    if (cause === undefined || depth >= MAX_CAUSE_DEPTH) {
+      return safe
+    }
+    safe.cause =
+      cause instanceof Error || isStructuredError(cause)
+        ? normalizeLoggedError(cause, logErrorPayload, depth + 1).error
+        : cause
+    return safe
+  }
+
   if (isStatusResponse(error)) {
     const message =
       typeof error.response === 'string' && error.response !== ''
@@ -120,12 +138,18 @@ export const normalizeLoggedError = (
       error.name === 'Error'
         ? (error.constructor?.name ?? error.name)
         : error.name
-    return { error: safe, message: parseError(error) }
+    return {
+      error: withCause(safe, error as unknown as Record<string, unknown>),
+      message: parseError(error)
+    }
   }
 
   if (isStructuredError(error)) {
     return {
-      error: copyStructuredErrorFields(error as Record<string, unknown>),
+      error: withCause(
+        copyStructuredErrorFields(error as Record<string, unknown>),
+        error as Record<string, unknown>
+      ),
       message: parseError(error)
     }
   }

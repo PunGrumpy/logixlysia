@@ -122,6 +122,139 @@ describe('handleHttpError', () => {
     expect(() => JSON.stringify(errorEvent?.meta)).not.toThrow()
   })
 
+  test('keeps the cause of a thrown error on the error line', async () => {
+    const { events, transport } = createCaptureTransport()
+    const app = new Elysia()
+      .use(
+        logixlysia({
+          config: {
+            disableFileLogging: true,
+            disableInternalLogger: true,
+            transports: [{ log: transport }]
+          }
+        })
+      )
+      .get('/save', () => {
+        throw new Error('save failed', {
+          cause: new Error('connection reset')
+        })
+      })
+
+    await app.handle(new Request('http://localhost/save'))
+
+    const metaError = events.find(event => event.meta.error)?.meta
+      .error as Record<string, unknown>
+    expect(metaError.message).toBe('save failed')
+    expect(metaError.cause).toEqual({
+      message: 'connection reset',
+      name: 'Error'
+    })
+  })
+
+  test('cuts a cause chain after three levels', async () => {
+    const { events, transport } = createCaptureTransport()
+    const chain = new Error('level 0', {
+      cause: new Error('level 1', {
+        cause: new Error('level 2', {
+          cause: new Error('level 3', { cause: new Error('level 4') })
+        })
+      })
+    })
+    const app = new Elysia()
+      .use(
+        logixlysia({
+          config: {
+            disableFileLogging: true,
+            disableInternalLogger: true,
+            transports: [{ log: transport }]
+          }
+        })
+      )
+      .get('/chain', () => {
+        throw chain
+      })
+
+    await app.handle(new Request('http://localhost/chain'))
+
+    const metaError = events.find(event => event.meta.error)?.meta
+      .error as Record<string, unknown>
+    expect(metaError).toEqual({
+      cause: {
+        cause: {
+          cause: { message: 'level 3', name: 'Error' },
+          message: 'level 2',
+          name: 'Error'
+        },
+        message: 'level 1',
+        name: 'Error'
+      },
+      message: 'level 0',
+      name: 'Error'
+    })
+  })
+
+  test('keeps a primitive cause as it is', async () => {
+    const { events, transport } = createCaptureTransport()
+    const app = new Elysia()
+      .use(
+        logixlysia({
+          config: {
+            disableFileLogging: true,
+            disableInternalLogger: true,
+            transports: [{ log: transport }]
+          }
+        })
+      )
+      .get('/plain', () => {
+        throw new Error('wrapped', { cause: 'plain string' })
+      })
+
+    await app.handle(new Request('http://localhost/plain'))
+
+    const metaError = events.find(event => event.meta.error)?.meta
+      .error as Record<string, unknown>
+    expect(metaError.cause).toBe('plain string')
+  })
+
+  test('autoRedact applies to the cause', async () => {
+    const { events, transport } = createCaptureTransport()
+    const app = new Elysia()
+      .use(
+        logixlysia({
+          config: {
+            autoRedact: true,
+            disableFileLogging: true,
+            disableInternalLogger: true,
+            transports: [{ log: transport }]
+          }
+        })
+      )
+      .get('/leak', () => {
+        throw new Error('wrapped', {
+          cause: Object.assign(new Error('rejected'), {
+            code: 'E_AUTH',
+            internal: { password: SECRET_PASSWORD }
+          })
+        })
+      })
+
+    await app.handle(new Request('http://localhost/leak'))
+
+    const serialized = JSON.stringify(events)
+    expect(serialized).toContain('rejected')
+    expect(serialized).not.toContain(SECRET_PASSWORD)
+  })
+
+  test('terminates on a circular cause', () => {
+    const loop = new Error('loop')
+    loop.cause = loop
+
+    const { error } = normalizeLoggedError(loop, false)
+
+    expect(JSON.stringify(error)).toContain('loop')
+    expect(error.cause).toBeDefined()
+  })
+
   test('preserves structured-error fields (why/fix) from a plain-object error', () => {
     const thrown = {
       fix: 'set the config value',
