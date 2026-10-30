@@ -26,6 +26,7 @@ const MILLIS_PER_SECOND = 1000
 const HTTP_TOO_MANY_REQUESTS = 429
 const HTTP_SERVER_ERROR_MIN = 500
 const ERROR_BODY_PREVIEW_LENGTH = 200
+const ERROR_BODY_MAX_READ = 1024
 const FLATTEN_MAX_DEPTH = 3
 
 export interface BatchTransportOptions {
@@ -166,17 +167,21 @@ const NANOS_PER_MILLI = 1_000_000n
 export const toUnixNanos = (date: Date): string =>
   String(BigInt(date.getTime()) * NANOS_PER_MILLI)
 
-const sleep = (ms: number): Promise<void> => {
+const sleep = (ms: number, keepAlive: boolean): Promise<void> => {
   const { promise, resolve }: PromiseWithResolvers<void> =
     Promise.withResolvers()
   const timer = setTimeout(resolve, ms)
-  timer.unref?.()
+  if (!keepAlive) {
+    timer.unref?.()
+  }
   return promise
 }
 
 export interface PostWithRetryInput {
   body: string
   headers: Record<string, string>
+  /** Keeps the retry backoff timer ref'd, for a caller awaiting this send. */
+  keepAlive?: boolean
   name: string
   retries: number
   timeout: number
@@ -215,12 +220,41 @@ export const resolveRetryDelay = (
   )
 }
 
+const readChunks = async (
+  reader: ReadableStreamDefaultReader<Uint8Array>,
+  decoder: TextDecoder,
+  text: string,
+  bytesRead: number
+): Promise<string> => {
+  if (bytesRead >= ERROR_BODY_MAX_READ) {
+    return text
+  }
+  const { done, value } = await reader.read()
+  if (done) {
+    return text
+  }
+  return readChunks(
+    reader,
+    decoder,
+    text + decoder.decode(value, { stream: true }),
+    bytesRead + value.byteLength
+  )
+}
+
 const readBodyText = async (response: Response): Promise<string> => {
-  try {
-    return await response.text()
-  } catch {
+  const reader = response.body?.getReader()
+  if (!reader) {
     return ''
   }
+  let text = ''
+  try {
+    text = await readChunks(reader, new TextDecoder(), '', 0)
+  } catch {
+    text = ''
+  } finally {
+    await settle(reader.cancel())
+  }
+  return text
 }
 
 const attemptPost = async (
@@ -234,7 +268,7 @@ const attemptPost = async (
     if (attempt >= input.retries) {
       throw error
     }
-    await sleep(delayMs)
+    await sleep(delayMs, input.keepAlive ?? false)
     return attemptPost(input, attempt + 1)
   }
 
@@ -320,7 +354,7 @@ export const createBatchQueue = (input: {
   maxPendingBatches?: number
   name: string
   onError?: (error: unknown) => void
-  send: (entries: LogEntry[]) => Promise<void>
+  send: (entries: LogEntry[], keepAlive: boolean) => Promise<void>
 }): BatchQueue => {
   let buffer: LogEntry[] = []
   let timer: ReturnType<typeof setTimeout> | undefined
@@ -364,7 +398,7 @@ export const createBatchQueue = (input: {
   ): Promise<void> => {
     try {
       await Promise.resolve()
-      await input.send(entries)
+      await input.send(entries, !background)
     } catch (error) {
       if (!background) {
         throw error
@@ -533,10 +567,11 @@ export const createHttpTransport = (
     maxPendingBatches,
     name: input.name,
     onError: input.options.onError,
-    send: entries =>
+    send: (entries, keepAlive) =>
       postWithRetry({
         body: input.body(entries),
         headers: input.headers,
+        keepAlive,
         name: input.name,
         retries,
         timeout,

@@ -20,6 +20,8 @@ import { stubFetch } from './helpers'
 
 const packageRoot = path.join(import.meta.dir, '..', '..')
 const MAX_EXIT_MS = 5000
+/** Ends the endless error body so an unbounded read fails the test instead of exhausting memory. */
+const MAX_TEST_PULLS = 256
 
 interface Deferred {
   promise: Promise<void>
@@ -388,6 +390,81 @@ describe('postWithRetry', () => {
     }
   })
 
+  test('reads at most 1 KB of an error body', async () => {
+    const original = globalThis.fetch
+    const chunk = new Uint8Array(64 * 1024).fill(120)
+    let pulls = 0
+    globalThis.fetch = mock(() =>
+      Promise.resolve(
+        new Response(
+          new ReadableStream<Uint8Array>({
+            pull(controller) {
+              pulls += 1
+              controller.enqueue(chunk)
+              if (pulls >= MAX_TEST_PULLS) {
+                controller.close()
+              }
+            }
+          }),
+          { status: 400 }
+        )
+      )
+    ) as unknown as typeof fetch
+    try {
+      const rejection = await postWithRetry({
+        body: '{}',
+        headers: {},
+        name: 'Test',
+        retries: 0,
+        timeout: 2000,
+        url: 'https://example.com/ingest'
+      }).catch((error: Error) => error)
+      expect(rejection).toBeInstanceOf(Error)
+      expect((rejection as Error).message).toContain('HTTP 400')
+      expect(pulls).toBeLessThanOrEqual(2)
+    } finally {
+      globalThis.fetch = original
+    }
+  })
+
+  test('cancels the error body stream when reading it throws', async () => {
+    const original = globalThis.fetch
+    let cancelled = false
+    // A real errored stream never runs its source `cancel`, so the reader is faked.
+    const failingResponse = {
+      body: {
+        getReader: () => ({
+          cancel: () => {
+            cancelled = true
+            return Promise.resolve()
+          },
+          read: () => Promise.reject(new Error('read failed'))
+        })
+      },
+      headers: new Headers(),
+      ok: false,
+      status: 400
+    }
+    globalThis.fetch = mock(() =>
+      Promise.resolve(failingResponse)
+    ) as unknown as typeof fetch
+    try {
+      const rejection = await postWithRetry({
+        body: '{}',
+        headers: {},
+        name: 'Test',
+        retries: 0,
+        timeout: 2000,
+        url: 'https://example.com/ingest'
+      }).catch((error: Error) => error)
+      expect(rejection).toBeInstanceOf(Error)
+      expect((rejection as Error).message).toContain('HTTP 400')
+      expect(cancelled).toBe(true)
+    } finally {
+      globalThis.fetch = original
+    }
+  })
+
   test('a process whose only pending work is a retry backoff exits promptly', () => {
     const script = `
       import { postWithRetry } from './src/adapters/shared'
@@ -409,6 +486,41 @@ describe('postWithRetry', () => {
     const elapsedMs = performance.now() - startedAt
 
     expect(proc.stderr.toString()).toBe('')
+    expect(proc.exitCode).toBe(0)
+    expect(elapsedMs).toBeLessThan(MAX_EXIT_MS)
+  }, 10_000)
+
+  test('an awaited flush survives a retry backoff when nothing else keeps the process alive', () => {
+    const script = `
+      import { createHttpTransport } from './src/adapters/shared'
+      let count = 0
+      const server = Bun.serve({
+        port: 0,
+        fetch() {
+          count += 1
+          return new Response('', { status: count === 1 ? 503 : 200 })
+        }
+      })
+      server.unref()
+      const transport = createHttpTransport({
+        body: entries => JSON.stringify(entries),
+        headers: {},
+        name: 'test',
+        options: { flushIntervalMs: 60_000, retries: 1 },
+        url: 'http://127.0.0.1:' + server.port + '/ingest'
+      })
+      transport.log('INFO', 'hello', {})
+      transport.flush().then(() => {
+        console.log('sent:' + count)
+        server.stop(true)
+      })
+    `
+    const startedAt = performance.now()
+    const proc = spawnSync(['bun', '-e', script], { cwd: packageRoot })
+    const elapsedMs = performance.now() - startedAt
+
+    expect(proc.stderr.toString()).toBe('')
+    expect(proc.stdout.toString()).toContain('sent:2')
     expect(proc.exitCode).toBe(0)
     expect(elapsedMs).toBeLessThan(MAX_EXIT_MS)
   }, 10_000)
