@@ -226,9 +226,19 @@ const enricherFields = [
 ]
 
 const files = [
-  { live: true, name: 'logs/api-2026-07-21.log', pct: 21, size: '2.1 MB' },
-  { live: false, name: 'logs/api-2026-07-20.log', pct: 100, size: '10.0 MB' },
-  { live: false, name: 'logs/api-2026-07-19.log.gz', pct: 12, size: '1.2 MB' }
+  { live: true, name: 'logs/api.log', pct: 21, size: '2.1 MB' },
+  {
+    live: false,
+    name: 'logs/api.log.2026-07-21-09-47-03-271-66425271402958.gz',
+    pct: 12,
+    size: '1.2 MB'
+  },
+  {
+    live: false,
+    name: 'logs/api.log.2026-07-21-08-52-19-604-63141604183217.gz',
+    pct: 11,
+    size: '1.1 MB'
+  }
 ]
 ---
 
@@ -413,7 +423,10 @@ const files = [
       <span class="whitespace-nowrap rounded-sm px-2 py-0.5 font-mono text-[11px] text-foreground ring-1 ring-border ring-inset" slot="chips">
         rotation: &lbrace; size: '10m', interval: '1d' &rbrace;
       </span>
-      <div class="grid gap-1 px-2 font-mono text-[0.8rem] leading-relaxed">
+      <div
+        class="grid gap-1 px-2 font-mono text-[0.8rem] leading-relaxed transition-opacity duration-150 ease-out-strong data-resetting:opacity-0"
+        data-files
+      >
         {files.map(file => (
           <FileRow
             live={file.live}
@@ -492,6 +505,13 @@ const files = [
     chip?.classList.toggle('bg-signal/20', on)
   }
 
+  const setName = (row: Element, name: string) => {
+    const label = row.querySelector('[data-file-name]')
+    if (label) {
+      label.textContent = name
+    }
+  }
+
   const tailDemo = document.querySelector('[data-tail]')
   if (tailDemo && !reduceMotion) {
     const rows = [...tailDemo.querySelectorAll<HTMLElement>('[data-log]')]
@@ -559,38 +579,109 @@ const files = [
   }
 
   const rotation = document.querySelector('[data-rotation]')
-  const row = rotation?.querySelector<HTMLElement>('[data-live-row]')
-  const size = rotation?.querySelector<HTMLElement>('[data-live-size]')
-  const bar = rotation?.querySelector<HTMLElement>('[data-live-bar]')
-  if (rotation && row && size && bar && !reduceMotion) {
-    const growFile = () =>
+  const files = rotation?.querySelector<HTMLElement>('[data-files]')
+  if (rotation && files && !reduceMotion) {
+    const CAP_MEGABYTES = 10
+    const FRESH_MEGABYTES = 0.1
+    // Logixlysia renames a full file to `<path>.<YYYY-MM-DD-HH-MM-SS-SSS>-<hrtime>`
+    // and appends `.gz` once it is compressed (output/rotation-manager.ts).
+    const archives = [
+      { gzMegabytes: 1.2, suffix: '2026-07-21-11-02-44-918-70966918077342' },
+      { gzMegabytes: 1.1, suffix: '2026-07-21-12-10-37-055-75039055630481' },
+      { gzMegabytes: 1.3, suffix: '2026-07-21-13-21-58-430-79320430918764' }
+    ]
+    const staticRows = [...files.children].map(row => row.cloneNode(true))
+    const livePath =
+      files.querySelector('[data-file="live"] [data-file-name]')?.textContent
+        ?.trim() ?? ''
+    let liveMegabytes = Number(
+      files
+        .querySelector('[data-file="live"] [data-file-size]')
+        ?.textContent?.trim()
+        .replace(' MB', '')
+    )
+
+    const setSize = (row: Element, megabytes: number) => {
+      const size = row.querySelector('[data-file-size]')
+      const bar = row.querySelector<HTMLElement>('[data-file-bar]')
+      if (size) {
+        size.textContent = `${megabytes.toFixed(1)} MB`
+      }
+      if (bar) {
+        bar.style.scale = `${megabytes / CAP_MEGABYTES} 1`
+      }
+    }
+    const grow = (row: Element) =>
       new Promise<void>(resolve => {
-        let megabytes = 0.1
         const tick = () => {
-          if (megabytes >= 10) {
+          setSize(row, Math.min(liveMegabytes, CAP_MEGABYTES))
+          if (liveMegabytes >= CAP_MEGABYTES) {
             resolve()
             return
           }
-          size.textContent = `${megabytes.toFixed(1)} MB`
-          bar.style.scale = `${megabytes / 10} 1`
-          megabytes += 0.3
+          liveMegabytes += 0.3
           setTimeout(tick, 120)
         }
         tick()
       })
-    const initialSize = size.textContent
-    const initialScale = bar.style.scale
+
+    // The rows below slide down one slot (transform only) to make room for
+    // the new live file, so the list keeps its height.
+    const shiftIn = (fresh: HTMLElement, rows: HTMLElement[]) => {
+      const before = rows.map(row => row.getBoundingClientRect().top)
+      files.prepend(fresh)
+      const offsets = rows.map(
+        (row, index) => (before[index] ?? 0) - row.getBoundingClientRect().top
+      )
+      for (const [index, row] of rows.entries()) {
+        row.style.transition = 'none'
+        row.style.translate = `0 ${offsets[index]}px`
+      }
+      files.getBoundingClientRect()
+      for (const row of rows) {
+        row.style.transition = ''
+        row.style.translate = ''
+      }
+    }
+
+    const rotate = async (index: number) => {
+      const archive = archives[index]
+      const rows = [...files.querySelectorAll<HTMLElement>('[data-file]')]
+      const live = rows.at(0)
+      const oldest = rows.at(-1)
+      if (!(archive && live && oldest)) {
+        return
+      }
+      await grow(live)
+      await sleep(300)
+      oldest.dataset.file = 'exiting'
+      await sleep(150)
+      oldest.remove()
+      const fresh = live.cloneNode(true)
+      if (!(fresh instanceof HTMLElement)) {
+        return
+      }
+      liveMegabytes = FRESH_MEGABYTES
+      setSize(fresh, liveMegabytes)
+      fresh.dataset.file = 'entering'
+      shiftIn(fresh, rows.slice(0, -1))
+      live.dataset.file = 'archived'
+      live.querySelector('[data-live-badge]')?.remove()
+      setName(live, `${livePath}.${archive.suffix}`)
+      await sleep(120)
+      fresh.dataset.file = 'live'
+      await sleep(780)
+      setName(live, `${livePath}.${archive.suffix}.gz`)
+      setSize(live, archive.gzMegabytes)
+      await sleep(1600)
+    }
+
     const play = async () => {
-      await replay(rotation, 3, async () => {
-        await growFile()
-        size.textContent = '10.0 MB'
-        bar.style.scale = '1 1'
-        row.classList.add('bg-[#067647]/10', 'dark:bg-[#99ffe4]/10')
-        await sleep(700)
-        row.classList.remove('bg-[#067647]/10', 'dark:bg-[#99ffe4]/10')
-      })
-      size.textContent = initialSize
-      bar.style.scale = initialScale
+      await replay(rotation, archives.length, rotate)
+      files.dataset.resetting = ''
+      await sleep(150)
+      files.replaceChildren(...staticRows)
+      delete files.dataset.resetting
     }
     play()
   }
