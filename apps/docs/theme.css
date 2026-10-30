@@ -55,6 +55,11 @@
   --color-panel-border: var(--lx-panel-border);
 }
 
+@theme {
+  --ease-out-strong: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out-strong: cubic-bezier(0.77, 0, 0.175, 1);
+}
+
 /* Diagonal hatching for regions that are dimmed or out of scope. */
 @utility hatch {
   background-image: repeating-linear-gradient(
