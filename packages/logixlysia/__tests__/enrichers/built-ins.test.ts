@@ -180,6 +180,21 @@ describe('userAgentEnricher', () => {
   test('falls back to desktop for an unknown agent', () => {
     expect(parse('curl/8.5.0')).toEqual({ bot: false, device: 'desktop' })
   })
+
+  test('bounds the work on a very long user agent', () => {
+    const start = performance.now()
+    const fields = parse(`Version/${'1'.repeat(16_000)}`)
+    expect(performance.now() - start).toBeLessThan(20)
+    expect(fields?.bot).toBe(false)
+  })
+
+  test('still parses a normal UA that happens to be long', () => {
+    const chrome =
+      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
+    expect(parse(`${chrome}${' extra/1.0'.repeat(60)}`)).toMatchObject({
+      browser: 'Chrome'
+    })
+  })
 })
 
 describe('geoEnricher', () => {

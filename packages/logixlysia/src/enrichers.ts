@@ -101,6 +101,8 @@ const TABLET = /ipad|tablet|playbook|silk|kindle/iu
 const MOBILE = /mobi|iphone|ipod|windows phone/iu
 const ANDROID_MOBILE = /android.*mobile/iu
 
+const MAX_USER_AGENT_LENGTH = 512
+
 /** First match wins, so more specific engines are listed before their base. */
 const BROWSERS: readonly [name: string, pattern: RegExp][] = [
   ['Edge', /edg(?:a|ios)?\/(?<version>[\d.]+)/iu],
@@ -155,10 +157,12 @@ const resolveDevice = (value: string, bot: boolean): string => {
  */
 export const userAgentEnricher = (): Enricher => ({
   request(request) {
-    const value = request.headers.get('user-agent')
-    if (!value) {
+    const raw = request.headers.get('user-agent')
+    if (!raw) {
       return
     }
+
+    const value = raw.slice(0, MAX_USER_AGENT_LENGTH)
 
     const bot = BOT.test(value)
     const browser = matchName(BROWSERS, value)
