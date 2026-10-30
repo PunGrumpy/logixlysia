@@ -60,6 +60,53 @@ describe('logixlysia/desertant', () => {
     expect(sink.records[0]?.message).toBe('GET /users - [GIVEN_NAME_1]')
   })
 
+  test('close() delivers the queued records, then closes the wrapped transport once', async () => {
+    const order: string[] = []
+    const records: Recorded[] = []
+    const sink: Transport = {
+      close: () => {
+        order.push('close')
+      },
+      log: (level, message, meta) => {
+        order.push('log')
+        records.push({ level, message, meta })
+      }
+    }
+    const transport = withRedaction(sink, createStubRedactor())
+
+    transport.log('INFO', 'GET /users - Anna Müller')
+    await transport.close()
+
+    expect(records).toHaveLength(1)
+    expect(records[0]?.message).toBe('GET /users - [GIVEN_NAME_1]')
+    expect(order).toEqual(['log', 'close'])
+  })
+
+  test('records logged after close() are dropped', async () => {
+    const sink = createSink()
+    const errors: unknown[] = []
+    const transport = withRedaction(sink, createStubRedactor(), {
+      onError: error => {
+        errors.push(error)
+      }
+    })
+
+    transport.log('INFO', 'early')
+    await transport.close()
+    transport.log('INFO', 'late')
+    await transport.flush()
+
+    expect(sink.records).toHaveLength(1)
+    expect(sink.records[0]?.message).toBe('early')
+    expect(errors).toHaveLength(0)
+  })
+
+  test('close() works for a wrapped transport without close', async () => {
+    const transport = withRedaction(createSink(), createStubRedactor())
+
+    await expect(transport.close()).resolves.toBeUndefined()
+  })
+
   test('redacts strings nested in meta, arrays included', async () => {
     const sink = createSink()
     const transport = withRedaction(sink, createStubRedactor())

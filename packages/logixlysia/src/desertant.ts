@@ -81,6 +81,8 @@ export interface NeuralRedactionOptions {
 export interface RedactingTransport extends Transport {
   /** Awaits the records already queued, then flushes the wrapped transport. */
   flush: () => Promise<void>
+  /** Awaits the queued records, closes the wrapped transport, then drops later records. */
+  close: () => Promise<void>
 }
 
 interface WalkContext {
@@ -310,6 +312,7 @@ export const withRedaction = (
 
   const getRedactor = loadRedactorOnce(source)
   const queue = createQueue(maxQueue)
+  let closed = false
 
   const report = (error: unknown): void => {
     if (onError === undefined) {
@@ -356,6 +359,9 @@ export const withRedaction = (
     message: string,
     meta?: Record<string, unknown>
   ): void => {
+    if (closed) {
+      return
+    }
     const accepted = queue.push(async () => {
       let redacted: { message: string; meta?: Record<string, unknown> }
       try {
@@ -388,6 +394,11 @@ export const withRedaction = (
   }
 
   return {
+    close: async () => {
+      closed = true
+      await queue.drain()
+      await (transport as Partial<AdapterTransport>).close?.()
+    },
     flush: async () => {
       await queue.drain()
       await (transport as Partial<AdapterTransport>).flush?.()
