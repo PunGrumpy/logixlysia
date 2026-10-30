@@ -247,34 +247,6 @@ const mergeConfig = (
     }
   }
 
-  if (base.logFilter || override.logFilter) {
-    merged.logFilter = {
-      ...base.logFilter,
-      ...override.logFilter
-    }
-  }
-
-  if (base.sampling || override.sampling) {
-    merged.sampling = {
-      ...base.sampling,
-      ...override.sampling
-    }
-  }
-
-  if (base.logRotation || override.logRotation) {
-    merged.logRotation = {
-      ...base.logRotation,
-      ...override.logRotation
-    }
-  }
-
-  if (base.timestamp || override.timestamp) {
-    merged.timestamp = {
-      ...base.timestamp,
-      ...override.timestamp
-    }
-  }
-
   return merged
 }
 
