@@ -75,4 +75,25 @@ describe('file sink lifecycle', () => {
       await removeTempDir(dir)
     }
   })
+
+  test('relative and absolute spellings of one path share a single sink', async () => {
+    const dir = await createTempDir()
+    const abs = path.join(dir, 'logs', 'same.log')
+    const rel = path.relative(process.cwd(), abs)
+    const sink = getFileSink(abs)
+    try {
+      expect(getFileSink(rel)).toBe(sink)
+
+      sink.write('via-absolute\n', {})
+      getFileSink(rel).write('via-relative\n', {})
+      await flushAllFileSinks()
+
+      const contents = await readFile(abs, 'utf-8')
+      const lines = contents.split('\n').filter(Boolean)
+      expect(lines.toSorted()).toEqual(['via-absolute', 'via-relative'])
+    } finally {
+      await sink.close()
+      await removeTempDir(dir)
+    }
+  })
 })

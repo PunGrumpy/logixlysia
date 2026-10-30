@@ -199,10 +199,11 @@ class FileSinkImpl implements FileSink {
 }
 
 export const getFileSink = (filePath: string): FileSink => {
-  let sink = sinks.get(filePath)
+  const resolved = path.resolve(filePath)
+  let sink = sinks.get(resolved)
   if (!sink) {
-    sink = new FileSinkImpl(filePath)
-    sinks.set(filePath, sink)
+    sink = new FileSinkImpl(resolved)
+    sinks.set(resolved, sink)
   }
   return sink
 }
