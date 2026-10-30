@@ -23,7 +23,6 @@ import type {
 } from './interfaces'
 import { createPluginLogger } from './logger'
 import { isSuppressed, reportFormatError, resolveSinks } from './logger/emit'
-import { errorStatus } from './logger/handle-http-error'
 import {
   getOrCreateRequestId,
   resolveRequestIdConfig
@@ -731,9 +730,9 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
         // schema): a second, error line.
         logger.handleHttpError(request, error, { beforeTime: record.startedAt })
         exitRequestScope()
-        return
       }
-      finishUnwrapped(request, record, errorStatus(error))
+      // An open record is finished by onAfterResponse, which sees the status a
+      // later onError mapped the error to.
     })
     .onAfterResponse(context => {
       const { request, set } = context
