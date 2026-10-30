@@ -6,6 +6,31 @@ import { precomputedFor } from '../_helpers/precomputed'
 import { createMockRequest } from '../_helpers/request'
 import { sleep } from '../_helpers/sleep'
 
+const urlSeenByTransport = (
+  url: string,
+  config?: { logQueryParams?: boolean }
+): unknown => {
+  const transport = mock<
+    (lvl: unknown, msg: unknown, metaArg?: unknown) => void
+  >(() => {})
+  const options: Options = {
+    config: { ...config, transports: [{ log: transport }] }
+  }
+  const request = createMockRequest(url)
+
+  logToTransports({
+    data: { message: 'Test message' },
+    level: 'INFO',
+    options,
+    precomputed: precomputedFor(request),
+    request,
+    store: { beforeTime: 0n }
+  })
+
+  const meta = transport.mock.calls[0]?.[2] as Record<string, unknown>
+  return (meta.request as { url?: unknown }).url
+}
+
 describe('logToTransports', () => {
   test('calls all transports with level/message/meta', () => {
     const t1 = mock<(lvl: unknown, msg: unknown, metaArg?: unknown) => void>(
@@ -230,5 +255,25 @@ describe('logToTransports', () => {
       store
     })
     expect(onError).toHaveBeenCalledTimes(2)
+  })
+
+  test('strips the query string and fragment from request.url by default', () => {
+    expect(
+      urlSeenByTransport('http://localhost/login?code=abc&state=xyz#frag')
+    ).toBe('http://localhost/login')
+  })
+
+  test('keeps the query string when logQueryParams is true', () => {
+    expect(
+      urlSeenByTransport('http://localhost/login?code=abc&state=xyz', {
+        logQueryParams: true
+      })
+    ).toBe('http://localhost/login?code=abc&state=xyz')
+  })
+
+  test('leaves a URL without a query string untouched', () => {
+    const request = createMockRequest('http://localhost/hello')
+    expect(urlSeenByTransport(request.url)).toBe(request.url)
+    expect(urlSeenByTransport(request.url)).toBe('http://localhost/hello')
   })
 })

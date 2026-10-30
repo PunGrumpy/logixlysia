@@ -50,6 +50,21 @@ interface LogToTransportsInput {
   store: StoreData
 }
 
+const withoutQuery = (url: string): string => {
+  const query = url.indexOf('?')
+  const fragment = url.indexOf('#')
+  if (query === -1 && fragment === -1) {
+    return url
+  }
+  if (query === -1) {
+    return url.slice(0, fragment)
+  }
+  if (fragment === -1) {
+    return url.slice(0, query)
+  }
+  return url.slice(0, Math.min(query, fragment))
+}
+
 export const logToTransports = (input: LogToTransportsInput): void => {
   const { level, request, data, options, precomputed } = input
   const transports = options.config?.transports ?? []
@@ -62,7 +77,9 @@ export const logToTransports = (input: LogToTransportsInput): void => {
   const meta: Record<string, unknown> = {
     request: {
       method: request.method,
-      url: request.url
+      url: options.config?.logQueryParams
+        ? request.url
+        : withoutQuery(request.url)
     },
     ...data,
     durationMs: precomputed.durationMs

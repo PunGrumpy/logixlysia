@@ -74,6 +74,7 @@ describe('createLogger', () => {
         autoRedact: true,
         disableFileLogging: true,
         disableInternalLogger: true,
+        logQueryParams: true,
         transports: [{ log: transport }]
       }
     }
@@ -90,6 +91,33 @@ describe('createLogger', () => {
     const reqMeta = meta?.request as { url?: string } | undefined
     expect(reqMeta?.url).toContain('jwt=redacted')
     expect(reqMeta?.url).not.toContain(sampleJwt)
+
+    await sleep(0)
+  })
+
+  test('strips the query from the transport URL when logQueryParams is off, even with autoRedact', async () => {
+    const transport = mock<
+      (lvl: unknown, msg: unknown, meta?: unknown) => void
+    >(() => {})
+    const options: Options = {
+      config: {
+        autoRedact: true,
+        disableFileLogging: true,
+        disableInternalLogger: true,
+        transports: [{ log: transport }]
+      }
+    }
+
+    const logger = createLogger(options)
+    const request = createMockRequest('http://localhost/test?jwt=secret')
+
+    logger.info(request, 'hello')
+
+    const meta = transport.mock.calls[0]?.[2] as
+      | Record<string, unknown>
+      | undefined
+    const reqMeta = meta?.request as { url?: string } | undefined
+    expect(reqMeta?.url).toBe('http://localhost/test')
 
     await sleep(0)
   })

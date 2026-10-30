@@ -140,7 +140,7 @@ export interface FormattingConfig {
   contextDepth?: number
   customLogFormat?: string
   ip?: boolean
-  /** Include query parameters in the logged URL path; default false. */
+  /** Include query parameters in the logged URL path; default false. Also governs the `request.url` handed to transports. */
   logQueryParams?: boolean
   /** Service name shown in `{service}` token (e.g. evlog-style `[my-app]`). */
   service?: string
