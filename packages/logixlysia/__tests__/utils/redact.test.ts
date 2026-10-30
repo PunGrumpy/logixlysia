@@ -260,6 +260,30 @@ describe('redact', () => {
     expect(original.user.email).toBe('test@example.com')
   })
 
+  test('keeps an own __proto__ key as a key instead of re-parenting the copy', () => {
+    const body = JSON.parse(
+      '{"__proto__":{"requestId":"forged"},"email":"a@b.co"}'
+    )
+    const result = redact(body) as Record<string, unknown>
+    expect(Object.keys(result)).toEqual(['__proto__', 'email'])
+    expect(Object.getPrototypeOf(result)).toBe(Object.prototype)
+    expect('requestId' in result).toBe(false)
+    expect(result.email).toBe('[REDACTED]')
+  })
+
+  test('keeps an own __proto__ key as a key in a nested object', () => {
+    const context = JSON.parse(
+      '{"__proto__":{"requestId":"forged"},"email":"a@b.co"}'
+    )
+    const result = redact({ context }) as {
+      context: Record<string, unknown>
+    }
+    expect(Object.keys(result.context)).toEqual(['__proto__', 'email'])
+    expect(Object.getPrototypeOf(result.context)).toBe(Object.prototype)
+    expect('requestId' in result.context).toBe(false)
+    expect(result.context.email).toBe('[REDACTED]')
+  })
+
   test('a redacted Error is never the original instance, even when nothing changed', () => {
     const original = new Error('nothing sensitive')
     const result = redact({ error: original }) as { error: Error }

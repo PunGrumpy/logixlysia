@@ -443,7 +443,7 @@ const walker = {
     } catch {
       return UNSERIALIZABLE_TEXT
     }
-    let result: Record<string, unknown> | undefined
+    let entries: [string, unknown][] | undefined
 
     for (const [index, key] of keys.entries()) {
       let original: unknown
@@ -462,20 +462,20 @@ const walker = {
       }
 
       if (
-        result === undefined &&
+        entries === undefined &&
         (sensitive || unreadable || redacted !== original)
       ) {
-        result = {}
-        for (const priorKey of keys.slice(0, index)) {
-          result[priorKey] = recordValue[priorKey]
-        }
+        entries = keys
+          .slice(0, index)
+          .map((priorKey): [string, unknown] => [
+            priorKey,
+            recordValue[priorKey]
+          ])
       }
-      if (result !== undefined) {
-        result[key] = redacted
-      }
+      entries?.push([key, redacted])
     }
 
-    return result ?? recordValue
+    return entries ? Object.fromEntries(entries) : recordValue
   },
 
   set: (
