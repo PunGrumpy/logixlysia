@@ -48,6 +48,7 @@ exports[`published API surface every exports subpath resolves and its named expo
   ],
   "./otel": [
     "injectTraceContext",
+    "otelEnricher",
   ],
   "./otlp": [
     "createOtlpTransport",
