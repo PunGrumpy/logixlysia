@@ -1,14 +1,8 @@
 # Plan 075: `precomputed` log parts become required, so the three duplicate URL and duration fallbacks go away
 
-> **Executor instructions**: Follow this plan step by step. Run every
-> verification command and confirm the expected result before moving to the
-> next step. If anything in the "STOP conditions" section occurs, stop and
-> report; do not improvise. Do not update `plans/README.md`; your reviewer
-> maintains the index.
+> **Executor instructions**: Follow this plan step by step. Run every verification command and confirm the expected result before moving to the next step. If anything in the "STOP conditions" section occurs, stop and report; do not improvise. Do not update `plans/README.md`; your reviewer maintains the index.
 >
-> **Drift check (run first)**: `git diff --stat 5115bea..HEAD -- packages/logixlysia/src/logger/emit.ts packages/logixlysia/src/logger/create-logger.ts packages/logixlysia/src/output/file.ts packages/logixlysia/src/output/index.ts packages/logixlysia/__tests__/output packages/logixlysia/__tests__/logger/format-output.test.ts`
-> must print nothing. If the excerpts under "Current state" do not match the
-> live file, STOP.
+> **Drift check (run first)**: `git diff --stat 5115bea..HEAD -- packages/logixlysia/src/logger/emit.ts packages/logixlysia/src/logger/create-logger.ts packages/logixlysia/src/output/file.ts packages/logixlysia/src/output/index.ts packages/logixlysia/__tests__/output packages/logixlysia/__tests__/logger/format-output.test.ts` must print nothing. If the excerpts under "Current state" do not match the live file, STOP.
 
 ## Status
 
@@ -88,18 +82,18 @@ Making `precomputed` required deletes the fallbacks, leaves one URL parser (`par
 - `:506-530` `getPathnameTokens(tokens, request, config, useColors, precomputed?)`:
 
   ```ts
-    let rawPathname: string
-    let search: string
-    if (precomputed) {
-      ;({ pathname: rawPathname, search } = precomputed)
-    } else {
-      try {
-        ;({ pathname: rawPathname, search } = new URL(request.url))
-      } catch {
-        rawPathname = sanitizeLogText(request.url || '/', 1024)
-        search = ''
-      }
+  let rawPathname: string
+  let search: string
+  if (precomputed) {
+    ;({ pathname: rawPathname, search } = precomputed)
+  } else {
+    try {
+      ;({ pathname: rawPathname, search } = new URL(request.url))
+    } catch {
+      rawPathname = sanitizeLogText(request.url || '/', 1024)
+      search = ''
     }
+  }
   ```
 
 - `:592-615` `getDurationTokens(..., precomputed?)` with `const durationMs = precomputed?.durationMs ?? elapsedMs(store.beforeTime)` at `:606`.
@@ -108,14 +102,14 @@ Making `precomputed` required deletes the fallbacks, leaves one URL parser (`par
 Direct test callers that must now pass `precomputed` (counts of `logToFile(`/`logToTransports(`/`formatLogOutput(` calls): `__tests__/output/file.test.ts` 17, `__tests__/output/transports.test.ts` 9, `__tests__/output/race-condition.test.ts` 3, `__tests__/output/interval-rotation.test.ts` 11, `__tests__/logger/format-output.test.ts` 11. A typical call, `file.test.ts:20-27`:
 
 ```ts
-      await logToFile({
-        data: { message: 'hello' },
-        filePath,
-        level: 'INFO',
-        options,
-        request: createMockRequest('http://localhost/test'),
-        store: { beforeTime: 0n }
-      })
+await logToFile({
+  data: { message: 'hello' },
+  filePath,
+  level: 'INFO',
+  options,
+  request: createMockRequest('http://localhost/test'),
+  store: { beforeTime: 0n }
+})
 ```
 
 `__tests__/_helpers/` holds small shared helpers (`request.ts`, `sleep.ts`, `tmp.ts`, ...), one export each.
@@ -157,8 +151,8 @@ Notes that save time:
   ```
 
   Commit the changeset together with the fix it describes.
-- Do not push, do not open a PR, do not touch `plans/`. Your reviewer maintains the index and does the delivery.
 
+- Do not push, do not open a PR, do not touch `plans/`. Your reviewer maintains the index and does the delivery.
 
 ## Scope
 

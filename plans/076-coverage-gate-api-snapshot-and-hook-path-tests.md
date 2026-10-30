@@ -1,14 +1,8 @@
 # Plan 076: Verification gates that can fail, and tests for the hook-path status line and the store logger levels
 
-> **Executor instructions**: Follow this plan step by step. Run every
-> verification command and confirm the expected result before moving to the
-> next step. If anything in the "STOP conditions" section occurs, stop and
-> report; do not improvise. Do not update `plans/README.md`; your reviewer
-> maintains the index.
+> **Executor instructions**: Follow this plan step by step. Run every verification command and confirm the expected result before moving to the next step. If anything in the "STOP conditions" section occurs, stop and report; do not improvise. Do not update `plans/README.md`; your reviewer maintains the index.
 >
-> **Drift check (run first)**: `git diff --stat 5115bea..HEAD -- packages/logixlysia/bunfig.toml packages/logixlysia/__tests__/api/surface.test.ts packages/logixlysia/__tests__/plugin AGENTS.md`
-> must print nothing. If the excerpts under "Current state" do not match the
-> live file, STOP.
+> **Drift check (run first)**: `git diff --stat 5115bea..HEAD -- packages/logixlysia/bunfig.toml packages/logixlysia/__tests__/api/surface.test.ts packages/logixlysia/__tests__/plugin AGENTS.md` must print nothing. If the excerpts under "Current state" do not match the live file, STOP.
 
 ## Status
 
@@ -123,8 +117,8 @@ Notes that save time:
   ```
 
   Commit the changeset together with the fix it describes.
-- Do not push, do not open a PR, do not touch `plans/`. Your reviewer maintains the index and does the delivery.
 
+- Do not push, do not open a PR, do not touch `plans/`. Your reviewer maintains the index and does the delivery.
 
 This plan adds no changeset: it changes tests and tooling only, and the published package is byte-identical. Say so in your report.
 
@@ -150,7 +144,7 @@ Run `cd packages/logixlysia && bun run build && bun test --coverage 2>&1 | tail 
 
 ### Step 2: The API snapshot test fails loudly in CI without a build and skips visibly elsewhere
 
-In `surface.test.ts`: when `dist/index.js` is missing and `process.env.CI` is set, throw at module scope: `throw new Error('dist/index.js is missing: run `bun run build` before `bun test` (or use `bun run test`)')`. Otherwise use `test.skipIf(!distReady)(...)` so a local run without a build reports the test as skipped, not passed. Delete the `if (!distReady) return` body guard.
+In `surface.test.ts`: when `dist/index.js` is missing and `process.env.CI` is set, throw at module scope: `throw new Error('dist/index.js is missing: run `bun run build`before`bun test`(or use`bun run test`)')`. Otherwise use `test.skipIf(!distReady)(...)` so a local run without a build reports the test as skipped, not passed. Delete the `if (!distReady) return` body guard.
 
 **Verify**: `cd packages/logixlysia && rm -rf dist && bun test __tests__/api` → the test shows as skipped (`1 skip`). `CI=1 bun test __tests__/api` → fails with the message. `bun run build && bun test __tests__/api` → passes.
 

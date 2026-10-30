@@ -1,14 +1,8 @@
 # Plan 072: A pending adapter retry backoff no longer keeps the process alive
 
-> **Executor instructions**: Follow this plan step by step. Run every
-> verification command and confirm the expected result before moving to the
-> next step. If anything in the "STOP conditions" section occurs, stop and
-> report; do not improvise. Do not update `plans/README.md`; your reviewer
-> maintains the index.
+> **Executor instructions**: Follow this plan step by step. Run every verification command and confirm the expected result before moving to the next step. If anything in the "STOP conditions" section occurs, stop and report; do not improvise. Do not update `plans/README.md`; your reviewer maintains the index.
 >
-> **Drift check (run first)**: `git diff --stat 5115bea..HEAD -- packages/logixlysia/src/adapters/shared.ts packages/logixlysia/__tests__/adapters/shared.test.ts`
-> must print nothing. If the excerpts under "Current state" do not match the
-> live file, STOP.
+> **Drift check (run first)**: `git diff --stat 5115bea..HEAD -- packages/logixlysia/src/adapters/shared.ts packages/logixlysia/__tests__/adapters/shared.test.ts` must print nothing. If the excerpts under "Current state" do not match the live file, STOP.
 
 ## Status
 
@@ -43,10 +37,10 @@ The only caller is `retryOrRethrow` inside `attemptPost` (`:229-238`): `await sl
 The pattern already used for the flush timer, `shared.ts:433-436`:
 
 ```ts
-    if (!timer) {
-      timer = setTimeout(flushFromTimer, input.flushIntervalMs)
-      timer.unref?.()
-    }
+if (!timer) {
+  timer = setTimeout(flushFromTimer, input.flushIntervalMs)
+  timer.unref?.()
+}
 ```
 
 Tests: `packages/logixlysia/__tests__/adapters/shared.test.ts` imports `postWithRetry`, `resolveRetryDelay` and friends from `../../src/adapters/shared`, uses `stubFetch` from `./helpers.ts` (which swaps `globalThis.fetch` for a stub returning queued `{ status, headers, body }` responses) and already has "honors Retry-After on 429" at `:288`. A subprocess-based test exists in `__tests__/api/surface.test.ts` (`spawnSync(['bun', '-e', script], { cwd })`).
@@ -88,8 +82,8 @@ Notes that save time:
   ```
 
   Commit the changeset together with the fix it describes.
-- Do not push, do not open a PR, do not touch `plans/`. Your reviewer maintains the index and does the delivery.
 
+- Do not push, do not open a PR, do not touch `plans/`. Your reviewer maintains the index and does the delivery.
 
 ## Scope
 

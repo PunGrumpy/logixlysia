@@ -1,14 +1,8 @@
 # Plan 071: `withRedaction` forwards `close` and drops records after it
 
-> **Executor instructions**: Follow this plan step by step. Run every
-> verification command and confirm the expected result before moving to the
-> next step. If anything in the "STOP conditions" section occurs, stop and
-> report; do not improvise. Do not update `plans/README.md`; your reviewer
-> maintains the index.
+> **Executor instructions**: Follow this plan step by step. Run every verification command and confirm the expected result before moving to the next step. If anything in the "STOP conditions" section occurs, stop and report; do not improvise. Do not update `plans/README.md`; your reviewer maintains the index.
 >
-> **Drift check (run first)**: `git diff --stat 5115bea..HEAD -- packages/logixlysia/src/desertant.ts packages/logixlysia/__tests__/adapters/desertant.test.ts`
-> must print nothing. If the excerpts under "Current state" do not match the
-> live file, STOP.
+> **Drift check (run first)**: `git diff --stat 5115bea..HEAD -- packages/logixlysia/src/desertant.ts packages/logixlysia/__tests__/adapters/desertant.test.ts` must print nothing. If the excerpts under "Current state" do not match the live file, STOP.
 
 ## Status
 
@@ -22,7 +16,6 @@
 ## Why this matters
 
 `withRedaction(transport, model)` wraps any transport so records pass through a redaction model before delivery. The wrapper returns only `{ flush, log }`, so the wrapped transport's `close` disappears. `flushLogixlysia(options, { close: true })` calls `transport.close?.()` on every configured transport; for a wrapped Axiom, Datadog or custom transport nothing is called, its sockets and timers stay open, and its "closed" gate is never set. The `Transport` contract (`src/types/config.ts:6-12`) also says that after `close` resolves, further `log()` calls should be dropped rather than queued.
-
 
 ## Current state
 
@@ -94,8 +87,8 @@ Notes that save time:
   ```
 
   Commit the changeset together with the fix it describes.
-- Do not push, do not open a PR, do not touch `plans/`. Your reviewer maintains the index and does the delivery.
 
+- Do not push, do not open a PR, do not touch `plans/`. Your reviewer maintains the index and does the delivery.
 
 ## Scope
 

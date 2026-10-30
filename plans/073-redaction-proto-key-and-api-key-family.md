@@ -1,14 +1,8 @@
 # Plan 073: Redaction keeps an own `__proto__` key as a key, `mergeContext` does too, and vendor-prefixed API keys are sensitive
 
-> **Executor instructions**: Follow this plan step by step. Run every
-> verification command and confirm the expected result before moving to the
-> next step. If anything in the "STOP conditions" section occurs, stop and
-> report; do not improvise. Do not update `plans/README.md`; your reviewer
-> maintains the index.
+> **Executor instructions**: Follow this plan step by step. Run every verification command and confirm the expected result before moving to the next step. If anything in the "STOP conditions" section occurs, stop and report; do not improvise. Do not update `plans/README.md`; your reviewer maintains the index.
 >
-> **Drift check (run first)**: `git diff --stat 5115bea..HEAD -- packages/logixlysia/src/utils/redact.ts packages/logixlysia/src/context/request-context.ts packages/logixlysia/__tests__/utils/redact.test.ts packages/logixlysia/__tests__/context/request-context.test.ts`
-> must print nothing. If the excerpts under "Current state" do not match the
-> live file, STOP.
+> **Drift check (run first)**: `git diff --stat 5115bea..HEAD -- packages/logixlysia/src/utils/redact.ts packages/logixlysia/src/context/request-context.ts packages/logixlysia/__tests__/utils/redact.test.ts packages/logixlysia/__tests__/context/request-context.test.ts` must print nothing. If the excerpts under "Current state" do not match the live file, STOP.
 
 ## Status
 
@@ -51,7 +45,9 @@ Second, `isSensitiveKey` matches the API-key family only when the whole normaliz
     if (DEFAULT_REDACT_KEYS.includes(normalized)) {
       return true
     }
-    if (extraKeys?.some(extraKey => normalizeKeyName(extraKey) === normalized)) {
+    if (
+      extraKeys?.some(extraKey => normalizeKeyName(extraKey) === normalized)
+    ) {
       return true
     }
     const parts = normalized.split('-')
@@ -166,8 +162,8 @@ Notes that save time:
   ```
 
   Commit the changeset together with the fix it describes.
-- Do not push, do not open a PR, do not touch `plans/`. Your reviewer maintains the index and does the delivery.
 
+- Do not push, do not open a PR, do not touch `plans/`. Your reviewer maintains the index and does the delivery.
 
 ## Scope
 

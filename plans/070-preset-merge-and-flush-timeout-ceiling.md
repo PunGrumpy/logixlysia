@@ -1,14 +1,8 @@
 # Plan 070: Preset values survive explicit `undefined` keys, dead preset merges go, and `flushTimeoutMs` gets the timer ceiling
 
-> **Executor instructions**: Follow this plan step by step. Run every
-> verification command and confirm the expected result before moving to the
-> next step. If anything in the "STOP conditions" section occurs, stop and
-> report; do not improvise. Do not update `plans/README.md`; your reviewer
-> maintains the index.
+> **Executor instructions**: Follow this plan step by step. Run every verification command and confirm the expected result before moving to the next step. If anything in the "STOP conditions" section occurs, stop and report; do not improvise. Do not update `plans/README.md`; your reviewer maintains the index.
 >
-> **Drift check (run first)**: `git diff --stat 5115bea..HEAD -- packages/logixlysia/src/config/resolve-options.ts packages/logixlysia/__tests__/config/resolve-options.test.ts`
-> must print nothing (you branch from `5115bea`, so it will). If the excerpts
-> under "Current state" do not match the live file, STOP.
+> **Drift check (run first)**: `git diff --stat 5115bea..HEAD -- packages/logixlysia/src/config/resolve-options.ts packages/logixlysia/__tests__/config/resolve-options.test.ts` must print nothing (you branch from `5115bea`, so it will). If the excerpts under "Current state" do not match the live file, STOP.
 
 ## Status
 
@@ -127,18 +121,18 @@ Only the `pino` block is live. The other four spread an always-undefined `base.<
 Test exemplar, `packages/logixlysia/__tests__/config/resolve-options.test.ts:13-24`:
 
 ```ts
-  test('explicit config overrides preset', () => {
-    const resolved = resolveOptions({
-      config: {
-        autoRedact: false,
-        showStartupMessage: true
-      },
-      preset: 'prod'
-    })
-
-    expect(resolved.config?.autoRedact).toBe(false)
-    expect(resolved.config?.showStartupMessage).toBe(true)
+test('explicit config overrides preset', () => {
+  const resolved = resolveOptions({
+    config: {
+      autoRedact: false,
+      showStartupMessage: true
+    },
+    preset: 'prod'
   })
+
+  expect(resolved.config?.autoRedact).toBe(false)
+  expect(resolved.config?.showStartupMessage).toBe(true)
+})
 ```
 
 and `:235-243` tests `flushTimeoutMs` rejections (`POSITIVE_INFINITY`, `NaN`, `-1`) with `.toThrow('flushTimeoutMs')`.
@@ -182,8 +176,8 @@ Notes that save time:
   ```
 
   Commit the changeset together with the fix it describes.
-- Do not push, do not open a PR, do not touch `plans/`. Your reviewer maintains the index and does the delivery.
 
+- Do not push, do not open a PR, do not touch `plans/`. Your reviewer maintains the index and does the delivery.
 
 ## Scope
 
@@ -242,8 +236,7 @@ In `resolve-options.ts`, add near `isNonNegativeNumber`:
 const MAX_TIMER_DELAY_MS = 2_147_483_647
 ```
 
-Change the `flushTimeoutMs` check in `validateOutput` to reject values above `MAX_TIMER_DELAY_MS` as well, with the message
-`flushTimeoutMs must be a finite number of milliseconds between 0 and 2147483647, got ${flushTimeoutMs}`.
+Change the `flushTimeoutMs` check in `validateOutput` to reject values above `MAX_TIMER_DELAY_MS` as well, with the message `flushTimeoutMs must be a finite number of milliseconds between 0 and 2147483647, got ${flushTimeoutMs}`.
 
 Update the existing rejection test's expectations only if its `.toThrow('flushTimeoutMs')` substring stops matching (it should still match). Add:
 
