@@ -6,6 +6,7 @@ import {
   formatLogOutput
 } from '../../src/logger/create-logger'
 import { redactRequest } from '../../src/utils/redact'
+import { precomputedFor } from '../_helpers/precomputed'
 import { createMockRequest } from '../_helpers/request'
 
 const DIGITS_ONLY_REGEX = /^\d+$/u
@@ -43,6 +44,7 @@ describe('formatLogOutput', () => {
       data: { status: 200 },
       level: 'INFO',
       options: baseOptions(),
+      precomputed: precomputedFor(request),
       request,
       store
     })
@@ -64,6 +66,7 @@ describe('formatLogOutput', () => {
       },
       level: 'INFO',
       options: baseOptions(),
+      precomputed: precomputedFor(request),
       request,
       store
     })
@@ -93,6 +96,7 @@ describe('formatLogOutput', () => {
           useColors: false
         }
       }),
+      precomputed: precomputedFor(request),
       request,
       store
     })
@@ -112,6 +116,7 @@ describe('formatLogOutput', () => {
       options: baseOptions({
         config: { logQueryParams: true }
       }),
+      precomputed: precomputedFor(request),
       request,
       store
     })
@@ -130,6 +135,7 @@ describe('formatLogOutput', () => {
           customLogFormat: '{pathname} > {query}'
         }
       }),
+      precomputed: precomputedFor(request),
       request,
       store
     })
@@ -146,6 +152,7 @@ describe('formatLogOutput', () => {
       options: baseOptions({
         config: { service: 'my-api', useColors: false }
       }),
+      precomputed: precomputedFor(request),
       request,
       store
     })
@@ -165,6 +172,7 @@ describe('formatLogOutput', () => {
           useColors: false
         }
       }),
+      precomputed: precomputedFor(request),
       request,
       store
     })
@@ -193,6 +201,7 @@ describe('formatLogOutput', () => {
           useColors: false
         }
       }),
+      precomputed: precomputedFor(redacted),
       request: redacted,
       store
     })
@@ -214,6 +223,7 @@ describe('formatLogOutput', () => {
       options: baseOptions({
         config: { customLogFormat: '{epoch} {ip}', ip: true, useColors: false }
       }),
+      precomputed: precomputedFor(request),
       request,
       store
     })
@@ -225,9 +235,7 @@ describe('formatLogOutput', () => {
 
   test('speed token appears when duration exceeds verySlowThreshold', () => {
     const request = createMockRequest('http://localhost/slow')
-    const store = {
-      beforeTime: process.hrtime.bigint() - 1_200_000_000n
-    }
+    const store = { beforeTime: 0n }
     const out = formatLogOutput({
       data: { status: 200 },
       level: 'INFO',
@@ -238,6 +246,7 @@ describe('formatLogOutput', () => {
           verySlowThreshold: 1000
         }
       }),
+      precomputed: precomputedFor(request, 1200),
       request,
       store
     })
@@ -261,6 +270,7 @@ const renderTimestamp = (translateTime: string): string => {
         useColors: false
       }
     },
+    precomputed: precomputedFor(request),
     request,
     store
   })

@@ -4,6 +4,7 @@ import path from 'node:path'
 import type { Options } from '../../src/interfaces'
 import { logToFile } from '../../src/output/file'
 import { resolveOpenedAt } from '../../src/output/file-sink'
+import { precomputedFor } from '../_helpers/precomputed'
 import { createMockRequest } from '../_helpers/request'
 import { sleep } from '../_helpers/sleep'
 import { createTempDir, removeTempDir } from '../_helpers/tmp'
@@ -28,23 +29,27 @@ describe('interval rotation', () => {
         config: { logRotation: { interval: '1h' } }
       }
 
+      const firstRequest = createMockRequest('http://localhost/first')
       await logToFile({
         data: { message: 'msg-1' },
         filePath,
         level: 'INFO',
         options,
-        request: createMockRequest('http://localhost/first'),
+        precomputed: precomputedFor(firstRequest),
+        request: firstRequest,
         store: { beforeTime: 0n }
       })
 
       setSystemTime(new Date(Date.now() + TWO_HOURS_MS))
 
+      const secondRequest = createMockRequest('http://localhost/second')
       await logToFile({
         data: { message: 'msg-2' },
         filePath,
         level: 'INFO',
         options,
-        request: createMockRequest('http://localhost/second'),
+        precomputed: precomputedFor(secondRequest),
+        request: secondRequest,
         store: { beforeTime: 0n }
       })
 
@@ -64,12 +69,14 @@ describe('interval rotation', () => {
 
       restoreRealClock()
 
+      const thirdRequest = createMockRequest('http://localhost/third')
       await logToFile({
         data: { message: 'msg-3' },
         filePath,
         level: 'INFO',
         options,
-        request: createMockRequest('http://localhost/third'),
+        precomputed: precomputedFor(thirdRequest),
+        request: thirdRequest,
         store: { beforeTime: 0n }
       })
 
@@ -90,20 +97,24 @@ describe('interval rotation', () => {
         config: { logRotation: { interval: '1h' } }
       }
 
+      const firstRequest = createMockRequest('http://localhost/first')
       await logToFile({
         data: { message: 'msg-1' },
         filePath,
         level: 'INFO',
         options,
-        request: createMockRequest('http://localhost/first'),
+        precomputed: precomputedFor(firstRequest),
+        request: firstRequest,
         store: { beforeTime: 0n }
       })
+      const secondRequest = createMockRequest('http://localhost/second')
       await logToFile({
         data: { message: 'msg-2' },
         filePath,
         level: 'INFO',
         options,
-        request: createMockRequest('http://localhost/second'),
+        precomputed: precomputedFor(secondRequest),
+        request: secondRequest,
         store: { beforeTime: 0n }
       })
 
@@ -127,12 +138,14 @@ describe('interval rotation', () => {
         config: { logRotation: { interval: '1w', maxSize: 50 } }
       }
 
+      const request = createMockRequest('http://localhost/first')
       await logToFile({
         data: { message: 'x'.repeat(60) },
         filePath,
         level: 'INFO',
         options,
-        request: createMockRequest('http://localhost/first'),
+        precomputed: precomputedFor(request),
+        request,
         store: { beforeTime: 0n }
       })
 
@@ -153,23 +166,27 @@ describe('interval rotation', () => {
         config: { logRotation: { interval: '1h', maxSize: 10_000_000 } }
       }
 
+      const firstRequest = createMockRequest('http://localhost/first')
       await logToFile({
         data: { message: 'msg-1' },
         filePath,
         level: 'INFO',
         options,
-        request: createMockRequest('http://localhost/first'),
+        precomputed: precomputedFor(firstRequest),
+        request: firstRequest,
         store: { beforeTime: 0n }
       })
 
       setSystemTime(new Date(Date.now() + TWO_HOURS_MS))
 
+      const secondRequest = createMockRequest('http://localhost/second')
       await logToFile({
         data: { message: 'msg-2' },
         filePath,
         level: 'INFO',
         options,
-        request: createMockRequest('http://localhost/second'),
+        precomputed: precomputedFor(secondRequest),
+        request: secondRequest,
         store: { beforeTime: 0n }
       })
 
@@ -197,12 +214,14 @@ describe('interval rotation', () => {
       const options: Options = {
         config: { logRotation: { interval: '1h' } }
       }
+      const request = createMockRequest('http://localhost/first')
       await logToFile({
         data: { message: 'after-restart' },
         filePath,
         level: 'INFO',
         options,
-        request: createMockRequest('http://localhost/first'),
+        precomputed: precomputedFor(request),
+        request,
         store: { beforeTime: 0n }
       })
 
@@ -229,12 +248,14 @@ describe('interval rotation', () => {
         config: { logRotation: { interval: '1h' } }
       }
 
+      const firstRequest = createMockRequest('http://localhost/first')
       await logToFile({
         data: { message: 'msg-1' },
         filePath,
         level: 'INFO',
         options,
-        request: createMockRequest('http://localhost/first'),
+        precomputed: precomputedFor(firstRequest),
+        request: firstRequest,
         store: { beforeTime: 0n }
       })
 
@@ -246,12 +267,14 @@ describe('interval rotation', () => {
       const idleEntries = await fs.readdir(logsDir)
       expect(idleEntries).toEqual(['idle.log'])
 
+      const secondRequest = createMockRequest('http://localhost/second')
       await logToFile({
         data: { message: 'msg-2' },
         filePath,
         level: 'INFO',
         options,
-        request: createMockRequest('http://localhost/second'),
+        precomputed: precomputedFor(secondRequest),
+        request: secondRequest,
         store: { beforeTime: 0n }
       })
 

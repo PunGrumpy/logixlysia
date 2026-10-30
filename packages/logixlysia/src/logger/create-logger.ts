@@ -2,7 +2,6 @@ import { STATUS_CODES } from 'node:http'
 import chalk from 'chalk'
 import { getStatusCode } from '../helpers/status'
 import type { LogLevel, Options, RequestInfo, StoreData } from '../interfaces'
-import { elapsedMs } from '../utils/duration'
 import { isStructuredError, parseError } from '../utils/error'
 import { sanitizeLogText } from '../utils/sanitize'
 
@@ -505,28 +504,14 @@ const getMessageToken = (
 
 const getPathnameTokens = (
   tokens: Set<string>,
-  request: RequestInfo,
   config: Options['config'],
   useColors: boolean,
-  precomputed?: PrecomputedLogParts
+  { pathname: rawPathname, search }: PrecomputedLogParts
 ): { coloredPathname: string; query: string } => {
   const needsPathname = tokens.has('{pathname}') || tokens.has('{path}')
   const needsQuery = tokens.has('{query}')
   if (!(needsPathname || needsQuery)) {
     return { coloredPathname: '', query: '' }
-  }
-
-  let rawPathname: string
-  let search: string
-  if (precomputed) {
-    ;({ pathname: rawPathname, search } = precomputed)
-  } else {
-    try {
-      ;({ pathname: rawPathname, search } = new URL(request.url))
-    } catch {
-      rawPathname = sanitizeLogText(request.url || '/', 1024)
-      search = ''
-    }
   }
 
   const query = needsQuery ? search : ''
@@ -592,18 +577,16 @@ const getContextToken = (
 
 const getDurationTokens = (
   tokens: Set<string>,
-  store: StoreData,
   useColors: boolean,
   slowThreshold: number,
   verySlowThreshold: number,
-  precomputed?: PrecomputedLogParts
+  { durationMs }: PrecomputedLogParts
 ): { coloredDuration: string; speedToken: string } => {
   const needsDuration = tokens.has('{duration}')
   const needsSpeed = tokens.has('{speed}')
   if (!(needsDuration || needsSpeed)) {
     return { coloredDuration: '', speedToken: '' }
   }
-  const durationMs = precomputed?.durationMs ?? elapsedMs(store.beforeTime)
   const { text, isVerySlow } = colorDurationText(
     durationMs,
     useColors,
@@ -637,7 +620,6 @@ export const formatLogOutput = ({
   level,
   request,
   data,
-  store,
   options,
   formatContext,
   precomputed
@@ -648,7 +630,7 @@ export const formatLogOutput = ({
   store: StoreData
   options: Options
   formatContext?: FormatContext
-  precomputed?: PrecomputedLogParts
+  precomputed: PrecomputedLogParts
 }): FormattedLogOutput => {
   const { config } = options
   const {
@@ -668,7 +650,6 @@ export const formatLogOutput = ({
   const message = getMessageToken(tokens, data)
   const { coloredPathname, query } = getPathnameTokens(
     tokens,
-    request,
     config,
     useColors,
     precomputed
@@ -684,7 +665,6 @@ export const formatLogOutput = ({
     : ''
   const { coloredDuration, speedToken } = getDurationTokens(
     tokens,
-    store,
     useColors,
     slowThreshold,
     verySlowThreshold,

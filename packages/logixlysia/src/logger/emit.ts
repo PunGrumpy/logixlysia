@@ -14,6 +14,7 @@ import { elapsedMs } from '../utils/duration'
 import { redact, redactRequest } from '../utils/redact'
 import { createErrorReporter } from '../utils/report'
 import type { ErrorReporter } from '../utils/report'
+import { sanitizeLogText } from '../utils/sanitize'
 import { settle } from '../utils/settle'
 import { formatLogOutput } from './create-logger'
 import type { FormatContext, PrecomputedLogParts } from './create-logger'
@@ -71,7 +72,7 @@ export const parseRequestUrlOnce = (
     const { pathname, search } = new URL(request.url)
     return { pathname, search }
   } catch {
-    return { pathname: request.url || '/', search: '' }
+    return { pathname: sanitizeLogText(request.url || '/', 1024), search: '' }
   }
 }
 

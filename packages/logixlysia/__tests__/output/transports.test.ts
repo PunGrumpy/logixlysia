@@ -2,6 +2,7 @@ import { describe, expect, mock, setSystemTime, test } from 'bun:test'
 import type { Options } from '../../src/interfaces'
 import { logToTransports } from '../../src/output'
 import { spyConsole } from '../_helpers/console'
+import { precomputedFor } from '../_helpers/precomputed'
 import { createMockRequest } from '../_helpers/request'
 import { sleep } from '../_helpers/sleep'
 
@@ -27,6 +28,7 @@ describe('logToTransports', () => {
       data: { message: 'Test message', status: 200 },
       level: 'INFO',
       options,
+      precomputed: precomputedFor(request),
       request,
       store
     })
@@ -54,28 +56,25 @@ describe('logToTransports', () => {
     expect(req?.url).toBe('http://localhost/hello')
   })
 
-  test('computes durationMs from store.beforeTime', () => {
+  test('reports the precomputed durationMs to transports', () => {
     const t1 = mock<(lvl: unknown, msg: unknown, metaArg?: unknown) => void>(
       () => {}
     )
     const options: Options = { config: { transports: [{ log: t1 }] } }
     const request = createMockRequest('http://localhost/hello')
-
-    const beforeTime = process.hrtime.bigint()
-    const store = { beforeTime }
+    const store = { beforeTime: 0n }
 
     logToTransports({
       data: { message: 'Test message' },
       level: 'INFO',
       options,
+      precomputed: precomputedFor(request, 12.34),
       request,
       store
     })
 
     const meta = t1.mock.calls[0]?.[2] as Record<string, unknown>
-    expect(meta.durationMs).toBeTypeOf('number')
-    expect(meta.durationMs as number).toBeGreaterThan(0)
-    expect(Number.isFinite(meta.durationMs as number)).toBe(true)
+    expect(meta.durationMs).toBe(12.34)
 
     const t2 = mock<(lvl: unknown, msg: unknown, metaArg?: unknown) => void>(
       () => {}
@@ -87,6 +86,7 @@ describe('logToTransports', () => {
       data: { message: 'Test message' },
       level: 'INFO',
       options: zeroOptions,
+      precomputed: precomputedFor(request),
       request,
       store: zeroStore
     })
@@ -114,6 +114,7 @@ describe('logToTransports', () => {
         data: { message: 'ignored' },
         level: 'INFO',
         options,
+        precomputed: precomputedFor(request),
         request,
         store
       })
@@ -126,6 +127,7 @@ describe('logToTransports', () => {
         data: { message: 'ignored again' },
         level: 'INFO',
         options,
+        precomputed: precomputedFor(request),
         request,
         store
       })
@@ -153,6 +155,7 @@ describe('logToTransports', () => {
         data: { message: 'ignored' },
         level: 'INFO',
         options,
+        precomputed: precomputedFor(request),
         request,
         store
       })
@@ -172,6 +175,7 @@ describe('logToTransports', () => {
       data: { message: 'async' },
       level: 'INFO',
       options,
+      precomputed: precomputedFor(request),
       request,
       store
     })
@@ -202,6 +206,7 @@ describe('logToTransports', () => {
         data: { message: 'ignored' },
         level: 'INFO',
         options,
+        precomputed: precomputedFor(request),
         request,
         store
       })
@@ -220,6 +225,7 @@ describe('logToTransports', () => {
       data: { message: 'ignored again' },
       level: 'INFO',
       options,
+      precomputed: precomputedFor(request),
       request,
       store
     })
