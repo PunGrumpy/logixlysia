@@ -128,6 +128,22 @@ describe('tail sampling', () => {
     ).toHaveLength(1)
   })
 
+  test('skips path rules for a pathname longer than 2048 characters', () => {
+    const sampling = resolveSampling(
+      { head: { INFO: 0 }, tail: { paths: ['/api/**'] } },
+      () => 0.99
+    )
+    const rescued = (pathname: string) => {
+      const key = {}
+      sampling?.begin(key)
+      sampling?.buffer(key, { data: {}, durationMs: 1, level: 'INFO' })
+      return sampling?.finalize(key, outcome({ pathname })) ?? []
+    }
+
+    expect(rescued(`/api/${'a'.repeat(3000)}`)).toHaveLength(0)
+    expect(rescued(`/api/${'a'.repeat(100)}`)).toHaveLength(1)
+  })
+
   test('discards buffered records when nothing matches', () => {
     const sampling = resolveSampling(config, () => 0.99)
     const key = {}

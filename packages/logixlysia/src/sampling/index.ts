@@ -73,6 +73,8 @@ const resolveTail = (
   return { durationMs: tail.durationMs, paths, status: tail.status }
 }
 
+const MAX_MATCHED_PATHNAME_LENGTH = 2048
+
 const matchesTail = (tail: ResolvedTail, outcome: RequestOutcome): boolean => {
   if (tail.status !== undefined && outcome.status >= tail.status) {
     return true
@@ -80,7 +82,7 @@ const matchesTail = (tail: ResolvedTail, outcome: RequestOutcome): boolean => {
   if (tail.durationMs !== undefined && outcome.durationMs >= tail.durationMs) {
     return true
   }
-  if (tail.paths) {
+  if (tail.paths && outcome.pathname.length <= MAX_MATCHED_PATHNAME_LENGTH) {
     for (const path of tail.paths) {
       if (path.test(outcome.pathname)) {
         return true
