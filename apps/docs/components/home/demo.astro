@@ -283,7 +283,7 @@ const interactiveRoutes = [
     </span>
     <button
       aria-label="Pause animation"
-      class="group absolute right-0.5 grid size-10 cursor-pointer place-items-center rounded-md text-panel-muted transition-transform duration-150 ease-out hover:bg-panel-hover hover:text-panel-foreground active:scale-[0.97] motion-reduce:transition-none"
+      class="group absolute right-0.5 grid size-10 cursor-pointer place-items-center rounded-md text-panel-muted transition-transform duration-150 ease-out-strong hover:bg-panel-hover hover:text-panel-foreground active:scale-[0.97] motion-reduce:transition-none"
       data-term-pause
       hidden
       type="button"
@@ -291,7 +291,7 @@ const interactiveRoutes = [
       <span class="relative size-4">
         <svg
           aria-hidden="true"
-          class="size-4 transition-[opacity,scale,filter] duration-300 ease-[cubic-bezier(0.2,0,0,1)] group-data-paused:scale-[0.25] group-data-paused:opacity-0 group-data-paused:blur-[4px]"
+          class="size-4 transition-[opacity,scale,filter] duration-200 ease-out-strong group-data-paused:scale-50 group-data-paused:opacity-0 group-data-paused:blur-[4px]"
           fill="none"
           stroke="currentColor"
           stroke-linecap="round"
@@ -303,7 +303,7 @@ const interactiveRoutes = [
         </svg>
         <svg
           aria-hidden="true"
-          class="absolute inset-0 size-4 translate-x-[2px] scale-[0.25] opacity-0 blur-[4px] transition-[opacity,scale,filter] duration-300 ease-[cubic-bezier(0.2,0,0,1)] group-data-paused:scale-100 group-data-paused:opacity-100 group-data-paused:blur-0"
+          class="absolute inset-0 size-4 translate-x-[2px] scale-50 opacity-0 blur-[4px] transition-[opacity,scale,filter] duration-200 ease-out-strong group-data-paused:scale-100 group-data-paused:opacity-100 group-data-paused:blur-0"
           fill="currentColor"
           viewBox="0 0 24 24"
         >
@@ -555,7 +555,10 @@ const interactiveRoutes = [
     while (body.childElementCount > MAX_TERMINAL_LINES) {
       body.firstElementChild?.remove()
     }
-    body.scrollTop = body.scrollHeight
+    body.scrollTo({
+      behavior: reduceMotion ? 'instant' : 'smooth',
+      top: body.scrollHeight
+    })
     if (statusRegion) {
       statusRegion.textContent = `${template.dataset.method} ${template.dataset.path} responded ${template.dataset.status} in ${durationText}`
     }

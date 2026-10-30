@@ -30,14 +30,14 @@ const inverse = tone === 'inverse'
     aria-label="Copy command"
     type="button"
     class:list={[
-      'group grid size-11 shrink-0 cursor-pointer place-items-center rounded-[2px] text-ink transition-transform duration-150 ease-out [-webkit-tap-highlight-color:transparent] active:scale-[0.97] motion-reduce:transition-none',
+      'group grid size-11 shrink-0 cursor-pointer place-items-center rounded-[2px] text-ink transition-transform duration-150 ease-out-strong [-webkit-tap-highlight-color:transparent] active:scale-[0.97] motion-reduce:transition-none',
       inverse ? 'bg-panel-foreground hover:bg-white' : 'bg-signal hover:brightness-95'
     ]}
   >
     <span class="relative size-4">
       <svg
         aria-hidden="true"
-        class="size-4 transition-[opacity,scale,filter] duration-300 ease-[cubic-bezier(0.2,0,0,1)] group-data-copied:scale-[0.25] group-data-copied:opacity-0 group-data-copied:blur-[4px]"
+        class="size-4 transition-[opacity,scale,filter] duration-200 ease-out-strong group-data-copied:scale-50 group-data-copied:opacity-0 group-data-copied:blur-[4px]"
         fill="none"
         stroke="currentColor"
         stroke-linecap="round"
@@ -50,7 +50,7 @@ const inverse = tone === 'inverse'
       </svg>
       <svg
         aria-hidden="true"
-        class="absolute inset-0 size-4 scale-[0.25] opacity-0 blur-[4px] transition-[opacity,scale,filter] duration-300 ease-[cubic-bezier(0.2,0,0,1)] group-data-copied:scale-100 group-data-copied:opacity-100 group-data-copied:blur-0"
+        class="absolute inset-0 size-4 scale-50 opacity-0 blur-[4px] transition-[opacity,scale,filter] duration-200 ease-out-strong group-data-copied:scale-100 group-data-copied:opacity-100 group-data-copied:blur-0"
         fill="none"
         stroke="currentColor"
         stroke-linecap="round"
