@@ -23,6 +23,31 @@ describe('resolveOptions', () => {
     expect(resolved.config?.showStartupMessage).toBe(true)
   })
 
+  test('undefined config keys keep the preset value', () => {
+    const resolved = resolveOptions({
+      config: { autoRedact: undefined, requestId: undefined },
+      preset: 'prod'
+    })
+
+    expect(resolved.config?.autoRedact).toBe(true)
+    expect(resolved.config?.requestId).toBe(true)
+  })
+
+  test('undefined config keys no preset defines stay absent', () => {
+    const resolved = resolveOptions({
+      config: { logFilePath: undefined },
+      preset: 'dev'
+    })
+
+    expect(Object.keys(resolved.config ?? {})).not.toContain('logFilePath')
+  })
+
+  test('without a preset the config is returned as given', () => {
+    const resolved = resolveOptions({ config: { autoRedact: undefined } })
+
+    expect(resolved.config?.autoRedact).toBeUndefined()
+  })
+
   test('dev preset enables pretty print', () => {
     const resolved = resolveOptions({ preset: 'dev' })
 

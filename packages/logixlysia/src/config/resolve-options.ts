@@ -232,7 +232,10 @@ const mergeConfig = (
     return base
   }
 
-  const merged: NonNullable<Options['config']> = { ...base, ...override }
+  const defined = Object.fromEntries(
+    Object.entries(override).filter(([, value]) => value !== undefined)
+  ) as NonNullable<Options['config']>
+  const merged: NonNullable<Options['config']> = { ...base, ...defined }
 
   if (base.pino || override.pino) {
     merged.pino = {
