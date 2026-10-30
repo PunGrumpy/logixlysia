@@ -169,7 +169,8 @@ export const toUnixNanos = (date: Date): string =>
 const sleep = (ms: number): Promise<void> => {
   const { promise, resolve }: PromiseWithResolvers<void> =
     Promise.withResolvers()
-  setTimeout(resolve, ms)
+  const timer = setTimeout(resolve, ms)
+  timer.unref?.()
   return promise
 }
 
