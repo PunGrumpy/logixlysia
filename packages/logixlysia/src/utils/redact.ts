@@ -73,11 +73,20 @@ const normalizeKeyName = (key: string): string =>
     .toLowerCase()
 
 const SENSITIVE_KEY_PARTS: ReadonlySet<string> = new Set([
+  'authorization',
+  'jwt',
   'passwd',
   'password',
   'secret'
 ])
 const SENSITIVE_LAST_KEY_PART = 'token'
+const KEY_PART = 'key'
+const SENSITIVE_KEY_QUALIFIERS: ReadonlySet<string> = new Set([
+  'access',
+  'api',
+  'private',
+  'signing'
+])
 
 export const isSensitiveKey = (
   key: string,
@@ -91,9 +100,16 @@ export const isSensitiveKey = (
     return true
   }
   const parts = normalized.split('-')
+  const lastPart = parts.at(-1)
+  const qualifier = parts.at(-2)
+  const endsInQualifiedKey =
+    lastPart === KEY_PART &&
+    qualifier !== undefined &&
+    SENSITIVE_KEY_QUALIFIERS.has(qualifier)
   return (
     parts.some(part => SENSITIVE_KEY_PARTS.has(part)) ||
-    parts.at(-1) === SENSITIVE_LAST_KEY_PART
+    lastPart === SENSITIVE_LAST_KEY_PART ||
+    endsInQualifiedKey
   )
 }
 
@@ -443,7 +459,7 @@ const walker = {
     } catch {
       return UNSERIALIZABLE_TEXT
     }
-    let result: Record<string, unknown> | undefined
+    let entries: [string, unknown][] | undefined
 
     for (const [index, key] of keys.entries()) {
       let original: unknown
@@ -462,20 +478,20 @@ const walker = {
       }
 
       if (
-        result === undefined &&
+        entries === undefined &&
         (sensitive || unreadable || redacted !== original)
       ) {
-        result = {}
-        for (const priorKey of keys.slice(0, index)) {
-          result[priorKey] = recordValue[priorKey]
-        }
+        entries = keys
+          .slice(0, index)
+          .map((priorKey): [string, unknown] => [
+            priorKey,
+            recordValue[priorKey]
+          ])
       }
-      if (result !== undefined) {
-        result[key] = redacted
-      }
+      entries?.push([key, redacted])
     }
 
-    return result ?? recordValue
+    return entries ? Object.fromEntries(entries) : recordValue
   },
 
   set: (

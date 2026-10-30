@@ -88,7 +88,7 @@ describe('createLogger', () => {
       | Record<string, unknown>
       | undefined
     const reqMeta = meta?.request as { url?: string } | undefined
-    expect(reqMeta?.url).toContain('%5BREDACTED%5D')
+    expect(reqMeta?.url).toContain('jwt=redacted')
     expect(reqMeta?.url).not.toContain(sampleJwt)
 
     await sleep(0)

@@ -15,6 +15,22 @@ describe('request context store', () => {
     expect(store.getContext(request)).toEqual({ plan: 'pro', userId: 'u1' })
   })
 
+  test('mergeContext keeps an own __proto__ key as a key', () => {
+    const store = createRequestContextStore()
+    const request = new Request('http://localhost/')
+
+    store.mergeContext(
+      request,
+      JSON.parse('{"__proto__":{"isAdmin":true},"plan":"pro"}')
+    )
+    const ctx = store.getContext(request)
+
+    expect(ctx.plan).toBe('pro')
+    expect('isAdmin' in ctx).toBe(false)
+    expect(Object.hasOwn(ctx, '__proto__')).toBe(true)
+    expect(({} as Record<string, unknown>).isAdmin).toBeUndefined()
+  })
+
   test('clearContext removes accumulated fields', () => {
     const store = createRequestContextStore()
     const request = new Request('http://localhost/')
