@@ -3,7 +3,7 @@ title: Pino
 description: High-performance structured logging with Pino
 ---
 
-Logixlysia can integrate with [Pino](https://github.com/pinojs/pino), a high-performance JSON-first logging library, as an optional logging backend.
+Logixlysia exposes a [Pino](https://github.com/pinojs/pino) instance as `store.pino` for your application's own structured logs. Pino is a high-performance, JSON-first logging library. The plugin's request lines are written by its own logger, not by Pino.
 
 ## Why Pino?
 

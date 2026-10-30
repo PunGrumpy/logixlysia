@@ -53,7 +53,7 @@ app.listen(3000)
 - **Enrichers**: add trace, user agent, geo, and size fields to every request. [Docs](https://logixlysia.vercel.app/docs/features/enrichers)
 - **Redaction**: `autoRedact` masks PII by pattern; `logixlysia/desertant` adds neural redaction. [Config docs](https://logixlysia.vercel.app/docs/configuration#autoredact), [Neural redaction docs](https://logixlysia.vercel.app/docs/integrations/desertant)
 - **Structured errors**: `HttpError` carries `why`, `fix`, and `link`. [Docs](https://logixlysia.vercel.app/docs/api-reference)
-- **Request IDs**: read from the incoming request or generated for every request. [Docs](https://logixlysia.vercel.app/docs/features/request-id)
+- **Request IDs**: read from the incoming request or generated, when `requestId` is on (the `prod` preset turns it on). [Docs](https://logixlysia.vercel.app/docs/features/request-id)
 - **OpenTelemetry**: trace correlation and AI usage metrics on the access log. [Docs](https://logixlysia.vercel.app/docs/integrations/otel)
 - **WebSocket logging**: lifecycle logs via `wrapWs`. [Docs](https://logixlysia.vercel.app/docs/features/websocket)
 

@@ -72,13 +72,13 @@ Every ` ```ts ` block in `apps/docs/content` is compiled against `packages/logix
 ## Running Tests
 
 ```bash
-bun test
+cd packages/logixlysia && bun test
 ```
 
 Watch mode:
 
 ```bash
-bun test --watch
+cd packages/logixlysia && bun test --watch
 ```
 
 ## Code Style
@@ -90,15 +90,15 @@ bun test --watch
 
 ## Changesets
 
-We use [Changesets](https://github.com/changesets/changesets) to manage versions and changelogs. If your change affects the published `logixlysia` package, create a changeset before opening your pull request:
+We use [Changesets](https://github.com/changesets/changesets) to manage versions and changelogs. Any change under `packages/logixlysia/` needs a changeset. Create one before opening your pull request, as a file named `.changeset/<slug>.md` with `'logixlysia': patch` or `'logixlysia': minor`:
 
 1. Run `bun changeset` in the repository root
 2. Select the packages you've changed
-3. Choose the appropriate version bump (`patch`, `minor`, or `major`)
+3. Choose the version bump (`patch` or `minor`)
 4. Write a clear description of your changes — it will appear in the changelog
 5. Commit the generated file in `.changeset/` along with your changes
 
-Docs-only or internal changes (no effect on the published package) don't need a changeset.
+Run the lint, format, typecheck, test and build commands listed in [CONTRIBUTING.md](https://github.com/PunGrumpy/logixlysia/blob/main/.github/CONTRIBUTING.md#verify-your-work) before you push.
 
 ## Preview Releases
 

@@ -219,7 +219,7 @@ service: 'my-api'
 
 ### `slowThreshold`
 
-Duration threshold (ms) for **green** duration text when colors are enabled. Between this value and `verySlowThreshold`, duration is **yellow**.
+Duration threshold (ms) for **green** duration text when colors are enabled. Between this value and `verySlowThreshold`, duration is **yellow**. Must be a finite number at or above 0, and `slowThreshold` must not exceed `verySlowThreshold`; otherwise startup throws `logixlysia: invalid formatting config`.
 
 - **Type:** `number`
 - **Default:** `500`
@@ -230,7 +230,7 @@ slowThreshold: 500
 
 ### `verySlowThreshold`
 
-Duration threshold (ms) at or above which duration is **red** (bold when colors are on) and the `{speed}` token adds `⚡ slow`.
+Duration threshold (ms) at or above which duration is **red** (bold when colors are on) and the `{speed}` token adds `⚡ slow`. Must be a finite number at or above 0, and `slowThreshold` must not exceed `verySlowThreshold`; otherwise startup throws `logixlysia: invalid formatting config`.
 
 - **Type:** `number`
 - **Default:** `1000`
@@ -522,10 +522,10 @@ Rotate when the live log file's age reaches the given interval. Evaluated on wri
 
 #### `logRotation.maxFiles`
 
-Maximum number of files or retention period.
+Maximum number of files or retention period. A number must be a positive integer; `0` or a negative value is rejected at startup.
 
 - **Type:** `number | string`
-- **Format:** Number or `'7d'`, `'30d'`
+- **Format:** Positive integer or `'7d'`, `'30d'`
 
 ```ts
 logRotation: {
