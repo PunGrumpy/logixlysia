@@ -325,12 +325,41 @@ export const withRedaction = (
     }
   }
 
-  const deliver = async (
+  const pendingDeliveries = new Set<Promise<void>>()
+
+  const track = async (
+    delivery: Promise<void>,
+    release: () => void
+  ): Promise<void> => {
+    try {
+      await delivery
+    } catch (error) {
+      report(error)
+    } finally {
+      release()
+    }
+  }
+
+  // A batching transport returns its whole send from log(); awaiting it here
+  // would stall redaction of every later record behind one network round trip.
+  const deliver = (
     level: LogLevel,
     message: string,
     meta?: Record<string, unknown>
-  ): Promise<void> => {
-    await transport.log(level, message, meta)
+  ): void => {
+    const result = transport.log(level, message, meta)
+    if (result === undefined || result === null) {
+      return
+    }
+    const tracked: Promise<void> = track(Promise.resolve(result), () => {
+      pendingDeliveries.delete(tracked)
+    })
+    pendingDeliveries.add(tracked)
+  }
+
+  const settleDeliveries = async (): Promise<void> => {
+    await queue.drain()
+    await Promise.allSettled(pendingDeliveries)
   }
 
   const redactRecord = async (
@@ -373,7 +402,7 @@ export const withRedaction = (
         report(error)
         if (onFailure === 'forward') {
           try {
-            await deliver(level, message, meta)
+            deliver(level, message, meta)
           } catch (deliveryError) {
             report(deliveryError)
           }
@@ -382,7 +411,7 @@ export const withRedaction = (
       }
 
       try {
-        await deliver(level, redacted.message, redacted.meta)
+        deliver(level, redacted.message, redacted.meta)
       } catch (error) {
         report(error)
       }
@@ -396,11 +425,11 @@ export const withRedaction = (
   return {
     close: async () => {
       closed = true
-      await queue.drain()
+      await settleDeliveries()
       await (transport as Partial<AdapterTransport>).close?.()
     },
     flush: async () => {
-      await queue.drain()
+      await settleDeliveries()
       await (transport as Partial<AdapterTransport>).flush?.()
     },
     log

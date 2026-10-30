@@ -2,6 +2,8 @@ import { describe, expect, test } from 'bun:test'
 import type { NeuralCallOptions, NeuralRedactor } from '../../src/desertant'
 import { withRedaction } from '../../src/desertant'
 import type { LogLevel, Transport } from '../../src/interfaces'
+import { sleep } from '../_helpers/sleep'
+import { waitFor } from '../_helpers/wait-for'
 
 interface Recorded {
   level: LogLevel
@@ -45,6 +47,46 @@ const createStubRedactor = (
       })
     },
     ...overrides
+  }
+}
+
+const PENDING = Symbol('pending')
+const SETTLE_WINDOW_MS = 10
+
+const settlesWithin = async (
+  promise: Promise<unknown>,
+  ms: number
+): Promise<boolean> => {
+  const outcome = await Promise.race([
+    promise.then(() => 'settled' as const),
+    sleep(ms).then(() => PENDING)
+  ])
+  return outcome !== PENDING
+}
+
+const createDeferredTransport = (): {
+  calls: string[]
+  rejectAt: (index: number, error: Error) => void
+  releaseAll: () => void
+} & Transport => {
+  const calls: string[] = []
+  const deferred: PromiseWithResolvers<void>[] = []
+  return {
+    calls,
+    log: (_level, message) => {
+      calls.push(message)
+      const entry: PromiseWithResolvers<void> = Promise.withResolvers()
+      deferred.push(entry)
+      return entry.promise
+    },
+    rejectAt: (index, error) => {
+      deferred[index]?.reject(error)
+    },
+    releaseAll: () => {
+      for (const entry of deferred) {
+        entry.resolve()
+      }
+    }
   }
 }
 
@@ -455,6 +497,81 @@ describe('logixlysia/desertant', () => {
     await transport.flush()
 
     expect(flushOrder).toEqual(['log', 'inner-flush'])
+  })
+
+  test("does not wait for the wrapped transport's delivery promise between records", async () => {
+    const inner = createDeferredTransport()
+    const transport = withRedaction(inner, createStubRedactor())
+
+    transport.log('INFO', 'one')
+    transport.log('INFO', 'two')
+    transport.log('INFO', 'three')
+    await waitFor(() => inner.calls.length === 3)
+
+    expect(inner.calls).toEqual(['one', 'two', 'three'])
+
+    const flushed = transport.flush()
+    expect(await settlesWithin(flushed, SETTLE_WINDOW_MS)).toBe(false)
+    inner.releaseAll()
+    await flushed
+  })
+
+  test('flush() waits for deliveries that are still pending', async () => {
+    const inner = createDeferredTransport()
+    const transport = withRedaction(inner, createStubRedactor())
+
+    transport.log('INFO', 'one')
+    await waitFor(() => inner.calls.length === 1)
+
+    const flushed = transport.flush()
+    expect(await settlesWithin(flushed, SETTLE_WINDOW_MS)).toBe(false)
+
+    inner.releaseAll()
+    expect(await settlesWithin(flushed, 1000)).toBe(true)
+  })
+
+  test('close() waits for pending deliveries before closing the wrapped transport', async () => {
+    const order: string[] = []
+    const inner = createDeferredTransport()
+    const transport = withRedaction(
+      {
+        ...inner,
+        close: () => {
+          order.push('close')
+        }
+      },
+      createStubRedactor()
+    )
+
+    transport.log('INFO', 'one')
+    await waitFor(() => inner.calls.length === 1)
+
+    const closed = transport.close()
+    expect(await settlesWithin(closed, SETTLE_WINDOW_MS)).toBe(false)
+    expect(order).toEqual([])
+
+    inner.releaseAll()
+    await closed
+    expect(order).toEqual(['close'])
+  })
+
+  test('reports a rejected delivery through onError and still resolves flush()', async () => {
+    const inner = createDeferredTransport()
+    const errors: unknown[] = []
+    const transport = withRedaction(inner, createStubRedactor(), {
+      onError: error => {
+        errors.push(error)
+      }
+    })
+    const failure = new Error('send failed')
+
+    transport.log('INFO', 'one')
+    await waitFor(() => inner.calls.length === 1)
+    inner.rejectAt(0, failure)
+
+    await transport.flush()
+
+    expect(errors).toEqual([failure])
   })
 
   test('skips the model for empty strings', async () => {
