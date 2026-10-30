@@ -88,7 +88,7 @@ app.log.2026-07-27-14-30-05-123-45678901234567 → app.log.2026-07-27-14-30-05-1
 
 `maxFiles` controls how many rotated files are kept:
 
-- A **number** (e.g. `10`) keeps that many most-recent rotated files, deleting older ones.
+- A **number** (e.g. `10`) keeps that many most-recent rotated files, deleting older ones. It must be a positive integer; `0` or a negative value is rejected at startup.
 - A **string** (e.g. `'7d'`) keeps rotated files younger than that age, deleting older ones.
 
 ## Example Configurations
