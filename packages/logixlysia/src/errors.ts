@@ -9,6 +9,8 @@ export interface HttpErrorPayload {
 }
 
 export interface HttpErrorInit {
+  /** The underlying error, logged with the line and never serialized into the response. */
+  cause?: unknown
   /**
    * Stable, machine-readable identifier the client can branch on, e.g.
    * `PAYMENT_DECLINED`. Unlike `message`, it is safe to depend on: rewording
@@ -48,8 +50,9 @@ const responseStatus = (status: number): number =>
  * An HTTP error carrying the context that makes a failure actionable.
  *
  * `code`, `why`, `fix`, and `link` appear in both the log and the response.
- * `internal` appears only in the log — it is non-enumerable and excluded from
- * `toJSON()`, so no serializer can leak it into a response body.
+ * `internal` and `cause` appear only in the log — `internal` is non-enumerable
+ * and both are excluded from `toJSON()`, so no serializer can leak them into a
+ * response body.
  *
  * ```ts
  * throw new HttpError(402, 'Card declined', {
@@ -80,7 +83,7 @@ export class HttpError extends Error {
   readonly why?: string
 
   constructor(status: number, message: string, init: HttpErrorInit = {}) {
-    super(message)
+    super(message, init.cause === undefined ? undefined : { cause: init.cause })
     this.status = status
     this.code = init.code
     this.fix = init.fix

@@ -324,6 +324,7 @@ class HttpError extends Error {
 }
 
 interface HttpErrorInit {
+  cause?: unknown
   code?: string
   fix?: string
   internal?: unknown
@@ -340,6 +341,7 @@ interface HttpErrorInit {
 - `fix` — what the caller should do about it
 - `link` — documentation URL for this failure
 - `internal` — **log-only** diagnostics. Non-enumerable and excluded from `toJSON()`, so no serializer can put it in a response body
+- `cause` — log-only too, rendered as `error.cause` with the `message`, `name` and structured fields of the inner error, up to three levels deep
 
 **Example:**
 

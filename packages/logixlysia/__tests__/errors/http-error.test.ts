@@ -62,6 +62,45 @@ describe('HttpError', () => {
   })
 })
 
+describe('HttpError cause', () => {
+  const INNER_MESSAGE = 'upstream socket closed'
+
+  test('stores the cause on the error', () => {
+    const inner = new Error(INNER_MESSAGE)
+    const error = new HttpError(502, 'Upstream failed', { cause: inner })
+
+    expect(error.cause).toBe(inner)
+  })
+
+  test('toJSON and JSON.stringify never carry the cause', () => {
+    const error = new HttpError(502, 'Upstream failed', {
+      cause: new Error(INNER_MESSAGE),
+      code: 'UPSTREAM_FAILED'
+    })
+
+    expect('cause' in error.toJSON()).toBe(false)
+    expect(JSON.stringify(error)).not.toContain(INNER_MESSAGE)
+  })
+
+  test('the logged error carries the normalized cause', () => {
+    const error = new HttpError(502, 'Upstream failed', {
+      cause: new Error(INNER_MESSAGE)
+    })
+
+    expect(normalizeLoggedError(error, false).error.cause).toEqual({
+      message: INNER_MESSAGE,
+      name: 'Error'
+    })
+  })
+
+  test('a bare error has no cause', () => {
+    const error = new HttpError(404, 'Not found')
+
+    expect('cause' in error).toBe(false)
+    expect('cause' in normalizeLoggedError(error, false).error).toBe(false)
+  })
+})
+
 describe('HttpError responses', () => {
   const app = new Elysia()
     .use(
