@@ -49,6 +49,7 @@ class FileSinkImpl implements FileSink {
   private handle: FileHandle | null = null
   private bytesWritten = 0
   private openedAt = 0
+  private rotationFailed = false
   private latestOptions: FileSinkOptions = {}
   private pendingBatch: PendingBatch | null = null
   // Serializes flush and rotation work per path: every batch (and the
@@ -128,7 +129,8 @@ class FileSinkImpl implements FileSink {
     const handle = await open(this.filePath, 'a', options.logFileMode ?? 0o600)
     const stat = await handle.stat()
     this.handle = handle
-    this.bytesWritten = stat.size
+    this.bytesWritten = this.rotationFailed ? 0 : stat.size
+    this.rotationFailed = false
     this.openedAt = resolveOpenedAt(stat.birthtimeMs, Date.now())
   }
 
@@ -171,6 +173,7 @@ class FileSinkImpl implements FileSink {
         options.logFileMode
       )
     } catch (error) {
+      this.rotationFailed = true
       if (options.onRotationError) {
         options.onRotationError(error)
       } else {
