@@ -26,6 +26,21 @@ test('logger.pino keeps pino default msg and err keys when none are set', () => 
   expect(error.err?.message).toBe('boom')
 })
 
+test('logger.pino keeps pino defaults when keys are explicitly undefined', () => {
+  const lines: string[] = []
+  const logger = createLogger(
+    { config: { pino: { errorKey: undefined, messageKey: undefined } } },
+    capturingFactory(lines)
+  )
+
+  logger.pino.info('hello')
+  logger.pino.error(new Error('boom'))
+
+  const [info, error] = lines.map(line => JSON.parse(line))
+  expect(info.msg).toBe('hello')
+  expect(error.err?.message).toBe('boom')
+})
+
 test('logger.pino honours custom messageKey and errorKey', () => {
   const lines: string[] = []
   const logger = createLogger(
