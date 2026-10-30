@@ -116,4 +116,5 @@ Bad sampling config throws at plugin construction rather than failing quietly at
 - `head.<LEVEL>` must be a number between `0` and `100`
 - `tail.status` and `tail.durationMs` must be non-negative numbers
 - `tail.paths` must contain non-empty strings
+- a `tail.paths` glob may use at most two single `*` in one path segment; use `**` or `?` for broader matches
 - `maxBufferedPerRequest` must be a non-negative integer

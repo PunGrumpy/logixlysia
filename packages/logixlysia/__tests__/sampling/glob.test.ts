@@ -50,6 +50,19 @@ describe('globToRegExp', () => {
     expect(() => globToRegExp('**//**')).toThrow('repeated recursive wildcards')
   })
 
+  test('rejects more than two single stars in one segment', () => {
+    expect(() => globToRegExp('/api/*-*-*.png')).toThrow('single wildcards')
+    expect(() => globToRegExp('/a/*-*/b/*-*')).not.toThrow()
+  })
+
+  test('matches a two-star segment on a long path in bounded time', () => {
+    const pattern = globToRegExp('/api/*-*.png')
+    const start = performance.now()
+    const matched = pattern.test(`/api/${'-'.repeat(2000)}`)
+    expect(matched).toBe(false)
+    expect(performance.now() - start).toBeLessThan(50)
+  })
+
   test('allows recursive wildcards separated by meaningful paths', () => {
     const pattern = globToRegExp('**/foo/**/bar')
     expect(pattern.test('a/b/foo/c/d/bar')).toBe(true)
