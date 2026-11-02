@@ -15,13 +15,13 @@ const normalizeStatusName = (value: string): string => {
   }
 
   return trimmed
-    .replace(DELIMITERS, ' ')
-    .replace(CAMEL_BOUNDARY_1, '$<before> $<after>')
-    .replace(CAMEL_BOUNDARY_2, '$<before> $<after>')
-    .replace(APOSTROPHES, '')
+    .replaceAll(DELIMITERS, ' ')
+    .replaceAll(CAMEL_BOUNDARY_1, '$<before> $<after>')
+    .replaceAll(CAMEL_BOUNDARY_2, '$<before> $<after>')
+    .replaceAll(APOSTROPHES, '')
     .toLowerCase()
-    .replace(NON_ALPHANUMERIC, ' ')
-    .replace(WHITESPACE, ' ')
+    .replaceAll(NON_ALPHANUMERIC, ' ')
+    .replaceAll(WHITESPACE, ' ')
     .trim()
 }
 

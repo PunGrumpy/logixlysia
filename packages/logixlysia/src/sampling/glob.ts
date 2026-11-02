@@ -7,7 +7,7 @@ const SINGLE_WILDCARD = /\*/gu
 const MAX_SINGLE_WILDCARDS_PER_SEGMENT = 2
 
 const escapeRegExp = (value: string): string =>
-  value.replace(REGEXP_SPECIALS, '\\$&')
+  value.replaceAll(REGEXP_SPECIALS, '\\$&')
 
 const hasRepeatedRecursiveWildcards = (pattern: string): boolean => {
   if (!REPEATED_RECURSIVE_PATTERN.test(pattern)) {
@@ -30,7 +30,9 @@ const hasRepeatedRecursiveWildcards = (pattern: string): boolean => {
 
 const hasTooManySingleWildcards = (pattern: string): boolean => {
   for (const segment of pattern.split('/')) {
-    const stars = segment.replace(RECURSIVE_WILDCARD, '').match(SINGLE_WILDCARD)
+    const stars = segment
+      .replaceAll(RECURSIVE_WILDCARD, '')
+      .match(SINGLE_WILDCARD)
     if (stars && stars.length > MAX_SINGLE_WILDCARDS_PER_SEGMENT) {
       return true
     }
