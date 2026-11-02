@@ -295,8 +295,8 @@ const log = useLogger<CheckoutFields>()
 
 ```typescript
 import { Redact } from '@desert-ant-labs/redact/native'
-import { withRedaction } from 'logixlysia/desertant'
 import { createAxiomTransport } from 'logixlysia/axiom'
+import { withRedaction } from 'logixlysia/desertant'
 
 const axiom = createAxiomTransport()
 
