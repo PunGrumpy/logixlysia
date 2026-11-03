@@ -86,6 +86,7 @@ Automatically redacts sensitive data from log messages, context objects, errors,
 1. **By key/header name** — a built-in, case-insensitive denylist (`authorization`, `cookie`, `x-api-key`, `password`, `secret`, `token`, `session`, and more) wholly redacts the value of any matching object key or request header, regardless of what the value looks like. `-`, `_`, and camelCase variants (`x-api-key`, `x_api_key`, `xApiKey`) all match.
 
    Keys ending in `api-key`, `access-key`, `private-key`, or `signing-key` under any prefix are always masked. For example, `x-goog-api-key`, `stripeApiKey`, and `accessKey` match. Keys containing an `authorization` or `jwt` part are also always masked. A bare `key` part is not sensitive, so `cache-key` and `idempotency-key` keep their values.
+
 2. **By value pattern** — emails, IP addresses, Luhn-valid payment card numbers, JWTs, the password part of a URL, and `Bearer`/`Basic` credentials are redacted wherever they appear in strings, even in fields not covered by the key denylist.
 3. **Through `toJSON`** — a value with a `toJSON` method (Bun's `CookieMap`, your own classes) is redacted as what it serializes to. Errors keep their class.
 
