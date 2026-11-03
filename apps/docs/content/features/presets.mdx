@@ -40,6 +40,20 @@ logixlysia({
 })
 ```
 
+A `config` key set to `undefined` does not override the preset. The preset value stays in effect. This lets you forward optional settings without accidentally turning off a preset default:
+
+```ts
+logixlysia({
+  preset: 'prod',
+  config: {
+    // When REDACT is unset, autoRedact stays true from the prod preset
+    autoRedact: process.env.REDACT ? true : undefined
+  }
+})
+```
+
+To turn off a preset value, set it explicitly, such as `autoRedact: false`.
+
 You can also resolve options programmatically:
 
 ```ts
