@@ -24,7 +24,7 @@
   },
   "devDependencies": {
     "@changesets/cli": "^3.0.3",
-    "oxfmt": "^0.71.0",
+    "oxfmt": "^0.75.0",
     "oxlint": "^1.90.0",
     "turbo": "^2.11.5",
     "typescript": "6.0.3",

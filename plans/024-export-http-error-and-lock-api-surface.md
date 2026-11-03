@@ -227,7 +227,8 @@ const packageRoot = join(import.meta.dir, '..', '..')
 const distReady = existsSync(join(packageRoot, 'dist', 'index.js'))
 
 type ExportEntry =
-  string | { import?: string; types?: string; default?: string }
+  | string
+  | { import?: string; types?: string; default?: string }
 
 const subpaths = Object.entries(
   packageJson.exports as Record<string, ExportEntry>
