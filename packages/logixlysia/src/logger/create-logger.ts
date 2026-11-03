@@ -693,7 +693,7 @@ export const formatLogOutput = ({
     '{status}': coloredStatus
   }
 
-  const main = format.replace(
+  const main = format.replaceAll(
     LOG_FORMAT_REGEX,
     match => tokenMap[match as FormatToken]
   )

@@ -43,7 +43,7 @@ const createStubRedactor = (
     redaction: (text: string, options?: NeuralCallOptions) => {
       calls.push({ options, text })
       return Promise.resolve({
-        redactedText: text.replace(NAME_PATTERN, '[GIVEN_NAME_1]')
+        redactedText: text.replaceAll(NAME_PATTERN, '[GIVEN_NAME_1]')
       })
     },
     ...overrides

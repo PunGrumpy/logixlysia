@@ -68,7 +68,7 @@ const CAMEL_CASE_BOUNDARY_REGEX = /(?<before>[a-z0-9])(?<after>[A-Z])/gu
 
 const normalizeKeyName = (key: string): string =>
   key
-    .replace(CAMEL_CASE_BOUNDARY_REGEX, '$<before>-$<after>')
+    .replaceAll(CAMEL_CASE_BOUNDARY_REGEX, '$<before>-$<after>')
     .replaceAll('_', '-')
     .toLowerCase()
 
@@ -155,7 +155,7 @@ const passesLuhn = (digits: string): boolean => {
 }
 
 const redactCreditCardCandidates = (text: string): string =>
-  text.replace(CREDIT_CARD_CANDIDATE_REGEX, match => {
+  text.replaceAll(CREDIT_CARD_CANDIDATE_REGEX, match => {
     const digits = match.replaceAll(/\D/gu, '')
     if (
       digits.length >= PAN_MIN_LEN &&
@@ -183,17 +183,17 @@ const endsWithUrlScheme = (text: string, end: number): boolean => {
 export const redactString = (text: string): string => {
   let result = text
 
-  result = result.replace(
+  result = result.replaceAll(
     URL_PASSWORD_REGEX,
     (match: string, prefix: string, offset: number, whole: string) =>
       endsWithUrlScheme(whole, offset) ? `${prefix}${REDACTED_TEXT}@` : match
   )
-  result = result.replace(EMAIL_REGEX, REDACTED_TEXT)
-  result = result.replace(IPV4_REGEX, REDACTED_TEXT)
-  result = result.replace(IPV6_REGEX, REDACTED_TEXT)
+  result = result.replaceAll(EMAIL_REGEX, REDACTED_TEXT)
+  result = result.replaceAll(IPV4_REGEX, REDACTED_TEXT)
+  result = result.replaceAll(IPV6_REGEX, REDACTED_TEXT)
   result = redactCreditCardCandidates(result)
-  result = result.replace(JWT_REGEX, REDACTED_TEXT)
-  result = result.replace(
+  result = result.replaceAll(JWT_REGEX, REDACTED_TEXT)
+  result = result.replaceAll(
     HTTP_CREDENTIAL_REGEX,
     (match: string, scheme: string, token: string) =>
       looksLikeCredential(token) ? `${scheme} ${REDACTED_TEXT}` : match
