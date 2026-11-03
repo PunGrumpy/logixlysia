@@ -252,7 +252,8 @@ const readNetlifyGeo = (
 
   let parsed: unknown
   try {
-    parsed = JSON.parse(atob(raw))
+    const bytes = Uint8Array.from(atob(raw), char => char.codePointAt(0) ?? 0)
+    parsed = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes))
   } catch {
     return
   }
