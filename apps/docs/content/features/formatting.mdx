@@ -132,8 +132,9 @@ Logixlysia natively supports structured errors (similar to the `evlog` pattern) 
 - `fix`: Suggests actionable remediation.
 - `link`: Provides a URL to documentation or troubleshooting help.
 - `internal`: Log-safe diagnostic metadata (e.g. error codes, non-sensitive context).
+- `cause`: The underlying error, set with `new Error(message, { cause })` or the `cause` option of `HttpError`.
 
-If a caught error contains any of these fields, they are automatically extracted and rendered under the `error.` namespace (`error.code`, `error.why`, `error.fix`, `error.link`, and `error.internal`) as individual tree branches.
+If a caught error contains any of these fields, they are automatically extracted and rendered under the `error.` namespace (`error.code`, `error.why`, `error.fix`, `error.link`, `error.internal`, and `error.cause`) as individual tree branches.
 
 > [!WARNING] Because `error.internal` is emitted verbatim to logs, it should contain only log-safe diagnostic metadata. Do not place sensitive secrets, credentials, or PII (Personally Identifiable Information) in this field.
 
@@ -159,6 +160,40 @@ Console output tree:
   ├─ error.link  https://docs.example.com/payments/declined
   └─ error.internal  {"gatewayCode":"NSF","raw":"..."}
 ```
+
+#### Error causes
+
+When you wrap a lower-level failure, pass it as `cause` to keep the original error on the log line. Logixlysia normalizes an `Error` cause the same way as the error itself, keeping its `name`, `message`, and any structured fields (`code`, `why`, `fix`, `link`, `internal`). A nested cause chain is followed up to three levels deep and cut after that. A primitive cause, such as a string, is logged as is.
+
+```ts
+app.post('/orders', async () => {
+  try {
+    await db.insert(order)
+  } catch (err) {
+    throw new Error('Could not save order', { cause: err })
+  }
+})
+```
+
+Console output tree:
+
+```
+  ├─ error  Could not save order
+  └─ error.cause  {"message":"connection reset","name":"Error"}
+```
+
+`HttpError` accepts `cause` in its init object. Like `internal`, the cause is written to the log only and is never serialized into the response body:
+
+```ts
+import { HttpError } from 'logixlysia'
+
+throw new HttpError(502, 'Upstream failed', {
+  code: 'UPSTREAM_FAILED',
+  cause: new Error('connection reset')
+})
+```
+
+See [`HttpError`](/docs/api-reference#httperror) for the full init options.
 
 Set `showContextTree: false` to disable the tree and put stringified context back on the main line via `{context}` when you include that token.
 
