@@ -189,7 +189,7 @@ import { HttpError } from 'logixlysia'
 
 throw new HttpError(502, 'Upstream failed', {
   code: 'UPSTREAM_FAILED',
-  cause: err
+  cause: new Error('connection reset')
 })
 ```
 
