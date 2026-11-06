@@ -2,7 +2,8 @@ import { describe, expect, mock, test } from 'bun:test'
 import { Elysia } from 'elysia'
 import { logixlysia } from '../../src'
 import { HttpError } from '../../src/interfaces'
-import type { Options } from '../../src/interfaces'
+import type { Options, SinkErrorContext } from '../../src/interfaces'
+import type { RequestOutcome } from '../../src/sampling'
 
 interface CapturedEvent {
   level: string
@@ -54,6 +55,15 @@ const buildApp = (
     .get('/logged-503', ({ log, status }) => {
       log.info('calling upstream')
       return status(503, 'down')
+    })
+    .get('/plan/:plan', ({ log, params }) => {
+      log.mergeContext({ plan: params.plan })
+      log.info('plan read')
+      return 'ok'
+    })
+    .get('/quiet/:plan', ({ log, params }) => {
+      log.mergeContext({ plan: params.plan })
+      return 'ok'
     })
     .get('/debug-404', ({ log, status }) => {
       log.debug('looking up the order')
@@ -183,10 +193,100 @@ describe('sampling through the plugin', () => {
   })
 })
 
+describe('tail keep predicate through the plugin', () => {
+  test('replays the records of a request whose context the predicate accepts', async () => {
+    const { events, transport } = createCaptureTransport()
+    const app = buildApp(
+      {
+        sampling: {
+          head: { INFO: 0 },
+          tail: { keep: ({ context }) => context.plan === 'enterprise' }
+        }
+      },
+      transport
+    )
+
+    await get(app, '/plan/enterprise')
+    expect(events.map(event => event.message)).toEqual(['plan read'])
+
+    await get(app, '/plan/free')
+    expect(events).toHaveLength(1)
+  })
+
+  test('hands the predicate the outcome of the finished request', async () => {
+    const { transport } = createCaptureTransport()
+    const keep = mock((_outcome: RequestOutcome) => false)
+    const app = buildApp(
+      { sampling: { head: { INFO: 0 }, tail: { keep } } },
+      transport
+    )
+
+    await get(app, '/plan/free')
+
+    const [received] = keep.mock.calls[0] ?? []
+    expect(typeof received?.durationMs).toBe('number')
+    expect(received?.pathname).toBe('/plan/free')
+    expect(received?.status).toBe(200)
+    expect(received?.context).toMatchObject({ plan: 'free' })
+  })
+
+  test('a predicate that mutates its context does not change later lines', async () => {
+    const { events, transport } = createCaptureTransport()
+    const app = buildApp(
+      {
+        sampling: {
+          head: { INFO: 0 },
+          tail: {
+            keep: ({ context }) => {
+              ;(context as Record<string, unknown>).plan = 'tampered'
+              return true
+            }
+          }
+        }
+      },
+      transport
+    )
+
+    await get(app, '/quiet/free')
+
+    expect(events).toHaveLength(1)
+    expect(events[0]?.meta.context).toMatchObject({ plan: 'free' })
+  })
+
+  test('a throwing predicate reports through onError and leaves the response alone', async () => {
+    const { events, transport } = createCaptureTransport()
+    const onError = mock((_context: SinkErrorContext) => {})
+    const app = buildApp(
+      {
+        onError,
+        sampling: {
+          head: { INFO: 0 },
+          tail: {
+            keep: () => {
+              throw new Error('bad rule')
+            }
+          }
+        }
+      },
+      transport
+    )
+
+    const response = await get(app, '/plan/free')
+
+    expect(response.status).toBe(200)
+    expect(await response.text()).toBe('ok')
+    expect(events).toHaveLength(0)
+    expect(onError.mock.calls.map(([context]) => context.sink)).toEqual([
+      'sampling'
+    ])
+  })
+})
+
 const HEAD_RATE_ERROR = /head\.INFO must be a number between 0 and 100/u
 const TAIL_STATUS_ERROR = /tail\.status must be a non-negative number/u
 const TAIL_DURATION_ERROR = /tail\.durationMs must be a non-negative number/u
 const TAIL_PATHS_ERROR = /tail\.paths must contain non-empty glob strings/u
+const TAIL_KEEP_ERROR = /tail\.keep must be a function/u
 const MAX_BUFFERED_ERROR =
   /maxBufferedPerRequest must be a non-negative integer/u
 
@@ -215,6 +315,12 @@ describe('sampling config validation', () => {
   test('rejects an empty glob', () => {
     expect(build({ sampling: { tail: { paths: [''] } } })).toThrow(
       TAIL_PATHS_ERROR
+    )
+  })
+
+  test('rejects a tail keep that is not a function', () => {
+    expect(build({ sampling: { tail: { keep: 'x' as never } } })).toThrow(
+      TAIL_KEEP_ERROR
     )
   })
 

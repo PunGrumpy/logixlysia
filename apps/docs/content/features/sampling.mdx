@@ -46,6 +46,26 @@ logixlysia({
 
 Rules are OR-ed — a single match replays the whole request, including the access log line that would otherwise have been sampled away.
 
+### Custom rules
+
+`keep` rescues on anything the handler learned. It receives `durationMs`, `pathname`, `status`, and a copy of the `context` merged into the request so far.
+
+```ts
+logixlysia({
+  config: {
+    sampling: {
+      head: { INFO: 10 },
+      tail: {
+        keep: ({ context, status }) =>
+          context.plan === 'enterprise' && status >= 400
+      }
+    }
+  }
+})
+```
+
+Like every other tail rule, `keep` does nothing without head rates. It runs after the other rules, so it is called only when none of them matched. Changing `context` inside `keep` does not change what later lines carry. A `keep` that throws is reported through `onError` with `sink: 'sampling'` and counts as no match.
+
 ### Path globs
 
 | Pattern | Matches                                      |
@@ -115,6 +135,7 @@ Bad sampling config throws at plugin construction rather than failing quietly at
 
 - `head.<LEVEL>` must be a number between `0` and `100`
 - `tail.status` and `tail.durationMs` must be non-negative numbers
+- `tail.keep` must be a function
 - `tail.paths` must contain non-empty strings
 - a `tail.paths` glob may use at most two single `*` in one path segment; use `**` or `?` for broader matches
 - `maxBufferedPerRequest` must be a non-negative integer

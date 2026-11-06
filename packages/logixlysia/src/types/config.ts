@@ -51,6 +51,15 @@ export interface LogFilter {
    * If not specified, all log levels will be allowed.
    */
   level?: LogLevel[]
+  /**
+   * Hides the access line for matching paths. `exclude` beats `include`. A
+   * status of 400 or above, a thrown error and a handler's own log lines are
+   * never hidden. Uses the globs of `sampling.tail.paths`.
+   */
+  accessLine?: {
+    exclude?: string[]
+    include?: string[]
+  }
 }
 
 /**
@@ -60,6 +69,18 @@ export interface LogFilter {
  */
 export type HeadSamplingConfig = Partial<Record<LogLevel, number>>
 
+/** How a request finished, matched against {@link TailSamplingConfig}. */
+export interface RequestOutcome {
+  /**
+   * A copy of the fields merged into the request so far. Changing it does not
+   * change what later lines carry.
+   */
+  context: Readonly<Record<string, unknown>>
+  durationMs: number
+  pathname: string
+  status: number
+}
+
 /**
  * Conditions that rescue a request's head-dropped records once its outcome is
  * known. Rules are OR-ed: any single match replays the whole request.
@@ -67,6 +88,11 @@ export type HeadSamplingConfig = Partial<Record<LogLevel, number>>
 export interface TailSamplingConfig {
   /** Rescue when the request took at least this many milliseconds. */
   durationMs?: number
+  /**
+   * Rescue when this returns `true`, for a rule the other fields cannot state.
+   * A predicate that throws is reported to `onError` and counts as no match.
+   */
+  keep?: (outcome: RequestOutcome) => boolean
   /**
    * Rescue when the request pathname matches one of these globs.
    * `**` crosses `/`, `*` and `?` do not — e.g. `/checkout/**`.
@@ -112,7 +138,14 @@ export type LogPreset = 'dev' | 'prod' | 'json'
 /** Context passed to {@link Options.config.onError} when a sink fails. */
 export interface SinkErrorContext {
   error: unknown
-  sink: 'enricher' | 'file' | 'format' | 'rotation' | 'shutdown' | 'transport'
+  sink:
+    | 'enricher'
+    | 'file'
+    | 'format'
+    | 'rotation'
+    | 'sampling'
+    | 'shutdown'
+    | 'transport'
 }
 
 export interface RequestIdConfig {

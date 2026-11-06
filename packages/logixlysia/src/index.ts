@@ -22,7 +22,12 @@ import type {
   StoreData
 } from './interfaces'
 import { createPluginLogger } from './logger'
-import { isSuppressed, reportFormatError, resolveSinks } from './logger/emit'
+import {
+  isSuppressed,
+  parseRequestUrlOnce,
+  reportFormatError,
+  resolveSinks
+} from './logger/emit'
 import {
   getOrCreateRequestId,
   resolveRequestIdConfig
@@ -34,6 +39,7 @@ import {
   raceWithTimeout,
   reportShutdownTimeout
 } from './output/shutdown'
+import { resolveAccessLineFilter } from './sampling/access-line'
 import { elapsedMs } from './utils/duration'
 import { createWsHandlerWrapper } from './websocket/wrap-ws'
 
@@ -46,6 +52,7 @@ export interface EmptyElysiaSlot {
 }
 
 const DEFAULT_STATUS = 200
+const CLIENT_ERROR_STATUS = 400
 const SERVER_ERROR_STATUS = 500
 
 /**
@@ -340,6 +347,10 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
   const enrichers = resolveEnrichers(options.config?.enrichers)
   const onSinkError = options.config?.onError
   const logFilter = options.config?.logFilter
+  const hidesAccessLinePath = resolveAccessLineFilter(logFilter?.accessLine)
+  const hidesAccessLine = (request: Request, status: number): boolean =>
+    status < CLIENT_ERROR_STATUS &&
+    hidesAccessLinePath?.(parseRequestUrlOnce(request).pathname) === true
   const sinks = resolveSinks(options.config)
 
   const emitCustomLog = (
@@ -532,7 +543,9 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
         (status >= 400 || !isStatusResponse(record.error))
       ) {
         logger.handleHttpError(request, record.error, { ...store, status })
-      } else if (!record.accessLineReplaced) {
+      } else if (
+        !(record.accessLineReplaced || hidesAccessLine(request, status))
+      ) {
         emitAccessLine(request, status, store)
       }
     } catch (failure) {
@@ -777,6 +790,7 @@ export type {
   EnricherFields,
   EnricherLike,
   EnricherResponseInput,
+  FormattingConfig,
   HeadSamplingConfig,
   LogFields,
   LogFilter,
@@ -788,9 +802,14 @@ export type {
   LogPreset,
   LogRotationConfig,
   Options,
+  OutputConfig,
   Pino,
+  PinoConfig,
+  PrettyPrintConfig,
+  RedactionConfig,
   RequestIdConfig,
   RequestScopedLogger,
+  RequestTrackingConfig,
   SamplingConfig,
   SinkErrorContext,
   StoreData,

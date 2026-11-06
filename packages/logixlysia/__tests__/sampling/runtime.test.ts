@@ -1,4 +1,5 @@
-import { describe, expect, test } from 'bun:test'
+import { describe, expect, mock, test } from 'bun:test'
+import type { SinkErrorContext } from '../../src/interfaces'
 import type { RequestOutcome } from '../../src/sampling'
 import { resolveSampling } from '../../src/sampling'
 
@@ -15,6 +16,7 @@ const rollsThenRepeatLast = (values: number[]): (() => number) => {
 }
 
 const outcome = (partial: Partial<RequestOutcome> = {}): RequestOutcome => ({
+  context: {},
   durationMs: 0,
   pathname: '/',
   status: 200,
@@ -31,6 +33,10 @@ describe('resolveSampling', () => {
 
   test('is off when only tail rules are configured', () => {
     expect(resolveSampling({ tail: { status: 400 } })).toBeUndefined()
+  })
+
+  test('is off when only a tail keep predicate is configured', () => {
+    expect(resolveSampling({ tail: { keep: () => true } })).toBeUndefined()
   })
 
   test('is on as soon as one level is thinned', () => {
@@ -211,5 +217,63 @@ describe('tail sampling', () => {
     const key = {}
     sampling?.begin(key)
     expect(sampling?.decide('INFO', key)).toBe('drop')
+  })
+})
+
+describe('tail keep predicate', () => {
+  test('rescues when the predicate returns true', () => {
+    const sampling = resolveSampling(
+      {
+        head: { INFO: 0 },
+        tail: { keep: ({ context }) => context.plan === 'enterprise' }
+      },
+      () => 0.99
+    )
+    const key = {}
+    sampling?.begin(key)
+    sampling?.buffer(key, { data: {}, durationMs: 1, level: 'INFO' })
+
+    const records =
+      sampling?.finalize(key, outcome({ context: { plan: 'enterprise' } })) ??
+      []
+
+    expect(records).toHaveLength(1)
+  })
+
+  test('does not run once an earlier rule has matched', () => {
+    const keep = mock(() => true)
+    const sampling = resolveSampling(
+      { head: { INFO: 0 }, tail: { keep, status: 400 } },
+      () => 0.99
+    )
+    const key = {}
+    sampling?.begin(key)
+
+    sampling?.finalize(key, outcome({ status: 500 }))
+
+    expect(keep).not.toHaveBeenCalled()
+  })
+
+  test('a throwing predicate counts as no match and reports to onError', () => {
+    const onError = mock((_context: SinkErrorContext) => {})
+    const failure = new Error('bad rule')
+    const sampling = resolveSampling(
+      {
+        head: { INFO: 0 },
+        tail: {
+          keep: () => {
+            throw failure
+          }
+        }
+      },
+      () => 0.99,
+      onError
+    )
+    const key = {}
+    sampling?.begin(key)
+    sampling?.buffer(key, { data: {}, durationMs: 1, level: 'INFO' })
+
+    expect(sampling?.finalize(key, outcome())).toHaveLength(0)
+    expect(onError).toHaveBeenCalledWith({ error: failure, sink: 'sampling' })
   })
 })

@@ -1,4 +1,9 @@
-import type { LogPreset, Options } from '../interfaces'
+import type {
+  LogFilter,
+  LogPreset,
+  Options,
+  SamplingConfig
+} from '../interfaces'
 import { requestIdHeaderName } from '../middleware/request-id'
 import { parseInterval, parseRetention, parseSize } from '../utils/rotation'
 
@@ -68,6 +73,28 @@ const invalidOutput = (detail: string): never => {
   throw new Error(`logixlysia: invalid output config — ${detail}`)
 }
 
+const validateTailSampling = (tail: SamplingConfig['tail']): void => {
+  if (tail?.status !== undefined && !isNonNegativeNumber(tail.status)) {
+    invalidSampling('tail.status must be a non-negative number')
+  }
+  if (tail?.durationMs !== undefined && !isNonNegativeNumber(tail.durationMs)) {
+    invalidSampling('tail.durationMs must be a non-negative number')
+  }
+  if (tail?.keep !== undefined && typeof tail.keep !== 'function') {
+    invalidSampling('tail.keep must be a function')
+  }
+  if (tail?.paths !== undefined) {
+    if (!Array.isArray(tail.paths)) {
+      invalidSampling('tail.paths must be an array')
+    }
+    if (
+      tail.paths.some(path => typeof path !== 'string' || path.length === 0)
+    ) {
+      invalidSampling('tail.paths must contain non-empty glob strings')
+    }
+  }
+}
+
 const validateSampling = (config: Options['config']): void => {
   const sampling = config?.sampling
   if (!sampling) {
@@ -85,23 +112,7 @@ const validateSampling = (config: Options['config']): void => {
     }
   }
 
-  const { tail } = sampling
-  if (tail?.status !== undefined && !isNonNegativeNumber(tail.status)) {
-    invalidSampling('tail.status must be a non-negative number')
-  }
-  if (tail?.durationMs !== undefined && !isNonNegativeNumber(tail.durationMs)) {
-    invalidSampling('tail.durationMs must be a non-negative number')
-  }
-  if (tail?.paths !== undefined) {
-    if (!Array.isArray(tail.paths)) {
-      invalidSampling('tail.paths must be an array')
-    }
-    if (
-      tail.paths.some(path => typeof path !== 'string' || path.length === 0)
-    ) {
-      invalidSampling('tail.paths must contain non-empty glob strings')
-    }
-  }
+  validateTailSampling(sampling.tail)
 
   const { maxBufferedPerRequest } = sampling
   if (
@@ -140,8 +151,7 @@ const validateFormatting = (config: Options['config']): void => {
   }
 }
 
-const validateLogFilter = (config: Options['config']): void => {
-  const level = config?.logFilter?.level
+const validateLogFilterLevel = (level: unknown): void => {
   if (level === undefined) {
     return
   }
@@ -154,6 +164,26 @@ const validateLogFilter = (config: Options['config']): void => {
       `level must be an array of DEBUG, INFO, WARNING or ERROR, got ${JSON.stringify(level)}`
     )
   }
+}
+
+const isGlobList = (value: unknown): boolean =>
+  Array.isArray(value) &&
+  value.every(entry => typeof entry === 'string' && entry.length > 0)
+
+const validateAccessLineGlobs = (accessLine: LogFilter['accessLine']): void => {
+  for (const key of ['include', 'exclude'] as const) {
+    const globs: unknown = accessLine?.[key]
+    if (globs !== undefined && !isGlobList(globs)) {
+      invalidLogFilter(
+        `accessLine.${key} must be an array of non-empty glob strings`
+      )
+    }
+  }
+}
+
+const validateLogFilter = (config: Options['config']): void => {
+  validateLogFilterLevel(config?.logFilter?.level)
+  validateAccessLineGlobs(config?.logFilter?.accessLine)
 }
 
 const validateOutput = (config: Options['config']): void => {
