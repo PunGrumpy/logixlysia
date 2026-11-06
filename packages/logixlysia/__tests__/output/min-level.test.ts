@@ -93,6 +93,15 @@ describe('transport minLevel', () => {
     await expect(transport.close()).resolves.toBeUndefined()
   })
 
+  test('an adapter rejects a minLevel that is not a level', () => {
+    expect(() =>
+      createBetterStackTransport({
+        minLevel: 'error' as never,
+        sourceToken: 'x'
+      })
+    ).toThrow(/minLevel/u)
+  })
+
   test('withRedaction forwards minLevel from the wrapped transport', () => {
     const redactor: NeuralRedactor = {
       redaction: text => Promise.resolve({ redactedText: text })

@@ -3,6 +3,8 @@ import { stringifyForLog } from '../utils/json'
 import { sanitizeLogText } from '../utils/sanitize'
 import { settle } from '../utils/settle'
 
+const LOG_LEVELS: readonly LogLevel[] = ['DEBUG', 'INFO', 'WARNING', 'ERROR']
+
 export const OTEL_SEVERITY: Record<LogLevel, number> = {
   DEBUG: 5,
   ERROR: 17,
@@ -556,6 +558,14 @@ export const createHttpTransport = (
     return value
   }
 
+  const { minLevel } = input.options
+  if (minLevel !== undefined && !LOG_LEVELS.includes(minLevel)) {
+    throw transportError(
+      input.name,
+      `minLevel must be one of ${LOG_LEVELS.join(', ')}, got ${String(minLevel)}`
+    )
+  }
+
   const maxBatchSize = positiveInteger(
     'maxBatchSize',
     input.options.maxBatchSize ?? DEFAULT_MAX_BATCH_SIZE
@@ -629,7 +639,7 @@ export const createHttpTransport = (
         timestamp: new Date()
       })
     },
-    minLevel: input.options.minLevel
+    minLevel
   }
 }
 

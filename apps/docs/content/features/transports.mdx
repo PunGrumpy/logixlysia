@@ -33,6 +33,7 @@ type Transport = {
   ) => void | Promise<void>
   flush?: () => void | Promise<void>
   close?: () => void | Promise<void>
+  minLevel?: LogLevel
 }
 
 const consoleTransport: Transport = {
