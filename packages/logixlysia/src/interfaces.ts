@@ -32,4 +32,9 @@ export type {
   EnricherLike,
   EnricherResponseInput
 } from './types/enricher'
-export type { LogFields, Logger, RequestScopedLogger } from './types/logger'
+export type {
+  DeepPartial,
+  LogFields,
+  Logger,
+  RequestScopedLogger
+} from './types/logger'

@@ -33,6 +33,7 @@ type Transport = {
   ) => void | Promise<void>
   flush?: () => void | Promise<void>
   close?: () => void | Promise<void>
+  minLevel?: LogLevel
 }
 
 const consoleTransport: Transport = {
@@ -134,6 +135,30 @@ app.use(
   })
 )
 ```
+
+## Minimum Level
+
+Set `minLevel` on a transport to send it only records at that level or louder. The levels, quietest first, are `DEBUG`, `INFO`, `WARNING` and `ERROR`. Records below it skip the transport and are not counted as dropped. A transport without `minLevel` receives every level.
+
+```ts
+import { Elysia } from 'elysia'
+import logixlysia from 'logixlysia'
+import { createAxiomTransport } from 'logixlysia/axiom'
+import { createSentryTransport } from 'logixlysia/sentry'
+
+const app = new Elysia().use(
+  logixlysia({
+    config: {
+      transports: [
+        createSentryTransport({ minLevel: 'ERROR' }),
+        createAxiomTransport()
+      ]
+    }
+  })
+)
+```
+
+A transport you write yourself takes the same field, and `withRedaction` keeps the one on the transport it wraps.
 
 ## Transport-Only Logging
 
