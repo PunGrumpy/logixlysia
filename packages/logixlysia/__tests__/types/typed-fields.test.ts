@@ -105,4 +105,28 @@ describe('typed request fields', () => {
 
     expect(contexts[0]).toMatchObject({ alsoFine: true, whatever: 1 })
   })
+
+  test('nested fields accept a partial object and reject unknown or mistyped ones', () => {
+    interface AccountFields {
+      tags: string[]
+      user: { id: string; plan: string }
+    }
+    const app = new Elysia()
+      .use(
+        logixlysia<AccountFields>({
+          config: { disableFileLogging: true, disableInternalLogger: true }
+        })
+      )
+      .get('/nested', ({ log }) => {
+        log.mergeContext({ user: { id: 'a' } })
+        log.info('seen', { user: { plan: 'pro' } })
+        // @ts-expect-error — idd is not a key of user
+        log.mergeContext({ user: { idd: 'a' } })
+        // @ts-expect-error — arrays stay whole, so the element type is checked
+        log.mergeContext({ tags: [1] })
+        return 'ok'
+      })
+
+    expect(app).toBeDefined()
+  })
 })
