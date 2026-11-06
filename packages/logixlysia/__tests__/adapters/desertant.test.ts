@@ -402,6 +402,62 @@ describe('logixlysia/desertant', () => {
     expect((errors[0] as Error).message).toContain('record dropped')
   })
 
+  test('reports a record logged after close() through onDropped', async () => {
+    const dropped: unknown[] = []
+    const transport = withRedaction(createSink(), createStubRedactor(), {
+      onDropped: info => dropped.push(info)
+    })
+
+    await transport.close()
+    transport.log('INFO', 'late')
+
+    expect(dropped).toEqual([{ count: 1, reason: 'closed' }])
+  })
+
+  test('reports a record past maxQueue through onDropped', async () => {
+    const dropped: unknown[] = []
+    const transport = withRedaction(createSink(), createStubRedactor(), {
+      maxQueue: 1,
+      onDropped: info => dropped.push(info)
+    })
+
+    transport.log('INFO', 'first')
+    transport.log('INFO', 'second')
+    await transport.flush()
+
+    expect(dropped).toEqual([{ count: 1, reason: 'queue-full' }])
+  })
+
+  test('reports a record the model rejected through onDropped', async () => {
+    const dropped: unknown[] = []
+    const transport = withRedaction(
+      createSink(),
+      { redaction: () => Promise.reject(new Error('model unavailable')) },
+      { onDropped: info => dropped.push(info) }
+    )
+
+    transport.log('INFO', 'Anna Müller')
+    await transport.flush()
+
+    expect(dropped).toEqual([{ count: 1, reason: 'redaction-failed' }])
+  })
+
+  test('does not report a forwarded record through onDropped', async () => {
+    const dropped: unknown[] = []
+    const sink = createSink()
+    const transport = withRedaction(
+      sink,
+      { redaction: () => Promise.reject(new Error('model unavailable')) },
+      { onDropped: info => dropped.push(info), onFailure: 'forward' }
+    )
+
+    transport.log('INFO', 'Anna Müller')
+    await transport.flush()
+
+    expect(sink.records).toHaveLength(1)
+    expect(dropped).toHaveLength(0)
+  })
+
   test('loads the model once, lazily, from a loader function', async () => {
     const sink = createSink()
     const redactor = createStubRedactor()

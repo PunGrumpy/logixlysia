@@ -66,6 +66,11 @@ export interface NeuralRedactionOptions {
   maxQueue?: number
   /** Neural confidence threshold, `0..1`. Deterministic recognizers always apply. */
   minimumConfidence?: number
+  /** Called with the reason each time a record is lost: `closed`, `queue-full`, or `redaction-failed`. */
+  onDropped?: (info: {
+    count: number
+    reason: 'closed' | 'queue-full' | 'redaction-failed'
+  }) => void
   /** Called when loading or redaction fails, and when a record is dropped. */
   onError?: (error: unknown) => void
   /**
@@ -306,6 +311,7 @@ export const withRedaction = (
     maxDepth = DEFAULT_MAX_DEPTH,
     maxQueue = DEFAULT_MAX_QUEUE,
     minimumConfidence,
+    onDropped,
     onError,
     onFailure = 'drop'
   } = options
@@ -322,6 +328,16 @@ export const withRedaction = (
       onError(error)
     } catch {
       // A reporting hook that throws must not take the log pipeline with it.
+    }
+  }
+
+  const notifyDropped = (
+    reason: 'closed' | 'queue-full' | 'redaction-failed'
+  ): void => {
+    try {
+      onDropped?.({ count: 1, reason })
+    } catch {
+      // A hook that throws must not take the log pipeline with it.
     }
   }
 
@@ -389,6 +405,7 @@ export const withRedaction = (
     meta?: Record<string, unknown>
   ): void => {
     if (closed) {
+      notifyDropped('closed')
       return
     }
     const accepted = queue.push(async () => {
@@ -400,12 +417,14 @@ export const withRedaction = (
         )
       } catch (error) {
         report(error)
-        if (onFailure === 'forward') {
-          try {
-            deliver(level, message, meta)
-          } catch (deliveryError) {
-            report(deliveryError)
-          }
+        if (onFailure !== 'forward') {
+          notifyDropped('redaction-failed')
+          return
+        }
+        try {
+          deliver(level, message, meta)
+        } catch (deliveryError) {
+          report(deliveryError)
         }
         return
       }
@@ -419,6 +438,7 @@ export const withRedaction = (
 
     if (!accepted) {
       report(queueFullError(maxQueue))
+      notifyDropped('queue-full')
     }
   }
 
