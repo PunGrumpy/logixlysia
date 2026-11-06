@@ -88,6 +88,23 @@ app.get('/user/:id', ({ log, params }) => {
 
 This handler logs one line, the custom one; it replaces the access line, so the console shows `200` for it even when the handler returns a 404.
 
+`log.error` also takes whatever you caught. A non-string is serialized like a thrown error, with its name, `HttpError` fields and cause:
+
+```ts
+declare function charge(): Promise<void>
+
+app.post('/pay', async ({ log }) => {
+  try {
+    await charge()
+  } catch (err) {
+    log.error(err, { step: 'payment' })
+  }
+  return { success: false }
+})
+```
+
+The line carries no status, because the handler may recover and respond with a 200.
+
 ### 2. Global Hook (`useLogger()`)
 
 Import `useLogger()` to log or merge context from deeply nested operations without prop-drilling the request context:
