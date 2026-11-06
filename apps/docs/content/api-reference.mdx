@@ -276,11 +276,12 @@ type SinkErrorContext = {
 
 ### `LogFilter`
 
-The type of `config.logFilter`, importable from `logixlysia`. Only the listed levels are logged; a missing or empty list keeps every level.
+The type of `config.logFilter`, importable from `logixlysia`. Only the listed levels are logged; a missing or empty list keeps every level. `accessLine` hides the access line of matching paths; see [Filtering](/docs/features/filtering#hiding-the-access-line-by-path).
 
 ```ts check=skip
 type LogFilter = {
   level?: LogLevel[]
+  accessLine?: { include?: string[]; exclude?: string[] }
 }
 ```
 

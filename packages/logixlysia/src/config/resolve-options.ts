@@ -1,4 +1,4 @@
-import type { LogPreset, Options } from '../interfaces'
+import type { LogFilter, LogPreset, Options } from '../interfaces'
 import { requestIdHeaderName } from '../middleware/request-id'
 import { parseInterval, parseRetention, parseSize } from '../utils/rotation'
 
@@ -140,8 +140,7 @@ const validateFormatting = (config: Options['config']): void => {
   }
 }
 
-const validateLogFilter = (config: Options['config']): void => {
-  const level = config?.logFilter?.level
+const validateLogFilterLevel = (level: unknown): void => {
   if (level === undefined) {
     return
   }
@@ -154,6 +153,26 @@ const validateLogFilter = (config: Options['config']): void => {
       `level must be an array of DEBUG, INFO, WARNING or ERROR, got ${JSON.stringify(level)}`
     )
   }
+}
+
+const isGlobList = (value: unknown): boolean =>
+  Array.isArray(value) &&
+  value.every(entry => typeof entry === 'string' && entry.length > 0)
+
+const validateAccessLineGlobs = (accessLine: LogFilter['accessLine']): void => {
+  for (const key of ['include', 'exclude'] as const) {
+    const globs: unknown = accessLine?.[key]
+    if (globs !== undefined && !isGlobList(globs)) {
+      invalidLogFilter(
+        `accessLine.${key} must be an array of non-empty glob strings`
+      )
+    }
+  }
+}
+
+const validateLogFilter = (config: Options['config']): void => {
+  validateLogFilterLevel(config?.logFilter?.level)
+  validateAccessLineGlobs(config?.logFilter?.accessLine)
 }
 
 const validateOutput = (config: Options['config']): void => {

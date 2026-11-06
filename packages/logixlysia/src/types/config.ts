@@ -51,6 +51,15 @@ export interface LogFilter {
    * If not specified, all log levels will be allowed.
    */
   level?: LogLevel[]
+  /**
+   * Hides the access line for matching paths. `exclude` beats `include`. A
+   * status of 400 or above, a thrown error and a handler's own log lines are
+   * never hidden. Uses the globs of `sampling.tail.paths`.
+   */
+  accessLine?: {
+    exclude?: string[]
+    include?: string[]
+  }
 }
 
 /**

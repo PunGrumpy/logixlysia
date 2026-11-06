@@ -5,6 +5,7 @@ const ALPHANUMERIC_PATTERN = /[a-zA-Z0-9]/u
 const RECURSIVE_WILDCARD = /\*\*/gu
 const SINGLE_WILDCARD = /\*/gu
 const MAX_SINGLE_WILDCARDS_PER_SEGMENT = 2
+const MAX_MATCHED_PATHNAME_LENGTH = 2048
 
 const escapeRegExp = (value: string): string =>
   value.replaceAll(REGEXP_SPECIALS, '\\$&')
@@ -79,3 +80,11 @@ export const globToRegExp = (pattern: string): RegExp => {
 
   return new RegExp(`^${source}$`, 'u')
 }
+
+export const isMatchablePath = (pathname: string): boolean =>
+  pathname.length <= MAX_MATCHED_PATHNAME_LENGTH
+
+export const matchesAnyGlob = (
+  globs: readonly RegExp[],
+  pathname: string
+): boolean => globs.some(glob => glob.test(pathname))

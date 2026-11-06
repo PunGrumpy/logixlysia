@@ -3,7 +3,7 @@ import type {
   SamplingConfig,
   TailSamplingConfig
 } from '../interfaces'
-import { globToRegExp } from './glob'
+import { globToRegExp, isMatchablePath, matchesAnyGlob } from './glob'
 
 const FULL_RATE = 100
 const DEFAULT_MAX_BUFFERED_PER_REQUEST = 100
@@ -73,8 +73,6 @@ const resolveTail = (
   return { durationMs: tail.durationMs, paths, status: tail.status }
 }
 
-const MAX_MATCHED_PATHNAME_LENGTH = 2048
-
 const matchesTail = (tail: ResolvedTail, outcome: RequestOutcome): boolean => {
   if (tail.status !== undefined && outcome.status >= tail.status) {
     return true
@@ -82,12 +80,12 @@ const matchesTail = (tail: ResolvedTail, outcome: RequestOutcome): boolean => {
   if (tail.durationMs !== undefined && outcome.durationMs >= tail.durationMs) {
     return true
   }
-  if (tail.paths && outcome.pathname.length <= MAX_MATCHED_PATHNAME_LENGTH) {
-    for (const path of tail.paths) {
-      if (path.test(outcome.pathname)) {
-        return true
-      }
-    }
+  if (
+    tail.paths &&
+    isMatchablePath(outcome.pathname) &&
+    matchesAnyGlob(tail.paths, outcome.pathname)
+  ) {
+    return true
   }
   return false
 }

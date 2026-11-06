@@ -417,12 +417,12 @@ disableWebSocketLogging: true
 
 ### `logFilter`
 
-Restricts which log levels get processed. See [Filtering](/docs/features/filtering).
+Restricts which log levels get processed, and hides the access line of chosen paths. See [Filtering](/docs/features/filtering).
 
-- **Type:** `{ level?: LogLevel[] }`
-- **Default:** all levels
+- **Type:** `{ level?: LogLevel[]; accessLine?: { include?: string[]; exclude?: string[] } }`
+- **Default:** all levels, every access line
 
-`level` must be an array containing only `'DEBUG'`, `'INFO'`, `'WARNING'`, or `'ERROR'`. Any other value, such as `'WARN'`, makes the plugin throw `logixlysia: invalid logFilter config` when you construct it.
+`level` must be an array containing only `'DEBUG'`, `'INFO'`, `'WARNING'`, or `'ERROR'`. Any other value, such as `'WARN'`, makes the plugin throw `logixlysia: invalid logFilter config` when you construct it. So does an `accessLine.include` or `accessLine.exclude` that is not an array of non-empty glob strings.
 
 ```ts
 logFilter: {
