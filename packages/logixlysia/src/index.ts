@@ -5,6 +5,7 @@ import {
   applyResponseEnrichers,
   resolveEnrichers
 } from './context/enrich'
+import { LINE_SETTLED } from './context/line-settled'
 import { createRequestContextStore } from './context/request-context'
 import { loggerStorage, noopRequestLogger } from './context/storage'
 import { startServer } from './extensions'
@@ -96,6 +97,8 @@ interface RequestRecord {
   accessLineReplaced: boolean
   customLogBuffered: boolean
   error?: unknown
+  /** A job's final line is always written, so a custom line never replaces it. */
+  isJob?: boolean
   phase: 'open' | 'streaming' | 'closed'
   seenByWrap: boolean
   setHeaders?: Record<string, string | number>
@@ -425,34 +428,52 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
     }
   }
 
-  const createRequestScopedLogger = (
-    request: Request
-  ): RequestScopedLogger => ({
-    debug: (message, context) =>
-      emitCustomLog('DEBUG', request, message, context),
-    error: (error, context) => {
-      if (typeof error === 'string') {
-        emitCustomLog('ERROR', request, error, context)
-        return
+  const requestLoggers = new WeakMap<Request, RequestScopedLogger>()
+
+  const getRequestScopedLogger = (request: Request): RequestScopedLogger => {
+    const existing = requestLoggers.get(request)
+    if (existing) {
+      return existing
+    }
+    const log: RequestScopedLogger = {
+      debug: (message, context) =>
+        emitCustomLog('DEBUG', request, message, context),
+      error: (error, context) => {
+        if (typeof error === 'string') {
+          emitCustomLog('ERROR', request, error, context)
+          return
+        }
+        const normalized = normalizeLoggedError(
+          error,
+          options.config?.logErrorPayload === true
+        )
+        emitCustomLog(
+          'ERROR',
+          request,
+          normalized.message,
+          context,
+          normalized.error
+        )
+      },
+      info: (message, context) =>
+        emitCustomLog('INFO', request, message, context),
+      mergeContext: partial => contextStore.mergeContext(request, partial),
+      warn: (message, context) =>
+        emitCustomLog('WARNING', request, message, context)
+    }
+    Object.defineProperty(log, LINE_SETTLED, {
+      enumerable: false,
+      value: (): boolean => {
+        const record = records.get(request)
+        return (
+          record?.phase === 'closed' ||
+          (record?.accessLineReplaced === true && record.isJob !== true)
+        )
       }
-      const normalized = normalizeLoggedError(
-        error,
-        options.config?.logErrorPayload === true
-      )
-      emitCustomLog(
-        'ERROR',
-        request,
-        normalized.message,
-        context,
-        normalized.error
-      )
-    },
-    info: (message, context) =>
-      emitCustomLog('INFO', request, message, context),
-    mergeContext: partial => contextStore.mergeContext(request, partial),
-    warn: (message, context) =>
-      emitCustomLog('WARNING', request, message, context)
-  })
+    })
+    requestLoggers.set(request, log)
+    return log
+  }
 
   const openRequestScope = (
     request: Request,
@@ -640,7 +661,7 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
       settleStream(request, record)
     }
     const runInScope = useAsyncLocalStorage
-      ? runInLoggerScope(createRequestScopedLogger(request))
+      ? runInLoggerScope(getRequestScopedLogger(request))
       : runUnscoped
     const wrapper =
       Symbol.asyncIterator in response
@@ -671,9 +692,11 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
 
   const finishJob = (
     request: Request,
+    record: RequestRecord,
     status: number,
     error?: unknown
   ): void => {
+    record.phase = 'closed'
     try {
       const store = closeRequest(request, {}, status)
       if (status >= CLIENT_ERROR_STATUS) {
@@ -696,23 +719,24 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
       )
     }
     const request = syntheticRequest('JOB', name)
-    openRecord(request)
+    const record = openRecord(request)
+    record.isJob = true
     try {
       openRequestScope(request, {})
     } catch (failure) {
       reportFormatError(failure, onSinkError)
     }
-    const log = createRequestScopedLogger(request)
+    const log = getRequestScopedLogger(request)
     let value: T
     try {
       value = await loggerStorage.run(log, () =>
         fn(log as RequestScopedLogger<TFields>)
       )
     } catch (error) {
-      finishJob(request, SERVER_ERROR_STATUS, error)
+      finishJob(request, record, SERVER_ERROR_STATUS, error)
       throw error
     }
-    finishJob(request, DEFAULT_STATUS)
+    finishJob(request, record, DEFAULT_STATUS)
     return value
   }
 
@@ -752,7 +776,7 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
         return response
       }
       return useAsyncLocalStorage
-        ? loggerStorage.run(createRequestScopedLogger(request), settle)
+        ? loggerStorage.run(getRequestScopedLogger(request), settle)
         : settle()
     }
 
@@ -770,7 +794,7 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
     .state('logger', logger)
     .state('pino', logger.pino)
     .state('beforeTime', 0n)
-    .derive(({ request }) => ({ log: createRequestScopedLogger(request) }))
+    .derive(({ request }) => ({ log: getRequestScopedLogger(request) }))
     .onStart(({ server }): void => {
       if (server) {
         startServer(server, options)
@@ -796,7 +820,7 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
       openRequestScope(request, set.headers)
 
       if (useAsyncLocalStorage && !record.seenByWrap) {
-        loggerStorage.enterWith(createRequestScopedLogger(request))
+        loggerStorage.enterWith(getRequestScopedLogger(request))
       }
     })
     .onAfterHandle(({ request, set, response }) => {
