@@ -79,6 +79,8 @@ function resolveOptions(options?: Options): Options
 
 ## Types
 
+Every config sub-type is importable from `logixlysia`, including `FormattingConfig`, `OutputConfig`, `PinoConfig`, `PrettyPrintConfig`, `RedactionConfig` and `RequestTrackingConfig`.
+
 ### `Logixlysia`
 
 Elysia instance type with Logixlysia store.
@@ -269,18 +271,26 @@ The argument of `config.onError`, importable from `logixlysia`.
 
 ```ts check=skip
 type SinkErrorContext = {
-  sink: 'transport' | 'file' | 'rotation' | 'shutdown' | 'enricher' | 'format'
+  sink:
+    | 'transport'
+    | 'file'
+    | 'rotation'
+    | 'shutdown'
+    | 'enricher'
+    | 'format'
+    | 'sampling'
   error: unknown
 }
 ```
 
 ### `LogFilter`
 
-The type of `config.logFilter`, importable from `logixlysia`. Only the listed levels are logged; a missing or empty list keeps every level.
+The type of `config.logFilter`, importable from `logixlysia`. Only the listed levels are logged; a missing or empty list keeps every level. `accessLine` hides the access line of matching paths; see [Filtering](/docs/features/filtering#hiding-the-access-line-by-path).
 
 ```ts check=skip
 type LogFilter = {
   level?: LogLevel[]
+  accessLine?: { include?: string[]; exclude?: string[] }
 }
 ```
 

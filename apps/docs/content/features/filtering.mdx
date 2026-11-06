@@ -1,9 +1,9 @@
 ---
 title: Log Filtering
-description: Filter logs by level
+description: Filter logs by level, and hide the access line by path
 ---
 
-`logFilter` restricts which log levels get processed. It has one field: `level`.
+`logFilter` restricts which log levels get processed with `level`, and hides the access line of chosen paths with `accessLine`.
 
 ## Basic usage
 
@@ -25,4 +25,28 @@ Omit `logFilter`, or omit `level`, and every level is processed.
 
 `logFilter` only drops whole levels. To keep a percentage of records instead, or to rescue slow and failed requests that would otherwise be dropped, use [sampling](/docs/features/sampling), which supports head sampling per level and tail sampling by status, duration, or path.
 
-Path-based include/exclude filtering is not currently available.
+## Hiding the access line by path
+
+A load balancer probing `/health` writes one access line per probe. `accessLine` hides the line for the paths you name.
+
+```ts
+logixlysia({
+  config: {
+    logFilter: {
+      accessLine: {
+        exclude: ['/health', '/metrics']
+      }
+    }
+  }
+})
+```
+
+`include` and `exclude` take the same globs as [`sampling.tail.paths`](/docs/features/sampling#path-globs). Precedence, in order:
+
+- A response with status `400` or above, or a thrown error, is never hidden.
+- A pathname longer than 2048 characters is never hidden.
+- `exclude` beats `include`.
+- With a non-empty `include`, a path it does not match is hidden.
+- An empty array is the same as leaving the key out.
+
+Only the access line is hidden. A handler's `log.*` lines still write and enrichers still run. Tail sampling does not bring a hidden access line back. The option has no effect on a `createLogger` instance used outside the plugin.

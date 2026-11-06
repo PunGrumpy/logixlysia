@@ -1,9 +1,12 @@
 import type {
   LogLevel,
   SamplingConfig,
+  SinkErrorContext,
   TailSamplingConfig
 } from '../interfaces'
-import { globToRegExp } from './glob'
+import type { RequestOutcome } from '../types/config'
+import { createErrorReporter } from '../utils/report'
+import { globToRegExp, isMatchablePath, matchesAnyGlob } from './glob'
 
 const FULL_RATE = 100
 const DEFAULT_MAX_BUFFERED_PER_REQUEST = 100
@@ -27,12 +30,7 @@ export interface BufferedRecord {
   level: LogLevel
 }
 
-/** How a request finished, matched against {@link TailSamplingConfig}. */
-export interface RequestOutcome {
-  durationMs: number
-  pathname: string
-  status: number
-}
+export type { RequestOutcome } from '../types/config'
 
 export interface SamplingRuntime {
   /** Marks a request as one that will reach {@link SamplingRuntime.finalize}. */
@@ -50,6 +48,7 @@ export interface SamplingRuntime {
 
 interface ResolvedTail {
   durationMs?: number
+  keep?: TailSamplingConfig['keep']
   paths?: RegExp[]
   status?: number
 }
@@ -64,32 +63,58 @@ const resolveTail = (
   const paths = tail.paths?.length ? tail.paths.map(globToRegExp) : undefined
   if (
     tail.durationMs === undefined &&
+    tail.keep === undefined &&
     tail.status === undefined &&
     paths === undefined
   ) {
     return
   }
 
-  return { durationMs: tail.durationMs, paths, status: tail.status }
+  return {
+    durationMs: tail.durationMs,
+    keep: tail.keep,
+    paths,
+    status: tail.status
+  }
 }
 
-const MAX_MATCHED_PATHNAME_LENGTH = 2048
+const reportKeepError = createErrorReporter(
+  'sampling',
+  'tail keep predicate failed'
+)
 
-const matchesTail = (tail: ResolvedTail, outcome: RequestOutcome): boolean => {
+const matchesKeep = (
+  keep: NonNullable<ResolvedTail['keep']>,
+  outcome: RequestOutcome,
+  onError: ((context: SinkErrorContext) => void) | undefined
+): boolean => {
+  try {
+    return keep(outcome) === true
+  } catch (error) {
+    reportKeepError(error, onError)
+    return false
+  }
+}
+
+const matchesTail = (
+  tail: ResolvedTail,
+  outcome: RequestOutcome,
+  onError: ((context: SinkErrorContext) => void) | undefined
+): boolean => {
   if (tail.status !== undefined && outcome.status >= tail.status) {
     return true
   }
   if (tail.durationMs !== undefined && outcome.durationMs >= tail.durationMs) {
     return true
   }
-  if (tail.paths && outcome.pathname.length <= MAX_MATCHED_PATHNAME_LENGTH) {
-    for (const path of tail.paths) {
-      if (path.test(outcome.pathname)) {
-        return true
-      }
-    }
+  if (
+    tail.paths &&
+    isMatchablePath(outcome.pathname) &&
+    matchesAnyGlob(tail.paths, outcome.pathname)
+  ) {
+    return true
   }
-  return false
+  return tail.keep !== undefined && matchesKeep(tail.keep, outcome, onError)
 }
 
 const resolveRates = (
@@ -120,7 +145,8 @@ const resolveRates = (
  */
 export const resolveSampling = (
   config?: SamplingConfig,
-  random: () => number = Math.random
+  random: () => number = Math.random,
+  onError?: (context: SinkErrorContext) => void
 ): SamplingRuntime | undefined => {
   const rates = resolveRates(config?.head)
   if (!rates) {
@@ -175,7 +201,7 @@ export const resolveSampling = (
       const bucket = buffers.get(key)
       buffers.delete(key)
 
-      if (!(tail && matchesTail(tail, outcome))) {
+      if (!(tail && matchesTail(tail, outcome, onError))) {
         return NO_RECORDS
       }
 

@@ -225,6 +225,34 @@ describe('resolveOptions', () => {
     ).toThrow('logixlysia: invalid logFilter config')
   })
 
+  test('throws when logFilter.accessLine.include is not an array', () => {
+    expect(() =>
+      resolveOptions({
+        config: { logFilter: { accessLine: { include: '/api' as never } } }
+      })
+    ).toThrow('logixlysia: invalid logFilter config')
+  })
+
+  test('throws when logFilter.accessLine.exclude holds an empty string', () => {
+    expect(() =>
+      resolveOptions({
+        config: { logFilter: { accessLine: { exclude: [''] } } }
+      })
+    ).toThrow('accessLine.exclude must be an array of non-empty glob strings')
+  })
+
+  test('accepts logFilter.accessLine globs without a level', () => {
+    const resolved = resolveOptions({
+      config: {
+        logFilter: {
+          accessLine: { exclude: ['/health'], include: ['/api/**'] }
+        }
+      }
+    })
+
+    expect(resolved.config?.logFilter?.accessLine?.exclude).toEqual(['/health'])
+  })
+
   test('accepts the four log levels in logFilter', () => {
     const resolved = resolveOptions({
       config: { logFilter: { level: ['DEBUG', 'INFO', 'WARNING', 'ERROR'] } }

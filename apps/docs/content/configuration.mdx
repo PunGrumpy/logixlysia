@@ -335,9 +335,9 @@ disableFileLogging: true
 
 ### `onError`
 
-Called when a sink (transport, file, or rotation) or an [enricher](/docs/features/enrichers) fails, and when a shutdown flush runs out of time (`sink: 'shutdown'`). `sink: 'format'` means building or printing a log record failed. The request itself is unaffected. Errors thrown by the hook itself are swallowed. When absent, failures go to stderr (rate-limited for transports, file writes, rotation, enrichers, and formatting).
+Called when a sink (transport, file, or rotation) or an [enricher](/docs/features/enrichers) fails, and when a shutdown flush runs out of time (`sink: 'shutdown'`). `sink: 'format'` means building or printing a log record failed. `sink: 'sampling'` means a `sampling.tail.keep` predicate threw. The request itself is unaffected. Errors thrown by the hook itself are swallowed. When absent, failures go to stderr (rate-limited for transports, file writes, rotation, enrichers, and formatting).
 
-- **Type:** `(context: { sink: 'transport' | 'file' | 'rotation' | 'shutdown' | 'enricher' | 'format'; error: unknown }) => void`
+- **Type:** `(context: { sink: 'transport' | 'file' | 'rotation' | 'shutdown' | 'enricher' | 'format' | 'sampling'; error: unknown }) => void`
 - **Default:** `undefined`
 
 ```ts
@@ -417,12 +417,12 @@ disableWebSocketLogging: true
 
 ### `logFilter`
 
-Restricts which log levels get processed. See [Filtering](/docs/features/filtering).
+Restricts which log levels get processed, and hides the access line of chosen paths. See [Filtering](/docs/features/filtering).
 
-- **Type:** `{ level?: LogLevel[] }`
-- **Default:** all levels
+- **Type:** `{ level?: LogLevel[]; accessLine?: { include?: string[]; exclude?: string[] } }`
+- **Default:** all levels, every access line
 
-`level` must be an array containing only `'DEBUG'`, `'INFO'`, `'WARNING'`, or `'ERROR'`. Any other value, such as `'WARN'`, makes the plugin throw `logixlysia: invalid logFilter config` when you construct it.
+`level` must be an array containing only `'DEBUG'`, `'INFO'`, `'WARNING'`, or `'ERROR'`. Any other value, such as `'WARN'`, makes the plugin throw `logixlysia: invalid logFilter config` when you construct it. So does an `accessLine.include` or `accessLine.exclude` that is not an array of non-empty glob strings.
 
 ```ts
 logFilter: {
@@ -436,7 +436,7 @@ logFilter: {
 
 Head + tail sampling. Head sampling keeps a percentage of records per level; tail sampling replays what head dropped once the finished request matches a rule. See [Sampling](/docs/features/sampling) for the full guide.
 
-- **Type:** `{ head?: Partial<Record<LogLevel, number>>; tail?: { status?: number; durationMs?: number; paths?: string[] }; maxBufferedPerRequest?: number }`
+- **Type:** `{ head?: Partial<Record<LogLevel, number>>; tail?: { status?: number; durationMs?: number; paths?: string[]; keep?: (outcome: RequestOutcome) => boolean }; maxBufferedPerRequest?: number }`
 - **Default:** `undefined` (no sampling)
 
 ```ts
