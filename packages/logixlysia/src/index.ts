@@ -41,6 +41,7 @@ import {
 } from './output/shutdown'
 import { resolveAccessLineFilter } from './sampling/access-line'
 import { elapsedMs } from './utils/duration'
+import { normalizeLoggedError } from './utils/error'
 import { syntheticRequest } from './utils/synthetic-request'
 import { createWsHandlerWrapper } from './websocket/wrap-ws'
 
@@ -369,7 +370,8 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
     level: LogLevel,
     request: Request,
     message: string,
-    context?: Record<string, unknown>
+    context?: Record<string, unknown>,
+    error?: Record<string, unknown>
   ): void => {
     if (isSuppressed(sinks, level, logFilter)) {
       return
@@ -379,7 +381,7 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
     const outcome = baseLogger.log(
       level,
       request,
-      { context, message },
+      error === undefined ? { context, message } : { context, error, message },
       { beforeTime: record.startedAt }
     )
     // Only a custom line that reaches the output stands in for the access
@@ -428,8 +430,23 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
   ): RequestScopedLogger => ({
     debug: (message, context) =>
       emitCustomLog('DEBUG', request, message, context),
-    error: (message, context) =>
-      emitCustomLog('ERROR', request, message, context),
+    error: (error, context) => {
+      if (typeof error === 'string') {
+        emitCustomLog('ERROR', request, error, context)
+        return
+      }
+      const normalized = normalizeLoggedError(
+        error,
+        options.config?.logErrorPayload === true
+      )
+      emitCustomLog(
+        'ERROR',
+        request,
+        normalized.message,
+        context,
+        normalized.error
+      )
+    },
     info: (message, context) =>
       emitCustomLog('INFO', request, message, context),
     mergeContext: partial => contextStore.mergeContext(request, partial),

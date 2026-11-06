@@ -129,4 +129,26 @@ describe('typed request fields', () => {
 
     expect(app).toBeDefined()
   })
+
+  test('error takes a caught value and keeps the context typed', () => {
+    const app = new Elysia()
+      .use(
+        logixlysia<CheckoutFields>({
+          config: { disableFileLogging: true, disableInternalLogger: true }
+        })
+      )
+      .get('/caught', ({ log }) => {
+        try {
+          return 'ok'
+        } catch (err) {
+          log.error(err)
+          log.error(err, { cartId: 'a' })
+          // @ts-expect-error — nope is not part of CheckoutFields
+          log.error(err, { nope: 1 })
+          return 'failed'
+        }
+      })
+
+    expect(app).toBeDefined()
+  })
 })
