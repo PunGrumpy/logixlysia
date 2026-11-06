@@ -41,6 +41,18 @@ const watch = async (
   }
 }
 
+const LEVEL_RANK: Record<LogLevel, number> = {
+  DEBUG: 0,
+  ERROR: 3,
+  INFO: 1,
+  WARNING: 2
+}
+
+const isBelowMinLevel = (
+  level: LogLevel,
+  minLevel: LogLevel | undefined
+): boolean => minLevel !== undefined && LEVEL_RANK[level] < LEVEL_RANK[minLevel]
+
 interface LogToTransportsInput {
   data: Record<string, unknown>
   level: LogLevel
@@ -86,6 +98,9 @@ export const logToTransports = (input: LogToTransportsInput): void => {
   }
 
   for (const transport of transports) {
+    if (isBelowMinLevel(level, transport.minLevel)) {
+      continue
+    }
     try {
       const result = transport.log(level, message, meta)
       if (result) {

@@ -3,6 +3,8 @@ import { stringifyForLog } from '../utils/json'
 import { sanitizeLogText } from '../utils/sanitize'
 import { settle } from '../utils/settle'
 
+const LOG_LEVELS: readonly LogLevel[] = ['DEBUG', 'INFO', 'WARNING', 'ERROR']
+
 export const OTEL_SEVERITY: Record<LogLevel, number> = {
   DEBUG: 5,
   ERROR: 17,
@@ -55,6 +57,11 @@ export interface BatchTransportOptions {
    * @default 32
    */
   maxPendingBatches?: number
+  /**
+   * The lowest level this transport receives; quieter records skip it and are
+   * not counted as dropped. Leave it out to receive every level.
+   */
+  minLevel?: LogLevel
   /**
    * Called with how many entries were lost and why: `queue-full` when too many
    * were already waiting, `send-failed` when a request failed after retries,
@@ -551,6 +558,14 @@ export const createHttpTransport = (
     return value
   }
 
+  const { minLevel } = input.options
+  if (minLevel !== undefined && !LOG_LEVELS.includes(minLevel)) {
+    throw transportError(
+      input.name,
+      `minLevel must be one of ${LOG_LEVELS.join(', ')}, got ${String(minLevel)}`
+    )
+  }
+
   const maxBatchSize = positiveInteger(
     'maxBatchSize',
     input.options.maxBatchSize ?? DEFAULT_MAX_BATCH_SIZE
@@ -623,7 +638,8 @@ export const createHttpTransport = (
         meta: snapshotMeta(meta ?? {}),
         timestamp: new Date()
       })
-    }
+    },
+    minLevel
   }
 }
 
