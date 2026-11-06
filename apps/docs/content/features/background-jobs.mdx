@@ -1,0 +1,78 @@
+---
+title: Background Jobs
+description: Log cron jobs, queue consumers and scripts through every sink
+---
+
+`runJob` runs a function outside a request and writes one final line for it, through transports, the file sink and redaction, the same as a request gets.
+
+```ts
+import logixlysia from 'logixlysia'
+
+const logs = logixlysia({
+  config: { service: 'billing', requestId: true }
+})
+
+await logs.runJob('nightly-sync', async log => {
+  const rows = await loadRows()
+  log.mergeContext({ rows: rows.length })
+  await pushRows(rows)
+})
+
+async function loadRows(): Promise<string[]> {
+  return ['a', 'b', 'c']
+}
+
+async function pushRows(_rows: string[]): Promise<void> {}
+```
+
+The line is labelled `JOB`, the job name is its path, and it carries the duration and the accumulated context:
+
+```text
+JOB     /nightly-sync 200 412ms
+```
+
+## Outcome
+
+- The final line is always written, even when the job logs lines of its own. A request's custom log replaces its access line; a job's does not.
+- A job that returns gets status `200`. The value `fn` returns is the value `runJob` returns.
+- A job that throws gets status `500`: logixlysia writes the error line, then rethrows the same error, so your scheduler still sees the failure.
+- An empty or non-string name rejects with a `TypeError` before `fn` runs.
+
+## Inside helpers
+
+`useLogger()` returns the job's logger anywhere under `fn`, across `await`s, without setting `useAsyncLocalStorage`. After the job settles it is a no-op again.
+
+```ts
+import { useLogger } from 'logixlysia'
+
+export const markSynced = (count: number): void => {
+  useLogger().mergeContext({ synced: count })
+}
+```
+
+## Scripts
+
+A script exits as soon as the job returns, and a batching transport has no other chance to send. End the script with `flushLogixlysia`, passing the same `options` object you gave the plugin:
+
+```ts
+import logixlysia, { flushLogixlysia } from 'logixlysia'
+import type { Options } from 'logixlysia'
+
+const options: Options = { config: { service: 'billing' } }
+const logs = logixlysia(options)
+
+await logs.runJob('backfill', log => {
+  log.mergeContext({ batch: 7 })
+})
+await flushLogixlysia(options)
+```
+
+## Sampling
+
+A successful job is head sampled like any other `INFO` line. With `sampling.head: { INFO: 0 }` it writes nothing, so give the jobs you care about a `tail.paths` rule:
+
+```ts check=skip
+sampling: { head: { INFO: 0 }, tail: { paths: ['/nightly-sync'] } }
+```
+
+A job that throws is kept by the `ERROR` line, along with the lines it buffered. See [sampling](/docs/features/sampling).

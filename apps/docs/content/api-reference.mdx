@@ -21,7 +21,7 @@ function logixlysia<TFields extends object = LogFields>(
 
 **Returns:**
 
-- `LogixlysiaPlugin<TFields>`: the Elysia plugin instance (its store carries `logger`, `pino` and `beforeTime`, and every handler receives a derived `log`) plus `wrapWs`
+- `LogixlysiaPlugin<TFields>`: the Elysia plugin instance (its store carries `logger`, `pino` and `beforeTime`, and every handler receives a derived `log`) plus `wrapWs` and `runJob`
 
 **Example:**
 
@@ -38,9 +38,22 @@ const app = new Elysia().use(
 )
 ```
 
+### `runJob`
+
+A method on the plugin instance. Runs `fn` outside a request and writes one final line for it (method `JOB`, status `200`, or `500` when `fn` throws) through every sink.
+
+```ts check=skip
+function runJob<T>(
+  name: string,
+  fn: (log: RequestScopedLogger<TFields>) => T | Promise<T>
+): Promise<T>
+```
+
+It resolves with the value `fn` returns. If `fn` throws, the error line is written and the same error is rethrown. See [Background Jobs](/docs/features/background-jobs).
+
 ### `useLogger`
 
-Returns the current request's `RequestScopedLogger`. Outside a request, or without `useAsyncLocalStorage: true`, it returns a no-op logger that writes nothing.
+Returns the current request's `RequestScopedLogger`. Outside a request, or without `useAsyncLocalStorage: true`, it returns a no-op logger that writes nothing. Inside `runJob` it returns the job's logger whatever the flag.
 
 ```ts check=skip
 function useLogger<
