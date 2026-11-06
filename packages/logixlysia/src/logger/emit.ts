@@ -149,14 +149,14 @@ const writeRecord = ({
     data,
     contextStore.peekContext(request)
   )
-  const logData =
+  const redactRules =
     config?.autoRedact === true
-      ? redact(dataWithContext, config?.redactKeys)
-      : dataWithContext
-  const logRequest =
-    config?.autoRedact === true
-      ? redactRequest(request, config?.redactKeys)
-      : request
+      ? { keys: config.redactKeys, patterns: config.redactPatterns }
+      : undefined
+  const logData = redactRules
+    ? redact(dataWithContext, redactRules)
+    : dataWithContext
+  const logRequest = redactRules ? redactRequest(request, redactRules) : request
 
   const precomputed = computePrecomputedLogParts(
     store,
