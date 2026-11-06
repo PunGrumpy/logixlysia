@@ -11,6 +11,7 @@ import { waitFor } from '../_helpers/wait-for'
 interface CapturedLine {
   ai?: Record<string, unknown>
   message: string
+  method?: string
   status?: number
 }
 
@@ -66,6 +67,8 @@ const capturingPlugin = () => {
             lines.push({
               ai: context?.ai,
               message,
+              method: (meta?.request as { method?: string } | undefined)
+                ?.method,
               status: meta?.status as number | undefined
             })
           }
@@ -191,6 +194,39 @@ describe('aiMiddleware', () => {
       inputTokens: 12,
       outputTokens: 5
     })
+  })
+
+  test('a job that logs first reports usage only on its JOB line', async () => {
+    const { lines, plugin } = capturingPlugin()
+
+    await plugin.runJob('nightly', async log => {
+      log.info('starting')
+      await generateText({ model: wrapped(log), prompt: 'x' })
+    })
+
+    expect(lines.map(line => line.message)).toEqual(['starting', ''])
+    const withUsage = lines.filter(line => line.ai !== undefined)
+    expect(withUsage).toHaveLength(1)
+    expect(withUsage[0]?.method).toBe('JOB')
+    expect(withUsage[0]?.ai).toMatchObject({ calls: 1, inputTokens: 12 })
+  })
+
+  test('a call that outlives its job writes its own line', async () => {
+    const { lines, plugin } = capturingPlugin()
+    let jobLog: RequestScopedLogger | undefined
+    await plugin.runJob('nightly', log => {
+      jobLog = log
+    })
+    if (!jobLog) {
+      throw new Error('the job never ran')
+    }
+
+    await generateText({ model: wrapped(jobLog), prompt: 'x' })
+
+    expect(lines).toHaveLength(2)
+    expect(lines[0]?.ai).toBeUndefined()
+    expect(lines[1]?.message).toBe('ai call finished')
+    expect(lines[1]?.ai).toMatchObject({ calls: 1, inputTokens: 12 })
   })
 
   test('a stream reaches the caller unchanged', async () => {

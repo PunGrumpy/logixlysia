@@ -97,6 +97,8 @@ interface RequestRecord {
   accessLineReplaced: boolean
   customLogBuffered: boolean
   error?: unknown
+  /** A job's final line is always written, so a custom line never replaces it. */
+  isJob?: boolean
   phase: 'open' | 'streaming' | 'closed'
   seenByWrap: boolean
   setHeaders?: Record<string, string | number>
@@ -457,7 +459,10 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
       enumerable: false,
       value: (): boolean => {
         const record = records.get(request)
-        return record?.phase === 'closed' || record?.accessLineReplaced === true
+        return (
+          record?.phase === 'closed' ||
+          (record?.accessLineReplaced === true && record.isJob !== true)
+        )
       }
     })
     return log
@@ -680,9 +685,11 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
 
   const finishJob = (
     request: Request,
+    record: RequestRecord,
     status: number,
     error?: unknown
   ): void => {
+    record.phase = 'closed'
     try {
       const store = closeRequest(request, {}, status)
       if (status >= CLIENT_ERROR_STATUS) {
@@ -705,7 +712,8 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
       )
     }
     const request = syntheticRequest('JOB', name)
-    openRecord(request)
+    const record = openRecord(request)
+    record.isJob = true
     try {
       openRequestScope(request, {})
     } catch (failure) {
@@ -718,10 +726,10 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
         fn(log as RequestScopedLogger<TFields>)
       )
     } catch (error) {
-      finishJob(request, SERVER_ERROR_STATUS, error)
+      finishJob(request, record, SERVER_ERROR_STATUS, error)
       throw error
     }
-    finishJob(request, DEFAULT_STATUS)
+    finishJob(request, record, DEFAULT_STATUS)
     return value
   }
 
