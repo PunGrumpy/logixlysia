@@ -452,6 +452,7 @@ export const withRedaction = (
       await settleDeliveries()
       await (transport as Partial<AdapterTransport>).flush?.()
     },
-    log
+    log,
+    minLevel: transport.minLevel
   }
 }

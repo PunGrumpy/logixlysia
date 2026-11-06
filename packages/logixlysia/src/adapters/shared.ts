@@ -56,6 +56,11 @@ export interface BatchTransportOptions {
    */
   maxPendingBatches?: number
   /**
+   * The lowest level this transport receives; quieter records skip it and are
+   * not counted as dropped. Leave it out to receive every level.
+   */
+  minLevel?: LogLevel
+  /**
    * Called with how many entries were lost and why: `queue-full` when too many
    * were already waiting, `send-failed` when a request failed after retries,
    * `closed` for a `log()` after `close()`. Add up `count` for a running total.
@@ -623,7 +628,8 @@ export const createHttpTransport = (
         meta: snapshotMeta(meta ?? {}),
         timestamp: new Date()
       })
-    }
+    },
+    minLevel: input.options.minLevel
   }
 }
 

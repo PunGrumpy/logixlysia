@@ -23,6 +23,11 @@ export interface Transport {
     message: string,
     meta?: Record<string, unknown>
   ) => void | Promise<void>
+  /**
+   * The lowest level this transport receives; quieter records skip it and are
+   * not counted as dropped. Leave it out to receive every level.
+   */
+  minLevel?: LogLevel
 }
 
 export interface LogRotationConfig {
