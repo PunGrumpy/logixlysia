@@ -101,10 +101,14 @@ export interface AdapterTransport extends Transport {
   flush: () => Promise<void>
 }
 
+/** One record, as the transport received it. */
 export interface LogEntry {
   level: LogLevel
+  /** Empty for an access line; `entryText` names it from `meta`. */
   message: string
+  /** A plain JSON copy of what was logged, taken when `log` was called. */
   meta: Record<string, unknown>
+  /** When the transport received the record. */
   timestamp: Date
 }
 
@@ -509,13 +513,30 @@ export const createBatchQueue = (input: {
 }
 
 export interface HttpTransportInput {
+  /**
+   * Turns one batch into the request body. It runs once per request, and a
+   * throw fails that request and reports its entries as `send-failed`.
+   */
   body: (entries: LogEntry[]) => string
+  /** Sent with every request, for example `Content-Type` and credentials. */
   headers: Record<string, string>
+  /** Labels this transport in error messages. */
   name: string
+  /**
+   * Batching, retry, timeout, queue and `minLevel` settings. Pass the options
+   * your caller gave you straight through.
+   */
   options: BatchTransportOptions
+  /** Where each batch is POSTed. Must be an `http:` or `https:` URL. */
   url: string
 }
 
+/**
+ * Builds a transport that POSTs batches of log entries to `url`, with the same
+ * batching, retry with backoff, bounded queue, `onDropped`, `flush` and
+ * `close` that the built-in adapters have. Invalid options or an invalid URL
+ * throw when the transport is created.
+ */
 export const createHttpTransport = (
   input: HttpTransportInput
 ): AdapterTransport => {
@@ -719,6 +740,10 @@ export const getPath = (
   return current
 }
 
+/**
+ * A one-line text for an entry: its message, or `METHOD /path` for an access
+ * line, which has no message. Falls back to the level when neither exists.
+ */
 export const defaultBody = (entry: LogEntry): string => {
   if (entry.message) {
     return entry.message

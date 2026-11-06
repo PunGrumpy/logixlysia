@@ -41,6 +41,10 @@ exports[`published API surface every exports subpath resolves and its named expo
     "traceparentEnricher",
     "userAgentEnricher",
   ],
+  "./http": [
+    "createHttpTransport",
+    "entryText",
+  ],
   "./hyperdx": [
     "createHyperDXTransport",
   ],

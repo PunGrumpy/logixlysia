@@ -249,24 +249,29 @@ logixlysia({
 ### Elasticsearch Transport
 
 ```ts
-const elasticsearchTransport = {
-  log: async (level, message, meta) => {
-    try {
-      await fetch('http://elasticsearch:9200/logs/_doc', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          level,
-          message,
-          ...meta,
-          timestamp: new Date().toISOString()
-        })
-      })
-    } catch (err) {
-      console.error('Elasticsearch transport error', err)
-    }
-  }
-}
+import logixlysia from 'logixlysia'
+import { createHttpTransport, entryText } from 'logixlysia/http'
+
+const elasticsearchTransport = createHttpTransport({
+  name: 'elasticsearch',
+  url: 'http://elasticsearch:9200/logs/_bulk',
+  headers: { 'Content-Type': 'application/x-ndjson' },
+  options: { maxBatchSize: 100, onError: console.error },
+  body: entries =>
+    entries
+      .map(entry =>
+        [
+          JSON.stringify({ index: {} }),
+          JSON.stringify({
+            ...entry.meta,
+            level: entry.level,
+            message: entryText(entry),
+            '@timestamp': entry.timestamp.toISOString()
+          })
+        ].join('\n')
+      )
+      .join('\n') + '\n'
+})
 
 app.use(
   logixlysia({
