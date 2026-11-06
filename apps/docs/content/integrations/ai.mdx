@@ -50,7 +50,6 @@ A returned `Response` writes its access line before the stream ends, and a custo
 ## Limits
 
 - A stream that ends without a finish chunk, or whose model fails mid-way, records nothing, because the final usage never arrives.
-- Use one logger object per request, `log` or `useLogger()`. Totals are per object, so mixing the two splits them.
 - In a handler, `useLogger()` needs `useAsyncLocalStorage: true`. Without it `useLogger()` returns a no-op logger and nothing is recorded.
 - Tested against `ai` 7.
 

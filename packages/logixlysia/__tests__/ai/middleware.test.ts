@@ -3,7 +3,7 @@ import { generateText, streamText, wrapLanguageModel } from 'ai'
 import type { LanguageModelMiddleware } from 'ai'
 import { MockLanguageModelV4, simulateReadableStream } from 'ai/test'
 import { Elysia } from 'elysia'
-import { logixlysia } from '../../src'
+import { logixlysia, useLogger } from '../../src'
 import { aiMiddleware, mergeAIMetrics } from '../../src/ai'
 import type { RequestScopedLogger } from '../../src/interfaces'
 import { waitFor } from '../_helpers/wait-for'
@@ -54,7 +54,7 @@ const mockModel = (): MockLanguageModelV4 =>
 const wrapped = (log: RequestScopedLogger, model = mockModel()) =>
   wrapLanguageModel({ middleware: aiMiddleware(log), model })
 
-const capturingPlugin = () => {
+const capturingPlugin = (useAsyncLocalStorage = false) => {
   const lines: CapturedLine[] = []
   const plugin = logixlysia({
     config: {
@@ -74,6 +74,7 @@ const capturingPlugin = () => {
           }
         }
       ],
+      useAsyncLocalStorage,
       useTransportsOnly: true
     }
   })
@@ -130,6 +131,20 @@ describe('aiMiddleware', () => {
       outputTokens: 10,
       totalTokens: 34
     })
+  })
+
+  test('calls through log and useLogger count together', async () => {
+    const { lines, plugin } = capturingPlugin(true)
+    const app = new Elysia().use(plugin).post('/', async ({ log }) => {
+      await generateText({ model: wrapped(log), prompt: 'x' })
+      await generateText({ model: wrapped(useLogger()), prompt: 'y' })
+      return 'ok'
+    })
+
+    await app.handle(post('/'))
+
+    expect(lines).toHaveLength(1)
+    expect(lines[0]?.ai).toMatchObject({ calls: 2, inputTokens: 24 })
   })
 
   test('a generator route lands on the access line', async () => {

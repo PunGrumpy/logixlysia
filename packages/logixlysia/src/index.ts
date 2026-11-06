@@ -428,7 +428,13 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
     }
   }
 
-  const createRequestScopedLogger = (request: Request): RequestScopedLogger => {
+  const requestLoggers = new WeakMap<Request, RequestScopedLogger>()
+
+  const getRequestScopedLogger = (request: Request): RequestScopedLogger => {
+    const existing = requestLoggers.get(request)
+    if (existing) {
+      return existing
+    }
     const log: RequestScopedLogger = {
       debug: (message, context) =>
         emitCustomLog('DEBUG', request, message, context),
@@ -465,6 +471,7 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
         )
       }
     })
+    requestLoggers.set(request, log)
     return log
   }
 
@@ -654,7 +661,7 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
       settleStream(request, record)
     }
     const runInScope = useAsyncLocalStorage
-      ? runInLoggerScope(createRequestScopedLogger(request))
+      ? runInLoggerScope(getRequestScopedLogger(request))
       : runUnscoped
     const wrapper =
       Symbol.asyncIterator in response
@@ -719,7 +726,7 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
     } catch (failure) {
       reportFormatError(failure, onSinkError)
     }
-    const log = createRequestScopedLogger(request)
+    const log = getRequestScopedLogger(request)
     let value: T
     try {
       value = await loggerStorage.run(log, () =>
@@ -769,7 +776,7 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
         return response
       }
       return useAsyncLocalStorage
-        ? loggerStorage.run(createRequestScopedLogger(request), settle)
+        ? loggerStorage.run(getRequestScopedLogger(request), settle)
         : settle()
     }
 
@@ -787,7 +794,7 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
     .state('logger', logger)
     .state('pino', logger.pino)
     .state('beforeTime', 0n)
-    .derive(({ request }) => ({ log: createRequestScopedLogger(request) }))
+    .derive(({ request }) => ({ log: getRequestScopedLogger(request) }))
     .onStart(({ server }): void => {
       if (server) {
         startServer(server, options)
@@ -813,7 +820,7 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
       openRequestScope(request, set.headers)
 
       if (useAsyncLocalStorage && !record.seenByWrap) {
-        loggerStorage.enterWith(createRequestScopedLogger(request))
+        loggerStorage.enterWith(getRequestScopedLogger(request))
       }
     })
     .onAfterHandle(({ request, set, response }) => {
