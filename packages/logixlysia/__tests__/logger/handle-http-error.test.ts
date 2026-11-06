@@ -117,6 +117,7 @@ describe('handleHttpError', () => {
     expect(errorEvent?.meta.error).toEqual({
       message: 'downstream',
       name: 'HttpError',
+      stack: expect.any(String),
       status: 503
     })
     expect(() => JSON.stringify(errorEvent?.meta)).not.toThrow()
@@ -147,7 +148,8 @@ describe('handleHttpError', () => {
     expect(metaError.message).toBe('save failed')
     expect(metaError.cause).toEqual({
       message: 'connection reset',
-      name: 'Error'
+      name: 'Error',
+      stack: expect.any(String)
     })
   })
 
@@ -181,15 +183,22 @@ describe('handleHttpError', () => {
     expect(metaError).toEqual({
       cause: {
         cause: {
-          cause: { message: 'level 3', name: 'Error' },
+          cause: {
+            message: 'level 3',
+            name: 'Error',
+            stack: expect.any(String)
+          },
           message: 'level 2',
-          name: 'Error'
+          name: 'Error',
+          stack: expect.any(String)
         },
         message: 'level 1',
-        name: 'Error'
+        name: 'Error',
+        stack: expect.any(String)
       },
       message: 'level 0',
-      name: 'Error'
+      name: 'Error',
+      stack: expect.any(String)
     })
   })
 
