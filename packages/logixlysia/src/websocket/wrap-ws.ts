@@ -1,6 +1,7 @@
 import { keyOf } from '../context/request-context'
 import type { RequestContextStore } from '../context/request-context'
 import type { Logger, Options, StoreData } from '../interfaces'
+import { syntheticRequest } from '../utils/synthetic-request'
 
 export interface WebSocketLike {
   readonly data?: { store?: { logger?: Logger } }
@@ -22,7 +23,7 @@ const wsRequestCache = new Map<string, Request>()
 const wsSyntheticRequest = (path: string): Request => {
   let request = wsRequestCache.get(path)
   if (!request) {
-    request = new Request(`http://logixlysia.local${path}`, { method: 'WS' })
+    request = syntheticRequest('WS', path)
     wsRequestCache.set(path, request)
   }
   return request

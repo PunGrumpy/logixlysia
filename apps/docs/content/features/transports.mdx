@@ -148,6 +148,40 @@ app.use(
 )
 ```
 
+## Testing Your Logs
+
+A transport that pushes to an array lets a test assert on the lines your app writes:
+
+```ts
+import { expect, test } from 'bun:test'
+import { Elysia } from 'elysia'
+import logixlysia from 'logixlysia'
+
+test('writes one access line', async () => {
+  const lines: { level: string; message: string; meta: unknown }[] = []
+  const app = new Elysia()
+    .use(
+      logixlysia({
+        config: {
+          disableFileLogging: true,
+          disableInternalLogger: true,
+          transports: [
+            {
+              log: (level, message, meta) =>
+                void lines.push({ level, message, meta })
+            }
+          ]
+        }
+      })
+    )
+    .get('/health', () => 'ok')
+
+  await app.handle(new Request('http://localhost/health'))
+
+  expect(lines).toHaveLength(1)
+})
+```
+
 ## Best Practices
 
 - Handle transport errors gracefully

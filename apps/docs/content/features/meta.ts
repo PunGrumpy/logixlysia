@@ -9,6 +9,7 @@ export default defineMeta({
     'enrichers',
     'request-id',
     'websocket',
+    'background-jobs',
     'formatting',
     'filtering',
     'sampling',

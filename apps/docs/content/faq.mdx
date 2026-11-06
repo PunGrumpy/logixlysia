@@ -159,7 +159,21 @@ app.get('/orders/:id', ({ store, params }) => {
 
 ### How do I use the logger outside of Elysia routes (in services, background jobs, etc.)?
 
-**Use `store.pino` directly** for logging outside of HTTP request context:
+**Use `runJob`** for a unit of work such as a cron job, a queue consumer or a script. It writes one final line with the duration, the outcome and the context you accumulated, through every sink:
+
+```ts check=skip
+import logixlysia from 'logixlysia'
+
+const logs = logixlysia({ config: { service: 'billing' } })
+
+await logs.runJob('nightly-sync', async log => {
+  log.mergeContext({ rows: await syncRows() })
+})
+```
+
+See [Background Jobs](/docs/features/background-jobs) for the outcome rules, `useLogger()` inside helpers, flushing a script and sampling.
+
+**Use `store.pino`** for a free-standing line that needs no job around it. It bypasses transports, the file sink and value-pattern redaction, so nothing written to it reaches Datadog or any other transport:
 
 ```ts check=skip
 // logger.ts
@@ -192,7 +206,7 @@ export class UserService {
 
 **Why can't I use `store.logger` outside routes?**
 
-`store.logger` methods (`.info()`, `.debug()`, `.warn()`, `.error()`) require a `Request` object because they're designed specifically for HTTP request logging with context like method, pathname, IP, and duration. For general-purpose logging, use `store.pino` instead.
+`store.logger` methods (`.info()`, `.debug()`, `.warn()`, `.error()`) require a `Request` object because they're designed specifically for HTTP request logging with context like method, pathname, IP, and duration. For a unit of work use `runJob`; for a free-standing line use `store.pino`.
 
 ## File Logging
 

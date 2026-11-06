@@ -48,6 +48,7 @@
           "features/enrichers",
           "features/request-id",
           "features/websocket",
+          "features/background-jobs",
           "features/formatting",
           "features/filtering",
           "features/sampling",

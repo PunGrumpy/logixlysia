@@ -41,6 +41,7 @@ import {
 } from './output/shutdown'
 import { resolveAccessLineFilter } from './sampling/access-line'
 import { elapsedMs } from './utils/duration'
+import { syntheticRequest } from './utils/synthetic-request'
 import { createWsHandlerWrapper } from './websocket/wrap-ws'
 
 /**
@@ -257,6 +258,17 @@ export type Logixlysia<TFields extends object = LogFields> = Elysia<
 
 export type LogixlysiaPlugin<TFields extends object = LogFields> =
   Logixlysia<TFields> & {
+    /**
+     * Runs `fn` as a job outside any request and writes one final line for it
+     * (method `JOB`, status 200, or 500 when `fn` throws) through every sink,
+     * with the context accumulated by `log` or `useLogger()` inside. The
+     * line is written even when `fn` logs its own lines. An error is logged
+     * and then rethrown unchanged; otherwise the value `fn` returns is returned.
+     */
+    runJob: <T>(
+      name: string,
+      fn: (log: RequestScopedLogger<TFields>) => T | Promise<T>
+    ) => Promise<T>
     wrapWs: ReturnType<typeof createWsHandlerWrapper>
   }
 
@@ -424,6 +436,25 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
     warn: (message, context) =>
       emitCustomLog('WARNING', request, message, context)
   })
+
+  const openRequestScope = (
+    request: Request,
+    setHeaders: Record<string, string | number>
+  ): void => {
+    logger.beginRequest(request)
+    if (requestIdConfig) {
+      const requestId = getOrCreateRequestId(request, requestIdConfig)
+      contextStore.mergeContext(request, { requestId })
+      // Set at the start as well as at close: a short-circuited request
+      // never reaches the later hooks, and the wrap runs after the Response
+      // exists.
+      setHeaders[requestIdConfig.header] = requestId
+    }
+
+    if (enrichers) {
+      applyRequestEnrichers(enrichers, contextStore, request, onSinkError)
+    }
+  }
 
   /**
    * Everything the exits share once the status is known: echo the request id,
@@ -621,6 +652,53 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
     exitRequestScope()
   }
 
+  const finishJob = (
+    request: Request,
+    status: number,
+    error?: unknown
+  ): void => {
+    try {
+      const store = closeRequest(request, {}, status)
+      if (status >= CLIENT_ERROR_STATUS) {
+        logger.handleHttpError(request, error, { ...store, status })
+      } else {
+        emitAccessLine(request, status, store)
+      }
+    } catch (failure) {
+      reportFormatError(failure, onSinkError)
+    }
+  }
+
+  const runJob = async <T>(
+    name: string,
+    fn: (log: RequestScopedLogger<TFields>) => T | Promise<T>
+  ): Promise<T> => {
+    if (typeof name !== 'string' || name.length === 0) {
+      throw new TypeError(
+        "logixlysia: runJob(name, fn) expects a non-empty job name first, e.g. plugin.runJob('nightly-sync', log => {})"
+      )
+    }
+    const request = syntheticRequest('JOB', name)
+    openRecord(request)
+    try {
+      openRequestScope(request, {})
+    } catch (failure) {
+      reportFormatError(failure, onSinkError)
+    }
+    const log = createRequestScopedLogger(request)
+    let value: T
+    try {
+      value = await loggerStorage.run(log, () =>
+        fn(log as RequestScopedLogger<TFields>)
+      )
+    } catch (error) {
+      finishJob(request, SERVER_ERROR_STATUS, error)
+      throw error
+    }
+    finishJob(request, DEFAULT_STATUS)
+    return value
+  }
+
   const wrapFetch =
     (fetch: (request: Request, server: unknown) => unknown) =>
     (request: Request, server: unknown): unknown => {
@@ -698,19 +776,7 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
       const record = openRecord(request)
       record.setHeaders = set.headers
       store.beforeTime = record.startedAt
-      logger.beginRequest(request)
-      if (requestIdConfig) {
-        const requestId = getOrCreateRequestId(request, requestIdConfig)
-        contextStore.mergeContext(request, { requestId })
-        // Set at the start as well as at close: a short-circuited request
-        // never reaches the later hooks, and the wrap runs after the Response
-        // exists.
-        set.headers[requestIdConfig.header] = requestId
-      }
-
-      if (enrichers) {
-        applyRequestEnrichers(enrichers, contextStore, request, onSinkError)
-      }
+      openRequestScope(request, set.headers)
 
       if (useAsyncLocalStorage && !record.seenByWrap) {
         loggerStorage.enterWith(createRequestScopedLogger(request))
@@ -763,7 +829,7 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
     })
     .as('scoped') as Logixlysia<TFields>
 
-  return Object.assign(plugin, { wrapWs }) as LogixlysiaPlugin<TFields>
+  return Object.assign(plugin, { runJob, wrapWs }) as LogixlysiaPlugin<TFields>
 }
 
 /**
