@@ -72,6 +72,7 @@ Every adapter accepts these options on top of its platform-specific ones:
 | `retries` | `number` | `2` | Retry attempts on network errors, 429, and 5xx |
 | `maxPendingBatches` | `number` | `32` | Bound on waiting entries, as a multiple of `maxBatchSize` |
 | `onError` | `(error: unknown) => void` | — | Called when a request the adapter started on its own fails after retries, or entries are dropped |
+| `onDropped` | `(info: { count, reason }) => void` | — | Called with how many entries were lost and why |
 
 The adapter factory validates these options when you call it. An invalid value throws `[logixlysia] <adapter> transport: <option> must be ...`, naming the option and the value it received. Omitted options use their defaults and are not affected.
 
@@ -85,6 +86,21 @@ The adapter factory validates these options when you call it. An invalid value t
 For example, `retries: Infinity`, `timeout: 0`, `timeout: 1.5`, `timeout: 2 ** 31`, and `maxPendingBatches: NaN` all throw at startup. The `timeout` ceiling matches the largest delay a timer honors. Node clamps a longer timer to 1 ms, which would abort every request. `retries: 0` and `flushIntervalMs: 0` stay valid.
 
 Requests are sent one at a time, so entries arrive in the order they were logged. Under load, the entries that arrived during a send go out together in the next request, up to `maxEntriesPerRequest`, so a slow backend does not limit delivery to one batch per round trip. Once `maxPendingBatches × maxBatchSize` entries are waiting, new entries are dropped and reported rather than buffered forever. To see every failure in one place, including those of requests no caller is awaiting, forward the adapter's `onError` to the function you give [`config.onError`](/docs/features/transports): `onError: error => handle({ error, sink: 'transport' })`, where `handle` is that function.
+
+### Counting lost entries
+
+`onDropped` receives `{ count, reason }` each time entries are lost. `reason` is `'queue-full'` when too many entries were already waiting (`count` is `1`), `'send-failed'` when a request failed after its retries (`count` is the size of that batch), and `'closed'` for a `log()` after `close()` (`count` is `1`).
+
+```ts
+let lost = 0
+const transport = createDatadogTransport({
+  onDropped: ({ count }) => {
+    lost += count
+  }
+})
+```
+
+`onDropped` adds to `onError` and does not replace it. A hook that throws is ignored.
 
 Every built-in adapter transport has `close()`, which stops accepting entries and flushes the ones it already has; [`flushLogixlysia(options, { close: true })`](#graceful-shutdown) calls it (a transport wrapped in [`withRedaction`](/docs/integrations/desertant) is not closed through the wrapper yet).
 

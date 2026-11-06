@@ -103,6 +103,7 @@ logger.info(request, 'Signup', { profile: Object.fromEntries(profile) })
 | `maxDepth` | `number` | `4` | Nested levels of `meta` walked; deeper values pass through |
 | `maxQueue` | `number` | `1000` | Records allowed to await the model before new ones are dropped |
 | `minimumConfidence` | `number` | model default | Neural confidence threshold; deterministic recognizers always apply |
+| `onDropped` | `(info: { count, reason }) => void` | — | Called for each lost record, with `reason` `'closed'`, `'queue-full'`, or `'redaction-failed'` |
 | `onError` | `(error: unknown) => void` | — | Called on load failure, redaction failure, and dropped records |
 | `onFailure` | `'drop' \| 'forward'` | `'drop'` | What to do with a record the model could not process |
 

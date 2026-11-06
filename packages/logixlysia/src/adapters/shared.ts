@@ -56,6 +56,15 @@ export interface BatchTransportOptions {
    */
   maxPendingBatches?: number
   /**
+   * Called with how many entries were lost and why: `queue-full` when too many
+   * were already waiting, `send-failed` when a request failed after retries,
+   * `closed` for a `log()` after `close()`. Add up `count` for a running total.
+   */
+  onDropped?: (info: {
+    count: number
+    reason: 'closed' | 'queue-full' | 'send-failed'
+  }) => void
+  /**
    * Called when a request fails after retries, or when entries are dropped
    * because too many were already waiting. Failures of a request that a
    * `log()` or `flush()` call started are rejected to that caller instead.
@@ -347,12 +356,25 @@ const createQueueReporter = (
   }
 }
 
+const notifyDropped = (
+  onDropped: BatchTransportOptions['onDropped'],
+  count: number,
+  reason: 'closed' | 'queue-full' | 'send-failed'
+): void => {
+  try {
+    onDropped?.({ count, reason })
+  } catch {
+    // A hook that throws must not take the log pipeline with it.
+  }
+}
+
 export const createBatchQueue = (input: {
   flushIntervalMs: number
   maxBatchSize: number
   maxEntriesPerRequest?: number
   maxPendingBatches?: number
   name: string
+  onDropped?: BatchTransportOptions['onDropped']
   onError?: (error: unknown) => void
   send: (entries: LogEntry[], keepAlive: boolean) => Promise<void>
 }): BatchQueue => {
@@ -400,6 +422,7 @@ export const createBatchQueue = (input: {
       await Promise.resolve()
       await input.send(entries, !background)
     } catch (error) {
+      notifyDropped(input.onDropped, entries.length, 'send-failed')
       if (!background) {
         throw error
       }
@@ -461,6 +484,7 @@ export const createBatchQueue = (input: {
   const push = (entry: LogEntry): Promise<void> | undefined => {
     if (inFlight && buffer.length >= maxWaiting) {
       dropped += 1
+      notifyDropped(input.onDropped, 1, 'queue-full')
       return
     }
     buffer.push(entry)
@@ -566,6 +590,7 @@ export const createHttpTransport = (
     maxEntriesPerRequest,
     maxPendingBatches,
     name: input.name,
+    onDropped: input.options.onDropped,
     onError: input.options.onError,
     send: (entries, keepAlive) =>
       postWithRetry({
@@ -587,15 +612,18 @@ export const createHttpTransport = (
       await queue.flush()
     },
     flush: queue.flush,
-    log: (level, message, meta) =>
-      closed
-        ? undefined
-        : queue.push({
-            level,
-            message,
-            meta: snapshotMeta(meta ?? {}),
-            timestamp: new Date()
-          })
+    log: (level, message, meta) => {
+      if (closed) {
+        notifyDropped(input.options.onDropped, 1, 'closed')
+        return
+      }
+      return queue.push({
+        level,
+        message,
+        meta: snapshotMeta(meta ?? {}),
+        timestamp: new Date()
+      })
+    }
   }
 }
 

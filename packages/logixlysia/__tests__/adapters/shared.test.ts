@@ -13,7 +13,7 @@ import {
   snapshotMeta,
   stripTrailingSlashes
 } from '../../src/adapters/shared'
-import type { LogEntry } from '../../src/adapters/shared'
+import type { BatchTransportOptions, LogEntry } from '../../src/adapters/shared'
 import { spyConsole } from '../_helpers/console'
 import { sleep } from '../_helpers/sleep'
 import { stubFetch } from './helpers'
@@ -1383,6 +1383,174 @@ describe('createHttpTransport', () => {
           })
         ).not.toThrow()
       }
+    } finally {
+      stub.restore()
+    }
+  })
+})
+
+const transportWith = (options: BatchTransportOptions) =>
+  createHttpTransport({
+    body: entries => JSON.stringify(entries),
+    headers: {},
+    name: 'Test',
+    options: { onError: () => {}, retries: 0, ...options },
+    url: 'https://ingest.example/v1'
+  })
+
+describe('onDropped', () => {
+  interface Dropped {
+    count: number
+    reason: 'closed' | 'queue-full' | 'send-failed'
+  }
+
+  test('reports each entry that does not fit in the waiting bound', async () => {
+    const stuck = deferred()
+    const onDropped = mock((_info: Dropped) => {})
+    const queue = createBatchQueue({
+      flushIntervalMs: 60_000,
+      maxBatchSize: 1,
+      maxPendingBatches: 2,
+      name: 'Test',
+      onDropped,
+      onError: () => {},
+      send: () => stuck.promise
+    })
+
+    for (const message of ['a', 'b', 'c', 'd', 'e']) {
+      queue.push(entry({ message }))
+    }
+
+    expect(onDropped.mock.calls).toEqual([
+      [{ count: 1, reason: 'queue-full' }],
+      [{ count: 1, reason: 'queue-full' }]
+    ])
+
+    stuck.resolve()
+    await queue.flush()
+  })
+
+  test('reports the whole batch when a flush() fails', async () => {
+    const stub = stubFetch([{ status: 400 }])
+    const onDropped = mock((_info: Dropped) => {})
+    try {
+      const transport = transportWith({ maxBatchSize: 10, onDropped })
+      for (const message of ['a', 'b', 'c']) {
+        transport.log('INFO', message)
+      }
+
+      await expect(transport.flush()).rejects.toThrow('HTTP 400')
+
+      expect(onDropped.mock.calls).toEqual([
+        [{ count: 3, reason: 'send-failed' }]
+      ])
+    } finally {
+      stub.restore()
+    }
+  })
+
+  test('reports the whole batch when a background send fails', async () => {
+    const stub = stubFetch([{ status: 200 }, { status: 400 }])
+    const onDropped = mock((_info: Dropped) => {})
+    try {
+      const transport = transportWith({ maxBatchSize: 2, onDropped })
+      transport.log('INFO', 'a')
+      const first = transport.log('INFO', 'b')
+      transport.log('INFO', 'c')
+      transport.log('INFO', 'd')
+      await first
+      await transport.flush()
+
+      expect(stub.calls).toHaveLength(2)
+      expect(onDropped.mock.calls).toEqual([
+        [{ count: 2, reason: 'send-failed' }]
+      ])
+    } finally {
+      stub.restore()
+    }
+  })
+
+  test('counts add up to the entries logged across failed sends', async () => {
+    const stub = stubFetch([{ status: 400 }])
+    const dropped: Dropped[] = []
+    try {
+      const transport = transportWith({
+        maxBatchSize: 100,
+        onDropped: info => {
+          dropped.push(info)
+        }
+      })
+      const failBatch = async (size: number): Promise<number> => {
+        for (let index = 0; index < size; index += 1) {
+          transport.log('INFO', 'x')
+        }
+        await expect(transport.flush()).rejects.toThrow('HTTP 400')
+        return size
+      }
+      const logged =
+        (await failBatch(1)) +
+        (await failBatch(2)) +
+        (await failBatch(3)) +
+        (await failBatch(4)) +
+        (await failBatch(5))
+
+      expect(dropped).toHaveLength(5)
+      expect(dropped.every(info => info.reason === 'send-failed')).toBe(true)
+      expect(dropped.reduce((total, info) => total + info.count, 0)).toBe(
+        logged
+      )
+    } finally {
+      stub.restore()
+    }
+  })
+
+  test('stays silent when a retry delivers the batch', async () => {
+    const stub = stubFetch([{ status: 503 }, { status: 200 }])
+    const onDropped = mock((_info: Dropped) => {})
+    try {
+      const transport = transportWith({ onDropped, retries: 1 })
+      transport.log('INFO', 'a')
+      await transport.flush()
+
+      expect(stub.calls).toHaveLength(2)
+      expect(onDropped).not.toHaveBeenCalled()
+    } finally {
+      stub.restore()
+    }
+  })
+
+  test('reports a log() after close()', async () => {
+    const stub = stubFetch([{ status: 200 }])
+    const onDropped = mock((_info: Dropped) => {})
+    try {
+      const transport = transportWith({ onDropped })
+      await transport.close()
+      transport.log('INFO', 'late')
+
+      expect(onDropped.mock.calls).toEqual([[{ count: 1, reason: 'closed' }]])
+      expect(stub.calls).toHaveLength(0)
+    } finally {
+      stub.restore()
+    }
+  })
+
+  test('an onDropped that throws leaves the pipeline running', async () => {
+    const stub = stubFetch([{ status: 400 }, { status: 200 }])
+    const onDropped = mock((_info: Dropped) => {
+      throw new Error('hook failed')
+    })
+    try {
+      const transport = transportWith({ onDropped })
+      transport.log('INFO', 'a')
+      await expect(transport.flush()).rejects.toThrow('HTTP 400')
+
+      transport.log('INFO', 'b')
+      await expect(transport.flush()).resolves.toBeUndefined()
+
+      await transport.close()
+      expect(() => transport.log('INFO', 'late')).not.toThrow()
+      expect(onDropped).toHaveBeenCalledTimes(2)
+      expect(stub.calls).toHaveLength(2)
     } finally {
       stub.restore()
     }
