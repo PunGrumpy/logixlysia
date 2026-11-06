@@ -13,6 +13,64 @@ export interface RequestContextStore {
   peekContext: (key: ContextKey) => Readonly<Record<string, unknown>>
 }
 
+const MAX_MERGE_DEPTH = 8
+
+const isPlainObject = (value: unknown): value is Record<string, unknown> => {
+  if (typeof value !== 'object' || value === null) {
+    return false
+  }
+  const proto = Object.getPrototypeOf(value)
+  return proto === Object.prototype || proto === null
+}
+
+const readOwn = (source: Record<string, unknown>, field: string): unknown =>
+  Object.hasOwn(source, field) ? source[field] : undefined
+
+// defineProperty, not assignment: a `__proto__` key must become an own property.
+const defineField = (
+  target: Record<string, unknown>,
+  field: string,
+  value: unknown
+): void => {
+  Object.defineProperty(target, field, {
+    configurable: true,
+    enumerable: true,
+    value,
+    writable: true
+  })
+}
+
+/**
+ * Plain objects on both sides merge into a fresh object, up to {@link MAX_MERGE_DEPTH}
+ * levels deep; anything else replaces. Neither input is mutated, so the live bag is never
+ * edited in place.
+ */
+const mergeValue = (
+  previous: unknown,
+  next: unknown,
+  depth: number
+): unknown => {
+  if (
+    depth >= MAX_MERGE_DEPTH ||
+    !isPlainObject(previous) ||
+    !isPlainObject(next)
+  ) {
+    return next
+  }
+  const merged: Record<string, unknown> = {}
+  for (const field of Object.keys(previous)) {
+    defineField(merged, field, previous[field])
+  }
+  for (const field of Object.keys(next)) {
+    defineField(
+      merged,
+      field,
+      mergeValue(readOwn(previous, field), next[field], depth + 1)
+    )
+  }
+  return merged
+}
+
 const EMPTY_CONTEXT: Readonly<Record<string, unknown>> = Object.freeze({})
 
 /**
@@ -51,13 +109,12 @@ export const createRequestContextStore = (): RequestContextStore => {
         return
       }
       const bag = getOrCreate(key)
-      for (const [field, value] of Object.entries(partial)) {
-        Object.defineProperty(bag, field, {
-          configurable: true,
-          enumerable: true,
-          value,
-          writable: true
-        })
+      for (const field of Object.keys(partial)) {
+        defineField(
+          bag,
+          field,
+          mergeValue(readOwn(bag, field), partial[field], 0)
+        )
       }
     },
     peekContext(key) {
@@ -83,10 +140,13 @@ export const mergeLogDataContext = (
     return data
   }
 
-  const mergedContext = {
-    ...accumulated,
-    ...(hasExplicit ? (explicit as Record<string, unknown>) : {})
-  }
+  const mergedContext = hasExplicit
+    ? mergeValue(
+        accumulated,
+        isPlainObject(explicit) ? explicit : { ...explicit },
+        0
+      )
+    : { ...accumulated }
 
   return { ...data, context: mergedContext }
 }
