@@ -71,6 +71,7 @@ Every adapter accepts these options on top of its platform-specific ones:
 | `timeout` | `number` | `5000` | Per-request timeout in milliseconds |
 | `retries` | `number` | `2` | Retry attempts on network errors, 429, and 5xx |
 | `maxPendingBatches` | `number` | `32` | Bound on waiting entries, as a multiple of `maxBatchSize` |
+| `minLevel` | `'DEBUG' \| 'INFO' \| 'WARNING' \| 'ERROR'` | — | Lowest level the adapter receives; quieter records skip it and are not counted as dropped |
 | `onError` | `(error: unknown) => void` | — | Called when a request the adapter started on its own fails after retries, or entries are dropped |
 | `onDropped` | `(info: { count, reason }) => void` | — | Called with how many entries were lost and why |
 

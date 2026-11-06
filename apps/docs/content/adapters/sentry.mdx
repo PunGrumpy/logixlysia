@@ -53,6 +53,12 @@ const sentry = createSentryTransport({
 })
 ```
 
+To send Sentry only the failures and keep everything else in another transport, set `minLevel`:
+
+```ts
+const sentry = createSentryTransport({ minLevel: 'ERROR' })
+```
+
 | Option | Type | Default | Description |
 | --- | --- | --- | --- |
 | `dsn` | `string` | `SENTRY_DSN` | Project DSN |
