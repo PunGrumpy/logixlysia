@@ -89,7 +89,8 @@ describe('HttpError cause', () => {
 
     expect(normalizeLoggedError(error, false).error.cause).toEqual({
       message: INNER_MESSAGE,
-      name: 'Error'
+      name: 'Error',
+      stack: expect.any(String)
     })
   })
 

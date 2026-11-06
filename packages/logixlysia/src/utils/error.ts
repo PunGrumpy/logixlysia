@@ -74,6 +74,7 @@ const copyStructuredErrorFields = (
 }
 
 const MAX_CAUSE_DEPTH = 3
+const FIRST_SERVER_ERROR_STATUS = 500
 
 export const normalizeLoggedError = (
   error: unknown,
@@ -138,6 +139,12 @@ export const normalizeLoggedError = (
       error.name === 'Error'
         ? (error.constructor?.name ?? error.name)
         : error.name
+    const { status } = error as { status?: unknown }
+    const isClientError =
+      typeof status === 'number' && status < FIRST_SERVER_ERROR_STATUS
+    if (!isClientError && error.stack !== undefined) {
+      safe.stack = error.stack
+    }
     return {
       error: withCause(safe, error as unknown as Record<string, unknown>),
       message: parseError(error)
