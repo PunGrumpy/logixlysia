@@ -38,7 +38,8 @@ const config = defineConfig({
     'src/better-stack.ts',
     'src/loki.ts',
     'src/clickhouse.ts',
-    'src/desertant.ts'
+    'src/desertant.ts',
+    'src/http.ts'
   ],
   external: ['elysia', 'chalk', 'pino', 'pino-pretty'],
   format: ['esm'],

@@ -106,6 +106,10 @@ const transport = createDatadogTransport({
 
 Every built-in adapter transport has `close()`, which stops accepting entries and flushes the ones it already has; [`flushLogixlysia(options, { close: true })`](#graceful-shutdown) calls it (a transport wrapped in [`withRedaction`](/docs/integrations/desertant) is not closed through the wrapper yet).
 
+## Your Own Backend
+
+For a backend without a built-in adapter, `createHttpTransport` from `logixlysia/http` gives you the same batching, retries, bounded queue and `onDropped`. You supply the URL, headers, and a function that turns a batch into a request body. See the [Elasticsearch example](/docs/features/transports#elasticsearch).
+
 ## Multiple Destinations
 
 Adapters compose — fan the same logs out to several platforms:
