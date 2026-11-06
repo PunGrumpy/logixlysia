@@ -1,5 +1,6 @@
 import { describe, expect, mock, test } from 'bun:test'
 import { createRequestContextStore } from '../../src/context/request-context'
+import type { Options } from '../../src/interfaces'
 import { createLogger } from '../../src/logger'
 import { createWsHandlerWrapper } from '../../src/websocket/wrap-ws'
 import type { WebSocketLike, WsHandlerHooks } from '../../src/websocket/wrap-ws'
@@ -45,6 +46,16 @@ interface LogRecord {
   durationMs?: number
 }
 
+const requestMethodFrom = (
+  transport: TransportMock,
+  callIndex: number
+): unknown =>
+  (
+    transport.mock.calls[callIndex]?.[2] as
+      | { request?: { method?: unknown } }
+      | undefined
+  )?.request?.method
+
 const recordFrom = (transport: TransportMock, message: string): LogRecord => {
   const call = transport.mock.calls.find(entry => entry[1] === message)
   return (call?.[2] as LogRecord | undefined) ?? {}
@@ -70,6 +81,49 @@ describe('wrapWs', () => {
     expect(messages).toContain('WebSocket opened')
     expect(messages).toContain('WebSocket message')
     expect(messages).toContain('WebSocket closed')
+  })
+
+  test('labels lifecycle lines WS, not GET', () => {
+    const { transport, wrapWs } = setup()
+    const ws = { id: 'ws-1' }
+
+    const hooks = wrapWs<unknown, WebSocketLike, WsHandlerHooks>('/chat', {})
+    hooks.open?.(ws)
+    hooks.message?.(ws, 'hi')
+    hooks.close?.(ws)
+
+    expect(
+      transport.mock.calls.map((_call, index) =>
+        requestMethodFrom(transport, index)
+      )
+    ).toEqual(['WS', 'WS', 'WS'])
+  })
+
+  test('keeps the WS label when autoRedact masks the path', () => {
+    const transport: TransportMock = mock(() => {})
+    const contextStore = createRequestContextStore()
+    const options: Options = {
+      config: {
+        autoRedact: true,
+        disableFileLogging: true,
+        disableInternalLogger: true,
+        transports: [{ log: transport }]
+      }
+    }
+    const logger = createLogger(options, undefined, contextStore)
+    const wrapWs = createWsHandlerWrapper(options, logger, contextStore)
+    const hooks = wrapWs<unknown, WebSocketLike, WsHandlerHooks>(
+      '/chat-a@b.co',
+      {}
+    )
+
+    hooks.open?.({ id: 'ws-1' })
+
+    const meta = transport.mock.calls[0]?.[2] as
+      | { request?: { method?: unknown; url?: string } }
+      | undefined
+    expect(meta?.request?.url).not.toContain('a@b.co')
+    expect(meta?.request?.method).toBe('WS')
   })
 
   test('forwards close code and reason to the hook and logs them', () => {

@@ -1,3 +1,5 @@
+import { labelRequest } from './synthetic-request'
+
 // Local part ≤64, domain ≤253, TLD 2–63 (RFC 5321 / 1035-ish limits; bounded to avoid ReDoS)
 const EMAIL_REGEX =
   /[a-zA-Z0-9._%+-]{1,64}@[a-zA-Z0-9.-]{1,253}\.[a-zA-Z]{2,63}/gu
@@ -652,5 +654,5 @@ export const redactRequest = (
     signal: request.signal
   }
 
-  return new Request(redactedUrl, init)
+  return labelRequest(new Request(redactedUrl, init), redactedMethod)
 }
