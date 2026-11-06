@@ -8,6 +8,57 @@ import {
   redactString
 } from '../../src/utils/redact'
 
+describe('redact patterns', () => {
+  const rules = { patterns: [/cust_[a-z0-9]+/gu] }
+
+  test('masks a matching string at every depth', () => {
+    const error = new Error('lookup failed for cust_abc123')
+    const out = redact(
+      {
+        error,
+        list: ['cust_abc123', 'fine'],
+        nested: { note: 'buyer cust_abc123' }
+      },
+      rules
+    ) as {
+      error: Error
+      list: string[]
+      nested: { note: string }
+    }
+    expect(out.nested.note).toBe('buyer [REDACTED]')
+    expect(out.list).toEqual(['[REDACTED]', 'fine'])
+    expect(out.error.message).toBe('lookup failed for [REDACTED]')
+    expect(out.error.stack).not.toContain('cust_abc123')
+  })
+
+  test('masks a path segment, a query value and a header value in a request', () => {
+    const request = new Request(
+      'http://h/users/cust_abc123/orders?ref=cust_xyz9',
+      { headers: { 'x-trace': 'for cust_k1' } }
+    )
+    const out = redactRequest(request, rules)
+    expect(new URL(out.url).pathname).toBe('/users/[REDACTED]/orders')
+    expect(new URL(out.url).searchParams.get('ref')).toBe('[REDACTED]')
+    expect(out.headers.get('x-trace')).toBe('for [REDACTED]')
+  })
+
+  test('leaves one mask where a built-in shape matches the same text', () => {
+    const out = redact('mail cust_abc123@example.com', {
+      patterns: [/cust_[a-z0-9]+@example\.com/gu]
+    })
+    expect(out).toBe('mail [REDACTED]')
+  })
+
+  test('keeps the other segments and slashes of a path', () => {
+    const out = redactRequest(new Request('http://h/a/cust_q1/b/c'), rules)
+    expect(new URL(out.url).pathname).toBe('/a/[REDACTED]/b/c')
+  })
+
+  test('leaves a string with no match as it was', () => {
+    expect(redact({ note: 'plain' }, rules)).toEqual({ note: 'plain' })
+  })
+})
+
 describe('redactString', () => {
   test('redacts emails', () => {
     expect(redactString('My email is test@example.com')).toBe(
@@ -242,7 +293,7 @@ describe('redact', () => {
   })
 
   test('redacts a key added via extraKeys', () => {
-    expect(redact({ custom: 'v' }, ['custom'])).toEqual({
+    expect(redact({ custom: 'v' }, { keys: ['custom'] })).toEqual({
       custom: '[REDACTED]'
     })
   })
@@ -643,7 +694,7 @@ describe('redactRequest', () => {
 
   test('masks a query parameter matching a custom redactKeys entry', () => {
     const req = new Request('http://h/p?promo=SECRET')
-    const out = redactRequest(req, ['promo'])
+    const out = redactRequest(req, { keys: ['promo'] })
     expect(out.url).not.toContain('SECRET')
     expect(out.url).toContain('promo=redacted')
   })

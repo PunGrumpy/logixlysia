@@ -233,6 +233,57 @@ const validateRequestId = (config: Options['config']): void => {
   }
 }
 
+const REDACT_PATTERNS_ERROR = 'logixlysia: invalid redactPatterns —'
+
+/** Short texts a pattern is tried on, for an empty match that may need context (`\b`, a lookahead). */
+const EMPTY_MATCH_SAMPLES = ['', 'a b'] as const
+
+const toGlobalPattern = (entry: unknown): RegExp => {
+  if (!(entry instanceof RegExp)) {
+    throw new TypeError(
+      `${REDACT_PATTERNS_ERROR} expected a RegExp, got ${typeof entry}`
+    )
+  }
+  const flags = entry.flags.replaceAll('g', '').replaceAll('y', '')
+  const pattern = new RegExp(entry.source, `${flags}g`)
+  const canMatchNothing = EMPTY_MATCH_SAMPLES.some(sample =>
+    [...sample.matchAll(pattern)].some(([match]) => match === '')
+  )
+  if (canMatchNothing) {
+    throw new Error(
+      `${REDACT_PATTERNS_ERROR} ${entry.source} can match nothing`
+    )
+  }
+  return pattern
+}
+
+/**
+ * `replaceAll` throws on a non-global pattern and a sticky one silently
+ * matches nothing, which would leak, so every pattern is rebuilt global and
+ * non-sticky. Idempotent: a normalized pattern comes back with the same flags.
+ */
+const normalizeRedactPatterns = (options: Options): Options => {
+  const patterns: unknown = options.config?.redactPatterns
+  if (patterns === undefined) {
+    return options
+  }
+  if (!Array.isArray(patterns)) {
+    throw new TypeError(
+      `${REDACT_PATTERNS_ERROR} expected an array of RegExp, got ${typeof patterns}`
+    )
+  }
+  if (patterns.length === 0) {
+    return options
+  }
+  if (options.config?.autoRedact !== true) {
+    throw new Error(`${REDACT_PATTERNS_ERROR} needs autoRedact: true`)
+  }
+  return {
+    ...options,
+    config: { ...options.config, redactPatterns: patterns.map(toGlobalPattern) }
+  }
+}
+
 const PRESET_DEFAULTS: Record<LogPreset, NonNullable<Options['config']>> = {
   dev: {
     pino: {
@@ -312,5 +363,5 @@ export const resolveOptions = (options: Options = {}): Options => {
   validateLogFilter(resolved.config)
   validateOutput(resolved.config)
   validateRequestId(resolved.config)
-  return resolved
+  return normalizeRedactPatterns(resolved)
 }

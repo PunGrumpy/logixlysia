@@ -1,6 +1,88 @@
 import { describe, expect, test } from 'bun:test'
 import { resolveOptions } from '../../src/config/resolve-options'
 
+const resolve = (
+  redactPatterns: RegExp[],
+  autoRedact = true
+): RegExp[] | undefined =>
+  resolveOptions({ config: { autoRedact, redactPatterns } }).config
+    ?.redactPatterns
+
+describe('resolveOptions redactPatterns', () => {
+  test('makes a non-global pattern global', () => {
+    expect(resolve([/cust_\d+/u])?.[0]?.flags).toBe('gu')
+  })
+
+  test('drops the sticky flag and keeps the others', () => {
+    expect(resolve([/cust_\d+/giuy])?.[0]?.flags).toBe('giu')
+  })
+
+  test('is idempotent', () => {
+    const once = resolveOptions({
+      config: { autoRedact: true, redactPatterns: [/cust_\d+/uy] }
+    })
+    const twice = resolveOptions(once)
+    expect(twice.config?.redactPatterns?.[0]?.flags).toBe('gu')
+    expect(twice.config?.redactPatterns?.[0]?.source).toBe('cust_\\d+')
+  })
+
+  test('leaves an absent or empty list alone', () => {
+    expect(
+      resolveOptions({ config: {} }).config?.redactPatterns
+    ).toBeUndefined()
+    expect(resolve([], false)).toEqual([])
+  })
+
+  test('throws without autoRedact, and not under the prod preset', () => {
+    expect(() => resolve([/cust_\d+/u], false)).toThrow(
+      'invalid redactPatterns — needs autoRedact: true'
+    )
+    expect(() =>
+      resolveOptions({
+        config: { redactPatterns: [/cust_\d+/u] },
+        preset: 'prod'
+      })
+    ).not.toThrow()
+  })
+
+  test('throws for a pattern that matches the empty string', () => {
+    expect(() => resolve([/x*/u])).toThrow('x* can match nothing')
+  })
+
+  test('throws for a zero-width pattern that needs context to match', () => {
+    expect(() => resolve([/\b/u])).toThrow('can match nothing')
+    expect(() => resolve([/(?=a)/u])).toThrow('can match nothing')
+  })
+
+  test('throws for an entry that is not a RegExp', () => {
+    expect(() => resolve(['cust_\\d+'] as unknown as RegExp[])).toThrow(
+      'invalid redactPatterns — expected a RegExp, got string'
+    )
+  })
+
+  test('names the type of an entry JSON cannot serialize', () => {
+    const cycle: Record<string, unknown> = {}
+    cycle.self = cycle
+    expect(() => resolve([10n] as unknown as RegExp[])).toThrow(
+      'expected a RegExp, got bigint'
+    )
+    expect(() => resolve([cycle] as unknown as RegExp[])).toThrow(
+      'expected a RegExp, got object'
+    )
+  })
+
+  test('throws for a list that is not an array', () => {
+    expect(() =>
+      resolveOptions({
+        config: {
+          autoRedact: true,
+          redactPatterns: /cust_\d+/u as unknown as RegExp[]
+        }
+      })
+    ).toThrow('invalid redactPatterns — expected an array')
+  })
+})
+
 describe('resolveOptions', () => {
   test('prod preset enables autoRedact and disables banner', () => {
     const resolved = resolveOptions({ preset: 'prod' })

@@ -39,6 +39,11 @@ const REDACTED_TEXT = '[REDACTED]'
 const CIRCULAR_REF = '[Circular]'
 const UNSERIALIZABLE_TEXT = '[Unserializable]'
 
+export interface RedactRules {
+  keys?: readonly string[]
+  patterns?: readonly RegExp[]
+}
+
 export const DEFAULT_REDACT_KEYS: readonly string[] = [
   'authorization',
   'proxy-authorization',
@@ -182,8 +187,15 @@ const endsWithUrlScheme = (text: string, end: number): boolean => {
   return false
 }
 
-export const redactString = (text: string): string => {
+export const redactString = (
+  text: string,
+  patterns?: readonly RegExp[]
+): string => {
   let result = text
+
+  for (const pattern of patterns ?? []) {
+    result = result.replaceAll(pattern, REDACTED_TEXT)
+  }
 
   result = result.replaceAll(
     URL_PASSWORD_REGEX,
@@ -210,18 +222,26 @@ export const redactString = (text: string): string => {
  */
 const URL_SAFE_REDACT = 'redacted'
 
-const redactUrlAuthoritySegment = (value: string): string =>
-  redactString(value).replaceAll(REDACTED_TEXT, URL_SAFE_REDACT)
+const redactUrlAuthoritySegment = (
+  value: string,
+  rules?: RedactRules
+): string =>
+  redactString(value, rules?.patterns).replaceAll(
+    REDACTED_TEXT,
+    URL_SAFE_REDACT
+  )
 
 const redactSearchParams = (
   params: URLSearchParams,
-  extraKeys?: readonly string[]
+  rules?: RedactRules
 ): URLSearchParams => {
   const result = new URLSearchParams()
   for (const [key, value] of params) {
     result.append(
       key,
-      isSensitiveKey(key, extraKeys) ? URL_SAFE_REDACT : redactString(value)
+      isSensitiveKey(key, rules?.keys)
+        ? URL_SAFE_REDACT
+        : redactString(value, rules?.patterns)
     )
   }
   return result
@@ -235,40 +255,43 @@ const decodeOrRaw = (segment: string): string => {
   }
 }
 
-const redactPathSegment = (segment: string): string => {
+const redactPathSegment = (segment: string, rules?: RedactRules): string => {
   const decoded = decodeOrRaw(segment)
-  const redacted = redactString(decoded)
+  const redacted = redactString(decoded, rules?.patterns)
   if (decoded === segment) {
     return redacted
   }
   return redacted === decoded ? segment : encodeURIComponent(redacted)
 }
 
-const redactRequestUrl = (
-  urlString: string,
-  extraKeys?: readonly string[]
-): string => {
+const redactRequestUrl = (urlString: string, rules?: RedactRules): string => {
   try {
     const u = new URL(urlString)
     if (u.username !== '') {
-      u.username = redactUrlAuthoritySegment(u.username)
+      u.username = redactUrlAuthoritySegment(u.username, rules)
     }
     if (u.password !== '') {
       u.password = URL_SAFE_REDACT
     }
-    u.hostname = redactUrlAuthoritySegment(u.hostname)
-    u.pathname = u.pathname.split('/').map(redactPathSegment).join('/')
+    u.hostname = redactUrlAuthoritySegment(u.hostname, rules)
+    u.pathname = u.pathname
+      .split('/')
+      .map(segment => redactPathSegment(segment, rules))
+      .join('/')
     // Assigning `search` re-serializes the query, so do it only when a value
     // changed. The values are decoded here, so patterns never run against
     // percent-encoded text.
-    const query = redactSearchParams(u.searchParams, extraKeys).toString()
+    const query = redactSearchParams(u.searchParams, rules).toString()
     if (query !== u.searchParams.toString()) {
       u.search = query
     }
-    u.hash = redactString(u.hash)
+    u.hash = redactString(u.hash, rules?.patterns)
     return u.toString()
   } catch {
-    return redactString(urlString).replaceAll(REDACTED_TEXT, URL_SAFE_REDACT)
+    return redactString(urlString, rules?.patterns).replaceAll(
+      REDACTED_TEXT,
+      URL_SAFE_REDACT
+    )
   }
 }
 
@@ -289,27 +312,24 @@ const normalizedHref = (value: string): string => {
 const redactHeaderValue = (
   name: string,
   value: string,
-  extraKeys?: readonly string[]
+  rules?: RedactRules
 ): string => {
-  if (isSensitiveKey(name, extraKeys)) {
+  if (isSensitiveKey(name, rules?.keys)) {
     return REDACTED_TEXT
   }
   if (!URL_VALUED_HEADERS.has(name.toLowerCase())) {
-    return redactString(value)
+    return redactString(value, rules?.patterns)
   }
-  const redacted = redactRequestUrl(value, extraKeys)
+  const redacted = redactRequestUrl(value, rules)
   // Keep the client's spelling when nothing was masked: serialising a URL
   // alone adds a trailing slash, and a changed header clones the request.
   return redacted === normalizedHref(value) ? value : redacted
 }
 
-const redactHeaders = (
-  headers: Headers,
-  extraKeys?: readonly string[]
-): Headers => {
+const redactHeaders = (headers: Headers, rules?: RedactRules): Headers => {
   const result = new Headers()
   for (const [name, value] of headers) {
-    result.append(name, redactHeaderValue(name, value, extraKeys))
+    result.append(name, redactHeaderValue(name, value, rules))
   }
   return result
 }
@@ -349,12 +369,12 @@ const walker = {
   array: (
     value: unknown[],
     inProgress: WeakSet<object>,
-    extraKeys?: readonly string[]
+    rules?: RedactRules
   ): unknown[] => {
     let result: unknown[] | undefined
 
     for (const [index, original] of value.entries()) {
-      const redacted = walker.value(original, inProgress, extraKeys)
+      const redacted = walker.value(original, inProgress, rules)
       if (result === undefined && redacted !== original) {
         result = value.slice(0, index)
       }
@@ -367,9 +387,9 @@ const walker = {
   error: (
     originalError: Error,
     inProgress: WeakSet<object>,
-    extraKeys?: readonly string[]
+    rules?: RedactRules
   ): Error & Record<string, unknown> => {
-    const redactedMessage = redactString(originalError.message)
+    const redactedMessage = redactString(originalError.message, rules?.patterns)
     const proto = Object.getPrototypeOf(originalError) as object
     const newError = Object.create(proto) as Error & Record<string, unknown>
 
@@ -387,7 +407,7 @@ const walker = {
     defineOwn('message', redactedMessage)
     defineOwn('name', originalError.name)
     if (originalError.stack !== undefined) {
-      defineOwn('stack', redactString(originalError.stack))
+      defineOwn('stack', redactString(originalError.stack, rules?.patterns))
     }
     if (originalError instanceof DOMException) {
       // The copy has no DOMException internal slot, so the prototype's `code`
@@ -418,9 +438,9 @@ const walker = {
         }
       }
 
-      const redactedValue = isSensitiveKey(key, extraKeys)
+      const redactedValue = isSensitiveKey(key, rules?.keys)
         ? REDACTED_TEXT
-        : walker.value(current, inProgress, extraKeys)
+        : walker.value(current, inProgress, rules)
 
       Object.defineProperty(newError, key, {
         configurable: descriptor.configurable,
@@ -436,15 +456,15 @@ const walker = {
   map: (
     value: Map<unknown, unknown>,
     inProgress: WeakSet<object>,
-    extraKeys?: readonly string[]
+    rules?: RedactRules
   ): Map<unknown, unknown> => {
     const result = new Map<unknown, unknown>()
     for (const [key, entry] of value) {
       const sensitive =
-        typeof key === 'string' && isSensitiveKey(key, extraKeys)
+        typeof key === 'string' && isSensitiveKey(key, rules?.keys)
       result.set(
         key,
-        sensitive ? REDACTED_TEXT : walker.value(entry, inProgress, extraKeys)
+        sensitive ? REDACTED_TEXT : walker.value(entry, inProgress, rules)
       )
     }
     return result
@@ -453,7 +473,7 @@ const walker = {
   record: (
     recordValue: Record<string, unknown>,
     inProgress: WeakSet<object>,
-    extraKeys?: readonly string[]
+    rules?: RedactRules
   ): Record<string, unknown> | string => {
     let keys: string[]
     try {
@@ -471,12 +491,12 @@ const walker = {
       } catch {
         unreadable = true
       }
-      const sensitive = isSensitiveKey(key, extraKeys)
+      const sensitive = isSensitiveKey(key, rules?.keys)
       let redacted: unknown = REDACTED_TEXT
       if (unreadable) {
         redacted = UNSERIALIZABLE_TEXT
       } else if (!sensitive) {
-        redacted = walker.value(original, inProgress, extraKeys)
+        redacted = walker.value(original, inProgress, rules)
       }
 
       if (
@@ -499,16 +519,14 @@ const walker = {
   set: (
     value: Set<unknown>,
     inProgress: WeakSet<object>,
-    extraKeys?: readonly string[]
+    rules?: RedactRules
   ): Set<unknown> =>
-    new Set(
-      Array.from(value, item => walker.value(item, inProgress, extraKeys))
-    ),
+    new Set(Array.from(value, item => walker.value(item, inProgress, rules))),
 
   toJson: (
     value: { toJSON: () => unknown },
     inProgress: WeakSet<object>,
-    extraKeys?: readonly string[]
+    rules?: RedactRules
   ): unknown => {
     let plain: unknown
     try {
@@ -521,19 +539,19 @@ const walker = {
       return walker.record(
         value as unknown as Record<string, unknown>,
         inProgress,
-        extraKeys
+        rules
       )
     }
-    return walker.value(plain, inProgress, extraKeys)
+    return walker.value(plain, inProgress, rules)
   },
 
   value: (
     value: unknown,
     inProgress: WeakSet<object>,
-    extraKeys?: readonly string[]
+    rules?: RedactRules
   ): unknown => {
     if (typeof value === 'string') {
-      return redactString(value)
+      return redactString(value, rules?.patterns)
     }
 
     if (value === null || typeof value !== 'object') {
@@ -555,16 +573,16 @@ const walker = {
     // These types expose their contents only through iteration or toJSON(),
     // so the key walk below would return them unchanged.
     if (value instanceof Headers) {
-      return redactHeaders(value, extraKeys)
+      return redactHeaders(value, rules)
     }
 
     if (value instanceof URLSearchParams) {
-      return redactSearchParams(value, extraKeys)
+      return redactSearchParams(value, rules)
     }
 
     if (value instanceof URL) {
       try {
-        return new URL(redactRequestUrl(value.href, extraKeys))
+        return new URL(redactRequestUrl(value.href, rules))
       } catch {
         return REDACTED_TEXT
       }
@@ -572,19 +590,19 @@ const walker = {
 
     if (value instanceof Map) {
       return withReentrancyGuard(value, inProgress, () =>
-        walker.map(value, inProgress, extraKeys)
+        walker.map(value, inProgress, rules)
       )
     }
 
     if (value instanceof Set) {
       return withReentrancyGuard(value, inProgress, () =>
-        walker.set(value, inProgress, extraKeys)
+        walker.set(value, inProgress, rules)
       )
     }
 
     if (value instanceof Error) {
       return withReentrancyGuard(value, inProgress, () =>
-        walker.error(value, inProgress, extraKeys)
+        walker.error(value, inProgress, rules)
       )
     }
 
@@ -598,24 +616,24 @@ const walker = {
     }
     if (typeof toJSON === 'function') {
       return withReentrancyGuard(value, inProgress, () =>
-        walker.toJson(value as { toJSON: () => unknown }, inProgress, extraKeys)
+        walker.toJson(value as { toJSON: () => unknown }, inProgress, rules)
       )
     }
 
     if (Array.isArray(value)) {
       return withReentrancyGuard(value, inProgress, () =>
-        walker.array(value, inProgress, extraKeys)
+        walker.array(value, inProgress, rules)
       )
     }
 
     return withReentrancyGuard(value, inProgress, () =>
-      walker.record(value as Record<string, unknown>, inProgress, extraKeys)
+      walker.record(value as Record<string, unknown>, inProgress, rules)
     )
   }
 }
 
-export const redact = <T>(value: T, extraKeys?: readonly string[]): T =>
-  walker.value(value, new WeakSet(), extraKeys) as T
+export const redact = <T>(value: T, rules?: RedactRules): T =>
+  walker.value(value, new WeakSet(), rules) as T
 
 /**
  * Clone request URL, method and headers for logging with the same string redaction as {@link redact}.
@@ -625,21 +643,21 @@ export const redact = <T>(value: T, extraKeys?: readonly string[]): T =>
  */
 export const redactRequest = (
   request: Request,
-  extraKeys?: readonly string[]
+  rules?: RedactRules
 ): Request => {
-  const redactedUrl = redactRequestUrl(request.url, extraKeys)
+  const redactedUrl = redactRequestUrl(request.url, rules)
   const nextHeaders = new Headers()
   let headersChanged = false
 
   for (const [name, value] of request.headers.entries()) {
-    const redacted = redactHeaderValue(name, value, extraKeys)
+    const redacted = redactHeaderValue(name, value, rules)
     if (redacted !== value) {
       headersChanged = true
     }
     nextHeaders.set(name, redacted)
   }
 
-  const redactedMethod = redactString(request.method)
+  const redactedMethod = redactString(request.method, rules?.patterns)
   const urlChanged = redactedUrl !== request.url
   const methodChanged = redactedMethod !== request.method
 

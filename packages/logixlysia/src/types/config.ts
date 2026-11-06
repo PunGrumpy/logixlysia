@@ -254,6 +254,13 @@ export interface RedactionConfig {
    * query-string parameter names in the logged request URL.
    */
   redactKeys?: string[]
+  /**
+   * Extra value shapes to mask when `autoRedact` is on, e.g. `/cust_[a-z0-9]+/`.
+   * Runs on every string a record carries, and on each URL path segment, each
+   * decoded query value and each header value, so a pattern cannot span a `/`.
+   * Numbers and object keys are not scanned. Does not apply to `store.pino`.
+   */
+  redactPatterns?: RegExp[]
 }
 
 export interface RequestTrackingConfig {
