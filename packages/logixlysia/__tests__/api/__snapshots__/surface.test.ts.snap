@@ -17,6 +17,7 @@ exports[`published API surface every exports subpath resolves and its named expo
     "useLogger",
   ],
   "./ai": [
+    "aiMiddleware",
     "mergeAIMetrics",
   ],
   "./axiom": [

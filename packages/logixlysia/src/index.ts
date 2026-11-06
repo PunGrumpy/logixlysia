@@ -5,6 +5,7 @@ import {
   applyResponseEnrichers,
   resolveEnrichers
 } from './context/enrich'
+import { LINE_SETTLED } from './context/line-settled'
 import { createRequestContextStore } from './context/request-context'
 import { loggerStorage, noopRequestLogger } from './context/storage'
 import { startServer } from './extensions'
@@ -425,34 +426,42 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
     }
   }
 
-  const createRequestScopedLogger = (
-    request: Request
-  ): RequestScopedLogger => ({
-    debug: (message, context) =>
-      emitCustomLog('DEBUG', request, message, context),
-    error: (error, context) => {
-      if (typeof error === 'string') {
-        emitCustomLog('ERROR', request, error, context)
-        return
+  const createRequestScopedLogger = (request: Request): RequestScopedLogger => {
+    const log: RequestScopedLogger = {
+      debug: (message, context) =>
+        emitCustomLog('DEBUG', request, message, context),
+      error: (error, context) => {
+        if (typeof error === 'string') {
+          emitCustomLog('ERROR', request, error, context)
+          return
+        }
+        const normalized = normalizeLoggedError(
+          error,
+          options.config?.logErrorPayload === true
+        )
+        emitCustomLog(
+          'ERROR',
+          request,
+          normalized.message,
+          context,
+          normalized.error
+        )
+      },
+      info: (message, context) =>
+        emitCustomLog('INFO', request, message, context),
+      mergeContext: partial => contextStore.mergeContext(request, partial),
+      warn: (message, context) =>
+        emitCustomLog('WARNING', request, message, context)
+    }
+    Object.defineProperty(log, LINE_SETTLED, {
+      enumerable: false,
+      value: (): boolean => {
+        const record = records.get(request)
+        return record?.phase === 'closed' || record?.accessLineReplaced === true
       }
-      const normalized = normalizeLoggedError(
-        error,
-        options.config?.logErrorPayload === true
-      )
-      emitCustomLog(
-        'ERROR',
-        request,
-        normalized.message,
-        context,
-        normalized.error
-      )
-    },
-    info: (message, context) =>
-      emitCustomLog('INFO', request, message, context),
-    mergeContext: partial => contextStore.mergeContext(request, partial),
-    warn: (message, context) =>
-      emitCustomLog('WARNING', request, message, context)
-  })
+    })
+    return log
+  }
 
   const openRequestScope = (
     request: Request,
