@@ -60,6 +60,16 @@ export interface Logger {
 /** The default shape of a request's context bag. Pass your own interface to `logixlysia<TFields>()` to type your fields. */
 export type LogFields = Record<string, unknown>
 
+/** `Partial` at every depth. Arrays, dates and functions stay whole, since they replace rather than merge. */
+export type DeepPartial<T> = T extends
+  | readonly unknown[]
+  | Date
+  | ((...args: never[]) => unknown)
+  ? T
+  : T extends object
+    ? { [K in keyof T]?: DeepPartial<T[K]> }
+    : T
+
 /**
  * The per-request logger derived onto the Elysia context as `log`.
  *
@@ -83,9 +93,9 @@ export type LogFields = Record<string, unknown>
  * type-only: nothing changes at runtime.
  */
 export interface RequestScopedLogger<TFields extends object = LogFields> {
-  debug: (message: string, context?: Partial<TFields>) => void
-  error: (message: string, context?: Partial<TFields>) => void
-  info: (message: string, context?: Partial<TFields>) => void
-  mergeContext: (partial: Partial<TFields>) => void
-  warn: (message: string, context?: Partial<TFields>) => void
+  debug: (message: string, context?: DeepPartial<TFields>) => void
+  error: (message: string, context?: DeepPartial<TFields>) => void
+  info: (message: string, context?: DeepPartial<TFields>) => void
+  mergeContext: (partial: DeepPartial<TFields>) => void
+  warn: (message: string, context?: DeepPartial<TFields>) => void
 }
