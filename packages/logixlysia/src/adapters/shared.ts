@@ -104,7 +104,7 @@ export interface AdapterTransport extends Transport {
 /** One record, as the transport received it. */
 export interface LogEntry {
   level: LogLevel
-  /** Empty for an access line; {@link defaultBody} names it from `meta`. */
+  /** Empty for an access line; `entryText` names it from `meta`. */
   message: string
   /** A plain JSON copy of what was logged, taken when `log` was called. */
   meta: Record<string, unknown>
