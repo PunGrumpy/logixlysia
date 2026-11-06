@@ -94,7 +94,13 @@ export type DeepPartial<T> = T extends
  */
 export interface RequestScopedLogger<TFields extends object = LogFields> {
   debug: (message: string, context?: DeepPartial<TFields>) => void
-  error: (message: string, context?: DeepPartial<TFields>) => void
+  /**
+   * Logs at `ERROR`. Pass a message, or whatever you caught: a non-string is
+   * serialized like a thrown error, with its name, `HttpError` fields and
+   * cause. Like any custom line, it stands in for the access line and carries
+   * no status.
+   */
+  error: (error: unknown, context?: DeepPartial<TFields>) => void
   info: (message: string, context?: DeepPartial<TFields>) => void
   mergeContext: (partial: DeepPartial<TFields>) => void
   warn: (message: string, context?: DeepPartial<TFields>) => void
