@@ -28,6 +28,30 @@ A custom log that passes `logFilter` and sampling (`log.info`, `store.logger.inf
 
 When you call `logger.info(request, message, { ...explicit })`, keys in the explicit context **override** accumulated values. Non-colliding keys from both sources are kept.
 
+## Nested objects
+
+Plain objects merge key by key, so each layer of your app can add to a nested field without knowing what earlier layers wrote:
+
+```ts
+app.get('/seat', ({ log }) => {
+  log.mergeContext({ user: { id: 'usr_123' } })
+  log.mergeContext({ user: { plan: 'pro' } })
+  log.info('seated', { user: { seat: 2 } })
+  return { ok: true }
+})
+```
+
+That custom line replaces the access line and logs `user` as `{ id: 'usr_123', plan: 'pro', seat: 2 }`. `seat` is per-line context, so it is not kept for later lines. The same rule applies to explicit context passed to `logger.info(request, message, { ...explicit })`.
+
+| Value | Behaviour |
+| --- | --- |
+| Plain and null-prototype objects on both sides | Merged into a fresh object. The objects you passed are never changed. |
+| Arrays, `Date`, class instances, `null` and primitives | Replace the earlier value. |
+| A nested `__proto__` or `constructor` key | Kept as an ordinary key. `Object.prototype` is never touched. |
+| Objects nested deeper than 8 levels, including cycles | Replace instead of merging, so a cyclic object cannot overflow the stack. |
+
+To replace a whole nested object, send `null` or an array. A typed field's type has to allow that value, for example `user: { id: string } | null`. Merging is also why a nested field in a typed context only needs the keys you are setting.
+
 ## Reading context
 
 ```ts

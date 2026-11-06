@@ -852,6 +852,7 @@ export { useLogger } from './context/storage'
 export type { HttpErrorInit, HttpErrorPayload } from './errors'
 export { HttpError } from './errors'
 export type {
+  DeepPartial,
   Enricher,
   EnricherFields,
   EnricherLike,

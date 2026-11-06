@@ -117,6 +117,22 @@ autoRedact: true,
 redactKeys: ['x-internal-token', 'customerSsn']
 ```
 
+### `redactPatterns`
+
+Extra value shapes to mask when `autoRedact` is enabled, for ids that only you know the shape of, such as a customer id or a national ID. Each match is replaced with `[REDACTED]`, before the built-in value patterns run.
+
+A pattern runs on every string a record carries, and on each URL path segment, each decoded query value and each header value, so a pattern cannot span a `/`. Numbers and object keys are not scanned. It does not apply to `store.pino`, which redacts by path. A pattern runs on every string of every record, so keep it simple.
+
+Patterns are made global and non-sticky for you. A pattern that can match nothing, such as `/x*/` or `/\b/`, is rejected at startup, as is a list without `autoRedact: true`.
+
+- **Type:** `RegExp[]`
+- **Default:** `undefined`
+
+```ts
+autoRedact: true,
+redactPatterns: [/cust_[a-z0-9]+/]
+```
+
 ### `logErrorPayload`
 
 Log the offending payload (`found`/`errors`) from validation errors. Off by default — a failed schema validation embeds the entire request body (passwords, tokens, card fields) in the error message, so leaving this off keeps those values out of your logs and transports.
