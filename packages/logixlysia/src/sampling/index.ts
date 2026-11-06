@@ -33,7 +33,11 @@ export interface BufferedRecord {
 export type { RequestOutcome } from '../types/config'
 
 export interface SamplingRuntime {
-  /** Marks a request as one that will reach {@link SamplingRuntime.finalize}. */
+  /**
+   * Marks a request as one that will reach {@link SamplingRuntime.finalize} and
+   * fixes its head-sampling roll, so every record it emits is kept or dropped
+   * together.
+   */
   begin: (key: object) => void
   /** Holds a head-dropped record, up to `maxBufferedPerRequest`. */
   buffer: (key: object, record: BufferedRecord) => void
@@ -163,9 +167,14 @@ export const resolveSampling = (
   // buffering for them would grow without bound.
   const inFlight = new WeakSet<object>()
   const rescued = new WeakSet<object>()
+  // One roll per opened request. Keys that never call `begin` (a shared
+  // WebSocket request) have no roll and are rolled per record instead, since a
+  // sticky roll would fix the fate of that key for the life of the process.
+  const rolls = new WeakMap<object, number>()
 
   return {
     begin(key) {
+      rolls.set(key, random() * FULL_RATE)
       if (tail) {
         inFlight.add(key)
       }
@@ -189,7 +198,8 @@ export const resolveSampling = (
       }
 
       const rate = rates[level] ?? FULL_RATE
-      if (rate >= FULL_RATE || (rate > 0 && random() * FULL_RATE < rate)) {
+      const roll = rolls.get(key) ?? random() * FULL_RATE
+      if (rate >= FULL_RATE || (rate > 0 && roll < rate)) {
         return 'keep'
       }
 
