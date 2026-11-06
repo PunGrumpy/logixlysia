@@ -71,6 +71,7 @@ Every adapter accepts these options on top of its platform-specific ones:
 | `timeout` | `number` | `5000` | Per-request timeout in milliseconds |
 | `retries` | `number` | `2` | Retry attempts on network errors, 429, and 5xx |
 | `maxPendingBatches` | `number` | `32` | Bound on waiting entries, as a multiple of `maxBatchSize` |
+| `minLevel` | `'DEBUG' \| 'INFO' \| 'WARNING' \| 'ERROR'` | — | Lowest level the adapter receives; quieter records skip it and are not counted as dropped |
 | `onError` | `(error: unknown) => void` | — | Called when a request the adapter started on its own fails after retries, or entries are dropped |
 | `onDropped` | `(info: { count, reason }) => void` | — | Called with how many entries were lost and why |
 
@@ -82,6 +83,7 @@ The adapter factory validates these options when you call it. An invalid value t
 | `retries` | An integer at or above `0` |
 | `timeout` | A whole number of milliseconds from `1` to `2147483647` (2^31 - 1) |
 | `flushIntervalMs` | A number of milliseconds from `0` to `2147483647` |
+| `minLevel` | `'DEBUG'`, `'INFO'`, `'WARNING'` or `'ERROR'` |
 
 For example, `retries: Infinity`, `timeout: 0`, `timeout: 1.5`, `timeout: 2 ** 31`, and `maxPendingBatches: NaN` all throw at startup. The `timeout` ceiling matches the largest delay a timer honors. Node clamps a longer timer to 1 ms, which would abort every request. `retries: 0` and `flushIntervalMs: 0` stay valid.
 
