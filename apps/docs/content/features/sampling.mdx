@@ -5,11 +5,11 @@ description: Keep a percentage of high-volume logs, and rescue the ones that tur
 
 Sampling keeps your log bill flat as traffic grows. Head sampling thins noisy levels by percentage. Tail sampling puts the dropped records back when the request turns out to be interesting — an error, a slow response, a route you are watching.
 
-Unlike [log filtering](/docs/features/filtering), which is all-or-nothing per level, sampling is per-record and reversible.
+Unlike [log filtering](/docs/features/filtering), which is all-or-nothing per level, sampling is per-request and reversible.
 
 ## Head Sampling
 
-Head sampling decides as each record is emitted: keep `n%` of a level, drop the rest.
+Head sampling keeps `n%` of a level and drops the rest. A request gets one roll when it opens, so all its records at a level are kept or dropped together, access line included. Kept low-rate levels are a subset of kept high-rate levels. A request that keeps `DEBUG` at `1` also keeps `INFO` at `10`. WebSocket lifecycle lines have no request to tie to, so they roll per record.
 
 ```ts
 logixlysia({
