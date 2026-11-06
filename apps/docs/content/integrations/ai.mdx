@@ -1,34 +1,78 @@
 ---
 title: AI SDK metrics
-description: Attach LLM usage metrics to request logs
+description: Record LLM usage on request logs with one line of AI SDK middleware
 ---
 
-Import from the `logixlysia/ai` subpath (no required peer dependency):
+Wrap the model with `aiMiddleware(log)` and every call records its usage, streams included. The `logixlysia/ai` subpath adds no dependency.
 
 ```ts
-import { Elysia } from 'elysia'
-import logixlysia from 'logixlysia'
-import { mergeAIMetrics } from 'logixlysia/ai'
+import { gateway, streamText, wrapLanguageModel } from 'ai'
+import { aiMiddleware } from 'logixlysia/ai'
 
-const plugin = logixlysia()
+const model = gateway('anthropic/claude-sonnet-4.5')
 
-const app = new Elysia()
-  .use(plugin)
-  .post('/chat', async ({ request, store }) => {
-    // After your AI SDK call:
-    mergeAIMetrics(store.logger, request, {
-      model: 'claude-sonnet',
-      provider: 'anthropic',
-      inputTokens: 1200,
-      outputTokens: 400,
-      totalTokens: 1600,
-      msToFinish: 2300
-    })
-
-    return { ok: true }
-  })
+app.post('/chat', ({ log }) =>
+  streamText({
+    model: wrapLanguageModel({ model, middleware: aiMiddleware(log) }),
+    prompt: 'Hello'
+  }).toTextStreamResponse()
+)
 ```
 
-The final access log `context.ai` object mirrors evlog’s wide-event `ai` field for easier migration. If the handler made a custom log before `mergeAIMetrics` ran, that log replaces the access line and the `ai` fields reach no sink.
+## Recorded fields
 
-Several calls in one request are summed: `calls`, the token counts and `msToFinish` add up, while `model`, `provider` and `finishReason` keep the last call's values.
+The fields land in the line's `context.ai`.
+
+| Field | Meaning |
+| --- | --- |
+| `calls` | Model calls in this request |
+| `model`, `provider` | The last call's model and provider |
+| `finishReason` | The last call's finish reason, such as `stop` |
+| `inputTokens`, `outputTokens`, `reasoningTokens` | Tokens the provider reported |
+| `totalTokens` | Input plus output tokens |
+| `msToFinish` | Time from the call to its last chunk |
+| `msToFirstChunk` | Streams only: the last call's time to its first text |
+| `tokensPerSecond` | Streams only: the last call's output tokens over the time from first text to finish |
+
+Several calls in one request are summed: `calls`, the token counts and `msToFinish` add up, while the other fields keep the last call's values. A field the provider did not report is left out.
+
+## Which line carries them
+
+| Route | Lines |
+| --- | --- |
+| `generateText` | Access line with `ai` |
+| Generator stream (`for await ... yield`) | Access line with `ai` |
+| Custom log first | Custom line, then `ai call finished` with `ai` |
+| `toTextStreamResponse()` | Access line, then `ai call finished` with `ai` |
+
+A returned `Response` writes its access line before the stream ends, and a custom log replaces the access line. In both cases the usage arrives too late for that line, so the middleware writes its own at `INFO`. Each late call writes one, carrying the request's totals so far.
+
+## Limits
+
+- A stream the client aborts records nothing, because the provider's final usage never arrives.
+- Use one logger object per request, `log` or `useLogger()`. Totals are per object, so mixing the two splits them.
+- Tested against `ai` 7.
+
+## Other SDKs
+
+For an SDK with no middleware, pass the numbers yourself. This form writes no line of its own, so the fields reach a sink only on a line written after the merge.
+
+```ts
+import { mergeAIMetrics } from 'logixlysia/ai'
+
+app.post('/chat', ({ log }) => {
+  // After your SDK call:
+  mergeAIMetrics(log, {
+    model: 'claude-sonnet',
+    provider: 'anthropic',
+    inputTokens: 1200,
+    outputTokens: 400,
+    totalTokens: 1600,
+    msToFinish: 2300
+  })
+
+  return { ok: true }
+})
+```
+
+`mergeAIMetrics(store.logger, request, metrics)` works the same way when you have no `log`.
