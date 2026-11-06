@@ -1,5 +1,27 @@
 # Changelog
 
+## 6.12.0
+
+### Minor Changes
+
+- d0f3a8b: `logFilter.accessLine` hides the access line for paths matching `exclude` or not matching `include`, so health checks and metrics scrapes stop writing a line per probe. Responses at 400 or above, thrown errors and a handler's own log lines are never hidden.
+- 666861e: Adapters and `withRedaction` accept an `onDropped` callback that reports how many records were lost and why, so you can keep a running count of dropped logs.
+- bb7946c: `aiMiddleware(log)` from `logixlysia/ai` records AI SDK usage with one `wrapLanguageModel` line, streams included. A call that finishes after the request's line was written, as `toTextStreamResponse()` does, writes an `ai call finished` line, so its usage still reaches your sinks. `mergeAIMetrics` also accepts the handler's `log` directly: `mergeAIMetrics(log, metrics)`.
+- ab89c27: Head sampling now rolls once per request, so a request's records are kept or dropped together. A sampled app keeps close to the configured share of requests, where an access line used to get a second chance after its custom log was dropped, so counts may fall.
+- a850609: `mergeContext` and per-line context now merge nested plain objects, so `log.mergeContext({ user: { id } })` followed by `log.mergeContext({ user: { plan } })` keeps both keys. A nested overwrite that relied on replacing the whole object now keeps the old keys; send `null` or an array to replace (a typed field's type has to allow it). Arrays, dates and class instances still replace, and typed fields accept a partial nested object through the new `DeepPartial` type.
+- 7425808: `log.error(err)` accepts whatever you caught, so `catch (err) { log.error(err) }` compiles and logs the error. A non-string is serialized like a thrown error, with its name, `HttpError` fields and cause, instead of a blank message. The line carries no status, since the handler may recover.
+- 71b77c8: `logixlysia/http` exports `createHttpTransport`, so a backend without a built-in adapter gets the same batching, retries, bounded queue and `onDropped` by supplying a URL, headers and a request body.
+- 64508cb: `redactPatterns` masks custom value shapes, such as a customer id, in log strings, URL path segments, query values and header values when `autoRedact` is on.
+- 7abac9d: `plugin.runJob(name, fn)` runs a cron job, queue consumer or script outside a request and writes one final `JOB` line for it, with duration, outcome and accumulated context, through every sink. It returns `fn`'s value, logs a thrown error with status 500 and rethrows it, and makes `useLogger()` work inside `fn` without `useAsyncLocalStorage`.
+- d0f3a8b: `sampling.tail.keep` takes a predicate that receives the finished request's `durationMs`, `pathname`, `status` and `context`, so tail sampling can rescue by anything the handler learned. A predicate that throws counts as no match and is reported through `onError` with `sink: 'sampling'`. `RequestOutcome` gains a required `context` field.
+- 26ab23b: A transport can set `minLevel` to receive only records at that level or louder, so you can send errors to Sentry and everything to Axiom without a wrapper. Every adapter accepts the option, and `withRedaction` keeps it.
+
+### Patch Changes
+
+- 399797c: Error lines sent to transports now include `error.stack`, unless the error's own `status` is below 500.
+- d0f3a8b: `FormattingConfig`, `OutputConfig`, `PinoConfig`, `PrettyPrintConfig`, `RedactionConfig` and `RequestTrackingConfig` can now be imported from `logixlysia`, so a wrapper around the config can name them.
+- 7abac9d: WebSocket lifecycle lines are labelled `WS` as documented, not `GET`.
+
 ## 6.11.0
 
 ### Minor Changes
