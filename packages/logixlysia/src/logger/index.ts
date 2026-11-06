@@ -20,6 +20,7 @@ import type { EmitOutcome } from './emit'
 import { handleHttpError } from './handle-http-error'
 
 const ZERO_STORE: StoreData = { beforeTime: 0n }
+const NO_CONTEXT: Readonly<Record<string, unknown>> = Object.freeze({})
 
 const createLazyPino = (
   config: Options['config'],
@@ -148,7 +149,11 @@ const buildLogger = (
   const lazyPino = createLazyPino(config, pinoFactory)
 
   const sinks = resolveSinks(config)
-  const sampling = resolveSampling(config?.sampling)
+  const sampling = resolveSampling(
+    config?.sampling,
+    Math.random,
+    config?.onError
+  )
 
   const log = (
     level: LogLevel,
@@ -178,6 +183,9 @@ const buildLogger = (
     }
 
     const outcome = {
+      context: config?.sampling?.tail?.keep
+        ? contextStore.getContext(request)
+        : NO_CONTEXT,
       durationMs: elapsedMs(store.beforeTime),
       pathname: parseRequestUrlOnce(request).pathname,
       status

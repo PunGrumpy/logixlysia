@@ -269,7 +269,14 @@ The argument of `config.onError`, importable from `logixlysia`.
 
 ```ts check=skip
 type SinkErrorContext = {
-  sink: 'transport' | 'file' | 'rotation' | 'shutdown' | 'enricher' | 'format'
+  sink:
+    | 'transport'
+    | 'file'
+    | 'rotation'
+    | 'shutdown'
+    | 'enricher'
+    | 'format'
+    | 'sampling'
   error: unknown
 }
 ```
