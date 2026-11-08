@@ -18,10 +18,10 @@ Set Theme "Catppuccin Mocha"
 # Sized so the whole demo fits on one screen without scrolling: `Wait+Screen`
 # reads buffer rows 0..term.rows-1, so it goes stale as soon as the terminal
 # scrolls and every assertion below would time out. Adding output means adding
-# height.
+# height. The extra row holds the `error.at` line under `/boom`.
 Set FontSize 15
 Set Width 1400
-Set Height 940
+Set Height 964
 Set Padding 24
 Set Margin 24
 Set MarginFill "#11111b"

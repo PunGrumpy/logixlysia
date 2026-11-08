@@ -401,11 +401,64 @@ const formatEntriesToTreeLines = (
   return lines
 }
 
+// Skips the function name up to its opening paren, then takes everything to
+// `:line:col`, so a directory name with a space survives.
+const FRAME_LOCATION_REGEX = /^at (?:[^(]*\()?(?<location>.+?:\d+:\d+)\)?$/u
+const PATH_SEPARATORS = ['/', '\\'] as const
+const FILE_URL_PREFIX = 'file://'
+const MAX_LOCATION_LENGTH = 256
+
+const isInternalFrame = (location: string): boolean =>
+  location.includes('/node_modules/') ||
+  location.includes('\\node_modules\\') ||
+  location.startsWith('node:') ||
+  location.startsWith('bun:') ||
+  location.startsWith('native')
+
+const relativeToCwd = (location: string): string => {
+  const cwd = process.cwd()
+  for (const separator of PATH_SEPARATORS) {
+    const prefix = `${cwd}${separator}`
+    if (location.startsWith(prefix)) {
+      return location.slice(prefix.length)
+    }
+  }
+  return location
+}
+
+const frameLocation = (line: string): string | undefined => {
+  const location = FRAME_LOCATION_REGEX.exec(line.trim())?.groups?.location
+  if (location === undefined) {
+    return
+  }
+  return location.startsWith(FILE_URL_PREFIX)
+    ? location.slice(FILE_URL_PREFIX.length)
+    : location
+}
+
+/** The first `path:line:col` outside node_modules and the runtime, or undefined. */
+const thrownAt = (stack: string): string | undefined => {
+  for (const line of stack.split('\n')) {
+    const location = frameLocation(line)
+    if (location !== undefined && !isInternalFrame(location)) {
+      return relativeToCwd(location)
+    }
+  }
+}
+
 const collectStructuredErrorEntries = (error: unknown): [string, string][] => {
   const entries: [string, string][] = []
   const msg = parseError(error)
   if (msg) {
     entries.push(['error', sanitizeLogText(msg)])
+  }
+  const stack =
+    typeof error === 'object' && error !== null && 'stack' in error
+      ? error.stack
+      : undefined
+  const at = typeof stack === 'string' ? thrownAt(stack) : undefined
+  if (at !== undefined) {
+    entries.push(['error.at', sanitizeLogText(at, MAX_LOCATION_LENGTH)])
   }
   if (isStructuredError(error)) {
     if (error.code !== undefined) {

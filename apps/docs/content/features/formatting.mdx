@@ -132,9 +132,11 @@ Logixlysia natively supports structured errors (similar to the `evlog` pattern) 
 - `fix`: Suggests actionable remediation.
 - `link`: Provides a URL to documentation or troubleshooting help.
 - `internal`: Log-safe diagnostic metadata (e.g. error codes, non-sensitive context).
-- `cause`: The underlying error, set with `new Error(message, { cause })` or the `cause` option of `HttpError`.
+- `cause`: The underlying error, set with `new Error(message, { cause })` or the `cause` option of `HttpError`. It reaches transports as `error.cause` (up to three levels) and is not a console branch.
 
-If a caught error contains any of these fields, they are automatically extracted and rendered under the `error.` namespace (`error.code`, `error.why`, `error.fix`, `error.link`, `error.internal`, and `error.cause`) as individual tree branches.
+If a caught error contains any of the `code`, `why`, `fix`, `link` or `internal` fields, they are automatically extracted and rendered under the `error.` namespace (`error.code`, `error.why`, `error.fix`, `error.link` and `error.internal`) as individual tree branches.
+
+An error that reaches the log with a stack also gets `error.at`, the first stack frame outside `node_modules`, as `<file>:<line>:<column>` relative to the working directory. It is console only: transports receive the full `stack` instead. A 4xx `HttpError` carries no stack, so it has no `error.at`.
 
 > [!WARNING] Because `error.internal` is emitted verbatim to logs, it should contain only log-safe diagnostic metadata. Do not place sensitive secrets, credentials, or PII (Personally Identifiable Information) in this field.
 
@@ -175,12 +177,14 @@ app.post('/orders', async () => {
 })
 ```
 
-Console output tree:
+Console output tree, which shows the wrapping error only:
 
 ```
   ├─ error  Could not save order
-  └─ error.cause  {"message":"connection reset","name":"Error"}
+  └─ error.at  src/routes/orders.ts:6:11
 ```
+
+Transports receive the cause as `meta.error.cause`, with the `name` and `message` of the original error.
 
 `HttpError` accepts `cause` in its init object. Like `internal`, the cause is written to the log only and is never serialized into the response body:
 
