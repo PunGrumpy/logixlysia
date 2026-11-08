@@ -1,9 +1,8 @@
+import { LOG_LEVELS, levelRank } from '../helpers/level'
 import type { LogLevel, Transport } from '../interfaces'
 import { stringifyForLog } from '../utils/json'
 import { sanitizeLogText } from '../utils/sanitize'
 import { settle } from '../utils/settle'
-
-const LOG_LEVELS: readonly LogLevel[] = ['DEBUG', 'INFO', 'WARNING', 'ERROR']
 
 export const OTEL_SEVERITY: Record<LogLevel, number> = {
   DEBUG: 5,
@@ -53,7 +52,9 @@ export interface BatchTransportOptions {
   /**
    * Bound on the entries that wait behind the request in flight, as a
    * multiple of `maxBatchSize`: at most `maxPendingBatches × maxBatchSize`
-   * entries wait, and entries beyond that are dropped and reported.
+   * entries wait, and entries beyond that are dropped and reported. A new
+   * entry that outranks the quietest waiting entry takes the place of the
+   * oldest entry at that level instead.
    * @default 32
    */
   maxPendingBatches?: number
@@ -492,11 +493,33 @@ export const createBatchQueue = (input: {
     }
   }
 
+  /** Drops the oldest entry at the quietest waiting level when `level` outranks it. */
+  const evictQuieter = (level: LogLevel): boolean => {
+    let quietest = Number.POSITIVE_INFINITY
+    let index = -1
+    for (const [position, waiting] of buffer.entries()) {
+      const rank = levelRank(waiting.level)
+      if (rank < quietest) {
+        quietest = rank
+        index = position
+      }
+    }
+    if (index === -1 || levelRank(level) <= quietest) {
+      return false
+    }
+    buffer.splice(index, 1)
+    return true
+  }
+
   const push = (entry: LogEntry): Promise<void> | undefined => {
     if (inFlight && buffer.length >= maxWaiting) {
       dropped += 1
       notifyDropped(input.onDropped, 1, 'queue-full')
-      return
+      if (!evictQuieter(entry.level)) {
+        return
+      }
+      // The evicted entry was accepted and will never be sent.
+      settled += 1
     }
     buffer.push(entry)
     accepted += 1
