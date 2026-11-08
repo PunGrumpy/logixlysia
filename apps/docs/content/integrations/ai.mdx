@@ -26,6 +26,7 @@ The fields land in the line's `context.ai`.
 | Field | Meaning |
 | --- | --- |
 | `calls` | Model calls in this request |
+| `errors` | Calls that failed: rejected, stream failed or ended without a finish, or finish reason `error` |
 | `model`, `provider` | The last call's model and provider |
 | `finishReason` | The last call's finish reason, such as `stop` |
 | `inputTokens`, `outputTokens`, `reasoningTokens` | Tokens the provider reported |
@@ -34,7 +35,7 @@ The fields land in the line's `context.ai`.
 | `msToFirstChunk` | Streams only: the last call's time to its first text |
 | `tokensPerSecond` | Streams only: the last call's output tokens over the time from first text to finish |
 
-Several calls in one request are summed: `calls`, the token counts and `msToFinish` add up, while the other fields keep the last call's values. A field the provider did not report is left out.
+Several calls in one request are summed: `calls`, `errors`, the token counts and `msToFinish` add up, while the other fields keep the last call's values. A field the provider did not report is left out. An SDK retry is its own call, so a request that retried and succeeded still carries `errors`.
 
 ## Which line carries them
 
@@ -47,9 +48,11 @@ Several calls in one request are summed: `calls`, the token counts and `msToFini
 
 A returned `Response` writes its access line before the stream ends, and a custom log replaces the access line. In both cases the usage arrives too late for that line, so the middleware writes its own at `INFO`. Each late call writes one, carrying the request's totals so far.
 
+A failed call that lands after the line writes `ai call failed` at `WARNING` instead.
+
 ## Limits
 
-- A stream that ends without a finish chunk, or whose model fails mid-way, records nothing, because the final usage never arrives.
+- A stream the client cancels before it ends records nothing, because the call never finishes on the server.
 - In a handler, `useLogger()` needs `useAsyncLocalStorage: true`. Without it `useLogger()` returns a no-op logger and nothing is recorded.
 - Tested against `ai` 7.
 
