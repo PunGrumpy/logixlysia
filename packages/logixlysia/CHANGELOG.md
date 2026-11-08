@@ -1,5 +1,19 @@
 # Changelog
 
+## 6.13.0
+
+### Minor Changes
+
+- 2351f8f: `aiMiddleware(log)` records a model call that fails: `ai.errors` counts them, `finishReason` is `error`, and the model, provider and duration are kept, whether the call rejected, its stream failed mid-way, or it ended without a finish. The error still reaches the caller unchanged. A failure after the request's line was written logs `ai call failed` at `WARNING`.
+- fcad3d8: The console tree shows where a server error was thrown: `error.at  src/routes/pay.ts:42:11`, the first stack frame outside `node_modules`. Transports are unchanged and still receive the full `stack`.
+- 76aaa36: `logixlysia/errors` exports `HttpError` and `isHttpErrorPayload` with no dependencies, so shared code and browser bundles can throw the error and parse its `why`, `fix` and `link` from a response. The root still exports both.
+
+### Patch Changes
+
+- 5672108: `flush()` on an adapter waits for every entry queued before it was called, even when louder entries evicted quieter ones from a full queue while it was pending.
+- d411642: A thrown or logged plain object is logged with its own fields and a `message`, instead of `[object Object]` and only its `code`, `why`, `fix`, `link` and `internal`. The console tree no longer prints `error  [object Object]` under a validation failure or a thrown string. A plain-object `cause` is normalized like the error itself, and the cause chain is cut at three levels.
+- 775b66a: When an adapter's queue is full, a new entry that outranks the quietest waiting entry now takes the place of the oldest entry at that level, so an `ERROR` is not lost to a burst of `DEBUG` lines. `onDropped` still counts every dropped entry. `logixlysia/http` exports the `LogLevel` type.
+
 ## 6.12.0
 
 ### Minor Changes
