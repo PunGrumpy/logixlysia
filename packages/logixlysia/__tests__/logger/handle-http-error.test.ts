@@ -26,6 +26,13 @@ const createCaptureTransport = () => {
 
 const SECRET_PASSWORD = 'hunter2-secret-value'
 
+const joinConsoleOutput = (
+  spies: ReturnType<typeof spyConsole>['spies']
+): string =>
+  [...spies.error.mock.calls, ...spies.warn.mock.calls]
+    .map(call => String(call[0]))
+    .join('\n')
+
 const buildLoginApp = (options: Options) =>
   new Elysia().use(logixlysia(options)).post('/login', () => 'ok', {
     body: t.Object({
@@ -366,5 +373,135 @@ describe('handleHttpError', () => {
     } finally {
       restore()
     }
+  })
+})
+
+describe('non-Error values', () => {
+  test('a thrown plain object is logged with its own fields and a message', async () => {
+    const { events, transport } = createCaptureTransport()
+    const payload = { code: 'X', detail: 'd', password: 'hunter2' }
+    const app = new Elysia()
+      .use(
+        logixlysia({
+          config: {
+            autoRedact: true,
+            disableFileLogging: true,
+            disableInternalLogger: true,
+            transports: [{ log: transport }]
+          }
+        })
+      )
+      .get('/declined', () => {
+        throw payload
+      })
+
+    await app.handle(new Request('http://localhost/declined'))
+
+    const [event] = events
+    expect(events).toHaveLength(1)
+    expect(event?.level).toBe('ERROR')
+    expect(event?.message).toBe('Non-Error object')
+    expect(event?.meta.status).toBe(500)
+    expect(event?.meta.error).toEqual({
+      code: 'X',
+      detail: 'd',
+      message: 'Non-Error object',
+      password: '[REDACTED]'
+    })
+    expect(JSON.stringify(events)).not.toContain('hunter2')
+  })
+
+  test('a thrown plain object with a string message uses it as the line message', async () => {
+    const { events, transport } = createCaptureTransport()
+    const payload = { code: 'X', message: 'boom' }
+    const app = new Elysia()
+      .use(
+        logixlysia({
+          config: {
+            disableFileLogging: true,
+            disableInternalLogger: true,
+            transports: [{ log: transport }]
+          }
+        })
+      )
+      .get('/boom', () => {
+        throw payload
+      })
+
+    await app.handle(new Request('http://localhost/boom'))
+
+    const [event] = events
+    expect(event?.message).toBe('boom')
+    expect(event?.meta.error).toMatchObject({ code: 'X' })
+  })
+
+  test('a validation failure prints its message in the console tree', async () => {
+    const { restore, spies } = spyConsole(['error', 'warn'])
+    try {
+      const app = buildLoginApp({
+        config: { disableFileLogging: true, useColors: false }
+      })
+
+      const res = await app.handle(
+        new Request('http://localhost/login', {
+          body: JSON.stringify({ email: 'a@b.co', password: 'short' }),
+          headers: { 'content-type': 'application/json' },
+          method: 'POST'
+        })
+      )
+
+      expect(res.status).toBe(422)
+      const output = joinConsoleOutput(spies)
+      expect(output).toContain('error  Validation failed (body)')
+      expect(output).not.toContain('[object Object]')
+    } finally {
+      restore()
+    }
+  })
+
+  test('a thrown string prints its text in the console tree', async () => {
+    const { restore, spies } = spyConsole(['error', 'warn'])
+    const payload = 'boom'
+    try {
+      const app = new Elysia()
+        .use(
+          logixlysia({ config: { disableFileLogging: true, useColors: false } })
+        )
+        .get('/text', () => {
+          throw payload
+        })
+
+      await app.handle(new Request('http://localhost/text'))
+
+      const output = joinConsoleOutput(spies)
+      expect(output).toContain('error  boom')
+      expect(output).not.toContain('[object Object]')
+    } finally {
+      restore()
+    }
+  })
+
+  test('a thrown array is logged with its joined text as the message', async () => {
+    const { events, transport } = createCaptureTransport()
+    const payload = ['a', 'b']
+    const app = new Elysia()
+      .use(
+        logixlysia({
+          config: {
+            disableFileLogging: true,
+            disableInternalLogger: true,
+            transports: [{ log: transport }]
+          }
+        })
+      )
+      .get('/list', () => {
+        throw payload
+      })
+
+    await app.handle(new Request('http://localhost/list'))
+
+    const [event] = events
+    expect(event?.message).toBe('a,b')
+    expect(event?.meta.error).toMatchObject({ message: 'a,b' })
   })
 })

@@ -151,4 +151,22 @@ test('a non-Error value does not throw and writes one line', async () => {
   expect(response.status).toBe(200)
   expect(events).toHaveLength(1)
   expect(events[0]?.level).toBe('ERROR')
+  expect(events[0]?.message).toBe('Non-Error object')
+  expect(events[0]?.meta.error).toMatchObject({
+    message: 'Non-Error object',
+    reason: 'x'
+  })
+})
+
+test('a plain object with a message uses it and keeps its other fields', async () => {
+  const { events, logs } = build()
+  const app = new Elysia().use(logs).get('/', ({ log }) => {
+    log.error({ message: 'db down', retries: 3 })
+    return 'ok'
+  })
+
+  await app.handle(new Request('http://localhost/'))
+
+  expect(events[0]?.message).toBe('db down')
+  expect(events[0]?.meta.error?.retries).toBe(3)
 })
