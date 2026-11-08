@@ -105,6 +105,8 @@ app.post('/pay', async ({ log }) => {
 
 The line carries no status, because the handler may recover and respond with a 200.
 
+A plain object, thrown or passed to `log.error`, is logged with its own fields. Its `message` field is the line's message when it is a string; otherwise the message is `Non-Error object`. Prefer `HttpError`: with `aot: true` Elysia sends a thrown plain object to the client as the JSON body, every field included.
+
 ### 2. Global Hook (`useLogger()`)
 
 Import `useLogger()` to log or merge context from deeply nested operations without prop-drilling the request context:
