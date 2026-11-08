@@ -143,6 +143,31 @@ const heldFetch = () => {
   }
 }
 
+const gatedFetch = (count: number) => {
+  const bodies: string[] = []
+  const gates = Array.from({ length: count }, (): PromiseWithResolvers<void> =>
+    Promise.withResolvers()
+  )
+  let calls = 0
+  const original = globalThis.fetch
+  globalThis.fetch = (async (_url: unknown, init?: RequestInit) => {
+    const gate = gates[calls]
+    calls += 1
+    bodies.push(String(init?.body))
+    await gate?.promise
+    return new Response('ok')
+  }) as typeof fetch
+  return {
+    bodies,
+    release: (index: number): void => {
+      gates[index]?.resolve()
+    },
+    restore: () => {
+      globalThis.fetch = original
+    }
+  }
+}
+
 const FLUSH_TIMEOUT_MS = 2000
 
 type LogFn = (level: LogLevel, message: string) => void
@@ -225,6 +250,77 @@ describe('a full queue', () => {
     expect(flushed).toBe(true)
     expect(bodies.every(body => body.length > 0)).toBe(true)
     expect(bodies.join(',').split(',')).toHaveLength(6)
+  })
+
+  test('flush keeps waiting for earlier entries when louder ones evict quieter ones', async () => {
+    const gated = gatedFetch(2)
+    try {
+      const transport = createHttpTransport({
+        body: entries =>
+          entries.map(item => `${item.level}:${item.message}`).join(','),
+        headers: HEADERS,
+        name: 'custom',
+        options: {
+          flushIntervalMs: 60_000,
+          maxBatchSize: 2,
+          maxPendingBatches: 2,
+          onError: () => {}
+        },
+        url: URL
+      })
+      const log: LogFn = (level, message) => {
+        transport.log(level, message, {})
+      }
+
+      log('INFO', 'a')
+      log('INFO', 'b')
+      await Bun.sleep(5)
+      for (const message of ['e1', 'e2', 'e3']) {
+        log('ERROR', message)
+      }
+      const flushed = transport.flush()
+      log('DEBUG', 'd')
+      log('INFO', 'i')
+      log('WARNING', 'w')
+      log('ERROR', 'e4')
+      gated.release(0)
+
+      const early = await Promise.race([
+        flushed.then(() => 'flushed'),
+        Bun.sleep(50).then(() => 'pending')
+      ])
+      expect(early).toBe('pending')
+
+      gated.release(1)
+      await flushed
+      expect(gated.bodies).toHaveLength(2)
+      for (const expected of ['e1', 'e2', 'e3', 'e4']) {
+        expect(gated.bodies[1]).toContain(`ERROR:${expected}`)
+      }
+      expect(gated.bodies.join(',').split(',')).toHaveLength(6)
+    } finally {
+      gated.restore()
+    }
+  })
+
+  test('flush sends every entry that was not dropped after several evictions', async () => {
+    const { bodies, dropped, flushed } = await withFullQueue(log => {
+      for (const message of ['d1', 'd2', 'd3', 'd4']) {
+        log('DEBUG', message)
+      }
+      for (const message of ['e1', 'e2', 'e3', 'e4', 'e5']) {
+        log('ERROR', message)
+      }
+    })
+
+    const logged = 2 + 4 + 5
+    let lost = 0
+    for (const info of dropped) {
+      lost += info.count
+    }
+    expect(flushed).toBe(true)
+    expect(bodies.every(body => body.length > 0)).toBe(true)
+    expect(bodies.join(',').split(',')).toHaveLength(logged - lost)
   })
 
   test('a same-level newcomer is dropped as before', async () => {

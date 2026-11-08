@@ -518,8 +518,8 @@ export const createBatchQueue = (input: {
       if (!evictQuieter(entry.level)) {
         return
       }
-      // The evicted entry was accepted and will never be sent.
-      settled += 1
+      // The evicted entry leaves the queue unsent, so a pending flush target must not be satisfied by it.
+      accepted -= 1
     }
     buffer.push(entry)
     accepted += 1
