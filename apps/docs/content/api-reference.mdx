@@ -405,11 +405,21 @@ An error with no client-facing fields keeps its previous behaviour exactly — `
 import { isHttpErrorPayload } from 'logixlysia/errors'
 
 const response = await fetch('/pay', { method: 'POST' })
-const body: unknown = await response.json()
+const text = await response.text()
+let body: unknown = text
+try {
+  body = JSON.parse(text)
+} catch {
+  // A bare HttpError answers with its message as plain text.
+}
 if (isHttpErrorPayload(body)) {
   showToast(body.why ?? body.message, { action: body.fix, href: body.link })
+} else if (!response.ok) {
+  showToast(text)
 }
 ```
+
+A bare `HttpError` with no client-facing field answers with its message as plain text, so read the body as text first.
 
 True when `message` is a string, `status` a number, and each of `code`, `why`, `fix` and `link` is absent or a string.
 
