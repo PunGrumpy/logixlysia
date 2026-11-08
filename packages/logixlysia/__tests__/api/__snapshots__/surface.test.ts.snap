@@ -10,6 +10,7 @@ exports[`published API surface every exports subpath resolves and its named expo
     "default",
     "flushLogixlysia",
     "getOrCreateRequestId",
+    "isHttpErrorPayload",
     "logixlysia",
     "resolveOptions",
     "resolveRequestIdConfig",
@@ -40,6 +41,10 @@ exports[`published API surface every exports subpath resolves and its named expo
     "sizeEnricher",
     "traceparentEnricher",
     "userAgentEnricher",
+  ],
+  "./errors": [
+    "HttpError",
+    "isHttpErrorPayload",
   ],
   "./http": [
     "createHttpTransport",

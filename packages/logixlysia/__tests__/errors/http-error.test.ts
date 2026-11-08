@@ -1,6 +1,6 @@
 import { describe, expect, mock, test } from 'bun:test'
 import { Elysia } from 'elysia'
-import { logixlysia, HttpError } from '../../src'
+import { logixlysia, HttpError, isHttpErrorPayload } from '../../src'
 import { normalizeLoggedError } from '../../src/utils/error'
 
 const INTERNAL_SECRET = 'sk_live_do_not_leak'
@@ -59,6 +59,41 @@ describe('HttpError', () => {
 
   test('name is non-enumerable, as on a native Error', () => {
     expect(Object.keys(new HttpError(404, 'Not found'))).not.toContain('name')
+  })
+})
+
+const whyOf = (value: unknown): string | undefined =>
+  isHttpErrorPayload(value) ? value.why : undefined
+
+describe('isHttpErrorPayload', () => {
+  test('accepts the body toResponse sends', async () => {
+    const body: unknown = await richError().toResponse?.().json()
+
+    expect(isHttpErrorPayload(body)).toBe(true)
+  })
+
+  test('accepts a bare message and status', () => {
+    expect(isHttpErrorPayload({ message: 'x', status: 404 })).toBe(true)
+  })
+
+  test.each([
+    ['null', null],
+    ['a string', 'x'],
+    ['a number', 42],
+    ['a body without status', { message: 'x' }],
+    ['a body without message', { status: 402 }],
+    ['a string status', { message: 'x', status: '402' }],
+    ['a numeric code', { code: 7, message: 'x', status: 402 }],
+    ['a null why', { message: 'x', status: 402, why: null }]
+  ])('rejects %s', (_name, value) => {
+    expect(isHttpErrorPayload(value)).toBe(false)
+  })
+
+  test('narrows to a payload whose optional fields are strings', async () => {
+    const body: unknown = await richError().toResponse?.().json()
+
+    expect(whyOf(body)).toBe('The issuing bank rejected the charge.')
+    expect(whyOf({ message: 'x', status: 404 })).toBeUndefined()
   })
 })
 

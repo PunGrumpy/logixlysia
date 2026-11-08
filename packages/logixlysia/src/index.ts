@@ -891,7 +891,7 @@ export const flushLogixlysia = async (
 export { resolveOptions } from './config/resolve-options'
 export { useLogger } from './context/storage'
 export type { HttpErrorInit, HttpErrorPayload } from './errors'
-export { HttpError } from './errors'
+export { HttpError, isHttpErrorPayload } from './errors'
 export type {
   DeepPartial,
   Enricher,

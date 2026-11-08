@@ -39,7 +39,8 @@ const config = defineConfig({
     'src/loki.ts',
     'src/clickhouse.ts',
     'src/desertant.ts',
-    'src/http.ts'
+    'src/http.ts',
+    'src/errors.ts'
   ],
   external: ['elysia', 'chalk', 'pino', 'pino-pretty'],
   format: ['esm'],

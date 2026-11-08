@@ -96,6 +96,11 @@
       "import": "./dist/desertant.js",
       "default": "./dist/desertant.js"
     },
+    "./errors": {
+      "types": "./dist/errors.d.ts",
+      "import": "./dist/errors.js",
+      "default": "./dist/errors.js"
+    },
     "./http": {
       "types": "./dist/http.d.ts",
       "import": "./dist/http.js",
