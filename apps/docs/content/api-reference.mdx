@@ -356,6 +356,8 @@ interface HttpErrorInit {
 }
 ```
 
+Import it from `logixlysia` on the server, or from `logixlysia/errors` anywhere: that subpath has no dependencies, so shared code and browser bundles can throw `HttpError` and read its payload. The two imports are the same class.
+
 **Properties:**
 
 - `status` — HTTP status code
@@ -396,6 +398,20 @@ Response body:
 The log line carries the same fields **plus** `internal`, rendered in the context tree as `error.code`, `error.why`, `error.fix`, `error.link`, and `error.internal`.
 
 An error with no client-facing fields keeps its previous behaviour exactly — `throw new HttpError(404, 'User not found')` still responds with the bare message, not JSON. Only an error carrying at least one of `code`, `why`, `fix`, or `link` responds as JSON.
+
+#### `isHttpErrorPayload`
+
+```ts check=skip
+import { isHttpErrorPayload } from 'logixlysia/errors'
+
+const response = await fetch('/pay', { method: 'POST' })
+const body: unknown = await response.json()
+if (isHttpErrorPayload(body)) {
+  showToast(body.why ?? body.message, { action: body.fix, href: body.link })
+}
+```
+
+True when `message` is a string, `status` a number, and each of `code`, `why`, `fix` and `link` is absent or a string.
 
 ## Usage Examples
 
