@@ -316,9 +316,100 @@ describe('buildContextTreeLines', () => {
       { config: { useColors: false } }
     )
 
-    expect(lines.length).toBe(1)
+    expect(lines.length).toBe(2)
     expect(lines[0]).toContain('error')
     expect(lines[0]).toContain('nope')
+    expect(lines[1]).toContain('error.at')
+    expect(lines[1]).toContain('format-output.test.ts:')
+  })
+
+  test('omits error.at when every frame is in node_modules or the runtime', () => {
+    const error = new Error('x')
+    error.stack =
+      'Error: x\n    at a (/app/node_modules/x/index.js:1:1)\n    at node:internal/process/task_queues:95:5'
+
+    const lines = buildContextTreeLines(
+      'ERROR',
+      { error },
+      { config: { useColors: false } }
+    )
+
+    expect(lines.length).toBe(1)
+    expect(lines.some(l => l.includes('error.at'))).toBe(false)
+  })
+
+  test('strips the file:// prefix from a bare stack frame', () => {
+    const error = new Error('x')
+    error.stack = 'Error: x\n    at file:///tmp/app/src/x.ts:3:4'
+
+    const lines = buildContextTreeLines(
+      'ERROR',
+      { error },
+      { config: { useColors: false } }
+    )
+
+    expect(lines[1]).toContain('/tmp/app/src/x.ts:3:4')
+    expect(lines[1]).not.toContain('file://')
+  })
+
+  test('keeps the whole path of a frame whose directory has a space', () => {
+    const error = new Error('x')
+    error.stack =
+      'Error: x\n    at pay (/home/me/My Projects/app/src/pay.ts:42:11)'
+
+    const lines = buildContextTreeLines(
+      'ERROR',
+      { error },
+      { config: { useColors: false } }
+    )
+
+    expect(lines[1]).toContain('/home/me/My Projects/app/src/pay.ts:42:11')
+    expect(lines[1]).not.toContain('pay (')
+  })
+
+  test('keeps a Windows-style frame path whole', () => {
+    const error = new Error('x')
+    error.stack =
+      'Error: x\n    at a (C:\\app\\node_modules\\x\\index.js:1:1)\n    at pay (C:\\app\\src\\pay.ts:42:11)'
+
+    const lines = buildContextTreeLines(
+      'ERROR',
+      { error },
+      { config: { useColors: false } }
+    )
+
+    expect(lines[1]).toContain('C:\\app\\src\\pay.ts:42:11')
+  })
+
+  test('makes a frame under the working directory relative, with either separator', () => {
+    const cwd = process.cwd()
+    const unix = new Error('x')
+    unix.stack = `Error: x\n    at pay (${cwd}/src/pay.ts:1:2)`
+    const windows = new Error('x')
+    windows.stack = `Error: x\n    at pay (${cwd}\\src\\pay.ts:1:2)`
+
+    const options = { config: { useColors: false } }
+    const unixLines = buildContextTreeLines('ERROR', { error: unix }, options)
+    const windowsLines = buildContextTreeLines(
+      'ERROR',
+      { error: windows },
+      options
+    )
+
+    expect(unixLines[1]).toContain('error.at  src/pay.ts:1:2')
+    expect(windowsLines[1]).toContain('error.at  src\\pay.ts:1:2')
+  })
+
+  test('adds error.at for a WARNING record', () => {
+    const lines = buildContextTreeLines(
+      'WARNING',
+      { error: { message: 'm', stack: '    at /x/y.ts:1:2' } },
+      { config: { useColors: false } }
+    )
+
+    expect(lines.length).toBe(2)
+    expect(lines[1]).toContain('error.at')
+    expect(lines[1]).toContain('/x/y.ts:1:2')
   })
 
   test('expands nested context when contextDepth > 1', () => {
@@ -351,16 +442,17 @@ describe('buildContextTreeLines', () => {
       { config: { useColors: false } }
     )
 
-    expect(lines.length).toBe(5)
+    expect(lines.length).toBe(6)
     expect(lines[0]).toContain('error')
     expect(lines[0]).toContain('Payment Failed')
-    expect(lines[1]).toContain('error.why')
-    expect(lines[1]).toContain('Card declined')
-    expect(lines[2]).toContain('error.fix')
-    expect(lines[2]).toContain('Try another card')
-    expect(lines[3]).toContain('error.link')
-    expect(lines[3]).toContain('https://link.com')
-    expect(lines[4]).toContain('error.internal')
-    expect(lines[4]).toContain('{"code":"NSF"}')
+    expect(lines[1]).toContain('error.at')
+    expect(lines[2]).toContain('error.why')
+    expect(lines[2]).toContain('Card declined')
+    expect(lines[3]).toContain('error.fix')
+    expect(lines[3]).toContain('Try another card')
+    expect(lines[4]).toContain('error.link')
+    expect(lines[4]).toContain('https://link.com')
+    expect(lines[5]).toContain('error.internal')
+    expect(lines[5]).toContain('{"code":"NSF"}')
   })
 })
