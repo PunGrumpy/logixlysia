@@ -47,6 +47,7 @@ describe('logixlysia/ai', () => {
 
     const allMetrics = {
       calls: 3,
+      errors: 1,
       finishReason: 'stop',
       inputTokens: 200,
       model: 'gpt-4o',
