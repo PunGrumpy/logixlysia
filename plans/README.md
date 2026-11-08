@@ -31,6 +31,12 @@ No two plans share a file, so all five run in parallel worktrees from `91fd02f`.
 - **`close()` aborting a pending retry backoff**: not planned, but the earlier premise was wrong: `flushLogixlysia` awaits `flushAll` with no race, so it is unbounded too, and plan 079's ref'd timer keeps the process alive. The fix is an abort design, recorded here for a later pass.
 - **The `useAsyncLocalStorage` leak on nested `app.handle()` with `aot: false`**, the wide-event default, error catalogs, sealing after emit, `fork`, a memory transport, config-file discovery and a CLI: stand as rejected or deferred in the earlier passes.
 
+### Open follow-ups, vetted and not planned
+
+- **A logged plain object is treated like a context bag.** Since 097, its own fields reach transports as they are, so a self-reference through a key other than `cause`, or an own `toJSON` that returns a sensitive value under another name, bypasses the depth cap and key-based redaction the same way a `mergeContext` bag already does. The built-in adapters snapshot with a cycle-safe serializer; a hand-written transport that calls `JSON.stringify` is the exposure. Dropping function fields and running the copy through the cycle-safe serializer is the likely shape; it needs a design that keeps `Date` values.
+- **The "fails mid-way" stream test fails before any chunk is delivered.** `controller.error()` in `start` clears the queue, so the test pins the error reaching the caller and one `errors`, not that earlier chunks survive. Passthrough is pinned separately; a pull-based fixture that errors after one chunk would say what the name says.
+- **`flush()` after an eviction** counted the evicted entry as settled, so evictions after a pending `flush()` could satisfy it early. Fixed with a failing-first test in [PR #602](https://github.com/PunGrumpy/logixlysia/pull/602), together with the `isHttpErrorPayload` docs example, which now reads a plain-text `HttpError` body too. Both came from CodeRabbit's review of this record.
+
 ### Not audited this run
 
 Everything outside the items above: no new audit of correctness, security, performance, tests or dependencies ran. Existing docs pages that name the reference library were left alone.
