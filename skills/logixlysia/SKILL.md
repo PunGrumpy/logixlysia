@@ -262,6 +262,8 @@ throw new HttpError(402, 'Card declined', {
 
 A bare `new HttpError(404, 'Not found')` still responds with the plain message.
 
+`logixlysia/errors` exports `HttpError` and `isHttpErrorPayload` without pulling in Elysia or pino; use it in shared or client code.
+
 ---
 
 ## 11. Typed fields

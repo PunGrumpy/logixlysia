@@ -8,6 +8,30 @@ export interface HttpErrorPayload {
   why?: string
 }
 
+const CLIENT_FIELDS = ['code', 'why', 'fix', 'link'] as const
+
+const isOptionalString = (value: unknown): boolean =>
+  value === undefined || typeof value === 'string'
+
+/**
+ * True for the body `HttpError.toResponse()` sends, after a JSON round trip:
+ * `message` is a string, `status` a number, and `code`, `why`, `fix` and
+ * `link` are strings when present. Use it where a client parses a response.
+ */
+export const isHttpErrorPayload = (
+  value: unknown
+): value is HttpErrorPayload => {
+  if (typeof value !== 'object' || value === null) {
+    return false
+  }
+  const record = value as Record<string, unknown>
+  return (
+    typeof record.message === 'string' &&
+    typeof record.status === 'number' &&
+    CLIENT_FIELDS.every(field => isOptionalString(record[field]))
+  )
+}
+
 export interface HttpErrorInit {
   /** The underlying error, logged with the line and never serialized into the response. */
   cause?: unknown
