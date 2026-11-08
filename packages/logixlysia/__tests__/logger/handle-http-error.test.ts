@@ -504,4 +504,57 @@ describe('non-Error values', () => {
     expect(event?.message).toBe('a,b')
     expect(event?.meta.error).toMatchObject({ message: 'a,b' })
   })
+
+  test('a plain object whose cause points back at itself is cut and serializes', async () => {
+    const { events, transport } = createCaptureTransport()
+    const payload: Record<string, unknown> = { code: 'X' }
+    payload.cause = payload
+    const app = new Elysia()
+      .use(
+        logixlysia({
+          config: {
+            disableFileLogging: true,
+            disableInternalLogger: true,
+            transports: [{ log: transport }]
+          }
+        })
+      )
+      // Elysia would fail serializing the cyclic body; the line is emitted first.
+      .onError(() => 'failed')
+      .get('/loop', () => {
+        throw payload
+      })
+
+    await app.handle(new Request('http://localhost/loop'))
+
+    expect(events).toHaveLength(1)
+    const metaError = events[0]?.meta.error as Record<string, unknown>
+    expect(metaError.cause).not.toBe(metaError)
+    expect(metaError.cause).not.toBe(payload)
+    expect(() => JSON.stringify(events)).not.toThrow()
+  })
+
+  test('a plain object keeps a plain-object cause with a message', async () => {
+    const { events, transport } = createCaptureTransport()
+    const payload = { cause: { detail: 'd' }, code: 'X' }
+    const app = new Elysia()
+      .use(
+        logixlysia({
+          config: {
+            disableFileLogging: true,
+            disableInternalLogger: true,
+            transports: [{ log: transport }]
+          }
+        })
+      )
+      .get('/nested', () => {
+        throw payload
+      })
+
+    await app.handle(new Request('http://localhost/nested'))
+
+    expect(events[0]?.meta.error).toMatchObject({
+      cause: { detail: 'd', message: 'Non-Error object' }
+    })
+  })
 })

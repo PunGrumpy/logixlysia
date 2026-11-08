@@ -102,7 +102,7 @@ export const normalizeLoggedError = (
       return safe
     }
     safe.cause =
-      cause instanceof Error || isStructuredError(cause)
+      cause instanceof Error || isStructuredError(cause) || isPlainObject(cause)
         ? normalizeLoggedError(cause, logErrorPayload, depth + 1).error
         : cause
     return safe
@@ -171,6 +171,9 @@ export const normalizeLoggedError = (
   if (isPlainObject(error)) {
     const message = parseError(error)
     const record: Record<string, unknown> = { ...error, message }
+    // `withCause` re-adds a normalized cause; the raw one would defeat its
+    // depth cap and any cycle in the chain.
+    delete record.cause
     return { error: withCause(record, error), message }
   }
 
