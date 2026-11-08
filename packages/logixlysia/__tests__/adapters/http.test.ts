@@ -1,7 +1,6 @@
 import { describe, expect, test } from 'bun:test'
-import type { LogEntry } from '../../src/http'
+import type { LogEntry, LogLevel } from '../../src/http'
 import { createHttpTransport, entryText } from '../../src/http'
-import type { LogLevel } from '../../src/interfaces'
 import { stubFetch } from './helpers'
 
 const URL = 'http://collector.test/ingest'
