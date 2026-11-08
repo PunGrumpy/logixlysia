@@ -2,14 +2,26 @@ import { STATUS_CODES } from 'node:http'
 import { isStatusResponse } from '../helpers/status'
 import { toText } from './sanitize'
 
+const NON_ERROR_OBJECT_MESSAGE = 'Non-Error object'
+
+const isPlainObject = (value: unknown): value is Record<string, unknown> => {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    return false
+  }
+  const proto = Object.getPrototypeOf(value)
+  return proto === Object.prototype || proto === null
+}
+
 // Elysia copies a `status(code, body)` body into `error.message`, so a message
 // is not always a string.
 export const parseError = (error: unknown): string => {
   if (error instanceof Error) {
     return toText(error.message)
   }
-  if (error && typeof error === 'object' && 'message' in error) {
-    return toText(error.message)
+  if (typeof error === 'object' && error !== null && !Array.isArray(error)) {
+    return 'message' in error && typeof error.message === 'string'
+      ? toText(error.message)
+      : NON_ERROR_OBJECT_MESSAGE
   }
   return String(error)
 }
@@ -90,7 +102,7 @@ export const normalizeLoggedError = (
       return safe
     }
     safe.cause =
-      cause instanceof Error || isStructuredError(cause)
+      cause instanceof Error || isStructuredError(cause) || isPlainObject(cause)
         ? normalizeLoggedError(cause, logErrorPayload, depth + 1).error
         : cause
     return safe
@@ -122,7 +134,12 @@ export const normalizeLoggedError = (
         ? `Validation failed (${scope}): ${paths.join(', ')}`
         : `Validation failed (${scope})`
     return {
-      error: { failedPaths: paths, name: 'ValidationError', type: scope },
+      error: {
+        failedPaths: paths,
+        message,
+        name: 'ValidationError',
+        type: scope
+      },
       message
     }
   }
@@ -151,15 +168,25 @@ export const normalizeLoggedError = (
     }
   }
 
+  if (isPlainObject(error)) {
+    const message = parseError(error)
+    const record: Record<string, unknown> = { ...error, message }
+    // `withCause` re-adds a normalized cause; the raw one would defeat its
+    // depth cap and any cycle in the chain.
+    delete record.cause
+    return { error: withCause(record, error), message }
+  }
+
+  const message = parseError(error)
+
   if (isStructuredError(error)) {
+    const safe = copyStructuredErrorFields(error as Record<string, unknown>)
+    safe.message = message
     return {
-      error: withCause(
-        copyStructuredErrorFields(error as Record<string, unknown>),
-        error as Record<string, unknown>
-      ),
-      message: parseError(error)
+      error: withCause(safe, error as Record<string, unknown>),
+      message
     }
   }
 
-  return { error: { value: String(error) }, message: parseError(error) }
+  return { error: { message, value: String(error) }, message }
 }
