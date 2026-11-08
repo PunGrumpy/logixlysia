@@ -1,3 +1,4 @@
+import { isLogLevel } from '../helpers/level'
 import type {
   LogFilter,
   LogPreset,
@@ -55,8 +56,6 @@ const isNonNegativeNumber = (value: unknown): boolean =>
 /** The largest delay `setTimeout` honours; above it the timer fires after 1 ms. */
 const MAX_TIMER_DELAY_MS = 2_147_483_647
 
-const VALID_SAMPLING_LEVELS = ['DEBUG', 'INFO', 'WARNING', 'ERROR'] as const
-
 const invalidSampling = (detail: string): never => {
   throw new Error(`logixlysia: invalid sampling config — ${detail}`)
 }
@@ -102,7 +101,7 @@ const validateSampling = (config: Options['config']): void => {
   }
 
   for (const [level, rate] of Object.entries(sampling.head ?? {})) {
-    if (!VALID_SAMPLING_LEVELS.includes(level as never)) {
+    if (!isLogLevel(level)) {
       invalidSampling(
         `head.${level} is not a valid level (must be DEBUG, INFO, WARNING, or ERROR)`
       )
@@ -156,9 +155,7 @@ const validateLogFilterLevel = (level: unknown): void => {
     return
   }
 
-  const isKnownLevelList =
-    Array.isArray(level) &&
-    level.every(entry => VALID_SAMPLING_LEVELS.includes(entry))
+  const isKnownLevelList = Array.isArray(level) && level.every(isLogLevel)
   if (!isKnownLevelList) {
     invalidLogFilter(
       `level must be an array of DEBUG, INFO, WARNING or ERROR, got ${JSON.stringify(level)}`
