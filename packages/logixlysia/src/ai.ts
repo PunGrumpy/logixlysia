@@ -3,6 +3,11 @@ import type { Logger, RequestScopedLogger } from './interfaces'
 
 export interface AIMetrics {
   calls?: number
+  /**
+   * Calls that failed: the call rejected, its stream failed or ended without
+   * a finish, or its finish reason was `error`.
+   */
+  errors?: number
   finishReason?: string
   inputTokens?: number
   model?: string
@@ -17,6 +22,7 @@ export interface AIMetrics {
 
 const COMBINE: Record<keyof AIMetrics, 'last' | 'sum'> = {
   calls: 'sum',
+  errors: 'sum',
   finishReason: 'last',
   inputTokens: 'sum',
   model: 'last',
@@ -126,7 +132,7 @@ export interface AIMiddleware {
   }) => Promise<T>
 }
 
-type AILog = Pick<RequestScopedLogger, 'info' | 'mergeContext'>
+type AILog = Pick<RequestScopedLogger, 'info' | 'mergeContext' | 'warn'>
 
 const MS_PER_SECOND = 1000
 
@@ -152,7 +158,9 @@ const recordCall = (
     const msToFinish = performance.now() - startedAt
     const msStreaming =
       msToFirstChunk === undefined ? 0 : msToFinish - msToFirstChunk
+    const failed = finishReason.unified === 'error'
     mergeAIMetrics(log, {
+      errors: failed ? 1 : undefined,
       finishReason: finishReason.unified,
       inputTokens,
       model: model.modelId,
@@ -171,10 +179,50 @@ const recordCall = (
           : undefined
     })
     if (isLineSettled(log)) {
-      log.info('ai call finished')
+      if (failed) {
+        log.warn('ai call failed')
+      } else {
+        log.info('ai call finished')
+      }
     }
   } catch {
     // A logging failure must not fail the model call it observes.
+  }
+}
+
+const recordFailure = (
+  log: AILog,
+  model: AIModelRef,
+  startedAt: number
+): void => {
+  try {
+    mergeAIMetrics(log, {
+      calls: 1,
+      errors: 1,
+      finishReason: 'error',
+      model: model.modelId,
+      msToFinish: performance.now() - startedAt,
+      provider: model.provider
+    })
+    if (isLineSettled(log)) {
+      log.warn('ai call failed')
+    }
+  } catch {
+    // A logging failure must not hide the model error it observes.
+  }
+}
+
+const awaitRecordingFailure = async <T>(
+  log: AILog,
+  model: AIModelRef,
+  call: () => PromiseLike<T>
+): Promise<{ result: T; startedAt: number }> => {
+  const startedAt = performance.now()
+  try {
+    return { result: await call(), startedAt }
+  } catch (error) {
+    recordFailure(log, model, startedAt)
+    throw error
   }
 }
 
@@ -187,36 +235,68 @@ const recordCall = (
  */
 export const aiMiddleware = (log: AILog): AIMiddleware => ({
   wrapGenerate: async ({ doGenerate, model }) => {
-    const startedAt = performance.now()
-    const result = await doGenerate()
+    const { result, startedAt } = await awaitRecordingFailure(
+      log,
+      model,
+      doGenerate
+    )
     recordCall(log, model, result, startedAt)
     return result
   },
   wrapStream: async ({ doStream, model }) => {
-    const startedAt = performance.now()
-    const result = await doStream()
+    const { result, startedAt } = await awaitRecordingFailure(
+      log,
+      model,
+      doStream
+    )
+    const reader = result.stream.getReader()
     let finish: AIFinish | undefined
     let msToFirstChunk: number | undefined
-    return {
-      ...result,
-      stream: result.stream.pipeThrough(
-        new TransformStream<AIStreamChunk, AIStreamChunk>({
-          flush: () => {
-            if (finish) {
-              recordCall(log, model, finish, startedAt, msToFirstChunk)
-            }
-          },
-          transform: (chunk, controller) => {
-            if (msToFirstChunk === undefined && chunk.type === 'text-delta') {
-              msToFirstChunk = performance.now() - startedAt
-            }
-            if (isFinishChunk(chunk)) {
-              finish = chunk
-            }
-            controller.enqueue(chunk)
-          }
-        })
-      )
+    let settled = false
+    const settle = (): void => {
+      if (settled) {
+        return
+      }
+      settled = true
+      if (finish) {
+        recordCall(log, model, finish, startedAt, msToFirstChunk)
+      } else {
+        recordFailure(log, model, startedAt)
+      }
     }
+    // Bun 1.3 never calls a TransformStream's cancel, so a transformer cannot
+    // see the source fail; reading the source directly can.
+    const stream = new ReadableStream<AIStreamChunk>({
+      cancel: reason => {
+        // The cancel ends a pending read as done: the client left, the call
+        // did not fail.
+        settled = true
+        return reader.cancel(reason)
+      },
+      pull: async controller => {
+        let next: Awaited<ReturnType<typeof reader.read>>
+        try {
+          next = await reader.read()
+        } catch (error) {
+          settle()
+          controller.error(error)
+          return
+        }
+        if (next.done) {
+          settle()
+          controller.close()
+          return
+        }
+        const chunk = next.value
+        if (msToFirstChunk === undefined && chunk.type === 'text-delta') {
+          msToFirstChunk = performance.now() - startedAt
+        }
+        if (isFinishChunk(chunk)) {
+          finish = chunk
+        }
+        controller.enqueue(chunk)
+      }
+    })
+    return { ...result, stream }
   }
 })
