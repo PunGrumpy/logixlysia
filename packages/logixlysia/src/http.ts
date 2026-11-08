@@ -8,3 +8,4 @@ export type {
   HttpTransportInput,
   LogEntry
 } from './adapters/shared'
+export type { LogLevel } from './interfaces'
