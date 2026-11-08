@@ -1,3 +1,4 @@
+import { levelRank } from '../helpers/level'
 import type {
   LogLevel,
   Options,
@@ -41,17 +42,10 @@ const watch = async (
   }
 }
 
-const LEVEL_RANK: Record<LogLevel, number> = {
-  DEBUG: 0,
-  ERROR: 3,
-  INFO: 1,
-  WARNING: 2
-}
-
 const isBelowMinLevel = (
   level: LogLevel,
   minLevel: LogLevel | undefined
-): boolean => minLevel !== undefined && LEVEL_RANK[level] < LEVEL_RANK[minLevel]
+): boolean => minLevel !== undefined && levelRank(level) < levelRank(minLevel)
 
 interface LogToTransportsInput {
   data: Record<string, unknown>

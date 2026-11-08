@@ -1,9 +1,8 @@
+import { LOG_LEVELS } from '../helpers/level'
 import type { LogLevel, Transport } from '../interfaces'
 import { stringifyForLog } from '../utils/json'
 import { sanitizeLogText } from '../utils/sanitize'
 import { settle } from '../utils/settle'
-
-const LOG_LEVELS: readonly LogLevel[] = ['DEBUG', 'INFO', 'WARNING', 'ERROR']
 
 export const OTEL_SEVERITY: Record<LogLevel, number> = {
   DEBUG: 5,
