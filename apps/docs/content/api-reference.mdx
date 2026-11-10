@@ -461,26 +461,3 @@ app.post(
   { body: t.Object({ email: t.String() }) }
 )
 ```
-data' }
-})
-```
-
-### Custom Logging
-
-```ts
-app.post(
-  '/users',
-  ({ store, body, request }) => {
-    const { logger } = store
-
-    logger.debug(request, 'Creating user', { email: body.email })
-
-    // ... create user logic
-
-    logger.info(request, 'User created', { userId: newUser.id })
-
-    return newUser
-  },
-  { body: t.Object({ email: t.String() }) }
-)
-```
