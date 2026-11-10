@@ -230,11 +230,11 @@ The `log` every handler receives, and what `useLogger()` returns. It is bound to
 
 ```ts check=skip
 type RequestScopedLogger<TFields extends object = LogFields> = {
-  debug: (message: string, context?: Partial<TFields>) => void
-  info: (message: string, context?: Partial<TFields>) => void
-  warn: (message: string, context?: Partial<TFields>) => void
-  error: (message: string, context?: Partial<TFields>) => void
-  mergeContext: (partial: Partial<TFields>) => void
+  debug: (message: string, context?: DeepPartial<TFields>) => void
+  info: (message: string, context?: DeepPartial<TFields>) => void
+  warn: (message: string, context?: DeepPartial<TFields>) => void
+  error: (error: unknown, context?: DeepPartial<TFields>) => void
+  mergeContext: (partial: DeepPartial<TFields>) => void
 }
 ```
 
