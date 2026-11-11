@@ -399,6 +399,38 @@ describe('aiMiddleware', () => {
     expect(log.mergeContext).not.toHaveBeenCalled()
   })
 
+  test('a stream the client cancels after the finish chunk records the call', async () => {
+    const log = mockLog()
+    const { stream } = await aiMiddleware(log).wrapStream({
+      doStream: () =>
+        Promise.resolve({
+          // The source never closes, so only the cancel can end the call.
+          stream: new ReadableStream({
+            start: controller => {
+              controller.enqueue(streamChunks.at(-1))
+            }
+          })
+        }),
+      model: { modelId: 'm', provider: 'p' }
+    })
+    const reader = stream.getReader()
+
+    const first = await reader.read()
+    expect(first.value?.type).toBe('finish')
+    await reader.cancel()
+
+    expect(log.mergeContext).toHaveBeenCalledTimes(1)
+    expect(log.mergeContext).toHaveBeenCalledWith({
+      ai: expect.objectContaining({
+        calls: 1,
+        finishReason: 'stop',
+        inputTokens: 12,
+        outputTokens: 5,
+        totalTokens: 17
+      })
+    })
+  })
+
   test('fits LanguageModelMiddleware, whatever fields the log is typed with', () => {
     const log: RequestScopedLogger<{ cartId: string }> = {
       debug: mock(),
