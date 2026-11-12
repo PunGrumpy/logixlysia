@@ -58,16 +58,42 @@ const consoleWrites = async (
 
 const get = (path: string): Request => new Request(`http://localhost${path}`)
 
+/** Every console write a request caused, each parsed as one JSON line. */
+const jsonRecords = async (
+  options: Options,
+  request: Request
+): Promise<Record<string, unknown>[]> => {
+  const writes = await consoleWrites(options, [request])
+  return writes.map(write => {
+    const text = write.replace(/^\w+: /u, '')
+    expect(text).not.toContain('\n')
+    return JSON.parse(text) as Record<string, unknown>
+  })
+}
+
 /** The one console write a request caused, parsed as JSON. */
 const jsonRecord = async (
   options: Options,
   request: Request
 ): Promise<Record<string, unknown>> => {
-  const writes = await consoleWrites(options, [request])
-  expect(writes).toHaveLength(1)
-  const text = (writes[0] ?? '').replace(/^\w+: /u, '')
-  expect(text).not.toContain('\n')
-  return JSON.parse(text) as Record<string, unknown>
+  const records = await jsonRecords(options, request)
+  expect(records).toHaveLength(1)
+  return records[0] ?? {}
+}
+
+/** The handler's own line and the access line of a request that logs once. */
+const customAndAccess = async (
+  options: Options,
+  request: Request
+): Promise<{
+  access: Record<string, unknown>
+  custom: Record<string, unknown>
+}> => {
+  const records = await jsonRecords(options, request)
+  expect(records).toHaveLength(2)
+  const access = records.find(record => record.message === '') ?? {}
+  const custom = records.find(record => record.message !== '') ?? {}
+  return { access, custom }
 }
 
 afterEach(() => {
@@ -119,20 +145,25 @@ describe.each(['json', 'prod'] as const)(
       })
     })
 
-    test('a log.info line replaces the access line and carries its context', async () => {
-      const record = await jsonRecord(options, get('/checkout'))
+    test('a log.info line carries its context, and the access line still carries the status', async () => {
+      const { access, custom } = await customAndAccess(
+        options,
+        get('/checkout')
+      )
 
-      expect(record.level).toBe('INFO')
-      expect(record.message).toBe('checkout started')
-      expect(record.context).toMatchObject({ cartId: 'cart_1' })
-      expect(record.status).toBeUndefined()
+      expect(custom.level).toBe('INFO')
+      expect(custom.message).toBe('checkout started')
+      expect(custom.context).toMatchObject({ cartId: 'cart_1' })
+      expect(custom.status).toBeUndefined()
+      expect(access.status).toBe(200)
+      expect(access.durationMs).toBeNumber()
     })
 
     test('a value with a newline stays on one line and round-trips', async () => {
-      const record = await jsonRecord(options, get('/multiline'))
+      const { custom } = await customAndAccess(options, get('/multiline'))
 
-      expect(record.message).toBe('line one\nline two')
-      expect(record.context).toMatchObject({ note: 'first\nsecond' })
+      expect(custom.message).toBe('line one\nline two')
+      expect(custom.context).toMatchObject({ note: 'first\nsecond' })
     })
   }
 )
@@ -140,7 +171,7 @@ describe.each(['json', 'prod'] as const)(
 describe('preset prod JSON line redaction', () => {
   test('masks a secret in the path and in the context', async () => {
     const path = await jsonRecord({ preset: 'prod' }, get('/users/ada@x.io'))
-    const signup = await jsonRecord(
+    const { custom: signup } = await customAndAccess(
       { preset: 'prod' },
       new Request('http://localhost/signup', { method: 'POST' })
     )
@@ -205,9 +236,11 @@ describe.each([
     ])
 
     expect(writes.map(write => write.replace(DURATION, '<duration>'))).toEqual([
-      'info: 2026-01-02T03:04:05.678Z INFO  GET     /checkout 200 <duration> checkout started\n  └─ cartId  cart_1',
+      'info: 2026-01-02T03:04:05.678Z INFO  GET     /checkout - <duration> checkout started\n  └─ cartId  cart_1',
+      'info: 2026-01-02T03:04:05.678Z INFO  GET     /checkout 200 <duration> ',
       'info: 2026-01-02T03:04:05.678Z INFO  GET     /merged 200 <duration> \n  ├─ cartId  cart_1\n  └─ items  3',
-      'info: 2026-01-02T03:04:05.678Z INFO  GET     /multiline 200 <duration> line one\\nline two\n  └─ note  first\\nsecond',
+      'info: 2026-01-02T03:04:05.678Z INFO  GET     /multiline - <duration> line one\\nline two\n  └─ note  first\\nsecond',
+      'info: 2026-01-02T03:04:05.678Z INFO  GET     /multiline 200 <duration> ',
       'info: 2026-01-02T03:04:05.678Z INFO  GET     /ok 200 <duration> '
     ])
   })

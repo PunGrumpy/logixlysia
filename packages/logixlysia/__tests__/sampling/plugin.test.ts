@@ -90,7 +90,11 @@ describe('sampling through the plugin', () => {
     const app = buildApp({ sampling: { head: { INFO: 100 } } }, transport)
 
     await get(app, '/fast')
-    expect(events).toHaveLength(2)
+    expect(events.map(event => event.message)).toEqual([
+      'step one',
+      'step two',
+      ''
+    ])
   })
 
   test('tail sampling replays head-dropped records on an error status', async () => {
@@ -110,7 +114,7 @@ describe('sampling through the plugin', () => {
     ])
   })
 
-  test('tail sampling rescues the custom logs of a matching path', async () => {
+  test('tail sampling rescues the custom logs and the access line of a matching path', async () => {
     const { events, transport } = createCaptureTransport()
     const app = buildApp(
       { sampling: { head: { INFO: 0 }, tail: { paths: ['/checkout/**'] } } },
@@ -121,7 +125,10 @@ describe('sampling through the plugin', () => {
     expect(events).toHaveLength(0)
 
     await get(app, '/checkout/cart')
-    expect(events.map(event => event.message)).toEqual(['cart read'])
+    expect(events.map(event => [event.message, event.meta.status])).toEqual([
+      ['cart read', undefined],
+      ['', 200]
+    ])
   })
 
   test('a head-dropped custom log does not take the access line with it', async () => {
@@ -165,7 +172,7 @@ describe('sampling through the plugin', () => {
     const app = buildApp({}, transport)
 
     await get(app, '/fast')
-    expect(events).toHaveLength(2)
+    expect(events).toHaveLength(3)
   })
 
   test('WebSocket pseudo-requests drop rather than buffer', () => {
@@ -207,10 +214,10 @@ describe('tail keep predicate through the plugin', () => {
     )
 
     await get(app, '/plan/enterprise')
-    expect(events.map(event => event.message)).toEqual(['plan read'])
+    expect(events.map(event => event.message)).toEqual(['plan read', ''])
 
     await get(app, '/plan/free')
-    expect(events).toHaveLength(1)
+    expect(events).toHaveLength(2)
   })
 
   test('hands the predicate the outcome of the finished request', async () => {

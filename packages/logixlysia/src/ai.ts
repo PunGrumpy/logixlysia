@@ -231,7 +231,7 @@ const awaitRecordingFailure = async <T>(
  * included: `wrapLanguageModel({ model, middleware: aiMiddleware(log) })`.
  *
  * Usage lands on the request's line. A call that finishes after that line was
- * written, or after a custom line replaced it, writes its own line.
+ * written writes its own line.
  */
 export const aiMiddleware = (log: AILog): AIMiddleware => ({
   wrapGenerate: async ({ doGenerate, model }) => {

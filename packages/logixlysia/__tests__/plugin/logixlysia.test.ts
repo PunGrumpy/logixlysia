@@ -40,7 +40,7 @@ describe('logixlysia plugin', () => {
     expect(levelValue).toBe('INFO')
   })
 
-  test('does not duplicate logs when a custom log is emitted', async () => {
+  test('a custom log is followed by the access line', async () => {
     const transport = mock<
       (lvl: unknown, msg: unknown, meta?: unknown) => void
     >(() => {})
@@ -61,13 +61,40 @@ describe('logixlysia plugin', () => {
 
     await app.handle(new Request('http://localhost/test'))
 
-    expect(transport).toHaveBeenCalledTimes(1)
-    const [levelValue, messageValue] = transport.mock.calls[0] ?? [
-      undefined,
-      undefined
-    ]
-    expect(levelValue).toBe('INFO')
-    expect(messageValue).toBe('custom')
+    expect(transport.mock.calls.map(([, message]) => message)).toEqual([
+      'custom',
+      ''
+    ])
+    expect(transport.mock.calls[0]?.[2]).not.toHaveProperty('status')
+    expect(transport.mock.calls[1]?.[2]).toMatchObject({ status: 200 })
+  })
+
+  test('a handler that logs and returns a 404 still gets a 404 access line', async () => {
+    const transport = mock<
+      (lvl: unknown, msg: unknown, meta?: unknown) => void
+    >(() => {})
+    const options: Options = {
+      config: {
+        disableFileLogging: true,
+        disableInternalLogger: true,
+        transports: [{ log: transport }]
+      }
+    }
+
+    const app = new Elysia()
+      .use(logixlysia(options))
+      .get('/user', ({ log, status }) => {
+        log.info('lookup')
+        return status(404, 'no such user')
+      })
+
+    await app.handle(new Request('http://localhost/user'))
+
+    expect(transport.mock.calls.map(([level]) => level)).toEqual([
+      'INFO',
+      'WARNING'
+    ])
+    expect(transport.mock.calls[1]?.[2]).toMatchObject({ status: 404 })
   })
 
   test('logs errors through transports on exceptions', async () => {

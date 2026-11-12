@@ -25,7 +25,7 @@ test('redactPatterns masks a custom shape and still delivers the record', async 
 
   await app.handle(new Request('http://localhost/'))
 
-  expect(transport).toHaveBeenCalledTimes(1)
+  expect(transport).toHaveBeenCalledTimes(2)
   const [level, message] = transport.mock.calls[0] ?? [undefined, undefined]
   expect(level).toBe('INFO')
   expect(message).toBe('order for [REDACTED]')

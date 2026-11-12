@@ -374,8 +374,9 @@ describe('logixlysia plugin - final line', () => {
 
     await run(app, '/x')
 
-    expect(transport).toHaveBeenCalledTimes(1)
+    expect(transport).toHaveBeenCalledTimes(2)
     expect(transport.mock.calls[0]?.[1]).toBe('from hook')
+    expect(recordAt(transport, 1).meta.status).toBe(200)
   })
 
   test('a generator body can log through useLogger() after a yield', async () => {
@@ -394,8 +395,9 @@ describe('logixlysia plugin - final line', () => {
 
     await run(app, '/s')
 
-    expect(transport).toHaveBeenCalledTimes(1)
+    expect(transport).toHaveBeenCalledTimes(2)
     expect(transport.mock.calls[0]?.[1]).toBe('from stream')
+    expect(recordAt(transport, 1).meta.status).toBe(200)
   })
 
   test('a sync generator body can log through useLogger() after a yield', async () => {
@@ -413,8 +415,9 @@ describe('logixlysia plugin - final line', () => {
 
     await run(app, '/s')
 
-    expect(transport).toHaveBeenCalledTimes(1)
+    expect(transport).toHaveBeenCalledTimes(2)
     expect(transport.mock.calls[0]?.[1]).toBe('from sync stream')
+    expect(recordAt(transport, 1).meta.status).toBe(200)
   })
 
   test('a handler that awaits app.handle() for another route keeps its own logger', async () => {
@@ -433,13 +436,16 @@ describe('logixlysia plugin - final line', () => {
 
     await run(app, '/outer')
 
-    expect(transport).toHaveBeenCalledTimes(2)
+    expect(transport).toHaveBeenCalledTimes(3)
     const innerLine = recordAt(transport, 0)
     expect(innerLine.level).toBe('INFO')
     expect(innerLine.meta.status).toBe(200)
     expect(innerLine.meta.request?.url).toEndWith('/inner')
     expect(transport.mock.calls[1]?.[1]).toBe('after-nested')
     expect(recordAt(transport, 1).meta.request?.url).toEndWith('/outer')
+    const outerLine = recordAt(transport, 2)
+    expect(outerLine.meta.status).toBe(200)
+    expect(outerLine.meta.request?.url).toEndWith('/outer')
   })
 
   test('a user onError registered after the plugin logs with the request id and the real duration', async () => {

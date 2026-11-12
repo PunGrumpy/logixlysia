@@ -189,7 +189,7 @@ describe('aiMiddleware', () => {
     expect(lines[0]?.ai?.tokensPerSecond).toBeGreaterThan(0)
   })
 
-  test('a custom log first is followed by a line carrying the usage', async () => {
+  test('a custom log first leaves the usage on the access line', async () => {
     const { lines, plugin } = capturingPlugin()
     const app = new Elysia().use(plugin).post('/', async ({ log }) => {
       log.info('calling')
@@ -199,11 +199,9 @@ describe('aiMiddleware', () => {
 
     await app.handle(post('/'))
 
-    expect(lines.map(line => line.message)).toEqual([
-      'calling',
-      'ai call finished'
-    ])
+    expect(lines.map(line => line.message)).toEqual(['calling', ''])
     expect(lines[0]?.ai).toBeUndefined()
+    expect(lines[1]?.status).toBe(200)
     expect(lines[1]?.ai).toMatchObject({ calls: 1, inputTokens: 12 })
   })
 
@@ -483,7 +481,7 @@ describe('aiMiddleware', () => {
     })
   })
 
-  test('a failure after a custom line writes ai call failed at WARNING', async () => {
+  test('a failure after a custom line is counted on the access line', async () => {
     const { lines, plugin } = capturingPlugin()
     const app = new Elysia().use(plugin).post('/', ({ log }) => {
       log.info('calling')
@@ -492,11 +490,8 @@ describe('aiMiddleware', () => {
 
     await app.handle(post('/'))
 
-    expect(lines.map(line => line.message)).toEqual([
-      'calling',
-      'ai call failed'
-    ])
-    expect(lines[1]?.level).toBe('WARNING')
+    expect(lines.map(line => line.message)).toEqual(['calling', ''])
+    expect(lines[1]?.status).toBe(200)
     expect(lines[1]?.ai?.errors).toBe(1)
   })
 

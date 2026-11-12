@@ -24,11 +24,12 @@ describe('AsyncLocalStorage & useLogger() context integration', () => {
 
     await app.handle(new Request('http://localhost/test'))
 
-    expect(transport).toHaveBeenCalledTimes(1)
+    expect(transport).toHaveBeenCalledTimes(2)
     const [level, message, meta] = transport.mock.calls[0] ?? []
     expect(level).toBe('INFO')
     expect(message).toBe('hello from derive')
     expect(meta?.context).toEqual({ custom: 'val' })
+    expect(transport.mock.calls[1]?.[2]?.status).toBe(200)
   })
 
   test('useLogger() works within route handler and async boundaries when enabled', async () => {
@@ -59,7 +60,7 @@ describe('AsyncLocalStorage & useLogger() context integration', () => {
 
     await app.handle(new Request('http://localhost/test'))
 
-    expect(transport).toHaveBeenCalledTimes(2)
+    expect(transport).toHaveBeenCalledTimes(3)
     const call1 = transport.mock.calls[0] ?? []
     const call2 = transport.mock.calls[1] ?? []
 

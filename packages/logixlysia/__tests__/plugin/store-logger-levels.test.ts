@@ -45,7 +45,7 @@ describe('store.logger level methods', () => {
 
       await app.handle(new Request(`http://localhost/log/${method}`))
 
-      expect(transport).toHaveBeenCalledTimes(1)
+      expect(transport).toHaveBeenCalledTimes(2)
       const [level, message] = transport.mock.calls[0] ?? [undefined, undefined]
       expect(level).toBe(expectedLevel)
       expect(message).toBe(`custom ${method}`)

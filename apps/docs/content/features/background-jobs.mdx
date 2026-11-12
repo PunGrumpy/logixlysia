@@ -33,7 +33,7 @@ JOB     /nightly-sync 200 412ms
 
 ## Outcome
 
-- The final line is always written, even when the job logs lines of its own. A request's custom log replaces its access line; a job's does not.
+- The final line is always written, even when the job logs lines of its own, as a request's access line is.
 - A job that returns gets status `200`. The value `fn` returns is the value `runJob` returns.
 - A job that throws gets status `500`: logixlysia writes the error line, then rethrows the same error, so your scheduler still sees the failure.
 - An empty or non-string name rejects with a `TypeError` before `fn` runs.

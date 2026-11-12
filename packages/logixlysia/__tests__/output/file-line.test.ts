@@ -73,12 +73,15 @@ describe('file log line', () => {
   test('a log.info call writes its message and context on the same line, redacted', async () => {
     const lines = await writeLines(routes, { autoRedact: true })
 
-    expect(lines).toHaveLength(3)
+    expect(lines).toHaveLength(4)
     expect(lines[2]).toMatch(
       new RegExp(
         `^${ISO} INFO GET /info - ${DURATION} hello \\{"password":"\\[REDACTED\\]","userId":7\\}$`,
         'u'
       )
+    )
+    expect(lines[3]).toMatch(
+      new RegExp(`^${ISO} INFO GET /info 200 ${DURATION}$`, 'u')
     )
     expect(lines.join('\n')).not.toContain('hunter2')
   })

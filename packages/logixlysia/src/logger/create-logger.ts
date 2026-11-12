@@ -688,6 +688,9 @@ const getPathnameTokens = (
   return { coloredPathname: getColoredPathname(pathname, useColors), query }
 }
 
+// A line written before the response exists has no status to show.
+const NO_STATUS = '-'
+
 const getStatusTokens = (
   tokens: Set<string>,
   data: Record<string, unknown>,
@@ -699,10 +702,13 @@ const getStatusTokens = (
     return { coloredStatus: '', statusText: '' }
   }
   const statusValue = data.status
-  const statusCode =
-    statusValue === null || statusValue === undefined
-      ? 200
-      : getStatusCode(statusValue)
+  if (statusValue === null || statusValue === undefined) {
+    return {
+      coloredStatus: needsStatus ? NO_STATUS : '',
+      statusText: ''
+    }
+  }
+  const statusCode = getStatusCode(statusValue)
   return {
     coloredStatus: needsStatus ? getColoredStatus(statusCode, useColors) : '',
     statusText: needsStatusText ? getStatusText(statusCode) : ''
