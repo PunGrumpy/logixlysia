@@ -51,7 +51,7 @@ const config = defineConfig({
   // Pin the entry root: with 9+ entries Bun.build's inferred common root
   // nests output under dist/src/, breaking the flat dist/*.js exports paths.
   sourceBase: './src',
-  sourcemap: 'inline'
+  sourcemap: 'none'
 })
 
 export default config

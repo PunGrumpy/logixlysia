@@ -1,4 +1,5 @@
 import { describe, expect, mock, test } from 'bun:test'
+import { createRequire } from 'node:module'
 import type pino from 'pino'
 import type { Options, Pino } from '../../src/interfaces'
 import { createLogger } from '../../src/logger'
@@ -7,12 +8,17 @@ import { createMockRequest } from '../_helpers/request'
 import { sleep } from '../_helpers/sleep'
 
 let prettyOptionsCaptured: unknown = null
-mock.module('pino-pretty', () => ({
-  default: (opts: unknown) => {
+// The logger loads pino-pretty through `createRequire`, which `mock.module`
+// does not intercept, so the test swaps the module's cached exports instead.
+const nodeRequire = createRequire(import.meta.url)
+nodeRequire('pino-pretty')
+const prettyModule = nodeRequire.cache[nodeRequire.resolve('pino-pretty')]
+if (prettyModule) {
+  prettyModule.exports = (opts: unknown) => {
     prettyOptionsCaptured = opts
     return { prettyStreamMock: true }
   }
-}))
+}
 
 describe('createLogger', () => {
   test('returns a logger with expected methods', () => {
