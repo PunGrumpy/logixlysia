@@ -132,7 +132,7 @@ Logixlysia natively supports structured errors (similar to the `evlog` pattern) 
 - `fix`: Suggests actionable remediation.
 - `link`: Provides a URL to documentation or troubleshooting help.
 - `internal`: Log-safe diagnostic metadata (e.g. error codes, non-sensitive context).
-- `cause`: The underlying error, set with `new Error(message, { cause })` or the `cause` option of `HttpError`. It reaches transports as `error.cause` (up to three levels) and is not a console branch.
+- `cause`: The underlying error, set with `new Error(message, { cause })` or the `cause` option of `HttpError`. It reaches transports as `error.cause` and prints in the console as `Caused by:` lines, up to three levels in both.
 
 If a caught error contains any of the `code`, `why`, `fix`, `link` or `internal` fields, they are automatically extracted and rendered under the `error.` namespace (`error.code`, `error.why`, `error.fix`, `error.link` and `error.internal`) as individual tree branches.
 
@@ -177,12 +177,16 @@ app.post('/orders', async () => {
 })
 ```
 
-Console output tree, which shows the wrapping error only:
+Console output tree. Each cause is a `Caused by: <name>: <message>` line, indented one step deeper than the one before it, and followed by an `at` line with the first frame outside `node_modules` when the cause has a stack:
 
 ```
   ├─ error  Could not save order
-  └─ error.at  src/routes/orders.ts:6:11
+  ├─ error.at  src/routes/orders.ts:6:11
+  ├─ Caused by: Error: connection to db timed out
+  └─   at src/db.ts:14:9
 ```
+
+The console follows the chain up to three causes, stops at a cause it has already shown, and prints a string or object cause as its text or JSON. With `autoRedact` on, a cause message is redacted like the top message.
 
 Transports receive the cause as `meta.error.cause`, with the `name` and `message` of the original error.
 
