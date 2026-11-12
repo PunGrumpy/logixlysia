@@ -409,7 +409,7 @@ If a custom `requestId.generator` throws or returns an id that does not match `^
 
 ### `useAsyncLocalStorage`
 
-Makes `useLogger()` return the current request's logger from anywhere in the call stack; without it `useLogger()` is a no-op. See [request context](/docs/features/request-context).
+Makes `useLogger()` return the current request's logger from anywhere in the call stack; without it `useLogger()` is a no-op and warns once on stderr outside production. See [request context](/docs/features/request-context).
 
 - **Type:** `boolean`
 - **Default:** `false`

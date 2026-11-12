@@ -16,6 +16,33 @@ export const noopRequestLogger: RequestScopedLogger = {
   warn: discard
 }
 
+let storageEnabled = false
+let storageDisabled = false
+let warnedAboutFallback = false
+
+export const recordStorageMode = (enabled: boolean): void => {
+  if (enabled) {
+    storageEnabled = true
+  } else {
+    storageDisabled = true
+  }
+}
+
+const warnOnceAboutFallback = (): void => {
+  const lostContextForSure = storageDisabled && !storageEnabled
+  if (
+    warnedAboutFallback ||
+    !lostContextForSure ||
+    process.env.NODE_ENV === 'production'
+  ) {
+    return
+  }
+  warnedAboutFallback = true
+  console.warn(
+    '[logixlysia] useLogger() returned a logger that writes nothing, so request context is lost. Set `useAsyncLocalStorage: true` in the plugin config to get the request logger.'
+  )
+}
+
 /**
  * The current request's logger, or a no-op one outside a request.
  *
@@ -24,6 +51,10 @@ export const noopRequestLogger: RequestScopedLogger = {
  */
 export const useLogger = <
   TFields extends object = LogFields
->(): RequestScopedLogger<TFields> =>
-  (loggerStorage.getStore() ??
-    noopRequestLogger) as RequestScopedLogger<TFields>
+>(): RequestScopedLogger<TFields> => {
+  const store = loggerStorage.getStore()
+  if (!store) {
+    warnOnceAboutFallback()
+  }
+  return (store ?? noopRequestLogger) as RequestScopedLogger<TFields>
+}
