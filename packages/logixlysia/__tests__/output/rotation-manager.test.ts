@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, spyOn, test } from 'bun:test'
 import { promises as fs } from 'node:fs'
 import path from 'node:path'
+import { gunzipSync } from 'node:zlib'
 import {
   getRotatedFileName,
   performRotation,
@@ -196,6 +197,19 @@ describe('performRotation compression', () => {
     expect(archives).toHaveLength(1)
     const { mode } = await fs.stat(path.join(dir, archives[0]))
     expect(permBits(mode)).toBe('640')
+  })
+
+  test('writes an archive that unpacks to the rotated content', async () => {
+    const filePath = path.join(dir, 'app.log')
+    await fs.writeFile(filePath, 'live content')
+
+    await performRotation(filePath, { compress: true })
+
+    const entries = await fs.readdir(dir)
+    const archive = entries.find(name => name.endsWith('.gz'))
+    expect(archive).toBeDefined()
+    const packed = await fs.readFile(path.join(dir, archive ?? ''))
+    expect(gunzipSync(packed).toString()).toBe('live content')
   })
 
   test('defaults the archive mode to 0o600 when none is given', async () => {

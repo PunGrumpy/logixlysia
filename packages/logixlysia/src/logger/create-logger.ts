@@ -1,4 +1,3 @@
-import { STATUS_CODES } from 'node:http'
 import chalk from 'chalk'
 import { getStatusCode } from '../helpers/status'
 import type { LogLevel, Options, StoreData } from '../interfaces'
@@ -6,6 +5,7 @@ import { stdoutWantsColor } from '../utils/color'
 import { isStructuredError, parseError } from '../utils/error'
 import type { LoggedRequest } from '../utils/redact'
 import { sanitizeLogText } from '../utils/sanitize'
+import { STATUS_TEXT } from '../utils/status-text'
 
 const pad2 = (value: number): string => String(value).padStart(2, '0')
 const pad3 = (value: number): string => String(value).padStart(3, '0')
@@ -307,7 +307,7 @@ const getColoredPathname = (pathname: string, useColors: boolean): string => {
 }
 
 const getStatusText = (statusCode: number): string => {
-  const text = STATUS_CODES[statusCode]
+  const text = STATUS_TEXT[statusCode]
   return text ?? ''
 }
 
