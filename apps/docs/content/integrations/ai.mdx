@@ -43,10 +43,10 @@ Several calls in one request are summed: `calls`, `errors`, the token counts and
 | --- | --- |
 | `generateText` | Access line with `ai` |
 | Generator stream (`for await ... yield`) | Access line with `ai` |
-| Custom log first | Custom line, then `ai call finished` with `ai` |
+| Custom log first | Custom line, then the access line with `ai` |
 | `toTextStreamResponse()` | Access line, then `ai call finished` with `ai` |
 
-A returned `Response` writes its access line before the stream ends, and a custom log replaces the access line. In both cases the usage arrives too late for that line, so the middleware writes its own at `INFO`. Each late call writes one, carrying the request's totals so far.
+A returned `Response` writes its access line before the stream ends. The usage arrives too late for that line, so the middleware writes its own at `INFO`. Each late call writes one, carrying the request's totals so far.
 
 A failed call that lands after the line writes `ai call failed` at `WARNING` instead.
 

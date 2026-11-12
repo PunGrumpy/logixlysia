@@ -131,7 +131,7 @@ describe('logixlysia plugin - request lifecycle', () => {
 
     await app.handle(new Request('http://localhost/slow'))
 
-    expect(transport).toHaveBeenCalledTimes(1)
+    expect(transport).toHaveBeenCalledTimes(2)
     expect(recordAt(transport, 0).meta.durationMs).toBeGreaterThanOrEqual(10)
   })
 

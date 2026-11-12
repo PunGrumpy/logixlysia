@@ -42,7 +42,7 @@ The request boundary is app-wide: once the plugin is mounted anywhere, every req
 
 ## Request context
 
-Accumulate fields during a request; they are merged into the automatic access log, or into the custom log line that replaces the access line:
+Accumulate fields during a request; they are merged into the automatic access log, and into any custom log line the handler writes after them:
 
 ```ts
 .get('/users/:id', ({ request, store, params }) => {

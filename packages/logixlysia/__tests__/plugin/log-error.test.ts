@@ -40,7 +40,7 @@ test('a string message is logged as before, with no error object', async () => {
 
   await app.handle(new Request('http://localhost/'))
 
-  expect(events).toHaveLength(1)
+  expect(events).toHaveLength(2)
   expect(events[0]?.level).toBe('ERROR')
   expect(events[0]?.message).toBe('plain')
   expect(events[0]?.meta.error).toBeUndefined()
@@ -91,7 +91,7 @@ test('a caught HttpError keeps its structured fields', async () => {
   })
 })
 
-test('a recovered error writes one line and the response stays 200 with no status on it', async () => {
+test('a recovered error writes its line with no status, then a 200 access line', async () => {
   const { events, logs } = build()
   const app = new Elysia().use(logs).get('/', ({ log }) => {
     try {
@@ -105,8 +105,9 @@ test('a recovered error writes one line and the response stays 200 with no statu
   const response = await app.handle(new Request('http://localhost/'))
 
   expect(response.status).toBe(200)
-  expect(events).toHaveLength(1)
+  expect(events.map(event => event.level)).toEqual(['ERROR', 'INFO'])
   expect(events[0]?.meta.status).toBeUndefined()
+  expect(events[1]?.meta.status).toBe(200)
 })
 
 test('autoRedact masks an email in the message and in meta.error.message', async () => {
@@ -139,7 +140,7 @@ test('runJob and useLogger take a string and a caught error alike', async () => 
   expect(errors[2]?.meta.error?.name).toBe('Error')
 })
 
-test('a non-Error value does not throw and writes one line', async () => {
+test('a non-Error value does not throw and writes its line', async () => {
   const { events, logs } = build()
   const app = new Elysia().use(logs).get('/', ({ log }) => {
     log.error({ reason: 'x' })
@@ -149,7 +150,7 @@ test('a non-Error value does not throw and writes one line', async () => {
   const response = await app.handle(new Request('http://localhost/'))
 
   expect(response.status).toBe(200)
-  expect(events).toHaveLength(1)
+  expect(events).toHaveLength(2)
   expect(events[0]?.level).toBe('ERROR')
   expect(events[0]?.message).toBe('Non-Error object')
   expect(events[0]?.meta.error).toMatchObject({

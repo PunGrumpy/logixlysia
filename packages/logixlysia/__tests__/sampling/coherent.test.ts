@@ -10,6 +10,7 @@ const ROLL_INSIDE_TEN_PERCENT = 0.05
 const ROLL_OUTSIDE_TEN_PERCENT = 0.5
 const SERVER_ERROR = 500
 const CUSTOM_LOGS_PER_REQUEST = 3
+const ACCESS_LINES_PER_REQUEST = 1
 
 const countingRandom = (values: number[]) => {
   let calls = 0
@@ -151,6 +152,6 @@ describe('head sampling rolls once per request', () => {
   test('keeps a whole request, access line included, when the roll hits', async () => {
     expect(
       await requestLines(ROLL_INSIDE_TEN_PERCENT, ROLL_OUTSIDE_TEN_PERCENT)
-    ).toHaveLength(CUSTOM_LOGS_PER_REQUEST)
+    ).toHaveLength(CUSTOM_LOGS_PER_REQUEST + ACCESS_LINES_PER_REQUEST)
   })
 })

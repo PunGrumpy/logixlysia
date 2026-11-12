@@ -55,7 +55,7 @@ describe('level word when colours are off', () => {
     const line = lineFor({ useColors: false }, method)
 
     expect(line).toMatch(
-      new RegExp(`^\\S+ ${word} GET {5}/hello 200 \\S+ hi$`, 'u')
+      new RegExp(`^\\S+ ${word} GET {5}/hello - \\S+ hi$`, 'u')
     )
     expect(line).not.toContain('🦊')
   })
@@ -64,7 +64,7 @@ describe('level word when colours are off', () => {
     setIsTTY(false)
     const line = lineFor({}, 'info')
 
-    expect(line).toMatch(/^\S+ INFO {2}GET {5}\/hello 200 \S+ hi$/u)
+    expect(line).toMatch(/^\S+ INFO {2}GET {5}\/hello - \S+ hi$/u)
     expect(line).not.toContain('🦊')
   })
 

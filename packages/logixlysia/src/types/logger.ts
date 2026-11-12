@@ -97,8 +97,8 @@ export interface RequestScopedLogger<TFields extends object = LogFields> {
   /**
    * Logs at `ERROR`. Pass a message, or whatever you caught: a non-string is
    * serialized like a thrown error, with its name, `HttpError` fields and
-   * cause. Like any custom line, it stands in for the access line and carries
-   * no status.
+   * cause. Like any custom line, it is written before the response exists and
+   * carries no status.
    */
   error: (error: unknown, context?: DeepPartial<TFields>) => void
   info: (message: string, context?: DeepPartial<TFields>) => void

@@ -22,7 +22,7 @@ const app = new Elysia()
 
 The final `INFO` access log includes a `context` object with `userId` and `cartTotal` (and renders as a context tree when `showContextTree` is enabled).
 
-A custom log that passes `logFilter` and sampling (`log.info`, `store.logger.info(request, …)`, `useLogger().info`) replaces that request's access line, so the request's status, its `durationMs` and the response-phase enricher fields are not logged on a separate line. A custom log that head sampling holds back counts only if the tail verdict replays it; one it drops leaves the access line in place.
+A custom log (`log.info`, `store.logger.info(request, …)`, `useLogger().info`) is a line of its own. It is written when you call it, before the response exists, so it carries no status and its `durationMs` is the time elapsed so far. The access line still follows with the request's status, its full `durationMs` and the response-phase enricher fields. To add fields to the access line without writing another line, use `mergeContext`.
 
 ## Precedence
 
@@ -41,7 +41,7 @@ app.get('/seat', ({ log }) => {
 })
 ```
 
-That custom line replaces the access line and logs `user` as `{ id: 'usr_123', plan: 'pro', seat: 2 }`. `seat` is per-line context, so it is not kept for later lines. The same rule applies to explicit context passed to `logger.info(request, message, { ...explicit })`.
+That custom line logs `user` as `{ id: 'usr_123', plan: 'pro', seat: 2 }`. `seat` is per-line context, so it is not kept for later lines. The same rule applies to explicit context passed to `logger.info(request, message, { ...explicit })`.
 
 | Value | Behaviour |
 | --- | --- |
@@ -86,7 +86,7 @@ app.get('/user/:id', ({ log, params }) => {
 })
 ```
 
-This handler logs one line, the custom one; it replaces the access line, so the console shows `200` for it even when the handler returns a 404.
+This handler logs two lines. The custom one comes first and shows `-` where the status goes, because the response does not exist yet. The access line follows with the status the client got.
 
 `log.error` also takes whatever you caught. A non-string is serialized like a thrown error, with its name, `HttpError` fields and cause:
 

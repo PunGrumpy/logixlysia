@@ -57,11 +57,15 @@ describe('logixlysia request context', () => {
 
     await app.handle(new Request('http://localhost/test'))
 
-    expect(transport).toHaveBeenCalledTimes(1)
+    expect(transport).toHaveBeenCalledTimes(2)
     const meta = transport.mock.calls[0]?.[2] as
       | Record<string, unknown>
       | undefined
     expect(meta?.context).toEqual({ plan: 'pro', userId: 'override' })
+    const accessMeta = transport.mock.calls[1]?.[2] as
+      | Record<string, unknown>
+      | undefined
+    expect(accessMeta?.context).toEqual({ plan: 'pro', userId: 'accumulated' })
   })
 
   test('autoRedact applies to merged request context', async () => {

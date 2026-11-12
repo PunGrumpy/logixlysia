@@ -98,11 +98,7 @@ const requestStarts = new WeakMap<Request, bigint>()
 const lineOwners = new WeakMap<Request, symbol>()
 
 interface RequestRecord {
-  accessLineReplaced: boolean
-  customLogBuffered: boolean
   error?: unknown
-  /** A job's final line is always written, so a custom line never replaces it. */
-  isJob?: boolean
   phase: 'open' | 'streaming' | 'closed'
   seenByWrap: boolean
   setHeaders?: Record<string, string | number>
@@ -347,8 +343,6 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
       requestStarts.set(request, startedAt)
     }
     const record: RequestRecord = {
-      accessLineReplaced: false,
-      customLogBuffered: false,
       phase: 'open',
       seenByWrap: false,
       startedAt,
@@ -384,20 +378,12 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
       return
     }
 
-    const record = openRecord(request)
-    const outcome = baseLogger.log(
+    baseLogger.log(
       level,
       request,
       error === undefined ? { context, message } : { context, error, message },
-      { beforeTime: record.startedAt }
+      { beforeTime: openRecord(request).startedAt }
     )
-    // Only a custom line that reaches the output stands in for the access
-    // line; a buffered one does if the tail verdict replays it.
-    if (outcome === 'written') {
-      record.accessLineReplaced = true
-    } else if (outcome === 'buffered') {
-      record.customLogBuffered = true
-    }
   }
 
   const logger = {
@@ -467,13 +453,7 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
     }
     Object.defineProperty(log, LINE_SETTLED, {
       enumerable: false,
-      value: (): boolean => {
-        const record = records.get(request)
-        return (
-          record?.phase === 'closed' ||
-          (record?.accessLineReplaced === true && record.isJob !== true)
-        )
-      }
+      value: (): boolean => records.get(request)?.phase === 'closed'
     })
     requestLoggers.set(request, log)
     return log
@@ -541,10 +521,7 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
       )
     }
 
-    const replayed = logger.finalizeRequest(request, store, status)
-    if (record?.customLogBuffered && replayed > 0) {
-      record.accessLineReplaced = true
-    }
+    logger.finalizeRequest(request, store, status)
     return store
   }
 
@@ -617,9 +594,7 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
         (status >= 400 || !isStatusResponse(record.error))
       ) {
         logger.handleHttpError(request, record.error, { ...store, status })
-      } else if (
-        !(record.accessLineReplaced || hidesAccessLine(request, status))
-      ) {
+      } else if (!hidesAccessLine(request, status)) {
         emitAccessLine(request, status, store)
       }
     } catch (failure) {
@@ -725,7 +700,6 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
     }
     const request = syntheticRequest('JOB', name)
     const record = openRecord(request)
-    record.isJob = true
     try {
       openRequestScope(request, {})
     } catch (failure) {
