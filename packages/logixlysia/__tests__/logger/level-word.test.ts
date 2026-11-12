@@ -80,7 +80,7 @@ describe('level word when colours are off', () => {
     process.env.NO_COLOR = '1'
     const line = lineFor({}, 'info')
 
-    expect(line).toMatch(/ INFO {2}GET {5}\/hello 200 \S+ hi$/u)
+    expect(line).toMatch(/ INFO {2}GET {5}\/hello - \S+ hi$/u)
     expect(line).not.toContain('🦊')
   })
 
