@@ -794,6 +794,16 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
     .state('logger', logger)
     .state('pino', logger.pino)
     .state('beforeTime', 0n)
+    // A scoped derive reaches one parent. This global one gives `log` to an
+    // app that mounts the plugin through a setup plugin. It has its own name
+    // because Elysia drops a later instance's hooks whose checksum matches a
+    // merged global hook, which would remove the per-module derive below.
+    .use(
+      new Elysia({ name: 'Logixlysia/log' }).derive(
+        { as: 'global' },
+        ({ request }) => ({ log: getRequestScopedLogger(request) })
+      )
+    )
     .derive(({ request }) => ({ log: getRequestScopedLogger(request) }))
     .onStart(({ server }): void => {
       if (server) {
