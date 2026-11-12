@@ -6,11 +6,14 @@ const IPV4_REGEX =
 const IPV6_REGEX =
   /(?<![\w:])(?:(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}|(?:[0-9a-fA-F]{1,4}:){1,7}:(?:[0-9a-fA-F]{1,4}(?::[0-9a-fA-F]{1,4}){0,6})?|::(?:[0-9a-fA-F]{1,4}(?::[0-9a-fA-F]{1,4}){0,6}))(?![\w:])/gu
 /**
- * A whole run of digit groups, however long. A pattern that stops at the first
- * 13 digits it can take cuts a card written one digit at a time short, and
- * starts in the number written before a card instead of at the card.
+ * A whole run of digit groups, however long, with any separators after it. A
+ * pattern that stops at the first 13 digits it can take cuts a card written
+ * one digit at a time short, and starts in the number written before a card
+ * instead of at the card. One character class, because a repeated group keeps
+ * a backtrack entry per digit and gives up on a very long run.
  */
-const CREDIT_CARD_CANDIDATE_REGEX = /\b\d(?:[ -]*\d){12,}\b/gu
+const DIGIT_RUN_REGEX = /\b\d[\d -]*/gu
+const WORD_CHAR_REGEX = /\w/u
 const DIGIT_GROUP_REGEX = /\d+/gu
 /**
  * Starts only where a token can start: after a character outside the token
@@ -194,37 +197,60 @@ const lastGroupOfCard = (run: DigitRun, first: number): number => {
 
 /**
  * A card is a window of whole digit groups inside the run, so `id 12` in front
- * of a card or a CVV after it does not hide the card.
+ * of a card or a CVV after it does not hide the card. Every group is tried as
+ * a start and overlapping windows are redacted as one, so a window that passes
+ * the check by chance and ends inside a card does not leave the card's tail.
  */
-const redactCardsInRun = (text: string): string => {
+const redactCardsInRun = (
+  text: string,
+  offset: number,
+  whole: string
+): string => {
+  if (text.length < PAN_MIN_LEN) {
+    return text
+  }
+
   const run: DigitRun = { digits: '', digitsThrough: [], groups: [] }
   for (const group of text.matchAll(DIGIT_GROUP_REGEX)) {
     run.digits += group[0]
     run.digitsThrough.push(run.digits.length)
     run.groups.push(group)
   }
+  // A group that runs into a word, as in `12ab`, is not a number of its own.
+  const endsInDigit = !text.endsWith(' ') && !text.endsWith('-')
+  if (endsInDigit && WORD_CHAR_REGEX.test(whole.charAt(offset + text.length))) {
+    run.groups.pop()
+    run.digitsThrough.pop()
+  }
 
   let result = ''
   let copiedTo = 0
-  let first = 0
-  while (first < run.groups.length) {
-    const last = lastGroupOfCard(run, first)
-    const lastGroup = run.groups[last]
-    if (lastGroup === undefined) {
-      first += 1
-    } else {
-      const start = run.groups[first]?.index ?? 0
-      result += `${text.slice(copiedTo, start)}${REDACTED_TEXT}`
+  let spanFirst = -1
+  let spanLast = -1
+  const closeSpan = (): void => {
+    const firstGroup = run.groups[spanFirst]
+    const lastGroup = run.groups[spanLast]
+    if (firstGroup !== undefined && lastGroup !== undefined) {
+      result += `${text.slice(copiedTo, firstGroup.index)}${REDACTED_TEXT}`
       copiedTo = lastGroup.index + lastGroup[0].length
-      first = last + 1
     }
   }
+
+  for (let first = 0; first < run.groups.length; first += 1) {
+    const last = lastGroupOfCard(run, first)
+    if (last !== -1 && first > spanLast) {
+      closeSpan()
+      spanFirst = first
+    }
+    spanLast = Math.max(spanLast, last)
+  }
+  closeSpan()
 
   return copiedTo === 0 ? text : `${result}${text.slice(copiedTo)}`
 }
 
 const redactCreditCardCandidates = (text: string): string =>
-  text.replaceAll(CREDIT_CARD_CANDIDATE_REGEX, redactCardsInRun)
+  text.replaceAll(DIGIT_RUN_REGEX, redactCardsInRun)
 
 const endsWithUrlScheme = (text: string, end: number): boolean => {
   for (let i = end - 1; i >= 0; i -= 1) {
