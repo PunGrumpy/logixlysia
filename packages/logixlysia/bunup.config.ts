@@ -2,6 +2,7 @@ import { rm } from 'node:fs/promises'
 import path from 'node:path'
 import { defineConfig } from 'bunup'
 import type { BunupPlugin } from 'bunup'
+import { copy } from 'bunup/plugins'
 
 const OUT_DIR = 'dist'
 
@@ -42,12 +43,12 @@ const config = defineConfig({
     'src/http.ts',
     'src/errors.ts'
   ],
-  external: ['elysia', 'chalk', 'pino', 'pino-pretty'],
+  external: ['elysia', 'chalk', 'pino', 'pino-pretty', './load-pino.cjs'],
   format: ['esm'],
   minify: true,
   name: 'Logixlysia',
   outDir: OUT_DIR,
-  plugins: [cleanOutDirBeforeBuild],
+  plugins: [cleanOutDirBeforeBuild, copy('src/logger/load-pino.cjs')],
   // Pin the entry root: with 9+ entries Bun.build's inferred common root
   // nests output under dist/src/, breaking the flat dist/*.js exports paths.
   sourceBase: './src',

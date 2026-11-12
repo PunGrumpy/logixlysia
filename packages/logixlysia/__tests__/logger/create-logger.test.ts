@@ -8,7 +8,7 @@ import { createMockRequest } from '../_helpers/request'
 import { sleep } from '../_helpers/sleep'
 
 let prettyOptionsCaptured: unknown = null
-// The logger loads pino-pretty through `createRequire`, which `mock.module`
+// The logger loads pino-pretty with a CommonJS require(), which `mock.module`
 // does not intercept, so the test swaps the module's cached exports instead.
 const nodeRequire = createRequire(import.meta.url)
 nodeRequire('pino-pretty')

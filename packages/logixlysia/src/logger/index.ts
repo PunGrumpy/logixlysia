@@ -1,4 +1,3 @@
-import { createRequire } from 'node:module'
 import type pino from 'pino'
 import type pretty from 'pino-pretty'
 import { resolveOptions } from '../config/resolve-options'
@@ -19,11 +18,7 @@ import { createFormatContext } from './create-logger'
 import { emit, isSuppressed, parseRequestUrlOnce, resolveSinks } from './emit'
 import type { EmitOutcome } from './emit'
 import { handleHttpError } from './handle-http-error'
-
-const nodeRequire = createRequire(import.meta.url)
-const loadPino = (): typeof pino => nodeRequire('pino') as typeof pino
-const loadPretty = (): typeof pretty =>
-  nodeRequire('pino-pretty') as typeof pretty
+import { loadPino, loadPretty } from './load-pino.cjs'
 
 const ZERO_STORE: StoreData = { beforeTime: 0n }
 const NO_CONTEXT: Readonly<Record<string, unknown>> = Object.freeze({})
