@@ -377,8 +377,12 @@ const collectContextEntries = (
   return out
 }
 
+type TreeEntry = [key: string, value: string, separator?: string]
+
+const DEFAULT_ENTRY_SEPARATOR = '  '
+
 const formatEntriesToTreeLines = (
-  entries: [string, string][],
+  entries: TreeEntry[],
   useColors: boolean
 ): string[] => {
   if (entries.length === 0) {
@@ -393,10 +397,10 @@ const formatEntriesToTreeLines = (
     if (!pair) {
       continue
     }
-    const [k, v] = pair
+    const [k, v, separator = DEFAULT_ENTRY_SEPARATOR] = pair
     const keyPart = useColors ? chalk.cyan(k) : k
     const valPart = useColors ? chalk.white(v) : v
-    lines.push(`  ${branch} ${keyPart}  ${valPart}`)
+    lines.push(`  ${branch} ${keyPart}${separator}${valPart}`)
   }
   return lines
 }
@@ -446,17 +450,77 @@ const thrownAt = (stack: string): string | undefined => {
   }
 }
 
-const collectStructuredErrorEntries = (error: unknown): [string, string][] => {
-  const entries: [string, string][] = []
-  const msg = parseError(error)
-  if (msg) {
-    entries.push(['error', sanitizeLogText(msg)])
-  }
+const MAX_CAUSE_LEVELS = 3
+const CAUSE_LABEL = 'Caused by:'
+const CAUSE_INDENT = '  '
+const CAUSE_SEPARATOR = ' '
+
+interface ErrorLike {
+  message: string
+  name?: unknown
+}
+
+const isErrorLike = (value: unknown): value is ErrorLike =>
+  typeof value === 'object' &&
+  value !== null &&
+  'message' in value &&
+  typeof value.message === 'string' &&
+  (value instanceof Error ||
+    ('name' in value && typeof value.name === 'string'))
+
+const stackLocation = (error: unknown): string | undefined => {
   const stack =
     typeof error === 'object' && error !== null && 'stack' in error
       ? error.stack
       : undefined
-  const at = typeof stack === 'string' ? thrownAt(stack) : undefined
+  return typeof stack === 'string' ? thrownAt(stack) : undefined
+}
+
+const readCause = (error: unknown): unknown =>
+  typeof error === 'object' && error !== null && 'cause' in error
+    ? error.cause
+    : undefined
+
+const collectCauseEntries = (error: unknown): TreeEntry[] => {
+  const entries: TreeEntry[] = []
+  const seen = new Set<unknown>([error])
+  let cause = readCause(error)
+  for (let level = 0; level < MAX_CAUSE_LEVELS; level += 1) {
+    if (cause === undefined || seen.has(cause)) {
+      break
+    }
+    seen.add(cause)
+    const label = `${CAUSE_INDENT.repeat(level)}${CAUSE_LABEL}`
+    if (!isErrorLike(cause)) {
+      entries.push([label, stringifyTreeValue(cause), CAUSE_SEPARATOR])
+      break
+    }
+    const name = typeof cause.name === 'string' ? cause.name : 'Error'
+    entries.push([
+      label,
+      sanitizeLogText(`${name}: ${cause.message}`),
+      CAUSE_SEPARATOR
+    ])
+    const at = stackLocation(cause)
+    if (at !== undefined) {
+      entries.push([
+        `${CAUSE_INDENT.repeat(level + 1)}at`,
+        sanitizeLogText(at, MAX_LOCATION_LENGTH),
+        CAUSE_SEPARATOR
+      ])
+    }
+    cause = readCause(cause)
+  }
+  return entries
+}
+
+const collectStructuredErrorEntries = (error: unknown): TreeEntry[] => {
+  const entries: TreeEntry[] = []
+  const msg = parseError(error)
+  if (msg) {
+    entries.push(['error', sanitizeLogText(msg)])
+  }
+  const at = stackLocation(error)
   if (at !== undefined) {
     entries.push(['error.at', sanitizeLogText(at, MAX_LOCATION_LENGTH)])
   }
@@ -477,6 +541,7 @@ const collectStructuredErrorEntries = (error: unknown): [string, string][] => {
       entries.push(['error.internal', stringifyTreeValue(error.internal)])
     }
   }
+  entries.push(...collectCauseEntries(error))
   return entries
 }
 
@@ -492,7 +557,7 @@ export const buildContextTreeLines = (
 
   const depth = options.config?.contextDepth ?? 1
 
-  const entries: [string, string][] = []
+  const entries: TreeEntry[] = []
 
   const ctx = data.context
   if (
