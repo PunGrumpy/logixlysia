@@ -1,5 +1,5 @@
-import pino from 'pino'
-import pretty from 'pino-pretty'
+import type pino from 'pino'
+import type pretty from 'pino-pretty'
 import { resolveOptions } from '../config/resolve-options'
 import { createRequestContextStore } from '../context/request-context'
 import type { RequestContextStore } from '../context/request-context'
@@ -18,13 +18,14 @@ import { createFormatContext } from './create-logger'
 import { emit, isSuppressed, parseRequestUrlOnce, resolveSinks } from './emit'
 import type { EmitOutcome } from './emit'
 import { handleHttpError } from './handle-http-error'
+import { loadPino, loadPretty } from './load-pino.cjs'
 
 const ZERO_STORE: StoreData = { beforeTime: 0n }
 const NO_CONTEXT: Readonly<Record<string, unknown>> = Object.freeze({})
 
 const createLazyPino = (
   config: Options['config'],
-  pinoFactory: typeof pino
+  pinoFactory: typeof pino | undefined
 ): Pino => {
   const pinoConfig = config?.pino
   const {
@@ -71,7 +72,7 @@ const createLazyPino = (
   }
 
   const prettyStream = (): ReturnType<typeof pretty> =>
-    pretty({
+    loadPretty()({
       colorize: process.stdout?.isTTY === true,
       translateTime: config?.timestamp?.translateTime,
       ...prettyPrintOptions,
@@ -82,9 +83,10 @@ const createLazyPino = (
 
   const getPino = (): Pino => {
     if (!realPino) {
+      const factory = pinoFactory ?? loadPino()
       realPino = shouldPrettyPrint
-        ? pinoFactory(basePinoOptions, prettyStream())
-        : pinoFactory({
+        ? factory(basePinoOptions, prettyStream())
+        : factory({
             ...basePinoOptions,
             transport: pinoOptions.transport
           })
@@ -139,7 +141,7 @@ export interface PluginLogger extends Logger {
 
 const buildLogger = (
   options: Options,
-  pinoFactory: typeof pino,
+  pinoFactory: typeof pino | undefined,
   externalContextStore?: RequestContextStore
 ): PluginLogger => {
   const contextStore = externalContextStore ?? createRequestContextStore()
@@ -266,7 +268,7 @@ const buildLogger = (
 /** Applies the preset and validates `options`, as the plugin does. */
 export const createLogger = (
   options: Options = {},
-  pinoFactory: typeof pino = pino,
+  pinoFactory?: typeof pino,
   externalContextStore?: RequestContextStore
 ): Logger =>
   buildLogger(resolveOptions(options), pinoFactory, externalContextStore)
@@ -278,4 +280,4 @@ export const createLogger = (
 export const createPluginLogger = (
   options: Options,
   contextStore: RequestContextStore
-): PluginLogger => buildLogger(options, pino, contextStore)
+): PluginLogger => buildLogger(options, undefined, contextStore)
