@@ -164,6 +164,8 @@ Timestamp configuration for the `{now}` console token.
 - **Type:** `{ translateTime?: string }`
 - **Default:** `undefined`
 
+Without a `timestamp` option or a `customLogFormat`, the default line prints local `HH:MM:ss.SSS` (for example `09:05:07.042`) when stdout is a TTY, and the full ISO timestamp in UTC (`2026-11-12T09:05:07.042Z`) when it is not. Setting either option, even `timestamp: {}`, turns the short form off.
+
 `translateTime` accepts three forms:
 
 - A bare token pattern (`yyyy`, `mm`, `dd`, `HH`, `MM`, `ss`, `SSS`), rendered with local time:
