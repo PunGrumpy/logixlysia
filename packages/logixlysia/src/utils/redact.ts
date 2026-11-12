@@ -5,7 +5,16 @@ const IPV4_REGEX =
   /(?<![\w/.])(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(?![\w.])/gu
 const IPV6_REGEX =
   /(?<![\w:])(?:(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}|(?:[0-9a-fA-F]{1,4}:){1,7}:(?:[0-9a-fA-F]{1,4}(?::[0-9a-fA-F]{1,4}){0,6})?|::(?:[0-9a-fA-F]{1,4}(?::[0-9a-fA-F]{1,4}){0,6}))(?![\w:])/gu
-const CREDIT_CARD_CANDIDATE_REGEX = /\b(?:\d[ -]*?){13,19}\b/gu
+/**
+ * A whole run of digit groups, however long, with any separators after it. A
+ * pattern that stops at the first 13 digits it can take cuts a card written
+ * one digit at a time short, and starts in the number written before a card
+ * instead of at the card. One character class, because a repeated group keeps
+ * a backtrack entry per digit and gives up on a very long run.
+ */
+const DIGIT_RUN_REGEX = /\b\d[\d -]*/gu
+const WORD_CHAR_REGEX = /\w/u
+const DIGIT_GROUP_REGEX = /\d+/gu
 /**
  * Starts only where a token can start: after a character outside the token
  * alphabet. Otherwise every `eyJ` inside a long run is a start position whose
@@ -132,20 +141,15 @@ export const buildPinoRedactPaths = (
   })
 }
 
-const passesLuhn = (digits: string): boolean => {
-  if (digits.length < PAN_MIN_LEN || digits.length > PAN_MAX_LEN) {
-    return false
-  }
+const ZERO_CODE_POINT = 48
 
+/** Luhn check over `digits[from, to)`, which holds decimal digits only. */
+const passesLuhn = (digits: string, from: number, to: number): boolean => {
   let sum = 0
   let alternate = false
 
-  for (let i = digits.length - 1; i >= 0; i -= 1) {
-    const code = digits.codePointAt(i) ?? 0
-    if (code < 48 || code > 57) {
-      return false
-    }
-    let n = code - 48
+  for (let i = to - 1; i >= from; i -= 1) {
+    let n = (digits.codePointAt(i) ?? ZERO_CODE_POINT) - ZERO_CODE_POINT
     if (alternate) {
       n *= 2
       if (n > 9) {
@@ -159,18 +163,94 @@ const passesLuhn = (digits: string): boolean => {
   return sum % 10 === 0
 }
 
-const redactCreditCardCandidates = (text: string): string =>
-  text.replaceAll(CREDIT_CARD_CANDIDATE_REGEX, match => {
-    const digits = match.replaceAll(/\D/gu, '')
-    if (
-      digits.length >= PAN_MIN_LEN &&
-      digits.length <= PAN_MAX_LEN &&
-      passesLuhn(digits)
-    ) {
-      return REDACTED_TEXT
+interface DigitRun {
+  /** Every digit of the run, separators dropped. */
+  digits: string
+  /** Per group: how many digits the run holds up to the end of that group. */
+  digitsThrough: number[]
+  groups: RegExpExecArray[]
+}
+
+/**
+ * Index of the group that ends the longest card starting at group `first`, or
+ * -1. Longest first, so a shorter prefix that happens to pass the check does
+ * not leave the card's last digits in the log.
+ */
+const lastGroupOfCard = (run: DigitRun, first: number): number => {
+  const from = first === 0 ? 0 : (run.digitsThrough[first - 1] ?? 0)
+  let last = first
+  while ((run.digitsThrough[last + 1] ?? Infinity) - from <= PAN_MAX_LEN) {
+    last += 1
+  }
+  for (; last >= first; last -= 1) {
+    const to = run.digitsThrough[last] ?? 0
+    const length = to - from
+    if (length < PAN_MIN_LEN) {
+      return -1
     }
-    return match
-  })
+    if (length <= PAN_MAX_LEN && passesLuhn(run.digits, from, to)) {
+      return last
+    }
+  }
+  return -1
+}
+
+/**
+ * A card is a window of whole digit groups inside the run, so `id 12` in front
+ * of a card or a CVV after it does not hide the card. Every group is tried as
+ * a start and overlapping windows are redacted as one, so a window that passes
+ * the check by chance and ends inside a card does not leave the card's tail.
+ */
+const redactCardsInRun = (
+  text: string,
+  offset: number,
+  whole: string
+): string => {
+  if (text.length < PAN_MIN_LEN) {
+    return text
+  }
+
+  const run: DigitRun = { digits: '', digitsThrough: [], groups: [] }
+  for (const group of text.matchAll(DIGIT_GROUP_REGEX)) {
+    run.digits += group[0]
+    run.digitsThrough.push(run.digits.length)
+    run.groups.push(group)
+  }
+  // A group that runs into a word, as in `12ab`, is not a number of its own.
+  const endsInDigit = !text.endsWith(' ') && !text.endsWith('-')
+  if (endsInDigit && WORD_CHAR_REGEX.test(whole.charAt(offset + text.length))) {
+    run.groups.pop()
+    run.digitsThrough.pop()
+  }
+
+  let result = ''
+  let copiedTo = 0
+  let spanFirst = -1
+  let spanLast = -1
+  const closeSpan = (): void => {
+    const firstGroup = run.groups[spanFirst]
+    const lastGroup = run.groups[spanLast]
+    if (firstGroup !== undefined && lastGroup !== undefined) {
+      result += `${text.slice(copiedTo, firstGroup.index)}${REDACTED_TEXT}`
+      copiedTo = lastGroup.index + lastGroup[0].length
+    }
+  }
+
+  for (let first = 0; first < run.groups.length; first += 1) {
+    const last = lastGroupOfCard(run, first)
+    if (last !== -1 && first > spanLast) {
+      closeSpan()
+      spanFirst = first
+    }
+    spanLast = Math.max(spanLast, last)
+  }
+  closeSpan()
+
+  return copiedTo === 0 ? text : `${result}${text.slice(copiedTo)}`
+}
+
+const redactCreditCardCandidates = (text: string): string =>
+  text.replaceAll(DIGIT_RUN_REGEX, redactCardsInRun)
 
 const endsWithUrlScheme = (text: string, end: number): boolean => {
   for (let i = end - 1; i >= 0; i -= 1) {
