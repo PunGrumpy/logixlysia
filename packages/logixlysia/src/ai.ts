@@ -269,7 +269,11 @@ export const aiMiddleware = (log: AILog): AIMiddleware => ({
     const stream = new ReadableStream<AIStreamChunk>({
       cancel: reason => {
         // The cancel ends a pending read as done: the client left, the call
-        // did not fail.
+        // did not fail. Once the finish chunk was read, the call completed
+        // and its usage is known, so it is still recorded.
+        if (finish) {
+          settle()
+        }
         settled = true
         return reader.cancel(reason)
       },
