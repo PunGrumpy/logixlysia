@@ -57,7 +57,7 @@ Enable colored output in console logs.
 useColors: true
 ```
 
-Colors require an interactive terminal: when `stdout` is not a TTY (Docker, CI, or output piped to a file), logs are printed uncolored even with `useColors: true`.
+Colors require an interactive terminal: when `stdout` is not a TTY (Docker, CI, or output piped to a file), logs are printed uncolored even with `useColors: true`. The same holds when the `NO_COLOR` environment variable is set to a non-empty value.
 
 ### `ip`
 

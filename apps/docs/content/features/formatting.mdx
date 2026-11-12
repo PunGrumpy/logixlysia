@@ -30,7 +30,7 @@ logixlysia({
 | `{status}` | Response status code |
 | `{statusText}` | Status text from Node’s `http.STATUS_CODES` (e.g. `Not Found` for 404) |
 | `{message}` | Custom message |
-| `{icon}` | With colors on a TTY, the Logixlysia fox `🦊` in a **level-colored background** (green INFO, yellow WARNING, red ERROR, blue DEBUG). When `useColors` is off or output is not a TTY, the level as a word padded to five characters: `DEBUG`, `INFO `, `WARN `, `ERROR` |
+| `{icon}` | With colors on a TTY, the Logixlysia fox `🦊` in a **level-colored background** (green INFO, yellow WARNING, red ERROR, blue DEBUG). When `useColors` is off, `NO_COLOR` is set or output is not a TTY, the level as a word padded to five characters: `DEBUG`, `INFO `, `WARN `, `ERROR` |
 | `{speed}` | When duration ≥ `verySlowThreshold`, appends ` ⚡ slow` (yellow with colors) |
 | `{service}` | From `config.service`, rendered as `[name] ` (dim with colors); empty if unset |
 | `{context}` | JSON string of `data.context` when the context tree is off or context is empty; omitted on the main line when the context tree is shown (see below) |

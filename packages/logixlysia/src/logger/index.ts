@@ -12,6 +12,7 @@ import type {
   StoreData
 } from '../interfaces'
 import { resolveSampling } from '../sampling'
+import { stdoutWantsColor } from '../utils/color'
 import { elapsedMs } from '../utils/duration'
 import { buildPinoRedactPaths } from '../utils/redact'
 import { createFormatContext } from './create-logger'
@@ -73,7 +74,7 @@ const createLazyPino = (
 
   const prettyStream = (): ReturnType<typeof pretty> =>
     loadPretty()({
-      colorize: process.stdout?.isTTY === true,
+      colorize: stdoutWantsColor(),
       translateTime: config?.timestamp?.translateTime,
       ...prettyPrintOptions,
       ...outputKeys
