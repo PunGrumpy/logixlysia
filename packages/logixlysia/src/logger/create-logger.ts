@@ -1,8 +1,9 @@
 import { STATUS_CODES } from 'node:http'
 import chalk from 'chalk'
 import { getStatusCode } from '../helpers/status'
-import type { LogLevel, Options, RequestInfo, StoreData } from '../interfaces'
+import type { LogLevel, Options, StoreData } from '../interfaces'
 import { isStructuredError, parseError } from '../utils/error'
+import type { LoggedRequest } from '../utils/redact'
 import { sanitizeLogText } from '../utils/sanitize'
 
 const pad2 = (value: number): string => String(value).padStart(2, '0')
@@ -99,7 +100,7 @@ const formatTimestamp = (date: Date, pattern?: string): string => {
     .replaceAll('SSS', SSS)
 }
 
-const getIp = (request: RequestInfo): string => {
+const getIp = (request: LoggedRequest): string => {
   const forwarded = request.headers.get('x-forwarded-for')
   const candidate = forwarded
     ? (forwarded.split(',')[0]?.trim() ?? '')
@@ -665,7 +666,7 @@ const getStatusTokens = (
 
 const getIpToken = (
   tokens: Set<string>,
-  request: RequestInfo,
+  request: LoggedRequest,
   config: Options['config']
 ): string => (config?.ip === true && tokens.has('{ip}') ? getIp(request) : '')
 
@@ -743,7 +744,7 @@ export const formatLogOutput = ({
   precomputed
 }: {
   level: LogLevel
-  request: RequestInfo
+  request: LoggedRequest
   data: Record<string, unknown>
   store: StoreData
   options: Options

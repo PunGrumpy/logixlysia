@@ -1,6 +1,7 @@
 import { getStatusCode } from '../helpers/status'
-import type { LogLevel, Options, RequestInfo, StoreData } from '../interfaces'
+import type { LogLevel, Options, StoreData } from '../interfaces'
 import type { PrecomputedLogParts } from '../logger/create-logger'
+import type { LoggedRequest } from '../utils/redact'
 import { createErrorReporter } from '../utils/report'
 import { sanitizeLogText } from '../utils/sanitize'
 import { getFileSink } from './file-sink'
@@ -20,7 +21,7 @@ interface LogToFileInput {
   level: LogLevel
   options: Options
   precomputed: PrecomputedLogParts
-  request: RequestInfo
+  request: LoggedRequest
   store: StoreData
 }
 
