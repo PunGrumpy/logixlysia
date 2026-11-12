@@ -157,20 +157,24 @@ const formatJsonLine = (
     status,
     ...rest
   } = toRecordMeta({ data, options, precomputed, request })
+  const service = options.config?.service?.trim() || undefined
+  const restEntries = Object.entries(rest)
   // Entries, not an object literal, because `bun run format` sorts literal
   // keys and this order is the line's key order.
   return stringifyForLog(
     Object.fromEntries([
       ['timestamp', new Date().toISOString()],
       ['level', level],
-      ['service', options.config?.service?.trim() || undefined],
+      ...(service === undefined ? [] : [['service', service]]),
       ['message', typeof data.message === 'string' ? data.message : ''],
       ['request', requestMeta],
       ['status', status],
       ['durationMs', durationMs],
       ['context', context],
       ['error', error],
-      ...Object.entries(rest)
+      ...(service === undefined
+        ? restEntries
+        : restEntries.filter(([key]) => key !== 'service'))
     ])
   )
 }
