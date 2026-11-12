@@ -23,12 +23,17 @@ logixlysia({
 
 ## File Format
 
-Logs are written in a structured format:
+Each log is one line, with no colors or icons:
 
 ```
-🦊 2025-04-13 15:00:19.225 INFO  123.45ms GET /api/users 200
-🦊 2025-04-13 15:00:20.225 ERROR 234.56ms POST /api/users 500 Error creating user
+2025-04-13T15:00:19.225Z INFO GET /api/users 200 123.45ms
+2025-04-13T15:00:20.225Z ERROR POST /api/users 500 234.56ms Error creating user
+2025-04-13T15:00:21.225Z INFO GET /api/users - 0.17ms Loaded users {"count":3}
 ```
+
+The fields are, in order, a UTC ISO 8601 timestamp, the level, the method, the path, the status, the duration, the message, and the context as JSON. The message and context are left out when empty. The status is `-` for a line you write with `log.info()` and similar, which belongs to no response. Newlines and control characters are escaped, and `autoRedact` masks the message and context before they are written.
+
+The file line has a fixed layout. `customLogFormat` and `timestamp.translateTime` shape the console only.
 
 ## Best Practices
 

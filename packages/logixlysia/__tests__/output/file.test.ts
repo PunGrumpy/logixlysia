@@ -145,7 +145,7 @@ describe('logToFile', () => {
       })
 
       const content = await fs.readFile(filePath, 'utf-8')
-      expect(content).toContain(' GET not a url[31m hello')
+      expect(content).toContain(' GET not a url[31m - 0.00ms hello')
       expect(content).not.toContain('\u001B')
     } finally {
       await removeTempDir(dir)
@@ -283,7 +283,7 @@ describe('logToFile', () => {
       expect(rotatedContent).toContain('x'.repeat(90))
 
       const liveContent = await fs.readFile(filePath, 'utf-8')
-      expect(liveContent).toContain('/second y')
+      expect(liveContent).toContain('/second - 0.00ms y')
       expect(liveContent).not.toContain('x'.repeat(90))
     } finally {
       await removeTempDir(dir)
@@ -295,12 +295,12 @@ describe('logToFile', () => {
     try {
       const filePath = path.join(dir, 'logs', 'no-leak.log')
       const options: Options = {
-        config: { logRotation: { maxSize: 100 } }
+        config: { logRotation: { maxSize: 150 } }
       }
 
       const firstRequest = createMockRequest('http://localhost/first')
       await logToFile({
-        data: { message: 'x'.repeat(90) },
+        data: { message: 'x'.repeat(120) },
         filePath,
         level: 'INFO',
         options,
@@ -347,12 +347,12 @@ describe('logToFile', () => {
     try {
       const filePath = path.join(dir, 'logs', 'mode-after-rotate.log')
       const options: Options = {
-        config: { logRotation: { maxSize: 50 } }
+        config: { logRotation: { maxSize: 150 } }
       }
 
       const firstRequest = createMockRequest('http://localhost/first')
       await logToFile({
-        data: { message: 'x'.repeat(60) },
+        data: { message: 'x'.repeat(160) },
         filePath,
         level: 'INFO',
         options,

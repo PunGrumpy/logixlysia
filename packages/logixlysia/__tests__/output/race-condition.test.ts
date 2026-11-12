@@ -9,7 +9,7 @@ import { createTempDir, removeTempDir } from '../_helpers/tmp'
 
 const MESSAGE_REGEX = /message-(?<id>\d+)/u
 const EXCLUSION_LINE_REGEX =
-  /^(?:DEBUG|INFO|WARNING|ERROR) [\d.]+ms GET \/test\d+ msg-(?<id>\d+)-x+$/u
+  /^\S+Z (?:DEBUG|INFO|WARNING|ERROR) GET \/test\d+ - [\d.]+ms msg-(?<id>\d+)-x+$/u
 
 describe('logToFile race condition', () => {
   test('handles concurrent writes during rotation without data loss', async () => {
