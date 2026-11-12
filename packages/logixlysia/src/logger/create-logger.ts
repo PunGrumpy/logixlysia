@@ -169,9 +169,17 @@ const getSpeedToken = (isVerySlow: boolean, useColors: boolean): string => {
   return ` ${chalk.yellow(badge)}`
 }
 
+// Padded to the longest word so the method column lines up across levels.
+const LEVEL_WORDS: Record<LogLevel, string> = {
+  DEBUG: 'DEBUG',
+  ERROR: 'ERROR',
+  INFO: 'INFO ',
+  WARNING: 'WARN '
+}
+
 const getLevelIcon = (level: LogLevel, useColors: boolean): string => {
   if (!useColors) {
-    return '🦊'
+    return LEVEL_WORDS[level]
   }
   if (level === 'ERROR') {
     return chalk.bgRed.black(' 🦊 ')

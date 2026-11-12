@@ -37,7 +37,7 @@ const baseOptions = (overrides?: Options): Options => ({
 })
 
 describe('formatLogOutput', () => {
-  test('includes path, status, and icon in main line', () => {
+  test('includes path, status, and level word in main line', () => {
     const request = createMockRequest('http://localhost/api/hello')
     const store = { beforeTime: 0n }
     const out = formatLogOutput({
@@ -52,7 +52,7 @@ describe('formatLogOutput', () => {
     expect(out.main).toContain('/api/hello')
     expect(out.main).toContain('200')
     expect(out.main).toContain('GET')
-    expect(out.main).toContain('🦊')
+    expect(out.main).toContain('INFO')
     expect(out.contextLines).toEqual([])
   })
 
