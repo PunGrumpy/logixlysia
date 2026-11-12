@@ -2,6 +2,7 @@ import { STATUS_CODES } from 'node:http'
 import chalk from 'chalk'
 import { getStatusCode } from '../helpers/status'
 import type { LogLevel, Options, StoreData } from '../interfaces'
+import { stdoutWantsColor } from '../utils/color'
 import { isStructuredError, parseError } from '../utils/error'
 import type { LoggedRequest } from '../utils/redact'
 import { sanitizeLogText } from '../utils/sanitize'
@@ -55,7 +56,7 @@ const isStdoutTty = (): boolean =>
   typeof process !== 'undefined' && process.stdout?.isTTY === true
 
 const shouldUseColors = (options: Options): boolean =>
-  (options.config?.useColors ?? true) && isStdoutTty()
+  (options.config?.useColors ?? true) && stdoutWantsColor()
 
 // pino-pretty's `standard` expands to `yyyy-mm-dd HH:MM:ss.l o`; this
 // formatter has no `l` or `o` token, so it uses `SSS` and drops the offset.

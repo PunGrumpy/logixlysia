@@ -13,7 +13,14 @@ const setIsTTY = (value: boolean) => {
   })
 }
 
+const originalNoColor = process.env.NO_COLOR
+
 afterEach(() => {
+  if (originalNoColor === undefined) {
+    delete process.env.NO_COLOR
+  } else {
+    process.env.NO_COLOR = originalNoColor
+  }
   if (originalIsTTY) {
     Object.defineProperty(process.stdout, 'isTTY', originalIsTTY)
   } else {
@@ -66,6 +73,23 @@ describe('level word when colours are off', () => {
 
     expect(line).toMatch(/^\S+ INFO {2}GET {5}\/hello 200 \S+ hi$/u)
     expect(line).not.toContain('🦊')
+  })
+
+  test('NO_COLOR on a TTY prints the level word', () => {
+    setIsTTY(true)
+    process.env.NO_COLOR = '1'
+    const line = lineFor({}, 'info')
+
+    expect(line).toMatch(/ INFO {2}GET {5}\/hello 200 \S+ hi$/u)
+    expect(line).not.toContain('🦊')
+  })
+
+  test('an empty NO_COLOR leaves colors on', () => {
+    setIsTTY(true)
+    process.env.NO_COLOR = ''
+    const line = lineFor({}, 'info')
+
+    expect(line).toContain('🦊')
   })
 
   test('the service name still precedes the level word', () => {
