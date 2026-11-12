@@ -49,18 +49,30 @@ export interface FormattedLogOutput {
   main: string
 }
 
-const shouldUseColors = (options: Options): boolean => {
-  const { config } = options
-  const enabledByConfig = config?.useColors ?? true
+const isStdoutTty = (): boolean =>
+  typeof process !== 'undefined' && process.stdout?.isTTY === true
 
-  const isTty = typeof process !== 'undefined' && process.stdout?.isTTY === true
-  return enabledByConfig && isTty
-}
+const shouldUseColors = (options: Options): boolean =>
+  (options.config?.useColors ?? true) && isStdoutTty()
 
 // pino-pretty's `standard` expands to `yyyy-mm-dd HH:MM:ss.l o`; this
 // formatter has no `l` or `o` token, so it uses `SSS` and drops the offset.
 const STANDARD_TIMESTAMP_PATTERN = 'yyyy-mm-dd HH:MM:ss.SSS'
 const TIMESTAMP_PREFIX_LENGTH = 'sys:'.length
+const TTY_TIMESTAMP_PATTERN = 'HH:MM:ss.SSS'
+
+// Someone watching a terminal knows the date. Piped output keeps the full ISO
+// instant because a machine reads it.
+const resolveTranslateTime = (options: Options): string | undefined => {
+  const { config } = options
+  if (
+    config?.timestamp !== undefined ||
+    config?.customLogFormat !== undefined
+  ) {
+    return config?.timestamp?.translateTime
+  }
+  return isStdoutTty() ? TTY_TIMESTAMP_PATTERN : undefined
+}
 
 const resolveTimestampPattern = (
   pattern: string
@@ -314,6 +326,7 @@ export interface FormatContext {
   serviceToken: string
   slowThreshold: number
   tokens: Set<string>
+  translateTime: string | undefined
   useColors: boolean
   verySlowThreshold: number
 }
@@ -333,6 +346,7 @@ export const createFormatContext = (options: Options): FormatContext => {
     serviceToken,
     slowThreshold,
     tokens,
+    translateTime: resolveTranslateTime(options),
     useColors,
     verySlowThreshold
   }
@@ -525,11 +539,15 @@ const collectCauseEntries = (error: unknown): TreeEntry[] => {
   return entries
 }
 
-const collectStructuredErrorEntries = (error: unknown): TreeEntry[] => {
+const collectStructuredErrorEntries = (
+  error: unknown,
+  mainLineMessage: string
+): TreeEntry[] => {
   const entries: TreeEntry[] = []
   const msg = parseError(error)
-  if (msg) {
-    entries.push(['error', sanitizeLogText(msg)])
+  const safeMessage = msg ? sanitizeLogText(msg) : ''
+  if (safeMessage && safeMessage !== mainLineMessage) {
+    entries.push(['error', safeMessage])
   }
   const at = stackLocation(error)
   if (at !== undefined) {
@@ -560,7 +578,8 @@ export const buildContextTreeLines = (
   level: LogLevel,
   data: Record<string, unknown>,
   options: Options,
-  useColors: boolean = shouldUseColors(options)
+  useColors: boolean = shouldUseColors(options),
+  mainLineMessage = ''
 ): string[] => {
   if (options.config?.showContextTree === false) {
     return []
@@ -584,7 +603,7 @@ export const buildContextTreeLines = (
   }
 
   if ((level === 'ERROR' || level === 'WARNING') && data.error !== undefined) {
-    entries.push(...collectStructuredErrorEntries(data.error))
+    entries.push(...collectStructuredErrorEntries(data.error, mainLineMessage))
   }
 
   return formatEntriesToTreeLines(entries, useColors)
@@ -767,13 +786,14 @@ export const formatLogOutput = ({
     serviceToken,
     slowThreshold,
     tokens,
+    translateTime,
     useColors,
     verySlowThreshold
   } = formatContext ?? createFormatContext(options)
 
   const { timestamp, epoch } = getTimestampTokens(
     tokens,
-    config?.timestamp?.translateTime,
+    translateTime,
     useColors
   )
   const message = getMessageToken(tokens, data)
@@ -827,7 +847,13 @@ export const formatLogOutput = ({
     match => tokenMap[match as FormatToken]
   )
 
-  const contextLines = buildContextTreeLines(level, data, options, useColors)
+  const contextLines = buildContextTreeLines(
+    level,
+    data,
+    options,
+    useColors,
+    message
+  )
 
   return { contextLines, main }
 }

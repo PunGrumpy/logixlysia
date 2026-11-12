@@ -435,7 +435,7 @@ describe('non-Error values', () => {
     expect(event?.meta.error).toMatchObject({ code: 'X' })
   })
 
-  test('a validation failure prints its message in the console tree', async () => {
+  test('a validation failure prints its message on the console line', async () => {
     const { restore, spies } = spyConsole(['error', 'warn'])
     try {
       const app = buildLoginApp({
@@ -452,14 +452,15 @@ describe('non-Error values', () => {
 
       expect(res.status).toBe(422)
       const output = joinConsoleOutput(spies)
-      expect(output).toContain('error  Validation failed (body)')
+      expect(output).toContain('422 ')
+      expect(output).toContain(' Validation failed (body)')
       expect(output).not.toContain('[object Object]')
     } finally {
       restore()
     }
   })
 
-  test('a thrown string prints its text in the console tree', async () => {
+  test('a thrown string prints its text on the console line', async () => {
     const { restore, spies } = spyConsole(['error', 'warn'])
     const payload = 'boom'
     try {
@@ -474,7 +475,7 @@ describe('non-Error values', () => {
       await app.handle(new Request('http://localhost/text'))
 
       const output = joinConsoleOutput(spies)
-      expect(output).toContain('error  boom')
+      expect(output).toEndWith(' boom')
       expect(output).not.toContain('[object Object]')
     } finally {
       restore()
