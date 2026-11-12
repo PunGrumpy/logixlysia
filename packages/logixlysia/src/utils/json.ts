@@ -36,17 +36,40 @@ interface OpenLevel {
 }
 
 /**
- * `JSON.stringify` for log output that never throws. A BigInt becomes its
- * decimal string and a reference back to one of the value's own ancestors
- * becomes "[Circular]". A value shared by two siblings is written twice, as
- * JSON would. A value nested deeper than 64 levels becomes "[Depth]".
- * An `Error` is written as its `name`, `message`, `cause` and own fields (no
- * stack), a `Map` as an object keyed by `String(key)`, and a `Set` as an
- * array. Anything else that fails, such as a throwing `toJSON`, becomes
- * "[Unserializable]". Returns '' when there is nothing to write
- * (`undefined`, a function, a symbol).
+ * True when plain `JSON.stringify` writes `value` as the replacer below
+ * would: no BigInt, Error, Map, Set, custom `toJSON`, cycle or deep nesting.
  */
-export const stringifyForLog = (value: unknown): string => {
+const isPlainJson = (value: unknown, ancestors: object[]): boolean => {
+  if (typeof value === 'bigint') {
+    return false
+  }
+  if (typeof value !== 'object' || value === null || value instanceof Date) {
+    return true
+  }
+  if (
+    ancestors.length >= MAX_DEPTH - 1 ||
+    ancestors.includes(value) ||
+    value instanceof Error ||
+    value instanceof Map ||
+    value instanceof Set ||
+    typeof (value as { toJSON?: unknown }).toJSON === 'function'
+  ) {
+    return false
+  }
+  ancestors.push(value)
+  const children: unknown[] = Array.isArray(value)
+    ? value
+    : Object.values(value)
+  for (const child of children) {
+    if (!isPlainJson(child, ancestors)) {
+      return false
+    }
+  }
+  ancestors.pop()
+  return true
+}
+
+const stringifyWithReplacer = (value: unknown): string => {
   const levels: OpenLevel[] = []
   const seen = new Set<unknown>()
   try {
@@ -84,4 +107,28 @@ export const stringifyForLog = (value: unknown): string => {
   } catch {
     return UNSERIALIZABLE
   }
+}
+
+/**
+ * `JSON.stringify` for log output that never throws. A BigInt becomes its
+ * decimal string and a reference back to one of the value's own ancestors
+ * becomes "[Circular]". A value shared by two siblings is written twice, as
+ * JSON would. A value nested deeper than 64 levels becomes "[Depth]".
+ * An `Error` is written as its `name`, `message`, `cause` and own fields (no
+ * stack), a `Map` as an object keyed by `String(key)`, and a `Set` as an
+ * array. Anything else that fails, such as a throwing `toJSON`, becomes
+ * "[Unserializable]". Returns '' when there is nothing to write
+ * (`undefined`, a function, a symbol).
+ */
+export const stringifyForLog = (value: unknown): string => {
+  // The replacer costs a call into JS per value, several times the plain
+  // stringify, so it runs only for values that need it.
+  try {
+    if (isPlainJson(value, [])) {
+      return JSON.stringify(value) ?? ''
+    }
+  } catch {
+    // A getter or `toJSON` threw. The replacer path gives the same result.
+  }
+  return stringifyWithReplacer(value)
 }

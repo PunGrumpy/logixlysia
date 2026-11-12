@@ -74,6 +74,23 @@ describe('stringifyForLog', () => {
     expect(stringifyForLog(value)).toBe('"[Unserializable]"')
   })
 
+  test('writes plain data, dates and nesting under the depth bound as JSON does', () => {
+    let nested: unknown = { at: new Date(0), list: [1, 'two', null, true] }
+    for (let i = 0; i < 60; i += 1) {
+      nested = { child: nested }
+    }
+    expect(stringifyForLog(nested)).toBe(JSON.stringify(nested))
+  })
+
+  test('replaces a value whose getter throws with "[Unserializable]"', () => {
+    const value = {
+      get broken(): never {
+        throw new Error('nope')
+      }
+    }
+    expect(stringifyForLog({ value })).toBe('"[Unserializable]"')
+  })
+
   test('returns an empty string when there is nothing to write', () => {
     const nothing: unknown = undefined
     expect(stringifyForLog(nothing)).toBe('')

@@ -224,24 +224,16 @@ app.onError(({ code, error, store }) => {
 
 ### JSON Format for Error Logs
 
-`customLogFormat` produces a text line, not JSON (the method is padded, quotes are not escaped, error rows follow the line, and colors apply on a TTY), so for JSON output write each record from a transport and turn off the console line:
+`customLogFormat` produces a text line, not JSON (the method is padded, quotes are not escaped, error rows follow the line, and colors apply on a TTY). For JSON output set `consoleFormat: 'json'`, or use the `json` or `prod` preset, which set it:
 
 ```ts
 logixlysia({
-  config: {
-    disableInternalLogger: true,
-    transports: [
-      {
-        log: (level, message, meta) =>
-          console.log(JSON.stringify({ level, message, ...meta }))
-      }
-    ]
-  }
+  config: { consoleFormat: 'json' }
 })
 ```
 
 ```
-{"level":"INFO","message":"","request":{"method":"GET","url":"http://localhost:3000/hello"},"status":200,"durationMs":0.42}
+{"timestamp":"2026-11-12T05:43:59.800Z","level":"INFO","message":"","request":{"method":"GET","url":"http://localhost:3000/hello"},"status":200,"durationMs":0.42}
 ```
 
 ## Custom Transports

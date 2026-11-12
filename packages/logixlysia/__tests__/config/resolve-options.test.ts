@@ -289,6 +289,15 @@ describe('resolveOptions', () => {
     expect(resolved.config?.verySlowThreshold).toBe(1000)
   })
 
+  test('throws on a consoleFormat other than json or text', () => {
+    expect(() =>
+      resolveOptions({
+        config: { consoleFormat: 'pretty' as unknown as 'json' },
+        preset: 'prod'
+      })
+    ).toThrow("consoleFormat must be 'json' or 'text', got \"pretty\"")
+  })
+
   test('throws on a negative slowThreshold', () => {
     expect(() => resolveOptions({ config: { slowThreshold: -1 } })).toThrow(
       'logixlysia: invalid formatting config'

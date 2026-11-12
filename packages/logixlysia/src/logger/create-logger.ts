@@ -301,6 +301,7 @@ const getServiceToken = (options: Options, useColors: boolean): string => {
 }
 
 export interface FormatContext {
+  consoleFormat: 'json' | 'text'
   format: string
   serviceToken: string
   slowThreshold: number
@@ -319,6 +320,7 @@ export const createFormatContext = (options: Options): FormatContext => {
   const serviceToken = getServiceToken(options, useColors)
 
   return {
+    consoleFormat: config?.consoleFormat ?? 'text',
     format,
     serviceToken,
     slowThreshold,

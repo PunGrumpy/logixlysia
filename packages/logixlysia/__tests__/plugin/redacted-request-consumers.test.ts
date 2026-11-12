@@ -53,15 +53,16 @@ test('every sink of the prod preset sees the request redacted', async () => {
   }
 
   const [line] = spies.info.mock.calls[0] as [string]
-  expect(line).toBe(
-    'GET     /users/[REDACTED]?token=redacted&page=2 [REDACTED]'
+  const redactedRequest = {
+    method: 'GET',
+    url: 'http://localhost/users/[REDACTED]?token=redacted&page=2'
+  }
+  expect((JSON.parse(line) as { request: unknown }).request).toEqual(
+    redactedRequest
   )
 
   const meta = transport.mock.calls[0]?.[2] as { request: unknown }
-  expect(meta.request).toEqual({
-    method: 'GET',
-    url: 'http://localhost/users/[REDACTED]?token=redacted&page=2'
-  })
+  expect(meta.request).toEqual(redactedRequest)
 
   const readLog = (): string =>
     existsSync(logFilePath) ? readFileSync(logFilePath, 'utf-8') : ''
