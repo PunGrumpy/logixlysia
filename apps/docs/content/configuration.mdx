@@ -286,14 +286,16 @@ showContextTree: true
 
 ### `contextDepth`
 
-How many levels of nested objects to expand in the context tree.
+How many levels of nested objects to expand in the context tree. At the default, `{ user: { id: 'usr_123', org: { id: 'org_9' } } }` prints `user.id  usr_123` and `user.org  {"id":"org_9"}`. Set `1` to print `user` as one JSON value.
 
 - **Type:** `number`
-- **Default:** `1`
+- **Default:** `2`
 
 ```ts
-contextDepth: 2
+contextDepth: 3
 ```
+
+On a TTY, a string value longer than 200 characters is cut to 200 and ends in `… (<length> chars)`. Piped stdout, files and transports always get the whole string.
 
 ## Output Options
 

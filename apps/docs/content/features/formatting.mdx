@@ -105,13 +105,14 @@ When `showContextTree` is `true` (default), object `context` passed to `logger.i
 
 - Each row is two spaces, `├─` or `└─`, the key (cyan when colors are on), two spaces, then the value.
 - For `ERROR` and `WARNING` logs, an `error` row is appended when an error object is present (parsed message). The row is left out when the main line already ends with the same message, so a failed request prints its message once.
-- Set `contextDepth` (default `1`) to flatten nested objects into dotted keys (e.g. `user.id`) up to that depth.
+- Set `contextDepth` (default `2`) to flatten nested objects into dotted keys (e.g. `user.id`) up to that depth.
+- On a TTY, a string value longer than 200 characters is cut to 200 and ends in `… (<length> chars)`. Piped stdout, files and transports get the whole string.
 
 ```ts
 logixlysia({
   config: {
     showContextTree: true,
-    contextDepth: 2
+    contextDepth: 3
   }
 })
 ```

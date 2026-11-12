@@ -185,7 +185,7 @@ export interface FormattingConfig {
    * @default 'text'
    */
   consoleFormat?: 'json' | 'text'
-  /** How many object nesting levels to expand in the context tree; default 1. */
+  /** How many object nesting levels to expand in the context tree; default 2. */
   contextDepth?: number
   customLogFormat?: string
   ip?: boolean
