@@ -1,5 +1,53 @@
 # Implementation Plans
 
+## November 2026 eighth pass (102–113): performance, first-run experience and console output
+
+Run on 2026-11-12 from commit `cb94f3b` under poteto-mode. The maintainer asked for the package to beat the sibling logging library named as the example on performance, developer experience and output (it is not named in any artifact here, by request; pages that already compare the two were left alone). Each plan has its own PR and its plan file arrives with that PR, so the links below resolve as the PRs merge. Nothing is merged yet: every row waits for the maintainer.
+
+### Execution order & status
+
+| Plan | Title | Release | Depends on | Status |
+| --- | --- | --- | --- | --- |
+| [102](102-fair-request-timing.md) | The bench times every library until its log line is written, and adds a `prod` case and a bare Elysia case | none | — | IN PROGRESS — [PR #610](https://github.com/PunGrumpy/logixlysia/pull/610) open |
+| [103](103-redaction-fast-path.md) | `autoRedact` costs less per request: headers redacted on first read, patterns skipped when the text cannot match | patch | — | IN PROGRESS — [PR #613](https://github.com/PunGrumpy/logixlysia/pull/613) open |
+| [104](104-lazy-pino-import.md) | pino loads on first use and still lands in bundled apps; no inline sourcemaps in the tarball | patch | — | IN PROGRESS — [PR #609](https://github.com/PunGrumpy/logixlysia/pull/609) open |
+| [105](105-log-context-through-setup-plugin.md) | `log` reaches routes behind a setup plugin and nested groups | patch | — | IN PROGRESS — [PR #611](https://github.com/PunGrumpy/logixlysia/pull/611) open |
+| [106](106-use-logger-fallback-warning.md) | `useLogger()` warns once when it falls back without `useAsyncLocalStorage` | patch | — | IN PROGRESS — [PR #606](https://github.com/PunGrumpy/logixlysia/pull/606) open |
+| [107](107-console-error-cause.md) | The console tree prints `Caused by:` for up to three causes | patch | — | IN PROGRESS — [PR #607](https://github.com/PunGrumpy/logixlysia/pull/607) open |
+| [108](108-file-log-line-format.md) | The log file line carries timestamp, level, status and context | minor | — | IN PROGRESS — [PR #608](https://github.com/PunGrumpy/logixlysia/pull/608) open |
+| [109](109-accurate-quick-start-and-output.md) | The quick start runs as written and shows real output; Usage is the second docs page | patch | — | IN PROGRESS — [PR #612](https://github.com/PunGrumpy/logixlysia/pull/612) open |
+| [110](110-json-preset-console-lines.md) | `preset: 'json'` and `'prod'` print one JSON line per record; `consoleFormat` picks the format | minor | — | IN PROGRESS — [PR #614](https://github.com/PunGrumpy/logixlysia/pull/614) open |
+| [111](111-level-word-without-colors.md) | Without colours the level is a word (`INFO`, `WARN`, `ERROR`, `DEBUG`) | minor | 107 | IN PROGRESS — [PR #615](https://github.com/PunGrumpy/logixlysia/pull/615) open, stacked on #607 |
+| [112](112-short-timestamp-and-single-error-message.md) | A terminal shows a short local time, and an error message prints once | minor | 111 | IN PROGRESS — [PR #616](https://github.com/PunGrumpy/logixlysia/pull/616) open, stacked on #615 |
+| [113](113-context-depth-and-value-truncation.md) | `contextDepth` defaults to 2, and a terminal shortens a long string value | minor | 112 | IN PROGRESS — [PR #617](https://github.com/PunGrumpy/logixlysia/pull/617) open, stacked on #616 |
+
+Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJECTED (with one-line rationale)
+
+**Review record (2026-11-12).** One executor per plan in an isolated worktree, Sonnet for the routine plans and Opus for 103, 104, 110 and the 111–113 stack. The coordinator read every source hunk, re-ran typecheck, build and the full suite on each branch, ran a hand-written probe against each change, and ran root lint on all twelve branches once the worktrees were gone (exit 0 on each). One plan was sent back: the first 104 loaded pino with `createRequire`, which hid it from bundlers, and an app built with `bun build` failed with `Cannot find package 'pino'`. The second round loads it through a small CommonJS file and adds a test that bundles an app and runs it where pino cannot be resolved. Every executor and the reviewer were Claude models, so agreement between them is weaker evidence than a cross-family review. Commits are unsigned.
+
+**Measured (2026-11-12).** The request-path bench from 102, five alternating rounds between the 102 branch alone and a local merge of 102–110, Node under vitest, machine load 15 to 18. Median operations per second: the default config 98.2k before and 94.4k after, `preset: 'prod'` 36.6k before and 48.6k after, the two other Elysia logging plugins 70.7k and 60.5k on the merge, bare Elysia 177k. The default config stays ahead of both plugins. `prod` gained a third and is still behind both: it redacts every record and they redact nothing in this bench. The 4% drop on the default config matches the drift on cases no plan touched, so it is not attributed to a plan.
+
+**Merge notes.** A trial merge found three overlaps, each a few lines. 103 and 108 both edit the imports of `src/output/file.ts`. 103 and 110 meet in `src/logger/emit.ts`: after both, `formatJsonLine` takes `LoggedRequest`, and the `prod` case in `redacted-request-consumers.test.ts` must set `consoleFormat: 'text'` or read the JSON line. The 111–113 stack overlaps 109 in `features/formatting.mdx` and 110 in `src/types/config.ts`.
+
+### Considered and rejected
+
+- **Skipping the card-number scan when a string has no long digit run**: the prototype missed digits separated by spaces, so 103 keeps the scan and only skips strings shorter than 13 characters.
+- **Skipping hostname and fragment redaction on the request URL**: no proof that every match is elsewhere, and the saving was small.
+- **JSON lines on stdout only**: 110 keeps `WARNING` and `ERROR` on stderr, the same as the text line, so a deploy that splits streams sees no change.
+- **Handling `NO_COLOR`**: the code and chalk both ignore it today. Honouring it changes every coloured token, so it is a plan of its own.
+
+### Open follow-ups, vetted and not planned
+
+- **A handler's `log.info` line replaces the access line, and under `consoleFormat: 'json'` that record has no `status`.** The text line prints `200` for it. Someone querying production logs by status loses every request whose handler logged. Seen on `main` and on the 110 branch.
+- **`prod` is still slower per request than both other plugins.** After 103, what remains is URL parsing in `redactRequestUrl` and the request ID.
+- **Digits spaced one by one stop matching as a card number past 13 digits.** Reported by the 103 executor and not reproduced by the reviewer.
+- **The JSON line has no `service` field**, because transports never carried one.
+- **Import time**: the 104 executor measured 128.7 ms to 106.3 ms of CPU under Bun. The reviewer did not re-measure it, and the 65 ms target set for this pass was not met.
+
+### Not audited this run
+
+No audit of security, dependencies or the adapters ran. The bench file still imports the compared libraries by package name, as it did before.
+
 ## November 2026 seventh pass (097–101): the open follow-ups, measured against the reference library
 
 Generated by the improve skill on 2026-11-08 at commit `91fd02f`. A direction pass with no fresh audit: the advisor re-read the feature list of the sibling logging library the maintainer named as the example (it is not named in any artifact here, by request), checked what the six earlier passes left open against this code, and put a shortlist of nine items to a poteto-mode co-decider (Opus, read-only), which ran twelve probes on Bun 1.3.14, Elysia 1.4.30 and `ai` 7.0.114 and ruled on each. It shipped five, widened one (every error record carries `message`, not only plain objects), folded one into another, deferred the playground, and left the earlier rejections standing. Baseline at `91fd02f`: 864 tests pass.
