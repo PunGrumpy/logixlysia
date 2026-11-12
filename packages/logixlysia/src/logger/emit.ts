@@ -7,10 +7,11 @@ import type {
   RequestInfo,
   StoreData
 } from '../interfaces'
-import { logToTransports } from '../output'
+import { logToTransports, toRecordMeta } from '../output'
 import { logToFile } from '../output/file'
 import type { SamplingRuntime } from '../sampling'
 import { elapsedMs } from '../utils/duration'
+import { stringifyForLog } from '../utils/json'
 import { redact, redactRequest } from '../utils/redact'
 import type { LoggedRequest } from '../utils/redact'
 import { createErrorReporter } from '../utils/report'
@@ -42,7 +43,8 @@ export const resolveSinks = (config: Options['config']): Sinks => {
     hasFileLogging ||
     hasInternalLogger
   )
-  const needsUrlParts = hasFileLogging || hasInternalLogger
+  const needsUrlParts =
+    hasFileLogging || (hasInternalLogger && config?.consoleFormat !== 'json')
 
   return {
     hasFileLogging,
@@ -133,6 +135,45 @@ export const reportFormatError: ErrorReporter = createErrorReporter(
   'failed to build a log record'
 )
 
+const formatTextLine = (
+  input: Parameters<typeof formatLogOutput>[0]
+): string => {
+  const { main, contextLines } = formatLogOutput(input)
+  return contextLines.length > 0 ? `${main}\n${contextLines.join('\n')}` : main
+}
+
+const formatJsonLine = (
+  level: LogLevel,
+  data: Record<string, unknown>,
+  request: RequestInfo,
+  precomputed: PrecomputedLogParts,
+  options: Options
+): string => {
+  const {
+    context,
+    durationMs,
+    error,
+    request: requestMeta,
+    status,
+    ...rest
+  } = toRecordMeta({ data, options, precomputed, request })
+  // Entries, not an object literal, because `bun run format` sorts literal
+  // keys and this order is the line's key order.
+  return stringifyForLog(
+    Object.fromEntries([
+      ['timestamp', new Date().toISOString()],
+      ['level', level],
+      ['message', typeof data.message === 'string' ? data.message : ''],
+      ['request', requestMeta],
+      ['status', status],
+      ['durationMs', durationMs],
+      ['context', context],
+      ['error', error],
+      ...Object.entries(rest)
+    ])
+  )
+}
+
 const writeRecord = ({
   contextStore,
   data,
@@ -198,19 +239,20 @@ const writeRecord = ({
     return
   }
 
-  const { main, contextLines } = formatLogOutput({
-    data: logData,
-    formatContext,
-    level,
-    options,
-    precomputed,
-    request: logRequest,
-    store
-  })
-  const message =
-    contextLines.length > 0 ? `${main}\n${contextLines.join('\n')}` : main
+  const line =
+    formatContext.consoleFormat === 'json'
+      ? formatJsonLine(level, logData, logRequest, precomputed, options)
+      : formatTextLine({
+          data: logData,
+          formatContext,
+          level,
+          options,
+          precomputed,
+          request: logRequest,
+          store
+        })
 
-  consoleForLevel(level)(message)
+  consoleForLevel(level)(line)
 }
 
 export const emit = (input: EmitInput): EmitOutcome => {

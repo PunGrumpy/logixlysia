@@ -22,11 +22,43 @@ const app = new Elysia().use(
 
 ## Available presets
 
-| Preset | Startup banner | Pretty print | Context tree | `autoRedact` | Request ID | Colors |
-| --- | --- | --- | --- | --- | --- | --- |
-| `dev` | Yes (banner) | Yes | Yes | No | No | Yes |
-| `prod` | No | No | No | Yes | Yes | No |
-| `json` | No | No | No | No | No | No |
+| Preset | Console | Startup banner | Pretty print | Context tree | `autoRedact` | Request ID | Colors |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `dev` | Text | Yes (banner) | Yes | Yes | No | No | Yes |
+| `prod` | JSON | No | No | No | Yes | Yes | No |
+| `json` | JSON | No | No | No | No | No | No |
+
+## JSON console lines
+
+`prod` and `json` set `consoleFormat: 'json'`. Each record is one line of JSON, the same record a transport receives, so Loki, Datadog or CloudWatch can parse the console output directly. A request under `prod` prints:
+
+```
+{"timestamp":"2026-11-12T05:43:59.800Z","level":"INFO","message":"","request":{"method":"GET","url":"http://localhost/users/[REDACTED]"},"status":200,"durationMs":0.83,"context":{"requestId":"8623487f-c151-4ccb-ae83-3d708e541e39"}}
+```
+
+Keys come in this order, and a key with no value is left out:
+
+| Key | Value |
+| --- | --- |
+| `timestamp` | ISO-8601 time of the write |
+| `level` | `DEBUG`, `INFO`, `WARNING` or `ERROR` |
+| `message` | The line's message, `''` for an access line |
+| `request` | `method` and `url`; the query is dropped unless `logQueryParams` is on |
+| `status` | Access and error lines |
+| `durationMs` | Time since the request started |
+| `context` | Request context, with `requestId` when request IDs are on |
+| `error` | `name`, `message` and `cause`, `stack` for a server error, and any `HttpError` fields |
+
+Newlines inside values are escaped, so one record is always one line. Under `autoRedact` the line is redacted exactly as the text line is. As with text, `WARNING` and `ERROR` lines go to stderr and the rest to stdout. The JSON line ignores the text-only settings: `customLogFormat`, `useColors`, `showContextTree`, `contextDepth` and `timestamp`.
+
+To keep the text line under a preset, set `consoleFormat: 'text'`:
+
+```ts
+logixlysia({
+  preset: 'prod',
+  config: { consoleFormat: 'text' }
+})
+```
 
 ## Override example
 

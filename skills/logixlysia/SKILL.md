@@ -80,6 +80,7 @@ app.use(
       },
 
       // Custom formatting and coloring
+      consoleFormat: 'text', // 'json' prints one JSON line per record; the prod and json presets set it
       useColors: true,
       slowThreshold: 500, // Duration below this logs as green
       verySlowThreshold: 1000, // Duration at or above this logs as red

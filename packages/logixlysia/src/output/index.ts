@@ -71,8 +71,25 @@ const withoutQuery = (url: string): string => {
   return url.slice(0, Math.min(query, fragment))
 }
 
+/** The record transports receive as `meta`, and the body of the JSON console line. */
+export const toRecordMeta = ({
+  data,
+  options,
+  precomputed,
+  request
+}: Omit<LogToTransportsInput, 'level' | 'store'>): Record<string, unknown> => ({
+  request: {
+    method: request.method,
+    url: options.config?.logQueryParams
+      ? request.url
+      : withoutQuery(request.url)
+  },
+  ...data,
+  durationMs: precomputed.durationMs
+})
+
 export const logToTransports = (input: LogToTransportsInput): void => {
-  const { level, request, data, options, precomputed } = input
+  const { level, data, options } = input
   const transports = options.config?.transports ?? []
   if (transports.length === 0) {
     return
@@ -80,16 +97,7 @@ export const logToTransports = (input: LogToTransportsInput): void => {
   const onError = options.config?.onError
 
   const message = typeof data.message === 'string' ? data.message : ''
-  const meta: Record<string, unknown> = {
-    request: {
-      method: request.method,
-      url: options.config?.logQueryParams
-        ? request.url
-        : withoutQuery(request.url)
-    },
-    ...data,
-    durationMs: precomputed.durationMs
-  }
+  const meta = toRecordMeta(input)
 
   for (const transport of transports) {
     if (isBelowMinLevel(level, transport.minLevel)) {

@@ -192,6 +192,19 @@ Timestamp configuration for the `{now}` console token.
 
 ## Formatting Options
 
+### `consoleFormat`
+
+What the console prints per record. `'text'` is the human line with its context tree. `'json'` is one line of JSON holding the record transports receive, with `timestamp`, `level`, `message`, `request`, `status`, `durationMs`, `context` and `error`. The `prod` and `json` presets set `'json'`. The file sink is not affected. Any other value throws `logixlysia: invalid formatting config` at startup.
+
+- **Type:** `'text' | 'json'`
+- **Default:** `'text'`
+
+```ts
+consoleFormat: 'json'
+```
+
+The JSON line ignores `customLogFormat`, `useColors`, `showContextTree`, `contextDepth` and `timestamp`. See [Presets](/docs/features/presets) for the key order and an example line.
+
 ### `customLogFormat`
 
 Custom log message format using placeholders.

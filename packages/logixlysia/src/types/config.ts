@@ -174,6 +174,17 @@ export interface RequestIdConfig {
 }
 
 export interface FormattingConfig {
+  /**
+   * What the console prints per record. `'text'` is the human line and its
+   * context tree. `'json'` is one line of JSON with `timestamp`, `level`,
+   * `message`, `request`, `status`, `durationMs`, `context` and `error`, the
+   * record transports receive. The text-only settings (`customLogFormat`,
+   * `useColors`, `showContextTree`, `contextDepth`, `timestamp`) do not
+   * apply to it. The `json` and `prod` presets set `'json'`. The file sink
+   * is not affected.
+   * @default 'text'
+   */
+  consoleFormat?: 'json' | 'text'
   /** How many object nesting levels to expand in the context tree; default 1. */
   contextDepth?: number
   customLogFormat?: string

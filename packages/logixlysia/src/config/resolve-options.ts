@@ -123,6 +123,17 @@ const validateSampling = (config: Options['config']): void => {
 }
 
 const validateFormatting = (config: Options['config']): void => {
+  const consoleFormat: unknown = config?.consoleFormat
+  if (
+    consoleFormat !== undefined &&
+    consoleFormat !== 'json' &&
+    consoleFormat !== 'text'
+  ) {
+    invalidFormatting(
+      `consoleFormat must be 'json' or 'text', got ${JSON.stringify(consoleFormat)}`
+    )
+  }
+
   const slowThreshold = config?.slowThreshold
   const verySlowThreshold = config?.verySlowThreshold
 
@@ -292,6 +303,7 @@ const PRESET_DEFAULTS: Record<LogPreset, NonNullable<Options['config']>> = {
     useColors: true
   },
   json: {
+    consoleFormat: 'json',
     pino: {
       prettyPrint: false
     },
@@ -301,6 +313,7 @@ const PRESET_DEFAULTS: Record<LogPreset, NonNullable<Options['config']>> = {
   },
   prod: {
     autoRedact: true,
+    consoleFormat: 'json',
     pino: {
       prettyPrint: false
     },

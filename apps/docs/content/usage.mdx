@@ -57,8 +57,8 @@ See [Request context](/docs/features/request-context) for details.
 
 ```ts
 logixlysia({ preset: 'dev' }) // pretty console + banner
-logixlysia({ preset: 'prod' }) // JSON logs + autoRedact
-logixlysia({ preset: 'json' }) // minimal JSON console
+logixlysia({ preset: 'prod' }) // one JSON line per record + autoRedact + request IDs
+logixlysia({ preset: 'json' }) // one JSON line per record
 ```
 
 Explicit `config` overrides preset defaults. Details: [Presets](/docs/features/presets).
