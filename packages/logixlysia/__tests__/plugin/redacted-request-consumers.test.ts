@@ -6,6 +6,8 @@ import { spyConsole } from '../_helpers/console'
 import { createTempDir, removeTempDir } from '../_helpers/tmp'
 import { waitFor } from '../_helpers/wait-for'
 
+const FILE_LINE =
+  /INFO GET \/users\/\[REDACTED\]\?token=redacted&page=2 - \S+ hello\n$/u
 const SECRETS = ['203.0.113.7', 'abc.def.ghi', 's3cr3t', 'user@example.com']
 
 let dir = ''
@@ -65,7 +67,7 @@ test('every sink of the prod preset sees the request redacted', async () => {
     existsSync(logFilePath) ? readFileSync(logFilePath, 'utf-8') : ''
   await waitFor(() => readLog() !== '')
   const file = readLog()
-  expect(file).toContain('GET /users/[REDACTED]?token=redacted&page=2 hello')
+  expect(file).toMatch(FILE_LINE)
 
   for (const output of [line, JSON.stringify(meta), file]) {
     for (const secret of SECRETS) {
