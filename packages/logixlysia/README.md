@@ -12,6 +12,30 @@ bun add logixlysia
 
 ## `📝` Usage
 
+Add the plugin, then log from a handler with `log`. Fields you add with `log.mergeContext` land on that request's access line.
+
+```ts
+import { Elysia } from 'elysia'
+import logixlysia from 'logixlysia'
+
+new Elysia()
+  .use(logixlysia())
+  .get('/users/:id', ({ log, params }) => {
+    log.mergeContext({ userId: params.id })
+    return { id: params.id }
+  })
+  .listen(3000)
+```
+
+`GET /users/42` prints:
+
+```
+2026-11-12T05:54:29.847Z 🦊 GET     /users/42 200 1ms
+  └─ userId  42
+```
+
+### Configuration
+
 ```ts
 import { Elysia } from 'elysia'
 import logixlysia from 'logixlysia' // or import { logixlysia } from 'logixlysia'
@@ -60,6 +84,8 @@ app.listen(3000)
 ## `📚` Documentation
 
 Check out the [website](https://logixlysia.vercel.app) for more detailed documentation and examples.
+
+Using a coding agent? The repo ships an [agent skill](https://github.com/PunGrumpy/logixlysia/blob/main/skills/logixlysia/SKILL.md) with the API and conventions.
 
 ## `📄` License
 
