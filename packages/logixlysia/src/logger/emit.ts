@@ -163,6 +163,7 @@ const formatJsonLine = (
     Object.fromEntries([
       ['timestamp', new Date().toISOString()],
       ['level', level],
+      ['service', options.config?.service?.trim() || undefined],
       ['message', typeof data.message === 'string' ? data.message : ''],
       ['request', requestMeta],
       ['status', status],

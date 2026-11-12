@@ -198,6 +198,32 @@ describe('preset prod JSON line redaction', () => {
   })
 })
 
+describe('service in the JSON line', () => {
+  test('a configured service follows the level', async () => {
+    const record = await jsonRecord(
+      { config: { service: ' checkout-api ' }, preset: 'json' },
+      get('/ok')
+    )
+
+    expect(record.service).toBe('checkout-api')
+    expect(Object.keys(record).slice(0, 4)).toEqual([
+      'timestamp',
+      'level',
+      'service',
+      'message'
+    ])
+  })
+
+  test('a blank service is left out', async () => {
+    const record = await jsonRecord(
+      { config: { service: '  ' }, preset: 'json' },
+      get('/ok')
+    )
+
+    expect(record).not.toHaveProperty('service')
+  })
+})
+
 describe('consoleFormat', () => {
   test("'text' brings the text line back under the prod preset", async () => {
     setSystemTime(NOW)
