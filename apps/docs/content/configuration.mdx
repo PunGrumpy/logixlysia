@@ -230,7 +230,7 @@ Available placeholders:
 - `{status}` - Response status code
 - `{statusText}` - HTTP status text from Node’s `http.STATUS_CODES` (e.g. `Not Found` for 404)
 - `{message}` - Custom message
-- `{icon}` - Logixlysia fox (`🦊`); with colors enabled, a level-colored background chip around the emoji
+- `{icon}` - with colors on a TTY, the Logixlysia fox (`🦊`) in a level-colored background chip; otherwise the level word (`DEBUG`, `INFO`, `WARN`, `ERROR`)
 - `{speed}` - When duration is at or above `verySlowThreshold`, appends `⚡ slow` (yellow when colors are on)
 - `{service}` - Service label from the `service` config option, shown as `[name] ` (dim when colors are on); empty if unset
 - `{context}` - Request context as JSON when `showContextTree` is off; empty while the context tree shows it

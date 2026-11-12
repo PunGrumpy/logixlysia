@@ -27,10 +27,10 @@ new Elysia()
   .listen(3000)
 ```
 
-`GET /users/42` prints:
+`GET /users/42` prints this when the output is piped or colors are off:
 
 ```
-2026-11-12T05:54:29.847Z 🦊 GET     /users/42 200 1ms
+2026-11-12T05:54:29.847Z INFO  GET     /users/42 200 1ms
   └─ userId  42
 ```
 

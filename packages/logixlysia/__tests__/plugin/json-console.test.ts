@@ -176,7 +176,7 @@ describe('consoleFormat', () => {
     )
 
     expect(writes.map(write => write.replace(DURATION, '<duration>'))).toEqual([
-      'info: 2026-01-02T03:04:05.678Z 🦊 GET     /ok 200 <duration> '
+      'info: 2026-01-02T03:04:05.678Z INFO  GET     /ok 200 <duration> '
     ])
   })
 
@@ -205,10 +205,10 @@ describe.each([
     ])
 
     expect(writes.map(write => write.replace(DURATION, '<duration>'))).toEqual([
-      'info: 2026-01-02T03:04:05.678Z 🦊 GET     /checkout 200 <duration> checkout started\n  └─ cartId  cart_1',
-      'info: 2026-01-02T03:04:05.678Z 🦊 GET     /merged 200 <duration> \n  ├─ cartId  cart_1\n  └─ items  3',
-      'info: 2026-01-02T03:04:05.678Z 🦊 GET     /multiline 200 <duration> line one\\nline two\n  └─ note  first\\nsecond',
-      'info: 2026-01-02T03:04:05.678Z 🦊 GET     /ok 200 <duration> '
+      'info: 2026-01-02T03:04:05.678Z INFO  GET     /checkout 200 <duration> checkout started\n  └─ cartId  cart_1',
+      'info: 2026-01-02T03:04:05.678Z INFO  GET     /merged 200 <duration> \n  ├─ cartId  cart_1\n  └─ items  3',
+      'info: 2026-01-02T03:04:05.678Z INFO  GET     /multiline 200 <duration> line one\\nline two\n  └─ note  first\\nsecond',
+      'info: 2026-01-02T03:04:05.678Z INFO  GET     /ok 200 <duration> '
     ])
   })
 })

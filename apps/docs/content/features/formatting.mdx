@@ -30,7 +30,7 @@ logixlysia({
 | `{status}` | Response status code |
 | `{statusText}` | Status text from Node’s `http.STATUS_CODES` (e.g. `Not Found` for 404) |
 | `{message}` | Custom message |
-| `{icon}` | Logixlysia fox `🦊`; plain emoji when `useColors` is off or output is not a TTY; with colors on a TTY, a **level-colored background** around the fox (green INFO, yellow WARNING, red ERROR, blue DEBUG) |
+| `{icon}` | With colors on a TTY, the Logixlysia fox `🦊` in a **level-colored background** (green INFO, yellow WARNING, red ERROR, blue DEBUG). When `useColors` is off or output is not a TTY, the level as a word padded to five characters: `DEBUG`, `INFO `, `WARN `, `ERROR` |
 | `{speed}` | When duration ≥ `verySlowThreshold`, appends ` ⚡ slow` (yellow with colors) |
 | `{service}` | From `config.service`, rendered as `[name] ` (dim with colors); empty if unset |
 | `{context}` | JSON string of `data.context` when the context tree is off or context is empty; omitted on the main line when the context tree is shown (see below) |
@@ -56,7 +56,7 @@ GET     /api/users 200
 
 ### Branded line with `{icon}` and `{service}`
 
-Use `{icon}` for the Logixlysia fox (level styling applies when colors and a TTY are available). Pair with `service` in config:
+Use `{icon}` for the level: the Logixlysia fox in a level-colored chip when colors and a TTY are available, and the level word otherwise. Pair with `service` in config:
 
 ```ts
 logixlysia({
@@ -71,7 +71,7 @@ logixlysia({
 With `useColors: false` or non-TTY output, a line can look like:
 
 ```
-2025-04-13T15:00:19.123Z [my-api] 🦊 GET     /api/users 200 12ms User viewed profile
+2025-04-13T15:00:19.123Z [my-api] INFO  GET     /api/users 200 12ms User viewed profile
 ```
 
 On a color terminal, the fox appears inside a colored chip by level, and slow requests append `⚡ slow` via `{speed}` when duration ≥ `verySlowThreshold` (default `1000`).
