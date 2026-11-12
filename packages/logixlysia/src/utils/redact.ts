@@ -123,10 +123,11 @@ const isSensitiveByDefault = (key: string): boolean => {
 
 /**
  * A program logs the same few field names on every record, so the answer for
- * a name is kept. Query and header names come from the client, so the map is
- * emptied when it fills instead of growing with them.
+ * a name is kept. Query and header names come from the client, so a long name
+ * is not kept and the map is emptied when it fills.
  */
 const SENSITIVE_BY_DEFAULT_MAX = 1024
+const SENSITIVE_BY_DEFAULT_KEY_LENGTH = 64
 const sensitiveByDefault = new Map<string, boolean>()
 
 export const isSensitiveKey = (
@@ -136,10 +137,12 @@ export const isSensitiveKey = (
   let sensitive = sensitiveByDefault.get(key)
   if (sensitive === undefined) {
     sensitive = isSensitiveByDefault(key)
-    if (sensitiveByDefault.size >= SENSITIVE_BY_DEFAULT_MAX) {
-      sensitiveByDefault.clear()
+    if (key.length <= SENSITIVE_BY_DEFAULT_KEY_LENGTH) {
+      if (sensitiveByDefault.size >= SENSITIVE_BY_DEFAULT_MAX) {
+        sensitiveByDefault.clear()
+      }
+      sensitiveByDefault.set(key, sensitive)
     }
-    sensitiveByDefault.set(key, sensitive)
   }
   if (sensitive || extraKeys === undefined || extraKeys.length === 0) {
     return sensitive
@@ -419,33 +422,46 @@ const redactRequestUrl = (urlString: string, rules?: RedactRules): string => {
   }
 }
 
-/** A character the URL parser moves, drops or escapes, or that starts a part parsed apart from the path. */
-const URL_PARSE_MARK_REGEX = /[^!-~]|[?#@%[\\]/u
-const NUMERIC_HOST_REGEX = /(?:^|\.)\d[^.]*\.?$/u
+/**
+ * A URL the parser gives back as written: a lower-case scheme and host, an
+ * optional port, and a path of characters it neither escapes nor moves.
+ */
+const PLAIN_URL_REGEX =
+  /^http(?<secure>s?):\/\/(?<host>[a-z0-9._-]+)(?::(?<port>[1-9]\d{0,4}))?\/(?<path>[\w.~!$&'()*+,;=:/-]*)$/u
+/** A last label the parser reads as a number, or a label it decodes. */
+const REWRITTEN_HOST_REGEX = /(?:^|\.)\d[^.]*\.?$|xn--/u
+const DOT_SEGMENT_REGEX = /(?:^|\/)\.\.?(?:\/|$)/u
+const HTTP_PORT = 80
+const HTTPS_PORT = 443
+const MAX_PORT = 65_535
+
+const isPortKept = (port: string | undefined, secure: boolean): boolean => {
+  if (port === undefined) {
+    return true
+  }
+  const value = Number(port)
+  return value <= MAX_PORT && value !== (secure ? HTTPS_PORT : HTTP_PORT)
+}
 
 /**
- * `Request.url` is already serialised, and most have no userinfo, query,
- * fragment or escape. Such a URL is a host and plain path segments, so each is
- * checked as text and the URL is parsed only when one of them would change.
+ * Most request URLs have no userinfo, query, fragment or escape. Such a URL is
+ * a host and plain path segments, so each is checked as text and the URL is
+ * parsed only when one of them would change. A server can hand over a request
+ * line it did not normalise, so only a URL that parsing leaves as written
+ * takes this path.
  */
 const redactSerializedUrl = (url: string, rules?: RedactRules): string => {
-  const schemeEnd = url.indexOf('://')
-  const hostStart = schemeEnd + 3
-  const pathStart = url.indexOf('/', hostStart)
+  const { secure, host, port, path } = PLAIN_URL_REGEX.exec(url)?.groups ?? {}
   const isPlain =
-    schemeEnd > 0 &&
-    url.indexOf('/') === schemeEnd + 1 &&
-    pathStart !== -1 &&
-    !URL_PARSE_MARK_REGEX.test(url)
+    host !== undefined &&
+    path !== undefined &&
+    isPortKept(port, secure === 's') &&
+    !REWRITTEN_HOST_REGEX.test(host) &&
+    !DOT_SEGMENT_REGEX.test(path)
   if (!isPlain) {
     return redactRequestUrl(url, rules)
   }
-  const host = url.slice(hostStart, pathStart).split(':', 1)[0] ?? ''
-  // The parser rewrites a host whose last label is a number into an address.
-  if (NUMERIC_HOST_REGEX.test(host)) {
-    return redactRequestUrl(url, rules)
-  }
-  for (const part of [host, ...url.slice(pathStart + 1).split('/')]) {
+  for (const part of [host, ...path.split('/')]) {
     if (redactString(part, rules?.patterns) !== part) {
       return redactRequestUrl(url, rules)
     }

@@ -59,10 +59,13 @@ describe('redact patterns', () => {
     expect(out.url).toBe('http://redacted.test:3000/a')
   })
 
+  // A server can pass on a request line or Host header it did not normalise.
   test.each([
     ['/users/cust_q1', '/users/redacted'],
     ['http://10.1/x', 'http://redacted/x'],
-    ['http://h/a b', 'http://h/a%20b']
+    ['http://h/a b', 'http://h/a%20b'],
+    ['http://h:4111111111111111/x', 'http://h:redacted/x'],
+    ['HTTP://Other.test:80/a/../b{', 'http://other.test/b%7B']
   ])('treats the unserialised URL %s as before', (url, expected) => {
     const out = redactRequest({ method: 'GET', url } as Request, rules)
     expect(out.url).toBe(expected)
