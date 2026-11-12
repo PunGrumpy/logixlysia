@@ -1,5 +1,3 @@
-import { labelRequest } from './synthetic-request'
-
 // Local part ≤64, domain ≤253, TLD 2–63 (RFC 5321 / 1035-ish limits; bounded to avoid ReDoS)
 const EMAIL_REGEX =
   /[a-zA-Z0-9._%+-]{1,64}@[a-zA-Z0-9.-]{1,253}\.[a-zA-Z]{2,63}/gu
@@ -197,21 +195,43 @@ export const redactString = (
     result = result.replaceAll(pattern, REDACTED_TEXT)
   }
 
-  result = result.replaceAll(
-    URL_PASSWORD_REGEX,
-    (match: string, prefix: string, offset: number, whole: string) =>
-      endsWithUrlScheme(whole, offset) ? `${prefix}${REDACTED_TEXT}@` : match
-  )
-  result = result.replaceAll(EMAIL_REGEX, REDACTED_TEXT)
-  result = result.replaceAll(IPV4_REGEX, REDACTED_TEXT)
-  result = result.replaceAll(IPV6_REGEX, REDACTED_TEXT)
-  result = redactCreditCardCandidates(result)
-  result = result.replaceAll(JWT_REGEX, REDACTED_TEXT)
-  result = result.replaceAll(
-    HTTP_CREDENTIAL_REGEX,
-    (match: string, scheme: string, token: string) =>
-      looksLikeCredential(token) ? `${scheme} ${REDACTED_TEXT}` : match
-  )
+  // A pattern is skipped only when the text lacks what every match contains.
+  // Every match contains `://`.
+  if (result.includes('://')) {
+    result = result.replaceAll(
+      URL_PASSWORD_REGEX,
+      (match: string, prefix: string, offset: number, whole: string) =>
+        endsWithUrlScheme(whole, offset) ? `${prefix}${REDACTED_TEXT}@` : match
+    )
+  }
+  // Every match contains `@`.
+  if (result.includes('@')) {
+    result = result.replaceAll(EMAIL_REGEX, REDACTED_TEXT)
+  }
+  // Every match contains `.`.
+  if (result.includes('.')) {
+    result = result.replaceAll(IPV4_REGEX, REDACTED_TEXT)
+  }
+  // Every match contains `:`.
+  if (result.includes(':')) {
+    result = result.replaceAll(IPV6_REGEX, REDACTED_TEXT)
+  }
+  // Every candidate holds at least PAN_MIN_LEN digits.
+  if (result.length >= PAN_MIN_LEN) {
+    result = redactCreditCardCandidates(result)
+  }
+  // Every match contains `eyJ`.
+  if (result.includes('eyJ')) {
+    result = result.replaceAll(JWT_REGEX, REDACTED_TEXT)
+  }
+  // Every match contains `earer` or `asic`.
+  if (result.includes('earer') || result.includes('asic')) {
+    result = result.replaceAll(
+      HTTP_CREDENTIAL_REGEX,
+      (match: string, scheme: string, token: string) =>
+        looksLikeCredential(token) ? `${scheme} ${REDACTED_TEXT}` : match
+    )
+  }
 
   return result
 }
@@ -274,10 +294,13 @@ const redactRequestUrl = (urlString: string, rules?: RedactRules): string => {
       u.password = URL_SAFE_REDACT
     }
     u.hostname = redactUrlAuthoritySegment(u.hostname, rules)
-    u.pathname = u.pathname
+    const pathname = u.pathname
       .split('/')
       .map(segment => redactPathSegment(segment, rules))
       .join('/')
+    if (pathname !== u.pathname) {
+      u.pathname = pathname
+    }
     // Assigning `search` re-serializes the query, so do it only when a value
     // changed. The values are decoded here, so patterns never run against
     // percent-encoded text.
@@ -635,42 +658,25 @@ const walker = {
 export const redact = <T>(value: T, rules?: RedactRules): T =>
   walker.value(value, new WeakSet(), rules) as T
 
+/** The part of a request the log sinks read. */
+export type LoggedRequest = Pick<Request, 'headers' | 'method' | 'url'>
+
 /**
- * Clone request URL, method and headers for logging with the same string redaction as {@link redact}.
- * When nothing needed redacting the original request is returned. Otherwise the result is a
- * logging-only artifact carrying url/method/headers/signal and no body, so it never re-uses the
- * original (possibly already-consumed) request stream. The original request is left untouched.
+ * The request URL, method and headers with the same string redaction as
+ * {@link redact}. Headers are redacted on first read, since most formats never
+ * print one. The original request is left untouched.
  */
 export const redactRequest = (
   request: Request,
   rules?: RedactRules
-): Request => {
-  const redactedUrl = redactRequestUrl(request.url, rules)
-  const nextHeaders = new Headers()
-  let headersChanged = false
-
-  for (const [name, value] of request.headers.entries()) {
-    const redacted = redactHeaderValue(name, value, rules)
-    if (redacted !== value) {
-      headersChanged = true
-    }
-    nextHeaders.set(name, redacted)
+): LoggedRequest => {
+  let headers: Headers | undefined
+  return {
+    get headers() {
+      headers ??= redactHeaders(request.headers, rules)
+      return headers
+    },
+    method: redactString(request.method, rules?.patterns),
+    url: redactRequestUrl(request.url, rules)
   }
-
-  const redactedMethod = redactString(request.method, rules?.patterns)
-  const urlChanged = redactedUrl !== request.url
-  const methodChanged = redactedMethod !== request.method
-
-  if (!(urlChanged || headersChanged || methodChanged)) {
-    return request
-  }
-
-  const init: RequestInit = {
-    headers: nextHeaders,
-    method: redactedMethod,
-    redirect: request.redirect,
-    signal: request.signal
-  }
-
-  return labelRequest(new Request(redactedUrl, init), redactedMethod)
 }

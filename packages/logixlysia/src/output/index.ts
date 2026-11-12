@@ -2,11 +2,11 @@ import { levelRank } from '../helpers/level'
 import type {
   LogLevel,
   Options,
-  RequestInfo,
   SinkErrorContext,
   StoreData
 } from '../interfaces'
 import type { PrecomputedLogParts } from '../logger/create-logger'
+import type { LoggedRequest } from '../utils/redact'
 import { createErrorReporter } from '../utils/report'
 
 const reportTransportError = createErrorReporter(
@@ -52,7 +52,7 @@ interface LogToTransportsInput {
   level: LogLevel
   options: Options
   precomputed: PrecomputedLogParts
-  request: RequestInfo
+  request: LoggedRequest
   store: StoreData
 }
 

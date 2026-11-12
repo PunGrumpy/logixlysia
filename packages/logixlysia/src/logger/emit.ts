@@ -12,6 +12,7 @@ import { logToFile } from '../output/file'
 import type { SamplingRuntime } from '../sampling'
 import { elapsedMs } from '../utils/duration'
 import { redact, redactRequest } from '../utils/redact'
+import type { LoggedRequest } from '../utils/redact'
 import { createErrorReporter } from '../utils/report'
 import type { ErrorReporter } from '../utils/report'
 import { sanitizeLogText } from '../utils/sanitize'
@@ -66,7 +67,7 @@ export const isSuppressed = (
 ): boolean => sinks.isEffectivelyDisabled || !shouldLog(level, logFilter)
 
 export const parseRequestUrlOnce = (
-  request: RequestInfo
+  request: LoggedRequest
 ): { pathname: string; search: string } => {
   try {
     const { pathname, search } = new URL(request.url)
@@ -78,7 +79,7 @@ export const parseRequestUrlOnce = (
 
 export const computePrecomputedLogParts = (
   store: StoreData,
-  request: RequestInfo,
+  request: LoggedRequest,
   needsUrlParts: boolean,
   durationOverride?: number
 ): PrecomputedLogParts => {
