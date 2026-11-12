@@ -230,11 +230,11 @@ The `log` every handler receives, and what `useLogger()` returns. It is bound to
 
 ```ts check=skip
 type RequestScopedLogger<TFields extends object = LogFields> = {
-  debug: (message: string, context?: Partial<TFields>) => void
-  info: (message: string, context?: Partial<TFields>) => void
-  warn: (message: string, context?: Partial<TFields>) => void
-  error: (message: string, context?: Partial<TFields>) => void
-  mergeContext: (partial: Partial<TFields>) => void
+  debug: (message: string, context?: DeepPartial<TFields>) => void
+  info: (message: string, context?: DeepPartial<TFields>) => void
+  warn: (message: string, context?: DeepPartial<TFields>) => void
+  error: (error: unknown, context?: DeepPartial<TFields>) => void
+  mergeContext: (partial: DeepPartial<TFields>) => void
 }
 ```
 
@@ -259,10 +259,11 @@ type Transport = {
   ) => void | Promise<void>
   flush?: () => void | Promise<void>
   close?: () => void | Promise<void>
+  minLevel?: LogLevel
 }
 ```
 
-`flush` drains entries the transport has queued or batched; the shutdown flush calls it when the app stops. `close` releases held sockets, timers and buffers, and is reached only through `flushLogixlysia(options, { close: true })`.
+`minLevel` is the lowest level the transport receives. Quieter records skip it and are not counted as dropped; see [Minimum Level](/docs/features/transports#minimum-level). `flush` drains entries the transport has queued or batched; the shutdown flush calls it when the app stops. `close` releases held sockets, timers and buffers, and is reached only through `flushLogixlysia(options, { close: true })`.
 
 ### `LogRotationConfig`
 
