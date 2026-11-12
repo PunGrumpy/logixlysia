@@ -38,7 +38,7 @@ import { logging } from './logging'
 export const users = new Elysia().use(logging).get('/users', () => [])
 ```
 
-The request boundary is app-wide: once the plugin is mounted anywhere, every request of the application gets an access line, routes on parent apps included.
+The request boundary is app-wide: once the plugin is mounted anywhere, every request of the application gets an access line, routes on parent apps included. The `log` context is app-wide too, so an app that mounts the plugin through a shared setup plugin gets `log` in its handlers. A route on a module that mounts its own instance gets that instance's `log`; any other route gets the `log` of the first instance mounted.
 
 ## Request context
 
