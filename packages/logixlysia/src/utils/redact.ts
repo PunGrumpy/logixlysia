@@ -102,15 +102,9 @@ const SENSITIVE_KEY_QUALIFIERS: ReadonlySet<string> = new Set([
   'signing'
 ])
 
-export const isSensitiveKey = (
-  key: string,
-  extraKeys?: readonly string[]
-): boolean => {
+const isSensitiveByDefault = (key: string): boolean => {
   const normalized = normalizeKeyName(key)
   if (DEFAULT_REDACT_KEYS.includes(normalized)) {
-    return true
-  }
-  if (extraKeys?.some(extraKey => normalizeKeyName(extraKey) === normalized)) {
     return true
   }
   const parts = normalized.split('-')
@@ -125,6 +119,36 @@ export const isSensitiveKey = (
     lastPart === SENSITIVE_LAST_KEY_PART ||
     endsInQualifiedKey
   )
+}
+
+/**
+ * A program logs the same few field names on every record, so the answer for
+ * a name is kept. Query and header names come from the client, so a long name
+ * is not kept and the map is emptied when it fills.
+ */
+const SENSITIVE_BY_DEFAULT_MAX = 1024
+const SENSITIVE_BY_DEFAULT_KEY_LENGTH = 64
+const sensitiveByDefault = new Map<string, boolean>()
+
+export const isSensitiveKey = (
+  key: string,
+  extraKeys?: readonly string[]
+): boolean => {
+  let sensitive = sensitiveByDefault.get(key)
+  if (sensitive === undefined) {
+    sensitive = isSensitiveByDefault(key)
+    if (key.length <= SENSITIVE_BY_DEFAULT_KEY_LENGTH) {
+      if (sensitiveByDefault.size >= SENSITIVE_BY_DEFAULT_MAX) {
+        sensitiveByDefault.clear()
+      }
+      sensitiveByDefault.set(key, sensitive)
+    }
+  }
+  if (sensitive || extraKeys === undefined || extraKeys.length === 0) {
+    return sensitive
+  }
+  const normalized = normalizeKeyName(key)
+  return extraKeys.some(extraKey => normalizeKeyName(extraKey) === normalized)
 }
 
 /** pino redact paths for every default and extra key: top-level and one nesting level. */
@@ -396,6 +420,53 @@ const redactRequestUrl = (urlString: string, rules?: RedactRules): string => {
       URL_SAFE_REDACT
     )
   }
+}
+
+/**
+ * A URL the parser gives back as written: a lower-case scheme and host, an
+ * optional port, and a path of characters it neither escapes nor moves.
+ */
+const PLAIN_URL_REGEX =
+  /^http(?<secure>s?):\/\/(?<host>[a-z0-9._-]+)(?::(?<port>[1-9]\d{0,4}))?\/(?<path>[\w.~!$&'()*+,;=:/-]*)$/u
+/** A last label the parser reads as a number, or a label it decodes. */
+const REWRITTEN_HOST_REGEX = /(?:^|\.)\d[^.]*\.?$|xn--/u
+const DOT_SEGMENT_REGEX = /(?:^|\/)\.\.?(?:\/|$)/u
+const HTTP_PORT = 80
+const HTTPS_PORT = 443
+const MAX_PORT = 65_535
+
+const isPortKept = (port: string | undefined, secure: boolean): boolean => {
+  if (port === undefined) {
+    return true
+  }
+  const value = Number(port)
+  return value <= MAX_PORT && value !== (secure ? HTTPS_PORT : HTTP_PORT)
+}
+
+/**
+ * Most request URLs have no userinfo, query, fragment or escape. Such a URL is
+ * a host and plain path segments, so each is checked as text and the URL is
+ * parsed only when one of them would change. A server can hand over a request
+ * line it did not normalise, so only a URL that parsing leaves as written
+ * takes this path.
+ */
+const redactSerializedUrl = (url: string, rules?: RedactRules): string => {
+  const { secure, host, port, path } = PLAIN_URL_REGEX.exec(url)?.groups ?? {}
+  const isPlain =
+    host !== undefined &&
+    path !== undefined &&
+    isPortKept(port, secure === 's') &&
+    !REWRITTEN_HOST_REGEX.test(host) &&
+    !DOT_SEGMENT_REGEX.test(path)
+  if (!isPlain) {
+    return redactRequestUrl(url, rules)
+  }
+  for (const part of [host, ...path.split('/')]) {
+    if (redactString(part, rules?.patterns) !== part) {
+      return redactRequestUrl(url, rules)
+    }
+  }
+  return url
 }
 
 const URL_VALUED_HEADERS: ReadonlySet<string> = new Set([
@@ -757,6 +828,6 @@ export const redactRequest = (
       return headers
     },
     method: redactString(request.method, rules?.patterns),
-    url: redactRequestUrl(request.url, rules)
+    url: redactSerializedUrl(request.url, rules)
   }
 }
