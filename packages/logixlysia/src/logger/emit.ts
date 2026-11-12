@@ -145,7 +145,7 @@ const formatTextLine = (
 const formatJsonLine = (
   level: LogLevel,
   data: Record<string, unknown>,
-  request: RequestInfo,
+  request: LoggedRequest,
   precomputed: PrecomputedLogParts,
   options: Options
 ): string => {
