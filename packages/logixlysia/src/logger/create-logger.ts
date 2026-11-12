@@ -13,6 +13,8 @@ const DEFAULT_SLOW_MS = 500
 const DEFAULT_VERY_SLOW_MS = 1000
 const METHOD_PAD = 7
 const MAX_KEY_LENGTH = 256
+const DEFAULT_CONTEXT_DEPTH = 2
+const MAX_TTY_VALUE_LENGTH = 200
 
 const DEFAULT_LOG_FORMAT =
   '{now} {service}{icon} {method} {pathname} {status} {duration} {message}{speed}'
@@ -382,10 +384,16 @@ const isExpandableObject = (value: unknown): value is Record<string, unknown> =>
   !(value instanceof Error) &&
   !(value instanceof Date)
 
+const shortenForTty = (value: unknown, text: string): string =>
+  typeof value === 'string' && text.length > MAX_TTY_VALUE_LENGTH
+    ? `${text.slice(0, MAX_TTY_VALUE_LENGTH)}… (${value.length} chars)`
+    : text
+
 const collectContextEntries = (
   obj: Record<string, unknown>,
   prefix: string,
-  depthRemaining: number
+  depthRemaining: number,
+  shortenStrings: boolean
 ): [string, string][] => {
   const out: [string, string][] = []
   for (const [k, v] of Object.entries(obj)) {
@@ -394,9 +402,12 @@ const collectContextEntries = (
     const expandable = isExpandableObject(v) && depthRemaining > 1
 
     if (expandable) {
-      out.push(...collectContextEntries(v, key, depthRemaining - 1))
+      out.push(
+        ...collectContextEntries(v, key, depthRemaining - 1, shortenStrings)
+      )
     } else {
-      out.push([key, stringifyTreeValue(v)])
+      const text = stringifyTreeValue(v)
+      out.push([key, shortenStrings ? shortenForTty(v, text) : text])
     }
   }
   return out
@@ -585,7 +596,7 @@ export const buildContextTreeLines = (
     return []
   }
 
-  const depth = options.config?.contextDepth ?? 1
+  const depth = options.config?.contextDepth ?? DEFAULT_CONTEXT_DEPTH
 
   const entries: TreeEntry[] = []
 
@@ -598,7 +609,12 @@ export const buildContextTreeLines = (
     depth >= 1
   ) {
     entries.push(
-      ...collectContextEntries(ctx as Record<string, unknown>, '', depth)
+      ...collectContextEntries(
+        ctx as Record<string, unknown>,
+        '',
+        depth,
+        isStdoutTty()
+      )
     )
   }
 
