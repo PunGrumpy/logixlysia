@@ -35,10 +35,10 @@ const blink = 'motion-safe:animate-[term-blink_1.1s_steps(1)_infinite]'
 const banner: TermPart[][] = [
   [['', '┌─────────────────────────────┐']],
   [['', '│                             │']],
-  [['', '│       Elysia v1.4.28        │']],
+  [['', '│       Elysia v1.4.30        │']],
   [['', '│                             │']],
   [['', '│  🦊  http://localhost:3000  │']],
-  [['', '│       logixlysia v6.6.0     │']],
+  [['', '│       logixlysia v6.13.0    │']],
   [['', '│                             │']],
   [['', '└─────────────────────────────┘']]
 ]
@@ -98,7 +98,27 @@ const termLines: TermLineData[] = [
       ['', ' '],
       [c.orange, '404'],
       ['', ' '],
-      [c.mint, '1ms']
+      [c.mint, '1ms'],
+      ['', ' '],
+      [c.fg, 'NOT_FOUND']
+    ]
+  },
+  {
+    delayMs: 90,
+    parts: [
+      ['', '  ├─ '],
+      [c.mint, 'error'],
+      ['', '  '],
+      [c.fg, 'NOT_FOUND']
+    ]
+  },
+  {
+    delayMs: 90,
+    parts: [
+      ['', '  └─ '],
+      [c.mint, 'error.code'],
+      ['', '  '],
+      [c.fg, 'NOT_FOUND']
     ]
   },
   {
@@ -129,7 +149,7 @@ const termLines: TermLineData[] = [
       [c.mint, '200'],
       ['', ' '],
       [`${c.red} ${c.bold}`, '1.2s'],
-      [c.orange, ' ⚡ slow']
+      [c.orange, '  ⚡ slow']
     ]
   },
   {
@@ -144,16 +164,27 @@ const termLines: TermLineData[] = [
       ['', ' '],
       [c.red, '500'],
       ['', ' '],
-      [c.mint, '2ms']
+      [c.mint, '2ms'],
+      ['', ' '],
+      [c.fg, 'Route crashed']
+    ]
+  },
+  {
+    delayMs: 90,
+    parts: [
+      ['', '  ├─ '],
+      [c.mint, 'error'],
+      ['', '  '],
+      [c.fg, 'Route crashed']
     ]
   },
   {
     delayMs: 90,
     parts: [
       ['', '  └─ '],
-      [c.mint, 'error'],
+      [c.mint, 'error.at'],
       ['', '  '],
-      [c.fg, 'Route crashed']
+      [c.fg, 'src/index.ts:12:11']
     ]
   },
   {
@@ -224,7 +255,7 @@ const interactiveRoutes = [
         [c.mint, '200'],
         ['', ' '],
         [`${c.red} ${c.bold}`, '', 'dur'],
-        [c.orange, ' ⚡ slow']
+        [c.orange, '  ⚡ slow']
       ]
     ] as TermPart[][],
     max: 1600,
@@ -247,13 +278,21 @@ const interactiveRoutes = [
         ['', ' '],
         [c.red, '500'],
         ['', ' '],
-        [c.mint, '', 'dur']
+        [c.mint, '', 'dur'],
+        ['', ' '],
+        [c.fg, 'Route crashed']
       ],
       [
-        ['', '  └─ '],
+        ['', '  ├─ '],
         [c.mint, 'error'],
         ['', '  '],
         [c.fg, 'Route crashed']
+      ],
+      [
+        ['', '  └─ '],
+        [c.mint, 'error.at'],
+        ['', '  '],
+        [c.fg, 'src/index.ts:12:11']
       ]
     ] as TermPart[][],
     max: 4,
