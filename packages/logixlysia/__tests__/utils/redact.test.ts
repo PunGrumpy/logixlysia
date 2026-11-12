@@ -54,6 +54,20 @@ describe('redact patterns', () => {
     expect(new URL(out.url).pathname).toBe('/a/[REDACTED]/b/c')
   })
 
+  test('masks a host name and keeps its port', () => {
+    const out = redactRequest(new Request('http://cust_q1.test:3000/a'), rules)
+    expect(out.url).toBe('http://redacted.test:3000/a')
+  })
+
+  test.each([
+    ['/users/cust_q1', '/users/redacted'],
+    ['http://10.1/x', 'http://redacted/x'],
+    ['http://h/a b', 'http://h/a%20b']
+  ])('treats the unserialised URL %s as before', (url, expected) => {
+    const out = redactRequest({ method: 'GET', url } as Request, rules)
+    expect(out.url).toBe(expected)
+  })
+
   test('leaves a string with no match as it was', () => {
     expect(redact({ note: 'plain' }, rules)).toEqual({ note: 'plain' })
   })
@@ -527,6 +541,21 @@ describe('isSensitiveKey', () => {
   test('does not match on substring (no false positives)', () => {
     expect(isSensitiveKey('tokenizer')).toBe(false)
     expect(isSensitiveKey('sessions')).toBe(false)
+  })
+
+  test('answers for extra keys only when they are passed', () => {
+    expect(isSensitiveKey('tenant')).toBe(false)
+    expect(isSensitiveKey('tenant', ['Tenant'])).toBe(true)
+    expect(isSensitiveKey('tenant')).toBe(false)
+  })
+
+  test('answers the same after many distinct names', () => {
+    const distinctNames = 3000
+    for (let index = 0; index < distinctNames; index += 1) {
+      expect(isSensitiveKey(`field${index}`)).toBe(false)
+    }
+    expect(isSensitiveKey('apiKey')).toBe(true)
+    expect(isSensitiveKey('field1')).toBe(false)
   })
 
   test('matches compound password, secret and token names', () => {
