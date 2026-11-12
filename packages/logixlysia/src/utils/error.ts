@@ -1,6 +1,6 @@
-import { STATUS_CODES } from 'node:http'
 import { isStatusResponse } from '../helpers/status'
 import { toText } from './sanitize'
+import { STATUS_TEXT } from './status-text'
 
 const NON_ERROR_OBJECT_MESSAGE = 'Non-Error object'
 
@@ -112,7 +112,7 @@ export const normalizeLoggedError = (
     const message =
       typeof error.response === 'string' && error.response !== ''
         ? error.response
-        : (STATUS_CODES[error.code] ?? `HTTP ${error.code}`)
+        : (STATUS_TEXT[error.code] ?? `HTTP ${error.code}`)
     return {
       error: { message, name: 'StatusResponse', status: error.code },
       message

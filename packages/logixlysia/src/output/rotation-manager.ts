@@ -1,7 +1,8 @@
 import type { Stats } from 'node:fs'
 import { promises as fs } from 'node:fs'
-import { promisify } from 'node:util'
-import { gzip } from 'node:zlib'
+import { createRequire } from 'node:module'
+import type { promisify as Promisify } from 'node:util'
+import type { gzip as Gzip } from 'node:zlib'
 import type { LogRotationConfig } from '../interfaces'
 import {
   getRotatedFiles,
@@ -11,7 +12,16 @@ import {
 } from '../utils/rotation'
 import { createKeyedMutex } from './keyed-mutex'
 
-const gzipAsync = promisify(gzip)
+const requireBuiltin = createRequire(import.meta.url)
+
+// Required on first use because only a rotation that compresses needs them.
+// A dynamic import() would do, but the bundler then links its runtime chunk
+// into every entry, the dependency-free `logixlysia/errors` included.
+const gzipAsync = async (content: Buffer): Promise<Buffer> => {
+  const util = requireBuiltin('node:util') as { promisify: typeof Promisify }
+  const zlib = requireBuiltin('node:zlib') as { gzip: typeof Gzip }
+  return await util.promisify(zlib.gzip)(content)
+}
 
 const DEFAULT_FILE_MODE = 0o600
 
