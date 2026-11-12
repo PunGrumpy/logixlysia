@@ -1,13 +1,15 @@
 import { mkdtempSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
+import { Writable } from 'node:stream'
+import { setImmediate as tick } from 'node:timers/promises'
 import {
   logger as bogeychanLogger,
   createPinoLogger as createBogeychan
 } from '@bogeychan/elysia-logger'
 import { consola } from 'consola'
 import { Elysia } from 'elysia'
-import { createLogger as createEvlog, initLogger } from 'evlog'
+import { createLogger as createEvlog, initLogger, log as evlogLog } from 'evlog'
 import { evlog } from 'evlog/elysia'
 import { createLogger, logixlysia } from 'logixlysia'
 import pino from 'pino'
@@ -56,18 +58,6 @@ const suite = (name: string, cases: readonly Case[]): void => {
   })
 }
 
-// evlog prints every wide event to console in addition to draining it —
-// pretty-formatted in dev, or JSON.stringify'd once `pretty` is off (see
-// `emitWideEvent` in evlog's dist: the console branch is gated on
-// `state.silent`, not `state.pretty`; `pretty` only chooses the format).
-// `silent` only suppresses that console branch — the elysia plugin's own
-// `drain` option flows through `options.drain ?? getGlobalDrain()` in its
-// request middleware, independent of `state.drain`/`state.silent` — so this
-// does not disable the drains configured below. Silencing it here makes the
-// drain evlog's only sink, matching logixlysia's noop transport in the
-// structured-sink suite.
-initLogger({ pretty: false, silent: true })
-
 const mockRequest = new Request('http://localhost:3000/')
 
 suite('Logger Creation', [
@@ -109,59 +99,78 @@ suite('Logger Creation', [
   ]
 ])
 
-const logix = createLogger({
-  config: {
-    disableInternalLogger: true,
-    pino: { enabled: false }
-  }
-})
-const p = pino({ enabled: false })
-const c = consola.create({ level: -1 })
-const w = winston.createLogger({
-  silent: true,
-  transports: [new winston.transports.Console()]
-})
-const ev = createEvlog()
-const bc = createBogeychan({ enabled: false })
+let linesWritten = 0
+let onLine: ((value: null) => void) | undefined
 
-suite('Simple Log (String)', [
-  [
-    'logixlysia',
-    () => {
-      logix.info(mockRequest, 'Hello World')
-    }
-  ],
-  [
-    'pino',
-    () => {
-      p.info('Hello World')
-    }
-  ],
-  [
-    'consola',
-    () => {
-      c.info('Hello World')
-    }
-  ],
-  [
-    'winston',
-    () => {
-      w.info('Hello World')
-    }
-  ],
-  [
-    'evlog',
-    () => {
-      ev.info('Hello World')
-    }
-  ],
-  [
-    'bogeychan',
-    () => {
-      bc.info('Hello World')
+// Every library below writes into this one sink. Each case is timed until the
+// sink has received its line, so work a library defers to a hook that runs
+// after the response (two of the plugins below do) is inside the timed region.
+const sink = (): void => {
+  linesWritten += 1
+  onLine?.(null)
+}
+
+const expectOneLine = async (
+  label: string,
+  run: () => unknown
+): Promise<void> => {
+  const before = linesWritten
+  await run()
+  await tick()
+  const written = linesWritten - before
+  if (written !== 1) {
+    throw new Error(`${label}: expected 1 log line, got ${written}`)
+  }
+}
+
+const plainCase = async (label: string, fn: () => void): Promise<Case> => {
+  await expectOneLine(label, fn)
+  return [label, fn]
+}
+
+interface Handler {
+  handle: (request: Request) => Promise<Response>
+}
+
+const requestCase = async (label: string, app: Handler): Promise<Case> => {
+  const send = (): Promise<Response> =>
+    app.handle(new Request('http://localhost/'))
+  await expectOneLine(label, send)
+  return [
+    label,
+    async () => {
+      const written = Promise.withResolvers<null>()
+      onLine = written.resolve
+      await send()
+      await written.promise
     }
   ]
-])
+}
+
+// The global drain wrapper is async but calls the drain synchronously, so the
+// sink is reached inside the top-level `log.info`. A `createLogger().info` is
+// not used: it only appends to the logger's context until `.emit()`.
+initLogger({ drain: sink, pretty: false, silent: true })
+
+const logix = createLogger({
+  config: { transports: [{ log: sink }], useTransportsOnly: true }
+})
+const p = pino({}, { write: sink } as never)
+// Under vitest consola defaults to a level that drops info, so set it.
+const c = consola.create({ level: 3, reporters: [{ log: sink }] })
+const w = winston.createLogger({
+  transports: [
+    new winston.transports.Stream({
+      stream: new Writable({
+        write(_chunk, _encoding, done) {
+          sink()
+          done()
+        }
+      })
+    })
+  ]
+})
+const bc = createBogeychan({ stream: { write: sink } as never })
 
 const data = {
   active: true,
@@ -170,45 +179,6 @@ const data = {
   tags: ['a', 'b', 'c'],
   user: 'John Doe'
 }
-
-suite('Structured Log (Object)', [
-  [
-    'logixlysia',
-    () => {
-      logix.info(mockRequest, 'Hello World', data)
-    }
-  ],
-  [
-    'pino',
-    () => {
-      p.info(data, 'Hello World')
-    }
-  ],
-  [
-    'consola',
-    () => {
-      c.info('Hello World', data)
-    }
-  ],
-  [
-    'winston',
-    () => {
-      w.info('Hello World', data)
-    }
-  ],
-  [
-    'evlog',
-    () => {
-      ev.info('Hello World', data)
-    }
-  ],
-  [
-    'bogeychan',
-    () => {
-      bc.info(data, 'Hello World')
-    }
-  ]
-])
 
 const deepData = {
   a: {
@@ -222,139 +192,110 @@ const deepData = {
   }
 }
 
+suite('Simple Log (String)', [
+  await plainCase('logixlysia', () => {
+    logix.info(mockRequest, 'Hello World')
+  }),
+  await plainCase('pino', () => {
+    p.info('Hello World')
+  }),
+  await plainCase('consola', () => {
+    c.info('Hello World')
+  }),
+  await plainCase('winston', () => {
+    w.info('Hello World')
+  }),
+  await plainCase('evlog', () => {
+    evlogLog.info({ message: 'Hello World' })
+  }),
+  await plainCase('bogeychan', () => {
+    bc.info('Hello World')
+  })
+])
+
+suite('Structured Log (Object)', [
+  await plainCase('logixlysia', () => {
+    logix.info(mockRequest, 'Hello World', data)
+  }),
+  await plainCase('pino', () => {
+    p.info(data, 'Hello World')
+  }),
+  await plainCase('consola', () => {
+    c.info('Hello World', data)
+  }),
+  await plainCase('winston', () => {
+    w.info('Hello World', data)
+  }),
+  await plainCase('evlog', () => {
+    evlogLog.info({ message: 'Hello World', ...data })
+  }),
+  await plainCase('bogeychan', () => {
+    bc.info(data, 'Hello World')
+  })
+])
+
 suite('Deep Nested Log', [
-  [
-    'logixlysia',
-    () => {
-      logix.info(mockRequest, 'Deep nested', deepData)
-    }
-  ],
-  [
-    'pino',
-    () => {
-      p.info(deepData, 'Deep nested')
-    }
-  ],
-  [
-    'consola',
-    () => {
-      c.info('Deep nested', deepData)
-    }
-  ],
-  [
-    'winston',
-    () => {
-      w.info('Deep nested', deepData)
-    }
-  ],
-  [
-    'evlog',
-    () => {
-      ev.info('Deep nested', deepData)
-    }
-  ],
-  [
-    'bogeychan',
-    () => {
-      bc.info(deepData, 'Deep nested')
-    }
-  ]
+  await plainCase('logixlysia', () => {
+    logix.info(mockRequest, 'Deep nested', deepData)
+  }),
+  await plainCase('pino', () => {
+    p.info(deepData, 'Deep nested')
+  }),
+  await plainCase('consola', () => {
+    c.info('Deep nested', deepData)
+  }),
+  await plainCase('winston', () => {
+    w.info('Deep nested', deepData)
+  }),
+  await plainCase('evlog', () => {
+    evlogLog.info({ message: 'Deep nested', ...deepData })
+  }),
+  await plainCase('bogeychan', () => {
+    bc.info(deepData, 'Deep nested')
+  })
 ])
 
-const silentLogixConfig = {
-  disableFileLogging: true,
-  disableInternalLogger: true,
-  pino: { enabled: false }
-} as const
-
-const logixlysiaApp = new Elysia()
-  .use(logixlysia({ config: silentLogixConfig }))
-  .get('/', () => 'ok')
-
-const evlogApp = new Elysia()
-  .use(
-    evlog({
-      drain: () => {
-        /* benchmark noop */
-      }
-    })
-  )
-  .get('/', () => 'ok')
-
-const evlogFloorApp = new Elysia()
-  .use(
-    evlog({
-      drain: () => {
-        /* benchmark noop */
-      },
-      exclude: ['/**']
-    })
-  )
-  .get('/', () => 'ok')
-
-const bogeychanApp = new Elysia()
-  .use(
-    bogeychanLogger({
-      enabled: false
-    })
-  )
-  .get('/', () => 'ok')
-
-suite('Elysia plugin request path — overhead floor (all sinks disabled)', [
-  [
-    'logixlysia',
-    async () => {
-      await logixlysiaApp.handle(new Request('http://localhost/'))
-    }
-  ],
-  [
-    'evlog',
-    async () => {
-      await evlogFloorApp.handle(new Request('http://localhost/'))
-    }
-  ],
-  [
-    'bogeychan',
-    async () => {
-      await bogeychanApp.handle(new Request('http://localhost/'))
-    }
-  ]
-])
-
-const noopTransport = {
-  log: () => {
-    /* consume */
-  }
+const transportOnly = {
+  transports: [{ log: sink }],
+  useTransportsOnly: true
 }
 
-const logixlysiaTransportApp = new Elysia()
-  .use(
-    logixlysia({
-      config: {
-        transports: [noopTransport],
-        useTransportsOnly: true
-      }
-    })
-  )
+const bareApp = new Elysia().get('/', () => 'ok')
+
+const logixlysiaApp = new Elysia()
+  .use(logixlysia({ config: transportOnly }))
   .get('/', () => 'ok')
 
-suite('Elysia plugin request path — structured sink (noop consumer)', [
+const logixlysiaProdApp = new Elysia()
+  .use(logixlysia({ config: transportOnly, preset: 'prod' }))
+  .get('/', () => 'ok')
+
+const evlogApp = new Elysia().use(evlog({ drain: sink })).get('/', () => 'ok')
+
+const bogeychanApp = new Elysia()
+  .use(bogeychanLogger({ stream: { write: sink } as never }))
+  .get('/', () => 'ok')
+
+suite('Elysia plugin request path (timed until the log line is written)', [
+  await requestCase('logixlysia', logixlysiaApp),
+  await requestCase('logixlysia (preset prod)', logixlysiaProdApp),
+  await requestCase('evlog', evlogApp),
+  await requestCase('bogeychan', bogeychanApp)
+])
+
+suite('Elysia request path reference (no logger)', [
   [
-    'logixlysia (transport)',
+    'bare elysia',
     async () => {
-      await logixlysiaTransportApp.handle(new Request('http://localhost/'))
-    }
-  ],
-  [
-    'evlog (drain)',
-    async () => {
-      await evlogApp.handle(new Request('http://localhost/'))
+      await bareApp.handle(new Request('http://localhost/'))
     }
   ]
 ])
 
 const benchLogDir = mkdtempSync(path.join(tmpdir(), 'logixlysia-bench-'))
 
+// Only logixlysia writes a file, and the file write is not awaited, so this
+// times the enqueue and is not comparable with the cases above.
 const logixlysiaFileApp = new Elysia()
   .use(
     logixlysia({
