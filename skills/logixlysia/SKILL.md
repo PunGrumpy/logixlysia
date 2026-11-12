@@ -287,7 +287,7 @@ import { useLogger } from 'logixlysia'
 const log = useLogger<CheckoutFields>()
 ```
 
-`useLogger()` returns a request-scoped logger only with `useAsyncLocalStorage: true`; without it, it returns a logger that writes nothing.
+`useLogger()` returns a request-scoped logger only with `useAsyncLocalStorage: true`; without it, it returns a logger that writes nothing. The first such call prints one warning to stderr naming the option, outside production only.
 
 ---
 

@@ -7,7 +7,11 @@ import {
 } from './context/enrich'
 import { LINE_SETTLED } from './context/line-settled'
 import { createRequestContextStore } from './context/request-context'
-import { loggerStorage, noopRequestLogger } from './context/storage'
+import {
+  loggerStorage,
+  noopRequestLogger,
+  recordStorageMode
+} from './context/storage'
 import { startServer } from './extensions'
 import {
   getStatusCode,
@@ -545,6 +549,7 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
   }
 
   const useAsyncLocalStorage = options.config?.useAsyncLocalStorage === true
+  recordStorageMode(useAsyncLocalStorage)
 
   const exitRequestScope = (): void => {
     if (useAsyncLocalStorage) {
