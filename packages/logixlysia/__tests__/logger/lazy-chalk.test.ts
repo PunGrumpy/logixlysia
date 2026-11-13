@@ -7,7 +7,14 @@ const packageRoot = path.join(import.meta.dir, '..', '..')
 const srcEntry = path.join(packageRoot, 'src', 'index.ts')
 const distEntry = path.join(packageRoot, 'dist', 'index.js')
 const distReady = existsSync(distEntry)
-const hasNode = Bun.which('node') !== null
+// The Node child watches loads through registerHooks, added in Node 22.15.
+const hasNodeLoadHooks =
+  Bun.which('node') !== null &&
+  spawnSync([
+    'node',
+    '-e',
+    "process.exit(typeof require('node:module').registerHooks === 'function' ? 0 : 1)"
+  ]).exitCode === 0
 
 type Runtime = 'bun' | 'node'
 
@@ -40,11 +47,19 @@ if (process.env.TTY === '1') {
 }
 let line = ''
 console.info = value => { line = String(value) }
-createLogger({ config: { disableFileLogging: true } }).info(new Request('http://localhost/hi'), 'hi')
+createLogger({ config: JSON.parse(process.env.CONFIG) }).info(new Request('http://localhost/hi'), 'hi')
 process.stderr.write(JSON.stringify({ afterImport, afterLine: loaded(), line }))
 `
 
-const observe = (runtime: Runtime, entry: string, tty: boolean): Observed => {
+const TEXT_CONFIG = { disableFileLogging: true }
+const JSON_CONFIG = { consoleFormat: 'json', disableFileLogging: true }
+
+const observe = (
+  runtime: Runtime,
+  entry: string,
+  tty: boolean,
+  config: Record<string, unknown> = TEXT_CONFIG
+): Observed => {
   const args =
     runtime === 'bun'
       ? ['bun', '-e', script]
@@ -52,7 +67,13 @@ const observe = (runtime: Runtime, entry: string, tty: boolean): Observed => {
   const { NO_COLOR: _noColor, ...env } = process.env
   const proc = spawnSync(args, {
     cwd: packageRoot,
-    env: { ...env, ENTRY: entry, FORCE_COLOR: '3', TTY: tty ? '1' : '0' }
+    env: {
+      ...env,
+      CONFIG: JSON.stringify(config),
+      ENTRY: entry,
+      FORCE_COLOR: '3',
+      TTY: tty ? '1' : '0'
+    }
   })
   if (proc.exitCode !== 0) {
     throw new Error(`${runtime} child failed: ${proc.stderr}`)
@@ -63,7 +84,7 @@ const observe = (runtime: Runtime, entry: string, tty: boolean): Observed => {
 const targets: [string, Runtime, string, boolean][] = [
   ['src under bun', 'bun', srcEntry, true],
   ['dist under bun', 'bun', distEntry, distReady],
-  ['dist under node', 'node', distEntry, distReady && hasNode]
+  ['dist under node', 'node', distEntry, distReady && hasNodeLoadHooks]
 ]
 
 describe('lazy chalk', () => {
@@ -80,6 +101,12 @@ describe('lazy chalk', () => {
       const seen = observe(runtime, entry, true)
       expect(seen).toMatchObject({ afterImport: false, afterLine: true })
       expect(seen.line).toContain('\u001B[')
+    })
+
+    run(`${name}: a JSON logger on a terminal never loads chalk`, () => {
+      const seen = observe(runtime, entry, true, JSON_CONFIG)
+      expect(seen).toMatchObject({ afterImport: false, afterLine: false })
+      expect(JSON.parse(seen.line).message).toBe('hi')
     })
   }
 })

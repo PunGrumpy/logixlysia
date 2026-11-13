@@ -63,8 +63,8 @@ const requireChalk = createRequire(import.meta.url)
 let loadedChalk: ChalkInstance | null | undefined
 
 // chalk detects color support as it loads, a third of this package's import
-// time, so it loads when a logger is created on a terminal and a server
-// without one never pays for it. Node before 22.12 cannot require an ES module, so there
+// time, so it loads when a text logger is created on a terminal and any other
+// logger never pays for it. Node before 22.12 cannot require an ES module, so there
 // the lines stay plain.
 const loadChalk = (): ChalkInstance | null => {
   if (loadedChalk === undefined) {
@@ -82,8 +82,10 @@ const loadChalk = (): ChalkInstance | null => {
 // when chalk cannot load.
 const chalk = (): ChalkInstance => loadChalk() as ChalkInstance
 
+// A JSON console line is never styled, so it does not load chalk.
 const shouldUseColors = (options: Options): boolean =>
   (options.config?.useColors ?? true) &&
+  options.config?.consoleFormat !== 'json' &&
   stdoutWantsColor() &&
   loadChalk() !== null
 
