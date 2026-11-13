@@ -1,4 +1,5 @@
-import chalk from 'chalk'
+import { createRequire } from 'node:module'
+import type chalkModule from 'chalk'
 import { getStatusCode } from '../helpers/status'
 import type { LogLevel, Options, StoreData } from '../interfaces'
 import { stdoutWantsColor } from '../utils/color'
@@ -55,8 +56,38 @@ export interface FormattedLogOutput {
 const isStdoutTty = (): boolean =>
   typeof process !== 'undefined' && process.stdout?.isTTY === true
 
+type ChalkInstance = typeof chalkModule
+
+const requireChalk = createRequire(import.meta.url)
+
+let loadedChalk: ChalkInstance | null | undefined
+
+// chalk detects color support as it loads, a third of this package's import
+// time, so it loads when a text logger is created on a terminal and any other
+// logger never pays for it. Node before 22.12 cannot require an ES module, so there
+// the lines stay plain.
+const loadChalk = (): ChalkInstance | null => {
+  if (loadedChalk === undefined) {
+    try {
+      loadedChalk = (requireChalk('chalk') as { default: ChalkInstance })
+        .default
+    } catch {
+      loadedChalk = null
+    }
+  }
+  return loadedChalk
+}
+
+// Styling runs only with useColors set, and shouldUseColors leaves it unset
+// when chalk cannot load.
+const chalk = (): ChalkInstance => loadChalk() as ChalkInstance
+
+// A JSON console line is never styled, so it does not load chalk.
 const shouldUseColors = (options: Options): boolean =>
-  (options.config?.useColors ?? true) && stdoutWantsColor()
+  (options.config?.useColors ?? true) &&
+  options.config?.consoleFormat !== 'json' &&
+  stdoutWantsColor() &&
+  loadChalk() !== null
 
 // pino-pretty's `standard` expands to `yyyy-mm-dd HH:MM:ss.l o`; this
 // formatter has no `l` or `o` token, so it uses `SSS` and drops the offset.
@@ -163,11 +194,11 @@ const colorDurationText = (
 
   let colored = raw
   if (ms < slow) {
-    colored = chalk.green(raw)
+    colored = chalk().green(raw)
   } else if (ms < verySlow) {
-    colored = chalk.yellow(raw)
+    colored = chalk().yellow(raw)
   } else {
-    colored = chalk.red.bold(raw)
+    colored = chalk().red.bold(raw)
   }
 
   return { isVerySlow, text: colored }
@@ -181,7 +212,7 @@ const getSpeedToken = (isVerySlow: boolean, useColors: boolean): string => {
   if (!useColors) {
     return ` ${badge}`
   }
-  return ` ${chalk.yellow(badge)}`
+  return ` ${chalk().yellow(badge)}`
 }
 
 // Padded to the longest word so the method column lines up across levels.
@@ -197,15 +228,15 @@ const getLevelIcon = (level: LogLevel, useColors: boolean): string => {
     return LEVEL_WORDS[level]
   }
   if (level === 'ERROR') {
-    return chalk.bgRed.black(' 🦊 ')
+    return chalk().bgRed.black(' 🦊 ')
   }
   if (level === 'WARNING') {
-    return chalk.bgYellow.black(' 🦊 ')
+    return chalk().bgYellow.black(' 🦊 ')
   }
   if (level === 'DEBUG') {
-    return chalk.bgBlue.black(' 🦊 ')
+    return chalk().bgBlue.black(' 🦊 ')
   }
-  return chalk.bgGreen.black(' 🦊 ')
+  return chalk().bgGreen.black(' 🦊 ')
 }
 
 const getColoredLevel = (level: LogLevel, useColors: boolean): string => {
@@ -214,16 +245,16 @@ const getColoredLevel = (level: LogLevel, useColors: boolean): string => {
   }
 
   if (level === 'ERROR') {
-    return chalk.bgRed.black(level)
+    return chalk().bgRed.black(level)
   }
   if (level === 'WARNING') {
-    return chalk.bgYellow.black(level)
+    return chalk().bgYellow.black(level)
   }
   if (level === 'DEBUG') {
-    return chalk.bgBlue.black(level)
+    return chalk().bgBlue.black(level)
   }
 
-  return chalk.bgGreen.black(level)
+  return chalk().bgGreen.black(level)
 }
 
 const getColoredMethod = (method: string, useColors: boolean): string => {
@@ -233,34 +264,34 @@ const getColoredMethod = (method: string, useColors: boolean): string => {
 
   const upper = method.toUpperCase()
   if (upper === 'GET') {
-    return chalk.green.bold(upper)
+    return chalk().green.bold(upper)
   }
   if (upper === 'POST') {
-    return chalk.blue.bold(upper)
+    return chalk().blue.bold(upper)
   }
   if (upper === 'PUT') {
-    return chalk.yellow.bold(upper)
+    return chalk().yellow.bold(upper)
   }
   if (upper === 'PATCH') {
-    return chalk.yellowBright.bold(upper)
+    return chalk().yellowBright.bold(upper)
   }
   if (upper === 'DELETE') {
-    return chalk.red.bold(upper)
+    return chalk().red.bold(upper)
   }
   if (upper === 'OPTIONS') {
-    return chalk.cyan.bold(upper)
+    return chalk().cyan.bold(upper)
   }
   if (upper === 'HEAD') {
-    return chalk.greenBright.bold(upper)
+    return chalk().greenBright.bold(upper)
   }
   if (upper === 'TRACE') {
-    return chalk.magenta.bold(upper)
+    return chalk().magenta.bold(upper)
   }
   if (upper === 'CONNECT') {
-    return chalk.cyanBright.bold(upper)
+    return chalk().cyanBright.bold(upper)
   }
 
-  return chalk.white.bold(upper)
+  return chalk().white.bold(upper)
 }
 
 const getColoredMethodToken = (method: string, useColors: boolean): string => {
@@ -276,18 +307,18 @@ const getColoredStatus = (statusCode: number, useColors: boolean): string => {
   }
 
   if (statusCode >= 500) {
-    return chalk.red(status)
+    return chalk().red(status)
   }
   if (statusCode >= 400) {
-    return chalk.yellow(status)
+    return chalk().yellow(status)
   }
   if (statusCode >= 300) {
-    return chalk.cyan(status)
+    return chalk().cyan(status)
   }
   if (statusCode >= 200) {
-    return chalk.green(status)
+    return chalk().green(status)
   }
-  return chalk.gray(status)
+  return chalk().gray(status)
 }
 
 const getColoredTimestamp = (timestamp: string, useColors: boolean): string => {
@@ -295,7 +326,7 @@ const getColoredTimestamp = (timestamp: string, useColors: boolean): string => {
     return timestamp
   }
 
-  return chalk.gray(timestamp)
+  return chalk().gray(timestamp)
 }
 
 const getColoredPathname = (pathname: string, useColors: boolean): string => {
@@ -303,7 +334,7 @@ const getColoredPathname = (pathname: string, useColors: boolean): string => {
     return pathname
   }
 
-  return chalk.whiteBright(pathname)
+  return chalk().whiteBright(pathname)
 }
 
 const getStatusText = (statusCode: number): string => {
@@ -320,7 +351,7 @@ const getServiceToken = (options: Options, useColors: boolean): string => {
   if (!useColors) {
     return `${bracketed} `
   }
-  return `${chalk.dim(bracketed)} `
+  return `${chalk().dim(bracketed)} `
 }
 
 export interface FormatContext {
@@ -435,8 +466,8 @@ const formatEntriesToTreeLines = (
       continue
     }
     const [k, v, separator = DEFAULT_ENTRY_SEPARATOR] = pair
-    const keyPart = useColors ? chalk.cyan(k) : k
-    const valPart = useColors ? chalk.white(v) : v
+    const keyPart = useColors ? chalk().cyan(k) : k
+    const valPart = useColors ? chalk().white(v) : v
     lines.push(`  ${branch} ${keyPart}${separator}${valPart}`)
   }
   return lines
