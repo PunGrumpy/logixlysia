@@ -34,12 +34,15 @@ const joinConsoleOutput = (
     .join('\n')
 
 const buildLoginApp = (options: Options) =>
-  new Elysia().use(logixlysia(options)).post('/login', () => 'ok', {
-    body: t.Object({
-      email: t.String(),
-      password: t.String({ minLength: 60 })
-    })
-  })
+  new Elysia().use(logixlysia(options)).guard(
+    {
+      body: t.Object({
+        email: t.String(),
+        password: t.String({ minLength: 60 })
+      })
+    },
+    guarded => guarded.post('/login', () => 'ok')
+  )
 
 describe('handleHttpError', () => {
   test('does not leak the request body when a validation error occurs', async () => {

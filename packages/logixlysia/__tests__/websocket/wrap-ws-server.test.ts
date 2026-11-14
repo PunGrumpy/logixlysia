@@ -2,6 +2,7 @@ import { expect, mock, test } from 'bun:test'
 import { Elysia } from 'elysia'
 import { logixlysia } from '../../src'
 import { awaitOpen } from '../_helpers/await-open'
+import { websocketCapability, wsContext } from '../_helpers/elysia'
 import { sleep } from '../_helpers/sleep'
 import { waitFor } from '../_helpers/wait-for'
 
@@ -25,11 +26,12 @@ test('logs the connection duration and merged context on a real socket', async (
     }
   })
   const app = new Elysia()
+    .use(websocketCapability())
     .use(plugin)
     .ws('/chat', {
       ...plugin.wrapWs('/chat', {
         open(ws) {
-          ws.data?.store?.logger?.mergeContext(ws, { room: 'lobby' })
+          wsContext(ws)?.store?.logger?.mergeContext(ws, { room: 'lobby' })
         }
       })
     })

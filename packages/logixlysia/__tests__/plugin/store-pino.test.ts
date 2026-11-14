@@ -20,12 +20,18 @@ const createCaptureTransport = () => {
 }
 
 describe('store.pino', () => {
-  test('is defined on the store after use', () => {
+  test('is defined on the store after use', async () => {
     const { options } = createCaptureTransport()
-    const app = new Elysia().use(logixlysia(options))
+    let seen: { logger: unknown; pino: unknown } | undefined
+    const app = new Elysia().use(logixlysia(options)).get('/x', ({ store }) => {
+      seen = { logger: store.logger.pino, pino: store.pino }
+      return 'ok'
+    })
 
-    expect(app.store.pino).toBeDefined()
-    expect(app.store.pino).toBe(app.store.logger.pino)
+    await app.handle(new Request('http://localhost/x'))
+
+    expect(seen?.pino).toBeDefined()
+    expect(seen?.pino).toBe(seen?.logger)
   })
 
   test('a handler can log through store.pino', async () => {
@@ -50,13 +56,20 @@ describe('store.pino', () => {
     expect(logMethod.mock.calls[0]?.[0]).toEqual(['hi'])
   })
 
-  test('an assignment to store.pino reaches pino', () => {
+  test('an assignment to store.pino reaches pino', async () => {
     const { options } = createCaptureTransport()
-    const app = new Elysia().use(logixlysia(options))
+    const plugin = logixlysia(options)
+    let pinoSeen: Pino | undefined
+    const app = new Elysia().use(plugin).get('/x', ({ store }) => {
+      store.pino.level = 'debug'
+      pinoSeen = store.pino
+      return 'ok'
+    })
 
-    app.store.pino.level = 'debug'
+    await app.handle(new Request('http://localhost/x'))
 
-    expect(app.store.pino.level).toBe('debug')
+    expect(pinoSeen?.level).toBe('debug')
+    expect(plugin.store.pino.level).toBe('debug')
   })
 
   test('enumerating store.pino before first use does not construct pino', () => {

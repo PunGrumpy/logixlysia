@@ -2,6 +2,7 @@ import { describe, expect, mock, test } from 'bun:test'
 import nodeAdapter from '@elysiajs/node'
 import { Elysia } from 'elysia'
 import { logixlysia } from '../../src'
+import { isElysia2 } from '../_helpers/elysia'
 import { createDemoApp, silentTestOptions } from './demo-app'
 import type { TransportLog } from './demo-app'
 
@@ -75,14 +76,19 @@ describe('demo routes (Bun)', () => {
 })
 
 describe('Node adapter', () => {
-  test('logixlysia resolves and handles GET / on @elysiajs/node', async () => {
-    const transport = mockTransport()
-    const app = new Elysia({ adapter: nodeAdapter() })
-      .use(logixlysia(silentTestOptions(transport)))
-      .get('/', () => ({ ok: true }))
+  // @elysiajs/node 1.4 implements the Elysia 1.x adapter interface; Elysia 2
+  // cannot build a fetch handler from it, with or without the plugin.
+  test.skipIf(isElysia2)(
+    'logixlysia resolves and handles GET / on @elysiajs/node',
+    async () => {
+      const transport = mockTransport()
+      const app = new Elysia({ adapter: nodeAdapter() })
+        .use(logixlysia(silentTestOptions(transport)))
+        .get('/', () => ({ ok: true }))
 
-    const response = await app.handle(new Request('http://localhost/'))
-    expect(response.status).toBe(200)
-    expect(transport).toHaveBeenCalled()
-  })
+      const response = await app.handle(new Request('http://localhost/'))
+      expect(response.status).toBe(200)
+      expect(transport).toHaveBeenCalled()
+    }
+  )
 })

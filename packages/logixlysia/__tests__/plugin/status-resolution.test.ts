@@ -2,6 +2,7 @@ import { describe, expect, mock, test } from 'bun:test'
 import { Elysia } from 'elysia'
 import { logixlysia } from '../../src'
 import type { Options } from '../../src/interfaces'
+import { isElysia2 } from '../_helpers/elysia'
 import { sleep } from '../_helpers/sleep'
 
 interface CapturedMeta {
@@ -94,9 +95,10 @@ describe('logixlysia plugin - status resolution', () => {
     const { options, transport } = createCaptureTransport()
     const app = new Elysia()
       .use(logixlysia(options))
-      .get('/guarded', () => 'ok', {
-        beforeHandle: ({ status }) => status(403, 'forbidden')
-      })
+      .guard(
+        { beforeHandle: ({ status }) => status(403, 'forbidden') },
+        guarded => guarded.get('/guarded', () => 'ok')
+      )
 
     const response = await run(app, '/guarded')
 
@@ -157,21 +159,28 @@ describe('logixlysia plugin - status resolution', () => {
     expect(recordAt(transport, 0).meta.status).toBe(409)
   })
 
-  test('logs a request that an auth macro resolve answers with status()', async () => {
-    const { options, transport } = createCaptureTransport()
-    const app = new Elysia()
-      .use(logixlysia(options))
-      .macro({ auth: { resolve: ({ status }) => status(401, 'no') } })
-      .get('/private', () => 'secret', { auth: true })
+  // Elysia 2.0.0-rc.3 does not run a macro's resolve for a route that turns
+  // the macro on, so nothing short-circuits.
+  test.skipIf(isElysia2)(
+    'logs a request that an auth macro resolve answers with status()',
+    async () => {
+      const { options, transport } = createCaptureTransport()
+      const app = new Elysia()
+        .use(logixlysia(options))
+        .macro({ auth: { resolve: ({ status }) => status(401, 'no') } })
+        .guard({ auth: true }, guarded =>
+          guarded.get('/private', () => 'secret')
+        )
 
-    const response = await run(app, '/private')
+      const response = await run(app, '/private')
 
-    expect(response.status).toBe(401)
-    expect(transport).toHaveBeenCalledTimes(1)
-    const { level, meta } = recordAt(transport, 0)
-    expect(level).toBe('WARNING')
-    expect(meta.status).toBe(401)
-  })
+      expect(response.status).toBe(401)
+      expect(transport).toHaveBeenCalledTimes(1)
+      const { level, meta } = recordAt(transport, 0)
+      expect(level).toBe('WARNING')
+      expect(meta.status).toBe(401)
+    }
+  )
 
   test('logs errors an earlier app-wide onError already answered', async () => {
     const { options, transport } = createCaptureTransport()

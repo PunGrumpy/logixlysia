@@ -101,12 +101,15 @@ describe('logixlysia plugin - request lifecycle', () => {
   test('an error thrown in afterHandle yields one error line with real duration and context', async () => {
     const { options, transport } = createCaptureTransport({ requestId: true })
 
-    const app = new Elysia().use(logixlysia(options)).get('/boom', () => 'ok', {
-      afterHandle: async () => {
-        await sleep(15)
-        throw new Error('boom')
-      }
-    })
+    const app = new Elysia().use(logixlysia(options)).guard(
+      {
+        afterHandle: async () => {
+          await sleep(15)
+          throw new Error('boom')
+        }
+      },
+      guarded => guarded.get('/boom', () => 'ok')
+    )
 
     await app.handle(new Request('http://localhost/boom'))
 
