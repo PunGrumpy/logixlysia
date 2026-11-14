@@ -10,6 +10,8 @@
 bun add logixlysia
 ```
 
+Works with Elysia 1.4 and the Elysia 2 prereleases. To try Elysia 2, install it from its `rc` tag (`bun add elysia@rc`); [what changes on Elysia 2](https://logixlysia.vercel.app/docs/usage#elysia-2-beta).
+
 ## `📝` Usage
 
 Add the plugin, then log from a handler with `log`. Fields you add with `log.mergeContext` land on that request's access line.

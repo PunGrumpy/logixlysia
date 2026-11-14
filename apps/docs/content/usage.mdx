@@ -9,6 +9,25 @@ description: Learn how to use Logixlysia in your Elysia applications
 bun add logixlysia
 ```
 
+### Elysia 2 beta
+
+Logixlysia runs on Elysia 1.4 and on the Elysia 2 prereleases, from `2.0.0-beta.32` on. To try it on Elysia 2, install Elysia from its `rc` tag:
+
+```bash
+bun add logixlysia elysia@rc
+```
+
+What changes on Elysia 2:
+
+- A `.ws()` route needs Elysia's WebSocket capability, `.use(websocket())` from `elysia/websocket`, and a socket handler reads `log` and `store` from the socket itself (`ws.log`) rather than from `ws.data`.
+- The app no longer has a `store` property. Read `store` in a handler, or take pino from the plugin instance: `logixlysia().store.pino`.
+- The plugin's TypeScript types still describe Elysia 1.4, so `log` and `store` are not yet part of a handler's context type on Elysia 2. They are there at runtime.
+
+The plugin registers an `onAfterResponse` hook, and on Elysia 2 any such hook changes what Elysia itself sends, with or without the plugin:
+
+- A generator that returns `status()` before its first `yield` answers with an empty 200 instead of that status.
+- On `2.0.0-beta.32`, an `sse()` body is sent as plain text with no `data:` framing. `2.0.0-rc.3` frames it again, which is why the install above uses the `rc` tag.
+
 ## Basic Usage
 
 ```ts
