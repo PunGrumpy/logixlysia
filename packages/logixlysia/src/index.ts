@@ -113,6 +113,13 @@ interface RequestRecord {
 const responseStatus = (response: unknown): number =>
   response instanceof Response ? response.status : DEFAULT_STATUS
 
+const isEventStream = (response: unknown): boolean =>
+  response instanceof Response &&
+  (response.headers.get('content-type')?.startsWith('text/event-stream') ??
+    false)
+
+const ITERATOR_METHODS = new Set(['next', 'return', 'throw'])
+
 const isGeneratorObject = (
   value: unknown
 ): value is AsyncIterable<unknown> | Iterable<unknown> =>
@@ -352,6 +359,10 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
   const records = new WeakMap<Request, RequestRecord>()
   const instance = Symbol('logixlysia')
   const scope = parentScope()
+  // Elysia 2 builds an `sse()` response before the body's first pull. 1.x
+  // reads the first value first, so there an unread event stream is a body
+  // a mapResponse put in place of the wrapped one.
+  const buildsSseBeforePull = scope !== 'scoped'
   const openRecord = (request: Request): RequestRecord => {
     const existing = records.get(request)
     if (existing) {
@@ -681,8 +692,15 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
         ? wrapAsyncStream(record, response, runInScope, onSettled)
         : wrapSyncStream(record, response, runInScope, onSettled)
     // Elysia reads markers off the generator object itself: `sse(generator)`
-    // sets the one that selects event-stream framing.
-    return Object.assign(wrapper, response)
+    // sets the one that selects event-stream framing. Elysia 2 hands over a
+    // tee branch whose iterator methods are own properties, and copying
+    // those would route every pull around the wrapper.
+    for (const key of Object.keys(response)) {
+      if (!ITERATOR_METHODS.has(key)) {
+        Reflect.set(wrapper, key, Reflect.get(response, key))
+      }
+    }
+    return wrapper
   }
 
   /**
@@ -770,12 +788,14 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
         }
         if (
           record.phase === 'streaming' &&
-          record.streamPulled &&
+          (record.streamPulled ||
+            (buildsSseBeforePull && isEventStream(response))) &&
           record.error === undefined
         ) {
           // The body is still being produced; the stream wrapper finishes it.
           // A recorded error means Elysia failed to build the stream after
           // its first pull and answered with an error response instead.
+          // Elysia 2 hands an `sse()` body over before its first pull.
           record.streamStatus = responseStatus(response)
           return response
         }

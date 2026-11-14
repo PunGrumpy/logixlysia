@@ -56,6 +56,11 @@ const run = async (
 // Elysia's own test for whether a hook makes the compiled handler async.
 const ELYSIA_IS_ASYNC = /(?:return|=>)\s?\S+\(|a(?:sync|wait)/u
 
+const failingEvents = function* failingEvents() {
+  yield 'a'
+  throw new Error('sse mid')
+}
+
 const slowStream = async function* slowStream() {
   yield 'a'
   await sleep(40)
@@ -296,6 +301,21 @@ describe('logixlysia plugin - final line', () => {
     expect(meta.error?.message).toBe('sync mid')
   })
 
+  test('logs an error line when an sse() body throws after its first event', async () => {
+    const { options, transport } = createCaptureTransport()
+    const app = new Elysia()
+      .use(logixlysia(options))
+      .get('/events', () => sse(failingEvents()))
+
+    await run(app, '/events')
+
+    expect(transport).toHaveBeenCalledTimes(1)
+    const { level, meta } = recordAt(transport, 0)
+    expect(level).toBe('ERROR')
+    expect(meta.status).toBe(200)
+    expect(transport.mock.calls[0]?.[1]).toBe('sse mid')
+  })
+
   test('times a sync generator until it finishes', async () => {
     const { options, transport } = createCaptureTransport()
     const app = new Elysia()
@@ -359,6 +379,27 @@ describe('logixlysia plugin - final line', () => {
     const { level, meta } = recordAt(transport, 0)
     expect(level).toBe('INFO')
     expect(meta.status).toBe(203)
+  })
+
+  test('logs a streamed route whose body a mapResponse replaced with an event stream', async () => {
+    const { options, transport } = createCaptureTransport()
+    const app = new Elysia()
+      .use(logixlysia(options))
+      .mapResponse(
+        () =>
+          new Response('data: x\n\n', {
+            headers: { 'content-type': 'text/event-stream' }
+          })
+      )
+      .get('/s', slowStream)
+
+    const { body } = await run(app, '/s')
+
+    expect(body).toBe('data: x\n\n')
+    expect(transport).toHaveBeenCalledTimes(1)
+    const { level, meta } = recordAt(transport, 0)
+    expect(level).toBe('INFO')
+    expect(meta.status).toBe(200)
   })
 
   test('a user onAfterHandle registered after the plugin can log through useLogger()', async () => {
