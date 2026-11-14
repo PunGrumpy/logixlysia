@@ -280,6 +280,22 @@ export type LogixlysiaPlugin<TFields extends object = LogFields> =
 const DEFAULT_FLUSH_TIMEOUT_MS = 5000
 
 /**
+ * The scope that lifts a plugin's hooks into the app that mounts it. Elysia
+ * 1.x calls it `'scoped'` and promotes any other name to global; 2.x calls it
+ * `'plugin'` and throws on `'scoped'`. A throwaway instance is asked, so the
+ * probe never touches the plugin.
+ */
+const parentScope = (): 'scoped' => {
+  try {
+    new Elysia().as('scoped')
+    return 'scoped'
+  } catch {
+    // Typed as 1.x's name: the package builds against the 1.4 types.
+    return 'plugin' as 'scoped'
+  }
+}
+
+/**
  * The response headers an enricher gets to read, merged the way Elysia builds
  * the wire response: a header on a returned `Response` wins, and
  * `set.headers` fills in the ones it lacks. `set-cookie` is the exception:
@@ -333,6 +349,7 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
   const options = resolveOptions(rawOptions)
   const records = new WeakMap<Request, RequestRecord>()
   const instance = Symbol('logixlysia')
+  const scope = parentScope()
   const openRecord = (request: Request): RequestRecord => {
     const existing = records.get(request)
     if (existing) {
@@ -792,10 +809,9 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
     // because Elysia drops a later instance's hooks whose checksum matches a
     // merged global hook, which would remove the per-module derive below.
     .use(
-      new Elysia({ name: 'Logixlysia/log' }).derive(
-        { as: 'global' },
-        ({ request }) => ({ log: getRequestScopedLogger(request) })
-      )
+      new Elysia({ name: 'Logixlysia/log' })
+        .derive(({ request }) => ({ log: getRequestScopedLogger(request) }))
+        .as('global')
     )
     .derive(({ request }) => ({ log: getRequestScopedLogger(request) }))
     .onStart(({ server }): void => {
@@ -871,7 +887,7 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
       }
       finishUnwrapped(request, record, getStatusCode(set.status))
     })
-    .as('scoped') as Logixlysia<TFields>
+    .as(scope) as Logixlysia<TFields>
 
   return Object.assign(plugin, { runJob, wrapWs }) as LogixlysiaPlugin<TFields>
 }
