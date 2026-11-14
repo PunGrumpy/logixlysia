@@ -1,6 +1,6 @@
 import type { PrecomputedLogParts } from '../../src/logger/create-logger'
-import { parseRequestUrlOnce } from '../../src/logger/emit'
 import type { LoggedRequest } from '../../src/utils/redact'
+import { parseRequestUrlOnce } from '../../src/utils/request-url'
 
 export const precomputedFor = (
   request: LoggedRequest,

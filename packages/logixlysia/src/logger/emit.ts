@@ -16,10 +16,12 @@ import { redact, redactRequest } from '../utils/redact'
 import type { LoggedRequest } from '../utils/redact'
 import { createErrorReporter } from '../utils/report'
 import type { ErrorReporter } from '../utils/report'
-import { sanitizeLogText } from '../utils/sanitize'
+import { parseRequestUrlOnce } from '../utils/request-url'
 import { settle } from '../utils/settle'
 import { formatLogOutput } from './create-logger'
 import type { FormatContext, PrecomputedLogParts } from './create-logger'
+import { resolvePathFilter } from './path-filter'
+import type { PathFilter } from './path-filter'
 
 export interface Sinks {
   hasFileLogging: boolean
@@ -27,6 +29,7 @@ export interface Sinks {
   hasTransports: boolean
   isEffectivelyDisabled: boolean
   needsUrlParts: boolean
+  pathFilter?: PathFilter
 }
 
 export const resolveSinks = (config: Options['config']): Sinks => {
@@ -51,7 +54,8 @@ export const resolveSinks = (config: Options['config']): Sinks => {
     hasInternalLogger,
     hasTransports,
     isEffectivelyDisabled,
-    needsUrlParts
+    needsUrlParts,
+    pathFilter: resolvePathFilter(config?.logFilter)
   }
 }
 
@@ -62,22 +66,20 @@ export const shouldLog = (level: LogLevel, logFilter?: LogFilter): boolean => {
   return logFilter.level.includes(level)
 }
 
+export const isExcludedRequest = (
+  sinks: Sinks,
+  request: RequestInfo
+): boolean => sinks.pathFilter?.excludes(request) === true
+
 export const isSuppressed = (
   sinks: Sinks,
   level: LogLevel,
-  logFilter?: LogFilter
-): boolean => sinks.isEffectivelyDisabled || !shouldLog(level, logFilter)
-
-export const parseRequestUrlOnce = (
-  request: LoggedRequest
-): { pathname: string; search: string } => {
-  try {
-    const { pathname, search } = new URL(request.url)
-    return { pathname, search }
-  } catch {
-    return { pathname: sanitizeLogText(request.url || '/', 1024), search: '' }
-  }
-}
+  logFilter: LogFilter | undefined,
+  request: RequestInfo
+): boolean =>
+  sinks.isEffectivelyDisabled ||
+  !shouldLog(level, logFilter) ||
+  isExcludedRequest(sinks, request)
 
 export const computePrecomputedLogParts = (
   store: StoreData,
@@ -273,7 +275,7 @@ export const emit = (input: EmitInput): EmitOutcome => {
   } = input
   const { config } = options
 
-  if (isSuppressed(sinks, level, config?.logFilter)) {
+  if (isSuppressed(sinks, level, config?.logFilter, request)) {
     return 'dropped'
   }
 

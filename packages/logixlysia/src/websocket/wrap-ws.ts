@@ -1,6 +1,8 @@
 import { keyOf } from '../context/request-context'
 import type { RequestContextStore } from '../context/request-context'
 import type { Logger, Options, StoreData } from '../interfaces'
+import { resolvePathFilter } from '../logger/path-filter'
+import type { PathFilter } from '../logger/path-filter'
 import { syntheticRequest } from '../utils/synthetic-request'
 
 export interface WebSocketLike {
@@ -71,7 +73,10 @@ const afterHook = (result: unknown, done: () => void): unknown => {
 export const createWsHandlerWrapper = (
   options: Options,
   logger: Logger,
-  contextStore: RequestContextStore
+  contextStore: RequestContextStore,
+  pathFilter: PathFilter | undefined = resolvePathFilter(
+    options.config?.logFilter
+  )
 ) => {
   const wsTimings = new WeakMap<object, bigint>()
 
@@ -82,6 +87,10 @@ export const createWsHandlerWrapper = (
     message: string,
     extra?: Record<string, unknown>
   ): void => {
+    const request = wsSyntheticRequest(path)
+    if (pathFilter?.excludes(request)) {
+      return
+    }
     const beforeTime = wsTimings.get(keyOf(ws)) ?? process.hrtime.bigint()
     const store: StoreData = { beforeTime }
     const accumulated = contextStore.peekContext(ws)
@@ -90,12 +99,7 @@ export const createWsHandlerWrapper = (
         ? { ...accumulated, ...extra, wsId: ws.id }
         : { wsId: ws.id }
 
-    logger.log(
-      level,
-      wsSyntheticRequest(path),
-      { context, message, status: 200 },
-      store
-    )
+    logger.log(level, request, { context, message, status: 200 }, store)
   }
 
   return <

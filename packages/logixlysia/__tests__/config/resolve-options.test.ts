@@ -344,6 +344,53 @@ describe('resolveOptions', () => {
     expect(resolved.config?.logFilter?.accessLine?.exclude).toEqual(['/health'])
   })
 
+  test.each(['include', 'exclude'] as const)(
+    'throws when logFilter.%s is not an array',
+    key => {
+      expect(() =>
+        resolveOptions({ config: { logFilter: { [key]: '/api' as never } } })
+      ).toThrow(`logFilter config — ${key} must be an array`)
+    }
+  )
+
+  test.each(['include', 'exclude'] as const)(
+    'throws when logFilter.%s holds a non-string or empty entry',
+    key => {
+      expect(() =>
+        resolveOptions({ config: { logFilter: { [key]: [1] as never } } })
+      ).toThrow(`${key} must be an array of non-empty glob strings`)
+      expect(() =>
+        resolveOptions({ config: { logFilter: { [key]: [''] } } })
+      ).toThrow(`${key} must be an array of non-empty glob strings`)
+    }
+  )
+
+  test('names the key and the glob when a logFilter glob is unusable', () => {
+    expect(() =>
+      resolveOptions({ config: { logFilter: { exclude: ['/a/**/b/**'] } } })
+    ).toThrow("invalid logFilter config — exclude: '/a/**/b/**' —")
+  })
+
+  test('throws for a logFilter that is not an object', () => {
+    expect(() =>
+      resolveOptions({ config: { logFilter: '/health' as never } })
+    ).toThrow('logFilter must be an object')
+    expect(() =>
+      resolveOptions({ config: { logFilter: ['/health'] as never } })
+    ).toThrow('logFilter must be an object')
+  })
+
+  test('validates a logFilter edited after an earlier resolve', () => {
+    const logFilter = { exclude: ['/health'] }
+    resolveOptions({ config: { logFilter } })
+
+    logFilter.exclude = ['/a/**/b/**']
+
+    expect(() => resolveOptions({ config: { logFilter } })).toThrow(
+      'invalid logFilter config'
+    )
+  })
+
   test('accepts the four log levels in logFilter', () => {
     const resolved = resolveOptions({
       config: { logFilter: { level: ['DEBUG', 'INFO', 'WARNING', 'ERROR'] } }

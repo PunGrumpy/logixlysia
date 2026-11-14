@@ -6,6 +6,7 @@ import type {
   SamplingConfig
 } from '../interfaces'
 import { requestIdHeaderName } from '../middleware/request-id'
+import { globToRegExp } from '../sampling/glob'
 import { parseInterval, parseRetention, parseSize } from '../utils/rotation'
 
 const VALID_PRESETS: ReadonlySet<LogPreset> = new Set(['dev', 'prod', 'json'])
@@ -189,9 +190,40 @@ const validateAccessLineGlobs = (accessLine: LogFilter['accessLine']): void => {
   }
 }
 
+const validateLogFilterPaths = (logFilter: LogFilter): void => {
+  for (const key of ['include', 'exclude'] as const) {
+    const globs: unknown = logFilter[key]
+    if (globs === undefined) {
+      continue
+    }
+    if (!isGlobList(globs)) {
+      invalidLogFilter(`${key} must be an array of non-empty glob strings`)
+    }
+    for (const glob of logFilter[key] ?? []) {
+      try {
+        globToRegExp(glob)
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error)
+        invalidLogFilter(`${key}: '${glob}' — ${message}`)
+      }
+    }
+  }
+}
+
 const validateLogFilter = (config: Options['config']): void => {
-  validateLogFilterLevel(config?.logFilter?.level)
-  validateAccessLineGlobs(config?.logFilter?.accessLine)
+  const logFilter: unknown = config?.logFilter
+  if (logFilter === undefined || logFilter === null) {
+    return
+  }
+  if (typeof logFilter !== 'object' || Array.isArray(logFilter)) {
+    invalidLogFilter(
+      `logFilter must be an object, got ${JSON.stringify(logFilter)}`
+    )
+  }
+  const filter = logFilter as LogFilter
+  validateLogFilterLevel(filter.level)
+  validateAccessLineGlobs(filter.accessLine)
+  validateLogFilterPaths(filter)
 }
 
 const validateOutput = (config: Options['config']): void => {
