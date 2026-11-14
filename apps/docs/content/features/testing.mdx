@@ -1,0 +1,169 @@
+---
+title: Testing Your Logs
+description: Assert on what a route logged with an in-memory transport
+---
+
+`logixlysia/testing` ships a transport that keeps records in memory, so a test can check that a route logged the order id or that a failure logged at `ERROR` with the right error code. It needs no dependency, and it runs under Bun, Node's test runner, Vitest and Jest.
+
+## Quick Start
+
+Pass the transport to the plugin, and set `useTransportsOnly` to keep the console quiet:
+
+```ts
+import { expect, test } from 'bun:test'
+import { Elysia } from 'elysia'
+import logixlysia from 'logixlysia'
+import { createMemoryTransport } from 'logixlysia/testing'
+
+test('logs the order id', async () => {
+  const memory = createMemoryTransport()
+  const app = new Elysia()
+    .use(
+      logixlysia({
+        config: {
+          showStartupMessage: false,
+          transports: [memory],
+          useTransportsOnly: true
+        }
+      })
+    )
+    .get('/orders/:id', ({ log, params }) => {
+      log.info('order loaded', { orderId: params.id })
+      return { id: params.id }
+    })
+
+  await app.handle(new Request('http://localhost/orders/42'))
+
+  const line = memory.find(record => record.message === 'order loaded')
+  expect(line?.context).toMatchObject({ orderId: '42' })
+  expect(memory.last()).toMatchObject({
+    method: 'GET',
+    path: '/orders/42',
+    status: 200
+  })
+})
+```
+
+A request that calls `log.info` writes two records: the handler's line, then the access line with the final status. The access line has an empty `message`.
+
+## Record Fields
+
+Every record is one `MemoryRecord`, so a test does not depend on the argument order a transport receives.
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `level` | `'DEBUG' \| 'INFO' \| 'WARNING' \| 'ERROR'` | The record's level. |
+| `message` | `string` | The logged message. Empty for an access line. |
+| `method` | `string \| undefined` | The request method. |
+| `path` | `string \| undefined` | The request pathname, without the query string. |
+| `status` | `number \| undefined` | The response status. Absent on a handler line, which is written before the response exists. |
+| `durationMs` | `number \| undefined` | Milliseconds since the request started. |
+| `requestId` | `string \| undefined` | `context.requestId`, when [`requestId`](/docs/features/request-id) is on. |
+| `context` | `Record<string, unknown>` | The request context merged with the call's own context. |
+| `error` | `MemoryRecordError \| undefined` | The serialized error, with `code`, `why`, `fix`, `link` and `internal` of an `HttpError`. |
+| `meta` | `Record<string, unknown>` | Everything the transport received, for fields not named above. |
+| `timestamp` | `Date` | When the transport received the record. |
+
+A record is plain data copied when it was logged. Changing the request context or the object you passed to `log.info` afterwards does not change a stored record. Records carry the redaction that [`autoRedact`](/docs/configuration#autoredact) applied, so a secret masked in the console is masked here too.
+
+## Asserting on Errors
+
+```ts
+import { expect, test } from 'bun:test'
+import { Elysia } from 'elysia'
+import logixlysia, { HttpError } from 'logixlysia'
+import { createMemoryTransport } from 'logixlysia/testing'
+
+test('logs a declined card with its code', async () => {
+  const memory = createMemoryTransport()
+  const app = new Elysia()
+    .use(
+      logixlysia({
+        config: {
+          showStartupMessage: false,
+          transports: [memory],
+          useTransportsOnly: true
+        }
+      })
+    )
+    .post('/pay', () => {
+      throw new HttpError(402, 'Card declined', {
+        code: 'PAYMENT_DECLINED',
+        why: 'The issuing bank rejected the charge.'
+      })
+    })
+
+  await app.handle(new Request('http://localhost/pay', { method: 'POST' }))
+
+  const failure = memory.find(record => record.error !== undefined)
+  expect(failure?.status).toBe(402)
+  expect(failure?.error?.code).toBe('PAYMENT_DECLINED')
+  expect(failure?.error?.why).toBe('The issuing bank rejected the charge.')
+})
+```
+
+## Reading Records
+
+| Member | Returns |
+| --- | --- |
+| `records` | A copy of the kept records, oldest first. |
+| `find(predicate)` | The first record the predicate accepts, or `undefined`. |
+| `filter(predicate)` | Every record the predicate accepts. |
+| `last()` | The newest record, or `undefined`. |
+| `clear()` | Forgets every record. Call it between steps of one test. |
+| `waitFor(predicate)` | A promise for the first matching record, kept or yet to come. |
+
+`createMemoryTransport({ maxRecords })` keeps the newest `maxRecords` records and drops the oldest past that. The default is 1000.
+
+## Waiting for a Record
+
+`app.handle` resolves once the response exists, which can be before a late line is written, such as one a background job logs. `waitFor` resolves as soon as a matching record arrives:
+
+```ts
+import { createMemoryTransport } from 'logixlysia/testing'
+
+const memory = createMemoryTransport()
+
+const done = await memory.waitFor(record => record.message === 'job done', {
+  timeoutMs: 2000
+})
+```
+
+`timeoutMs` defaults to 1000. On a timeout the promise rejects with the records it saw, so the failure says what was logged instead:
+
+```text
+[logixlysia] memory transport: no record matched within 2000ms; 2 records seen:
+  INFO GET /orders/42 "order loaded"
+  INFO GET /orders/42 200
+```
+
+## Filtered Requests
+
+A request that [`logFilter`](/docs/features/filtering) hides never reaches the transport, so `memory.records` stays empty for it:
+
+```ts
+import { expect, test } from 'bun:test'
+import { Elysia } from 'elysia'
+import logixlysia from 'logixlysia'
+import { createMemoryTransport } from 'logixlysia/testing'
+
+test('does not log health checks', async () => {
+  const memory = createMemoryTransport()
+  const app = new Elysia()
+    .use(
+      logixlysia({
+        config: {
+          logFilter: { exclude: ['/health'] },
+          showStartupMessage: false,
+          transports: [memory],
+          useTransportsOnly: true
+        }
+      })
+    )
+    .get('/health', () => 'ok')
+
+  await app.handle(new Request('http://localhost/health'))
+
+  expect(memory.records).toHaveLength(0)
+})
+```
