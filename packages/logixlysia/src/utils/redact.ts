@@ -13,6 +13,7 @@ const IPV6_REGEX =
  * a backtrack entry per digit and gives up on a very long run.
  */
 const DIGIT_RUN_REGEX = /\b\d[\d -]*/gu
+const DIGIT_DOT_DIGIT_REGEX = /\d\.\d/u
 const WORD_CHAR_REGEX = /\w/u
 const DIGIT_GROUP_REGEX = /\d+/gu
 /**
@@ -331,8 +332,8 @@ export const redactString = (
   if (result.includes('@')) {
     result = result.replaceAll(EMAIL_REGEX, REDACTED_TEXT)
   }
-  // Every match contains `.`.
-  if (result.includes('.')) {
+  // Every match contains a digit, a `.` and a digit.
+  if (DIGIT_DOT_DIGIT_REGEX.test(result)) {
     result = result.replaceAll(IPV4_REGEX, REDACTED_TEXT)
   }
   // Every match contains `:`.
