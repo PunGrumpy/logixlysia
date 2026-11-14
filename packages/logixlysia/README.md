@@ -67,6 +67,21 @@ const app = new Elysia({
 app.listen(3000)
 ```
 
+#### Choosing which routes are logged
+
+`logFilter` takes path globs, so health checks and static assets stay out of your logs. A request whose pathname matches `exclude`, or misses a non-empty `include`, writes nothing: no access line, no `log.*` lines from its handler, no error line, no WebSocket lines. `exclude` wins over `include`. `**` crosses `/`; `*` and `?` do not.
+
+```ts
+logixlysia({
+  config: {
+    logFilter: {
+      include: ['/api/**'],
+      exclude: ['/api/internal/**']
+    }
+  }
+})
+```
+
 ## `✨` Features
 
 - **Request context**: accumulate fields with `mergeContext` into a context tree. [Docs](https://logixlysia.vercel.app/docs/features/request-context)
