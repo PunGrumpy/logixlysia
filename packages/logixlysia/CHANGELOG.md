@@ -1,5 +1,58 @@
 # Changelog
 
+## 6.14.0
+
+### Minor Changes
+
+- 36b8d61: A handler that calls `log.info`, `log.warn`, `log.debug` or `log.error` now gets its access line as well. Before, the custom line replaced the access line, so the request's status and full duration were logged nowhere, and the text line printed `200` even when the handler went on to return a 404.
+  
+  The custom line is written before the response exists. It shows `-` where the status goes in the text and file formats, and has no `status` in the JSON line or in transport records. The access line follows with the real status, the full `durationMs`, the response-phase enricher fields and any AI usage merged during the request.
+  
+  A request that logs once now writes two lines instead of one. To add fields to the access line without a second line, use `log.mergeContext`. To drop the access line, set `logFilter.accessLine`.
+- df74ccb: Make the console context tree easier to scan.
+  
+  - `contextDepth` now defaults to `2`, so a nested object prints its fields as `user.id  usr_123` rows in place of one JSON blob. Set `contextDepth: 1` to get the old output.
+  - On a TTY, a context string longer than 200 characters is cut to 200 and ends in `… (<length> chars)`. Piped stdout, files and transports still get the whole string.
+- 9f03ff3: The plugin now runs on the Elysia 2 prereleases (`2.0.0-beta.32` and later) as well as on Elysia 1.4, and the `elysia` peer range accepts both. On Elysia 2 it mounts with the scope 2.x names `plugin`, reads a handler's result from `responseValue`, recognises a `status()` result by its new shape, times an `sse()` body that Elysia hands over before its first read, keeps one instance's logger and pino out of a sibling instance's state, and gives the plugin instance a `store` so `plugin.store.pino` still works. A validation error's `failedPaths` stay JSON Pointers on both lines, and `logErrorPayload` logs the payload Elysia 2 no longer puts in the message. The types still describe Elysia 1.4.
+- 75c305f: Each line in the `logFilePath` file now starts with a full ISO 8601 UTC timestamp and carries the response status, as the file logging docs describe. A line reads `2025-04-13T15:00:19.225Z INFO GET /api/users 200 123.45ms message {"context":"json"}`, where it was `INFO 123.45ms GET /api/users message`. A line you write with `log.info()` shows `-` for the status, and its context is written after the message. The layout of the file changed, so update any script that parses it.
+- 94c74ce: The JSON console line now carries the `service` option as a `service` key, placed after `level`. Before, `service` only reached the text line's `[name]` prefix, so records from several services could not be told apart once they were collected in one place. A record without a configured service is unchanged.
+- c57049a: `preset: 'prod'` and `preset: 'json'` now print one line of JSON per record, as the docs promised, instead of the text line with its fox emoji. Loki, Datadog and CloudWatch can parse the console output without extra config:
+  
+  ```
+  {"timestamp":"2026-11-12T05:43:59.800Z","level":"INFO","message":"","request":{"method":"GET","url":"http://localhost/users/[REDACTED]"},"status":200,"durationMs":0.83,"context":{"requestId":"8623487f-c151-4ccb-ae83-3d708e541e39"}}
+  ```
+  
+  The line is the record transports receive, with an ISO-8601 `timestamp`. Newlines in values are escaped, and `autoRedact` masks it as it masks the text line. A new option, `consoleFormat: 'text' | 'json'`, picks the console output and works without a preset.
+  
+  What changed for you: if you use `prod` or `json` and want the text line back, set `consoleFormat: 'text'`:
+  
+  ```ts
+  logixlysia({ preset: 'prod', config: { consoleFormat: 'text' } })
+  ```
+  
+  The default (no preset) and `preset: 'dev'` print exactly what they did before. Plain records also serialise faster for every adapter, since they skip the per-value replacer that BigInt, Error, Map, Set and cycles need.
+- da54dc5: Print the log level as a word when console colors are off. With `useColors: false` or a stdout that is not a TTY, the `{icon}` token in the default line now reads `DEBUG`, `INFO`, `WARN` or `ERROR`, padded to five characters so the method column lines up, in place of the `🦊` emoji that looked the same for every level. A color terminal still shows the fox in a level-colored chip.
+- 6392023: `logFilter` now takes `include` and `exclude` globs on the request pathname, so health checks, metrics and static assets can stay out of your logs, or only `/api/**` can be logged. A request that matches `exclude`, or misses a non-empty `include`, writes nothing: no access line, no `log.*` lines from its handler, no error line and no WebSocket lines for its path. `exclude` wins over `include`. The globs are the ones `sampling.tail.paths` already uses, they are compiled once at startup, and a value that is not an array of non-empty glob strings throws an error naming the key. An excluded request skips log assembly, redaction and enrichers, so it costs a fraction of a logged one.
+- 573dc2d: Shorten the console line on a terminal and stop printing an error message twice.
+  
+  - When stdout is a TTY and you set neither `timestamp` nor `customLogFormat`, `{now}` prints local `HH:MM:ss.SSS` (`09:05:07.042`) in place of the full ISO date. Piped output, CI and Docker logs keep the ISO timestamp, and any `timestamp` or `customLogFormat` you set keeps working as before.
+  - A failed request no longer repeats its message as an `error` row in the tree when the main line already ends with it. The row still appears when your format leaves out `{message}` or the logged message differs from the error's.
+
+### Patch Changes
+
+- b927e60: Show the `cause` chain of a logged error in the console. Each cause prints under the error as `Caused by: <name>: <message>`, up to three levels deep, with the same redaction as the error message. Transports already received the cause and are unchanged.
+- 4e44611: Make `autoRedact` cheaper on every request. A request URL with no userinfo, query, fragment or escape is checked as text and parsed only when part of it would change, and the answer to whether a field name is sensitive is kept per name. The redacted output is the same. A request through the `prod` preset takes about a fifth less time.
+- b9e6a69: Honor the `NO_COLOR` environment variable. When it is set to a non-empty value, the console line is printed without colors on an interactive terminal too, as it is with `useColors: false`, and the pino pretty stream stops colorizing.
+- 25f3c9d: Importing the plugin no longer loads `chalk`. It loads when a text logger is created on a terminal, so a server without one, or one that logs JSON, never pays for it. Colors, and when they turn on, are unchanged. Measured on the built package after Elysia is loaded: 19.2 ms to 14.3 ms under Bun, 14.0 ms to 8.1 ms under Node. On Node before 22.12, which cannot `require` an ES module, terminal lines are no longer colored.
+- 3f962fa: Import logixlysia faster and install a smaller package. `pino` and `pino-pretty` now load the first time something needs them, so a config without `config.pino` and without `store.pino` use never pays for them. `store.pino` and `createLogger` behave as before, and an app bundled with `bun build`, `bun build --compile`, esbuild or Vite still contains pino. The published files no longer embed inline sourcemaps, which cuts the packed tarball from about 233 kB to about 79 kB.
+- c7ae0b3: Importing the plugin is cheaper. It no longer loads `node:http` for the status reason phrases, and it loads `node:zlib` only when a rotated log file is compressed. Measured on the built package after Elysia is loaded: 30.5 ms to 18.6 ms under Bun, 27.4 ms to 13.2 ms under Node.
+- 5180e0c: `log` is now defined in handlers of an app that mounts logixlysia through a shared setup plugin (`new Elysia({ name: 'setup' }).use(logixlysia())`), at any depth. Before, TypeScript showed `log` but the handler threw `undefined is not an object` and the request answered 500. The same holds for `group` and `guard` routes, `onError` handlers and `ws.data.log` in WebSocket handlers. A module that mounts its own instance still gets that instance's `log`, and each request is still logged once.
+- b10b6a3: The README quick start now shows logging from a handler with `({ log })` and the output it prints, and links the agent skill the repo ships.
+- b765685: An AI stream that the client cancels after reading its finish chunk is recorded with its usage and finish reason, instead of leaving no trace. A cancel before the finish chunk still records nothing.
+- 9552618: Redact a card number written one digit at a time, such as `4 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1`, and a card that follows another number, such as `id 12 4111 1111 1111 1111`. Both were left in the log before.
+- b24497d: With `autoRedact` on, which `preset: 'prod'` turns on, each log line costs less CPU. Request headers are redacted only when the log format prints one (the `{ip}` token). The built-in patterns skip text that cannot contain a match. What gets redacted is unchanged.
+- fb0d3c2: `useLogger()` now prints one warning to stderr the first time it falls back to a logger that writes nothing because the plugin was created without `useAsyncLocalStorage: true`. The warning names the option. It never prints in production (`NODE_ENV === 'production'`) or when any plugin has the option on. The fallback logger behaves as before.
+
 ## 6.13.0
 
 ### Minor Changes
