@@ -844,18 +844,21 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
         loggerStorage.enterWith(getRequestScopedLogger(request))
       }
     })
-    .onAfterHandle(({ request, set, response }) => {
+    .onAfterHandle(({ request, response, responseValue, set }) => {
+      // Elysia 2 fills only `responseValue`, and 1.x with `aot: false` only
+      // `response`.
+      const handled = responseValue ?? response
       const record = openRecord(request)
       if (!record.seenByWrap) {
         finishUnwrapped(
           request,
           record,
-          resolveHandledStatus(set.status, response),
-          response instanceof Response ? response.headers : undefined
+          resolveHandledStatus(set.status, handled),
+          handled instanceof Response ? handled.headers : undefined
         )
         return
       }
-      const wrapped = wrapStream(request, record, response)
+      const wrapped = wrapStream(request, record, handled)
       if (wrapped !== undefined) {
         return wrapped
       }
