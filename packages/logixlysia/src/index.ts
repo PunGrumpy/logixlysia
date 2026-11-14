@@ -15,6 +15,7 @@ import {
 import { startServer } from './extensions'
 import {
   getStatusCode,
+  asStatusResponse,
   isStatusResponse,
   levelForStatus
 } from './helpers/status'
@@ -73,8 +74,9 @@ const resolveHandledStatus = (
   setStatus: unknown,
   response: unknown
 ): number => {
-  if (isStatusResponse(response)) {
-    return response.code
+  const statusResponse = asStatusResponse(response)
+  if (statusResponse) {
+    return statusResponse.code
   }
 
   if (response instanceof Response && response.status !== DEFAULT_STATUS) {

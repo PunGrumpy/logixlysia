@@ -37,25 +37,48 @@ const STATUS_BY_NORMALIZED_NAME = (() => {
 
 /**
  * What Elysia's `status(code, body)` returns or throws: a numeric `code` and
- * the `response` body. Matched by the class name Elysia's own `mapResponse`
- * checks rather than by `instanceof`, so it still works when the app
- * resolves a second copy of Elysia, and a plain object with the same keys
- * (an API envelope, say) never matches.
+ * the `response` body.
  */
 export interface StatusResponseLike {
   code: number
   response: unknown
 }
 
-export const isStatusResponse = (value: unknown): value is StatusResponseLike =>
-  typeof value === 'object' &&
-  value !== null &&
-  !(value instanceof Error) &&
-  (value as { constructor?: { name?: string } }).constructor?.name ===
-    'ElysiaCustomStatusResponse' &&
-  'code' in value &&
-  typeof value.code === 'number' &&
-  'response' in value
+/**
+ * Reads a `status()` result from either Elysia line: 1.x builds an
+ * `ElysiaCustomStatusResponse` with `code`, 2.x an `ElysiaStatus` with
+ * `status` and no `response` for a bodiless code. Matched by the class name
+ * Elysia's own `mapResponse` checks rather than by `instanceof`, so it still
+ * works when the app resolves a second copy of Elysia, and a plain object
+ * with the same keys (an API envelope, say) never matches.
+ */
+export const asStatusResponse = (
+  value: unknown
+): StatusResponseLike | undefined => {
+  if (typeof value !== 'object' || value === null || value instanceof Error) {
+    return
+  }
+  const fields = value as {
+    code?: unknown
+    constructor?: { name?: string }
+    response?: unknown
+    status?: unknown
+  }
+  const className = fields.constructor?.name
+  if (
+    className === 'ElysiaCustomStatusResponse' &&
+    typeof fields.code === 'number' &&
+    'response' in value
+  ) {
+    return value as StatusResponseLike
+  }
+  if (className === 'ElysiaStatus' && typeof fields.status === 'number') {
+    return { code: fields.status, response: fields.response }
+  }
+}
+
+export const isStatusResponse = (value: unknown): boolean =>
+  asStatusResponse(value) !== undefined
 
 export const getStatusCode = (value: unknown): number => {
   if (typeof value === 'number' && Number.isFinite(value)) {

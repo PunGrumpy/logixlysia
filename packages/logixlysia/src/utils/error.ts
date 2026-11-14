@@ -1,4 +1,4 @@
-import { isStatusResponse } from '../helpers/status'
+import { asStatusResponse } from '../helpers/status'
 import { toText } from './sanitize'
 import { STATUS_TEXT } from './status-text'
 
@@ -108,13 +108,15 @@ export const normalizeLoggedError = (
     return safe
   }
 
-  if (isStatusResponse(error)) {
+  const statusResponse = asStatusResponse(error)
+  if (statusResponse) {
+    const { code, response } = statusResponse
     const message =
-      typeof error.response === 'string' && error.response !== ''
-        ? error.response
-        : (STATUS_TEXT[error.code] ?? `HTTP ${error.code}`)
+      typeof response === 'string' && response !== ''
+        ? response
+        : (STATUS_TEXT[code] ?? `HTTP ${code}`)
     return {
-      error: { message, name: 'StatusResponse', status: error.code },
+      error: { message, name: 'StatusResponse', status: code },
       message
     }
   }
