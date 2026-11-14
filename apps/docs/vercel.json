@@ -4,8 +4,9 @@
   "framework": null,
   "git": {
     "deploymentEnabled": {
-      "changeset-release/main": false,
-      "changesets-ghcommit-temp/changeset-release/main": false
+      "changeset-release/**": false,
+      "changesets-ghcommit-temp/**": false,
+      "dependabot/**": false
     }
   },
   "ignoreCommand": "node scripts/skip-ci.mjs",
