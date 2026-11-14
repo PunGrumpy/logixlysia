@@ -84,6 +84,26 @@ logixlysia({
 })
 ```
 
+## `🧪` Testing
+
+Assert on what a route logs with the in-memory transport from `logixlysia/testing`:
+
+```ts
+import { Elysia } from 'elysia'
+import logixlysia from 'logixlysia'
+import { createMemoryTransport } from 'logixlysia/testing'
+
+const memory = createMemoryTransport()
+const app = new Elysia().use(
+  logixlysia({ config: { transports: [memory], useTransportsOnly: true } })
+)
+
+await app.handle(new Request('http://localhost/orders/42'))
+
+memory.last() // { level, message, method, path, status, durationMs, requestId, context, error }
+await memory.waitFor(record => record.message === 'order loaded')
+```
+
 ## `✨` Features
 
 - **Request context**: accumulate fields with `mergeContext` into a context tree. [Docs](https://logixlysia.vercel.app/docs/features/request-context)
@@ -96,6 +116,7 @@ logixlysia({
 - **Structured errors**: `HttpError` carries `why`, `fix`, and `link`. [Docs](https://logixlysia.vercel.app/docs/api-reference)
 - **Request IDs**: read from the incoming request or generated, when `requestId` is on (the `prod` preset turns it on). [Docs](https://logixlysia.vercel.app/docs/features/request-id)
 - **OpenTelemetry**: trace correlation and AI usage metrics on the access log. [Docs](https://logixlysia.vercel.app/docs/integrations/otel)
+- **Testing**: `logixlysia/testing` keeps typed, redacted records in memory so a test can assert on what a route logged. [Docs](https://logixlysia.vercel.app/docs/features/testing)
 - **WebSocket logging**: lifecycle logs via `wrapWs`. [Docs](https://logixlysia.vercel.app/docs/features/websocket)
 
 ## `📚` Documentation
