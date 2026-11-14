@@ -205,6 +205,76 @@ const REQUESTS: {
       url: 'http://h/p'
     },
     url: 'http://h/p#'
+  },
+  {
+    headers: {},
+    method: 'GET',
+    redacted: { headers: [], method: 'GET', url: 'http://h/p?page=2&sort=asc' },
+    url: 'http://h/p?page=2&sort=asc'
+  },
+  {
+    headers: {},
+    method: 'GET',
+    redacted: {
+      headers: [],
+      method: 'GET',
+      url: 'http://h/p?token=redacted&page=2'
+    },
+    url: 'http://h/p?token=abc&page=2'
+  },
+  {
+    headers: {},
+    method: 'GET',
+    redacted: { headers: [], method: 'GET', url: 'http://h/p?token=redacted' },
+    url: 'http://h/p?token'
+  },
+  {
+    headers: {},
+    method: 'GET',
+    redacted: { headers: [], method: 'GET', url: 'http://h/p?a=1&&b=2' },
+    url: 'http://h/p?a=1&&b=2'
+  },
+  {
+    headers: {},
+    method: 'GET',
+    redacted: {
+      headers: [],
+      method: 'GET',
+      url: 'http://h/p?ip=%5BREDACTED%5D&q=1'
+    },
+    url: 'http://h/p?ip=10.0.0.1&q=1'
+  },
+  {
+    headers: {},
+    method: 'GET',
+    redacted: {
+      headers: [],
+      method: 'GET',
+      url: 'http://h/p?card=%5BREDACTED%5D'
+    },
+    url: 'http://h/p?card=4111-1111-1111-1111'
+  },
+  {
+    headers: {},
+    method: 'GET',
+    redacted: {
+      headers: [],
+      method: 'GET',
+      url: 'http://h/p?note=%5BREDACTED%5D&q=1'
+    },
+    url: 'http://h/p?note=cust_abc&q=1'
+  },
+  {
+    headers: {},
+    method: 'GET',
+    redacted: { headers: [], method: 'GET', url: 'http://h/p?q=a=b=c' },
+    url: 'http://h/p?q=a=b=c'
+  },
+  {
+    headers: {},
+    method: 'GET',
+    redacted: { headers: [], method: 'GET', url: 'http://h/p?v=1.2.3&q=x-y_z' },
+    url: 'http://h/p?v=1.2.3&q=x-y_z'
   }
 ]
 

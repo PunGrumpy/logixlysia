@@ -443,10 +443,13 @@ const redactRequestUrl = (urlString: string, rules?: RedactRules): string => {
 
 /**
  * A URL the parser gives back as written: a lower-case scheme and host, an
- * optional port, and a path of characters it neither escapes nor moves.
+ * optional port, a path of characters it neither escapes nor moves, and a
+ * query of characters it leaves alone.
  */
+/* oxlint-disable prefer-named-capture-group -- a named group builds a `groups` object per match */
 const PLAIN_URL_REGEX =
-  /^http(?<secure>s?):\/\/(?<host>[a-z0-9._-]+)(?::(?<port>[1-9]\d{0,4}))?\/(?<path>[\w.~!$&'()*+,;=:/-]*)$/u
+  /^http(s?):\/\/([a-z0-9._-]+)(?::([1-9]\d{0,4}))?\/([\w.~!$&'()*+,;=:/-]*)(?:\?([\w.~=&-]+))?$/u
+/* oxlint-enable prefer-named-capture-group */
 /** A last label the parser reads as a number, or a label it decodes. */
 const REWRITTEN_HOST_REGEX = /(?:^|\.)\d[^.]*\.?$|xn--/u
 const DOT_SEGMENT_REGEX = /(?:^|\/)\.\.?(?:\/|$)/u
@@ -463,14 +466,35 @@ const isPortKept = (port: string | undefined, secure: boolean): boolean => {
 }
 
 /**
- * Most request URLs have no userinfo, query, fragment or escape. Such a URL is
- * a host and plain path segments, so each is checked as text and the URL is
- * parsed only when one of them would change. A server can hand over a request
- * line it did not normalise, so only a URL that parsing leaves as written
- * takes this path.
+ * A query of characters the parser neither escapes nor decodes (no `%` or
+ * `+`), so each name and value is read as written. The masking decision is
+ * the one `redactSearchParams` makes; any pair it would change sends the URL
+ * through the full parse.
+ */
+const isQueryUnchanged = (query: string, rules?: RedactRules): boolean => {
+  for (const pair of query.split('&')) {
+    const equals = pair.indexOf('=')
+    const name = equals === -1 ? pair : pair.slice(0, equals)
+    const value = equals === -1 ? '' : pair.slice(equals + 1)
+    if (
+      isSensitiveKey(name, rules?.keys) ||
+      redactString(value, rules?.patterns) !== value
+    ) {
+      return false
+    }
+  }
+  return true
+}
+
+/**
+ * Most request URLs have no userinfo, fragment or escape. Such a URL is a host,
+ * plain path segments and perhaps a plain query, so each is checked as text
+ * and the URL is parsed only when one of them would change. A server can hand
+ * over a request line it did not normalise, so only a URL that parsing leaves
+ * as written takes this path.
  */
 const redactSerializedUrl = (url: string, rules?: RedactRules): string => {
-  const { secure, host, port, path } = PLAIN_URL_REGEX.exec(url)?.groups ?? {}
+  const [, secure, host, port, path, query] = PLAIN_URL_REGEX.exec(url) ?? []
   const isPlain =
     host !== undefined &&
     path !== undefined &&
@@ -484,6 +508,9 @@ const redactSerializedUrl = (url: string, rules?: RedactRules): string => {
     if (redactString(part, rules?.patterns) !== part) {
       return redactRequestUrl(url, rules)
     }
+  }
+  if (query !== undefined && !isQueryUnchanged(query, rules)) {
+    return redactRequestUrl(url, rules)
   }
   return url
 }
