@@ -1,4 +1,4 @@
-import { isStatusResponse } from '../helpers/status'
+import { asStatusResponse } from '../helpers/status'
 import { toText } from './sanitize'
 import { STATUS_TEXT } from './status-text'
 
@@ -50,17 +50,94 @@ export interface NormalizedLoggedError {
   message: string
 }
 
+const isElysia2ValidationShape = (value: Error): boolean => {
+  const { code, errors, type } = value as {
+    code?: unknown
+    errors?: unknown
+    type?: unknown
+  }
+  return (
+    code === 'validation' && typeof type === 'string' && Array.isArray(errors)
+  )
+}
+
 const isValidationErrorLike = (
   value: unknown
-): value is Error & { all?: unknown[]; status?: number; type?: string } =>
+): value is Error & {
+  all?: unknown[]
+  errors?: unknown
+  status?: number
+  type?: string
+  value?: unknown
+} =>
   value instanceof Error &&
   // `code` is Elysia's minification-safe discriminant — `.name` and
   // `.constructor.name` both degrade to a mangled string under bundler
   // minification (e.g. `bun build --minify`, esbuild), so `code` must be
   // checked too or validation bodies silently re-leak in that build mode.
+  // Elysia 1.x spells it `VALIDATION`, 2.x `validation`; an app's own error
+  // may use the lowercase one too, so 2.x's also needs Elysia's own fields.
   ((value as { code?: unknown }).code === 'VALIDATION' ||
+    isElysia2ValidationShape(value) ||
     value.name === 'ValidationError' ||
     value.constructor?.name === 'ValidationError')
+
+const pathOf = (failure: unknown, key: string): string => {
+  if (typeof failure !== 'object' || failure === null || !(key in failure)) {
+    return ''
+  }
+  return String((failure as Record<string, unknown>)[key])
+}
+
+const pointerSegment = (segment: unknown): string => {
+  const key =
+    typeof segment === 'object' && segment !== null && 'key' in segment
+      ? (segment as { key: unknown }).key
+      : segment
+  return String(key).replaceAll('~', '~0').replaceAll('/', '~1')
+}
+
+/**
+ * A TypeBox failure carries its JSON Pointer as `instancePath`; a Standard
+ * Schema issue (Zod, Valibot, ArkType) gives its location as an array of
+ * keys, which is turned into the same pointer.
+ */
+const pointerOf = (failure: unknown): string => {
+  const pointer = pathOf(failure, 'instancePath')
+  if (pointer || typeof failure !== 'object' || failure === null) {
+    return pointer
+  }
+  const { path } = failure as { path?: unknown }
+  return Array.isArray(path) && path.length > 0
+    ? `/${path.map(pointerSegment).join('/')}`
+    : ''
+}
+
+/**
+ * JSON Pointers to the values that failed. Elysia 1.x gives them as each
+ * failure's `path`; 2.x writes a dotted `path` that cannot tell a nested
+ * key from one containing a dot, and keeps the pointer on `errors`.
+ */
+const failedPaths = (error: { all?: unknown[]; errors?: unknown }): string[] =>
+  Array.isArray(error.errors)
+    ? error.errors.map(pointerOf).filter(Boolean)
+    : (Array.isArray(error.all) ? error.all : [])
+        .map(failure => pathOf(failure, 'path'))
+        .filter(Boolean)
+
+/**
+ * Elysia 1.x puts a validation error's payload in its message; 2.x keeps it
+ * on the error, so it is copied over only when the payload is wanted.
+ */
+const addValidationPayload = (
+  safe: Record<string, unknown>,
+  error: Error
+): void => {
+  if (isValidationErrorLike(error) && Array.isArray(error.errors)) {
+    safe.found = error.value
+    safe.errors = error.errors
+  }
+}
 
 const STRUCTURED_ERROR_KEYS = [
   'code',
@@ -108,26 +185,21 @@ export const normalizeLoggedError = (
     return safe
   }
 
-  if (isStatusResponse(error)) {
+  const statusResponse = asStatusResponse(error)
+  if (statusResponse) {
+    const { code, response } = statusResponse
     const message =
-      typeof error.response === 'string' && error.response !== ''
-        ? error.response
-        : (STATUS_TEXT[error.code] ?? `HTTP ${error.code}`)
+      typeof response === 'string' && response !== ''
+        ? response
+        : (STATUS_TEXT[code] ?? `HTTP ${code}`)
     return {
-      error: { message, name: 'StatusResponse', status: error.code },
+      error: { message, name: 'StatusResponse', status: code },
       message
     }
   }
 
   if (isValidationErrorLike(error) && !logErrorPayload) {
-    const failures = Array.isArray(error.all) ? error.all : []
-    const paths = failures
-      .map(failure =>
-        typeof failure === 'object' && failure !== null && 'path' in failure
-          ? String((failure as { path: unknown }).path)
-          : ''
-      )
-      .filter(Boolean)
+    const paths = failedPaths(error)
     const scope = typeof error.type === 'string' ? error.type : 'request'
     const message =
       paths.length > 0
@@ -162,6 +234,7 @@ export const normalizeLoggedError = (
     if (!isClientError && error.stack !== undefined) {
       safe.stack = error.stack
     }
+    addValidationPayload(safe, error)
     return {
       error: withCause(safe, error as unknown as Record<string, unknown>),
       message: parseError(error)

@@ -61,6 +61,64 @@ jobs:
           CI: true
         run: ${{ matrix.command }}
 
+  elysia-2:
+    name: Test on Elysia ${{ matrix.tag }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        tag:
+          - next
+          - rc
+    steps:
+      - name: 🛫 Checkout Code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: 🍞 Setup Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: package.json
+      - name: 🌵 Cache Bun
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.bun/install/cache
+            .turbo
+          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}-
+            ${{ runner.os }}-bun-
+      - name: 🔽 Install Dependencies
+        run: bun install --frozen-lockfile
+      - name: 🏷️ Resolve Elysia ${{ matrix.tag }}
+        id: elysia
+        env:
+          TAG: ${{ matrix.tag }}
+        run: |
+          version=$(npm view "elysia@$TAG" version)
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          if [ "$TAG" != next ] && [ "$version" = "$(npm view elysia@next version)" ]; then
+            echo "Elysia $TAG is $version, the same as next"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: 📦 Install Elysia ${{ steps.elysia.outputs.version }}
+        if: steps.elysia.outputs.skip != 'true'
+        working-directory: packages/logixlysia
+        env:
+          VERSION: ${{ steps.elysia.outputs.version }}
+        run: bun add --dev "elysia@$VERSION" "exact-mirror@^1.2.7"
+      - name: 🦊 Build Logixlysia
+        if: steps.elysia.outputs.skip != 'true'
+        run: bun run build --filter logixlysia
+      # No typecheck: the package's types are written against Elysia 1.4.
+      - name: 🔍 Run Test
+        if: steps.elysia.outputs.skip != 'true'
+        working-directory: packages/logixlysia
+        env:
+          CI: true
+        run: bun test
+
   demo-smoke:
     name: Playground smoke
     runs-on: ubuntu-latest

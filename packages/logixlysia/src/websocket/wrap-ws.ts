@@ -6,9 +6,12 @@ import type { PathFilter } from '../logger/path-filter'
 import { syntheticRequest } from '../utils/synthetic-request'
 
 export interface WebSocketLike {
+  /** Elysia 1.x hands a socket its context here. */
   readonly data?: { store?: { logger?: Logger } }
   readonly id?: string
   readonly raw?: object
+  /** Elysia 2 puts the context on the socket itself. */
+  readonly store?: { logger?: Logger }
 }
 
 export interface WsHandlerHooks<

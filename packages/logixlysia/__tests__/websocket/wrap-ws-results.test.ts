@@ -4,6 +4,7 @@ import type { AnyElysia } from 'elysia'
 import { logixlysia } from '../../src'
 import type { WsHandlerHooks } from '../../src/websocket/wrap-ws'
 import { awaitOpen } from '../_helpers/await-open'
+import { websocketCapability } from '../_helpers/elysia'
 import { sleep } from '../_helpers/sleep'
 import { waitFor } from '../_helpers/wait-for'
 
@@ -51,6 +52,7 @@ afterAll(() => {
 
 const serve = (path: string, hooks: WsHandlerHooks): string => {
   app = new Elysia()
+    .use(websocketCapability())
     .use(plugin)
     .onError(({ error }) => {
       errors.push(error)

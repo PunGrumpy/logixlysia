@@ -3,6 +3,7 @@ import { Elysia } from 'elysia'
 import { logixlysia } from '../../src'
 import type { Options } from '../../src/interfaces'
 import { awaitOpen } from '../_helpers/await-open'
+import { websocketCapability, wsContext } from '../_helpers/elysia'
 import { sleep } from '../_helpers/sleep'
 import { waitFor } from '../_helpers/wait-for'
 
@@ -108,10 +109,11 @@ describe('logixlysia plugin - installed through a setup plugin', () => {
     const capture = createCaptureTransport()
     const setup = new Elysia({ name: 'setup' }).use(logixlysia(capture.options))
     const app = new Elysia()
+      .use(websocketCapability())
       .use(setup)
       .ws('/ws', {
         open(ws) {
-          ws.data.log.info('from the socket')
+          wsContext(ws).log.info('from the socket')
         }
       })
       .listen(0)

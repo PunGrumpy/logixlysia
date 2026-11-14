@@ -8,6 +8,7 @@ import {
 } from '../../src/enrichers'
 import { HttpError } from '../../src/interfaces'
 import type { Options } from '../../src/interfaces'
+import { isElysia2 } from '../_helpers/elysia'
 
 const TRACE_ID = '4bf92f3577b34da6a3ce929d0e0e4736'
 const SPAN_ID = '00f067aa0ba902b7'
@@ -270,7 +271,8 @@ describe('enrichers through the plugin', () => {
       [
         'an array set-cookie yields to the returned Response',
         () => new Response('body', { headers: { 'set-cookie': 'a=1' } }),
-        ['a=1']
+        // Elysia 2 sends the `set.headers` cookies alongside the Response's.
+        isElysia2 ? ['a=1', 'b=2', 'c=3'] : ['a=1']
       ],
       [
         'an array set-cookie is split without a Response',

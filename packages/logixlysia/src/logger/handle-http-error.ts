@@ -1,5 +1,9 @@
 import type { RequestContextStore } from '../context/request-context'
-import { isStatusResponse, levelForStatus } from '../helpers/status'
+import {
+  asStatusResponse,
+  isStatusResponse,
+  levelForStatus
+} from '../helpers/status'
 import type { LogLevel, Options, RequestInfo, StoreData } from '../interfaces'
 import type { SamplingRuntime } from '../sampling'
 import { normalizeLoggedError } from '../utils/error'
@@ -16,8 +20,9 @@ const isErrorWithStatus = (
   typeof (value as { status?: unknown }).status === 'number'
 
 export const errorStatus = (error: unknown): number => {
-  if (isStatusResponse(error)) {
-    return error.code
+  const statusResponse = asStatusResponse(error)
+  if (statusResponse) {
+    return statusResponse.code
   }
   return isErrorWithStatus(error) ? error.status : 500
 }

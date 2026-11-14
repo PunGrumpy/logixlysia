@@ -1,6 +1,8 @@
 [test]
 coverage = true
-# Build config that the API-surface test imports, not library code.
-coveragePathIgnorePatterns = ["bunup.config.ts"]
+# Build config that the API-surface test imports, not library code. The
+# test helpers branch on the installed Elysia line, so part of them never
+# runs in a given suite.
+coveragePathIgnorePatterns = ["bunup.config.ts", "__tests__/_helpers/**"]
 coverageSkipTestFiles = true
 coverageThreshold = { lines = 0.80, functions = 0.70 }

@@ -3,6 +3,7 @@ import { Elysia } from 'elysia'
 import { logixlysia } from '../../src'
 import type { Options } from '../../src'
 import { spyConsole } from '../_helpers/console'
+import { isElysia2 } from '../_helpers/elysia'
 
 const printedFor = async (
   thrown: () => never,
@@ -48,10 +49,14 @@ test('a 404 prints NOT_FOUND once on the line and keeps error.code', async () =>
     )
     await app.handle(new Request('http://localhost/missing'))
     const text = String(spies.warn.mock.calls[0]?.[0])
+    // Elysia 2 names the error `not-found` and gives it its own message.
+    const [message, code] = isElysia2
+      ? ['Not Found', 'not-found']
+      : ['NOT_FOUND', 'NOT_FOUND']
 
     expect(text.split('\n')).toEqual([
-      expect.stringMatching(/ 404 \S+ NOT_FOUND$/u),
-      '  └─ error.code  NOT_FOUND'
+      expect.stringMatching(new RegExp(` 404 \\S+ ${message}$`, 'u')),
+      `  └─ error.code  ${code}`
     ])
   } finally {
     restore()
