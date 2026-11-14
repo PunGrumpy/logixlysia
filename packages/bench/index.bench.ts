@@ -292,6 +292,52 @@ suite('Elysia request path reference (no logger)', [
   ]
 ])
 
+const discard = (): void => {
+  // The transport is timed, not read.
+}
+
+const noopTransport = {
+  transports: [{ log: discard }],
+  useTransportsOnly: true
+}
+
+const structuredApp = (preset: 'json' | 'prod') =>
+  new Elysia()
+    .use(logixlysia({ config: noopTransport, preset }))
+    .get('/users/:id/orders', () => 'ok')
+
+const structuredProdApp = structuredApp('prod')
+const structuredJsonApp = structuredApp('json')
+
+const structuredCase = (label: string, app: Handler, target: string): Case => [
+  label,
+  async () => {
+    await app.handle(new Request(target))
+  }
+]
+
+// One sync no-op transport and nothing awaited after the response, so this is
+// the plugin's own cost from request start to the record handed to the
+// transport. A host with a dot and a query are what real traffic has, and
+// what `autoRedact` (on in `prod`) has to read.
+suite('Elysia plugin request path — structured sink', [
+  structuredCase(
+    'prod, host and path',
+    structuredProdApp,
+    'http://api.example.com/users/42/orders'
+  ),
+  structuredCase(
+    'prod, host, path and query',
+    structuredProdApp,
+    'http://api.example.com/users/42/orders?page=2&sort=asc'
+  ),
+  structuredCase(
+    'json, host, path and query',
+    structuredJsonApp,
+    'http://api.example.com/users/42/orders?page=2&sort=asc'
+  )
+])
+
 const benchLogDir = mkdtempSync(path.join(tmpdir(), 'logixlysia-bench-'))
 
 // Only logixlysia writes a file, and the file write is not awaited, so this
