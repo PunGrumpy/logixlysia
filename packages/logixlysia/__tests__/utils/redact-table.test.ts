@@ -14,6 +14,12 @@ const STRINGS: [input: string, redacted: string][] = [
   ],
   ['2026-11-12T05:39:55.808Z', '2026-11-12T05:39:55.808Z'],
   ['version 1.2.3.4.5', 'version 1.2.3.4.5'],
+  ['api.example.com', 'api.example.com'],
+  ['v1.2.3', 'v1.2.3'],
+  ['host-1.2.3.4', 'host-[REDACTED]'],
+  ['256.1.1.1', '256.1.1.1'],
+  ['a.1.2.3.4b', 'a.1.2.3.4b'],
+  ['x 10.0.0.1.', 'x 10.0.0.1.'],
   ['host:3000', 'host:3000'],
   ['user@example.com wrote', '[REDACTED] wrote'],
   ['contact user@example.com today', 'contact [REDACTED] today'],
@@ -41,6 +47,15 @@ const STRINGS: [input: string, redacted: string][] = [
   ['4111 1111 1111 1111x', '4111 1111 1111 1111x'],
   ['4111 1111 1111 1111 x', '[REDACTED] x'],
   ['4111111111111112', '4111111111111112'],
+  [
+    'c861a892-3269-4521-94f6-9c9cb222bee8',
+    'c861a892-3269-4521-94f6-9c9cb222bee8'
+  ],
+  ['892-3269-4521-94', '[REDACTED]'],
+  ['a4111111111111111', 'a4111111111111111'],
+  ['4111-1111-1111-1111', '[REDACTED]'],
+  [`${'x'.repeat(300)} 4111111111111111`, `${'x'.repeat(300)} [REDACTED]`],
+  [`${'x'.repeat(300)}.${'4111111111111111'}`, `${'x'.repeat(300)}.[REDACTED]`],
   ['order 1234567890123 total', 'order 1234567890123 total'],
   ['eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIn0.sig-_x', '[REDACTED]'],
   [
@@ -196,6 +211,76 @@ const REQUESTS: {
       url: 'http://h/p'
     },
     url: 'http://h/p#'
+  },
+  {
+    headers: {},
+    method: 'GET',
+    redacted: { headers: [], method: 'GET', url: 'http://h/p?page=2&sort=asc' },
+    url: 'http://h/p?page=2&sort=asc'
+  },
+  {
+    headers: {},
+    method: 'GET',
+    redacted: {
+      headers: [],
+      method: 'GET',
+      url: 'http://h/p?token=redacted&page=2'
+    },
+    url: 'http://h/p?token=abc&page=2'
+  },
+  {
+    headers: {},
+    method: 'GET',
+    redacted: { headers: [], method: 'GET', url: 'http://h/p?token=redacted' },
+    url: 'http://h/p?token'
+  },
+  {
+    headers: {},
+    method: 'GET',
+    redacted: { headers: [], method: 'GET', url: 'http://h/p?a=1&&b=2' },
+    url: 'http://h/p?a=1&&b=2'
+  },
+  {
+    headers: {},
+    method: 'GET',
+    redacted: {
+      headers: [],
+      method: 'GET',
+      url: 'http://h/p?ip=%5BREDACTED%5D&q=1'
+    },
+    url: 'http://h/p?ip=10.0.0.1&q=1'
+  },
+  {
+    headers: {},
+    method: 'GET',
+    redacted: {
+      headers: [],
+      method: 'GET',
+      url: 'http://h/p?card=%5BREDACTED%5D'
+    },
+    url: 'http://h/p?card=4111-1111-1111-1111'
+  },
+  {
+    headers: {},
+    method: 'GET',
+    redacted: {
+      headers: [],
+      method: 'GET',
+      url: 'http://h/p?note=%5BREDACTED%5D&q=1'
+    },
+    url: 'http://h/p?note=cust_abc&q=1'
+  },
+  {
+    headers: {},
+    method: 'GET',
+    redacted: { headers: [], method: 'GET', url: 'http://h/p?q=a=b=c' },
+    url: 'http://h/p?q=a=b=c'
+  },
+  {
+    headers: {},
+    method: 'GET',
+    redacted: { headers: [], method: 'GET', url: 'http://h/p?v=1.2.3&q=x-y_z' },
+    url: 'http://h/p?v=1.2.3&q=x-y_z'
   }
 ]
 
