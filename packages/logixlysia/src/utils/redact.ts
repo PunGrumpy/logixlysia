@@ -289,14 +289,33 @@ const endsWithUrlScheme = (text: string, end: number): boolean => {
   return false
 }
 
+/**
+ * Text with none of these cannot hold what a rule below matches: each needs a
+ * `:`, `@`, `.` or whitespace, or, for a card, a digit run (see
+ * `DIGIT_RUN_REGEX`) with 13 digits. Request ids, methods and path segments
+ * rarely have any.
+ */
+const MAY_HOLD_SECRET_REGEX = /[:@.\s]|\b(?:\d[ -]*){13}/u
+/** The test is linear but not free, so only short text takes it. */
+const MAY_HOLD_SECRET_MAX_LENGTH = 256
+
 export const redactString = (
   text: string,
   patterns?: readonly RegExp[]
 ): string => {
   let result = text
 
-  for (const pattern of patterns ?? []) {
-    result = result.replaceAll(pattern, REDACTED_TEXT)
+  if (patterns !== undefined) {
+    for (const pattern of patterns) {
+      result = result.replaceAll(pattern, REDACTED_TEXT)
+    }
+  }
+
+  if (
+    result.length <= MAY_HOLD_SECRET_MAX_LENGTH &&
+    !MAY_HOLD_SECRET_REGEX.test(result)
+  ) {
+    return result
   }
 
   // A pattern is skipped only when the text lacks what every match contains.
