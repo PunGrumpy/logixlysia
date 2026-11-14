@@ -102,6 +102,11 @@ const createLazyPino = (
   const target = { level: undefined } as unknown as Pino
   const lazyPino = new Proxy(target, {
     get(_target, prop) {
+      // Elysia reads the tag to decide whether to merge a later plugin's
+      // state into this object; a tagged value is stored by reference.
+      if (prop === Symbol.toStringTag) {
+        return 'Pino'
+      }
       const real = getPino()
       const value = (real as unknown as Record<string | symbol, unknown>)[prop]
       return typeof value === 'function'

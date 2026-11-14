@@ -456,6 +456,11 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
     }
   }
 
+  // Elysia 2 deep-merges a later instance's state into an earlier one's
+  // object of the same key, which would swap this logger's methods for the
+  // later instance's. A tagged object is stored by reference instead.
+  Object.defineProperty(logger, Symbol.toStringTag, { value: 'Logixlysia' })
+
   const requestLoggers = new WeakMap<Request, RequestScopedLogger>()
 
   const getRequestScopedLogger = (request: Request): RequestScopedLogger => {
