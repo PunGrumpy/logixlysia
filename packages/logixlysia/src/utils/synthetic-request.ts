@@ -6,8 +6,18 @@ export const labelRequest = (request: Request, method: string): Request =>
     ? request
     : Object.defineProperty(request, 'method', { value: method })
 
+const jobRequests = new WeakSet<Request>()
+
+/** True only for a request `runJob` made; a client can send any method, `JOB` included. */
+export const isJobRequest = (request: Request): boolean =>
+  jobRequests.has(request)
+
 export const syntheticRequest = (method: string, path: string): Request => {
   const url = new URL(SYNTHETIC_ORIGIN)
   url.pathname = path
-  return labelRequest(new Request(url), method)
+  const request = labelRequest(new Request(url), method)
+  if (method === 'JOB') {
+    jobRequests.add(request)
+  }
+  return request
 }

@@ -28,8 +28,8 @@ import type {
 } from './interfaces'
 import { createPluginLogger } from './logger'
 import {
+  isExcludedRequest,
   isSuppressed,
-  parseRequestUrlOnce,
   reportFormatError,
   resolveSinks
 } from './logger/emit'
@@ -47,6 +47,7 @@ import {
 import { resolveAccessLineFilter } from './sampling/access-line'
 import { elapsedMs } from './utils/duration'
 import { normalizeLoggedError } from './utils/error'
+import { parseRequestUrlOnce } from './utils/request-url'
 import { syntheticRequest } from './utils/synthetic-request'
 import { createWsHandlerWrapper } from './websocket/wrap-ws'
 
@@ -352,8 +353,14 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
     return record
   }
   const contextStore = createRequestContextStore()
-  const baseLogger = createPluginLogger(options, contextStore)
-  const wrapWs = createWsHandlerWrapper(options, baseLogger, contextStore)
+  const sinks = resolveSinks(options.config)
+  const baseLogger = createPluginLogger(options, contextStore, sinks)
+  const wrapWs = createWsHandlerWrapper(
+    options,
+    baseLogger,
+    contextStore,
+    sinks.pathFilter
+  )
   const requestIdConfig = resolveRequestIdConfig(
     options.config?.requestId,
     options.config?.onError
@@ -365,7 +372,8 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
   const hidesAccessLine = (request: Request, status: number): boolean =>
     status < CLIENT_ERROR_STATUS &&
     hidesAccessLinePath?.(parseRequestUrlOnce(request).pathname) === true
-  const sinks = resolveSinks(options.config)
+  const isExcluded = (request: Request): boolean =>
+    isExcludedRequest(sinks, request)
 
   const emitCustomLog = (
     level: LogLevel,
@@ -374,7 +382,7 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
     context?: Record<string, unknown>,
     error?: Record<string, unknown>
   ): void => {
-    if (isSuppressed(sinks, level, logFilter)) {
+    if (isSuppressed(sinks, level, logFilter, request)) {
       return
     }
 
@@ -433,6 +441,9 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
           emitCustomLog('ERROR', request, error, context)
           return
         }
+        if (isSuppressed(sinks, 'ERROR', logFilter, request)) {
+          return
+        }
         const normalized = normalizeLoggedError(
           error,
           options.config?.logErrorPayload === true
@@ -473,7 +484,7 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
       setHeaders[requestIdConfig.header] = requestId
     }
 
-    if (enrichers) {
+    if (enrichers && !isExcluded(request)) {
       applyRequestEnrichers(enrichers, contextStore, request, onSinkError)
     }
   }
@@ -507,7 +518,7 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
       beforeTime: record?.startedAt ?? 0n
     }
 
-    if (enrichers && enrichers.response.length > 0) {
+    if (enrichers && enrichers.response.length > 0 && !isExcluded(request)) {
       applyResponseEnrichers(
         enrichers,
         contextStore,
@@ -589,6 +600,9 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
         status,
         responseHeaders
       )
+      if (isExcluded(request)) {
+        return
+      }
       if (
         record.error !== undefined &&
         (status >= 400 || !isStatusResponse(record.error))

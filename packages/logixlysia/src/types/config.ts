@@ -57,6 +57,22 @@ export interface LogFilter {
    */
   level?: LogLevel[]
   /**
+   * Globs on the request pathname (no query string). When set, only requests
+   * matching one of them are logged, whatever the record: the access line,
+   * `log.*` calls in the handler, error lines and WebSocket lines. An empty
+   * array puts no limit on paths. Same globs as `sampling.tail.paths`: `**`
+   * crosses `/`, `*` and `?` do not.
+   *
+   * WebSocket lines match the path given to `wrapWs`, as written.
+   */
+  include?: string[]
+  /**
+   * Globs on the request pathname. A matching request writes no record at
+   * all, and does no work to build one. Beats `include`. Same globs as
+   * `include`.
+   */
+  exclude?: string[]
+  /**
    * Hides the access line for matching paths. `exclude` beats `include`. A
    * status of 400 or above, a thrown error and a handler's own log lines are
    * never hidden. Uses the globs of `sampling.tail.paths`.

@@ -1,9 +1,9 @@
 ---
 title: Log Filtering
-description: Filter logs by level, and hide the access line by path
+description: Filter logs by level, choose which routes are logged, and hide the access line by path
 ---
 
-`logFilter` restricts which log levels get processed with `level`, and hides the access line of chosen paths with `accessLine`.
+`logFilter` restricts which log levels get processed with `level`, chooses which routes are logged with `include` and `exclude`, and hides the access line of chosen paths with `accessLine`.
 
 ## Basic usage
 
@@ -24,6 +24,46 @@ Omit `logFilter`, or omit `level`, and every level is processed.
 ## Reducing volume
 
 `logFilter` only drops whole levels. To keep a percentage of records instead, or to rescue slow and failed requests that would otherwise be dropped, use [sampling](/docs/features/sampling), which supports head sampling per level and tail sampling by status, duration, or path.
+
+## Choosing which routes are logged
+
+Health checks, metrics scrapes and static assets can outnumber real traffic. `exclude` silences the routes you name, and `include` logs only the routes you name.
+
+```ts
+logixlysia({
+  config: {
+    logFilter: {
+      exclude: ['/health', '/metrics', '/assets/**']
+    }
+  }
+})
+```
+
+```ts
+logixlysia({
+  config: {
+    logFilter: {
+      include: ['/api/**'],
+      exclude: ['/api/internal/**']
+    }
+  }
+})
+```
+
+Both take the same globs as [`sampling.tail.paths`](/docs/features/sampling#path-globs): `**` crosses `/`, while `*` and `?` do not. They match the pathname only, so `/health?probe=1` is `/health`. Precedence, in order:
+
+- `exclude` beats `include`.
+- With a non-empty `include`, a path it does not match is not logged. That includes a request that no route answers, which is a `404` for a path outside `include`.
+- An empty array is the same as leaving the key out.
+- A pathname longer than 2048 characters matches no glob, so it is always logged. Otherwise a client could hide requests to an included route by padding the path.
+
+The verdict is made once per request, from the pathname, and covers every record that request writes: the access line, `log.*` calls in its handler (through `log` or `useLogger()`), error lines, and the WebSocket open, message and close lines. Status and level do not change it, so an excluded route that answers `500` writes nothing. Use [`accessLine`](#hiding-the-access-line-by-path) when errors on the route should still be logged.
+
+An excluded request does no work to build a record. Its enrichers do not run, nothing is redacted and it takes no part in [sampling](/docs/features/sampling). The request id is still generated and echoed in the response header.
+
+WebSocket lines match the path you pass to `wrapWs`, as you wrote it. A route declared as `/rooms/:id` matches `/rooms/*`, not `/rooms/42`.
+
+Records that belong to no request are not filtered by path: the startup banner, `store.pino` and the lines `runJob` writes. `store.pino` is plain pino, so `logFilter` never touches it, `level` included. The startup banner is never filtered either. `level` applies to `runJob` lines.
 
 ## Hiding the access line by path
 

@@ -38,7 +38,7 @@ export const handleHttpError = (
   const level: LogLevel =
     isStatusResponse(error) || status >= 400 ? levelForStatus(status) : 'ERROR'
 
-  if (isSuppressed(sinks, level, config?.logFilter)) {
+  if (isSuppressed(sinks, level, config?.logFilter, request)) {
     return
   }
 

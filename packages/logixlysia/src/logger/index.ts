@@ -15,9 +15,10 @@ import { resolveSampling } from '../sampling'
 import { stdoutWantsColor } from '../utils/color'
 import { elapsedMs } from '../utils/duration'
 import { buildPinoRedactPaths } from '../utils/redact'
+import { parseRequestUrlOnce } from '../utils/request-url'
 import { createFormatContext } from './create-logger'
-import { emit, isSuppressed, parseRequestUrlOnce, resolveSinks } from './emit'
-import type { EmitOutcome } from './emit'
+import { emit, isExcludedRequest, isSuppressed, resolveSinks } from './emit'
+import type { EmitOutcome, Sinks } from './emit'
 import { handleHttpError } from './handle-http-error'
 import { loadPino, loadPretty } from './load-pino.cjs'
 
@@ -143,7 +144,8 @@ export interface PluginLogger extends Logger {
 const buildLogger = (
   options: Options,
   pinoFactory: typeof pino | undefined,
-  externalContextStore?: RequestContextStore
+  externalContextStore?: RequestContextStore,
+  externalSinks?: Sinks
 ): PluginLogger => {
   const contextStore = externalContextStore ?? createRequestContextStore()
   const { config } = options
@@ -151,7 +153,7 @@ const buildLogger = (
 
   const lazyPino = createLazyPino(config, pinoFactory)
 
-  const sinks = resolveSinks(config)
+  const sinks = externalSinks ?? resolveSinks(config)
   const sampling = resolveSampling(
     config?.sampling,
     Math.random,
@@ -181,7 +183,7 @@ const buildLogger = (
     store: StoreData,
     status: number
   ): number => {
-    if (!sampling) {
+    if (!sampling || isExcludedRequest(sinks, request)) {
       return 0
     }
 
@@ -221,7 +223,7 @@ const buildLogger = (
     message: string,
     context?: Record<string, unknown>
   ): void => {
-    if (isSuppressed(sinks, level, config?.logFilter)) {
+    if (isSuppressed(sinks, level, config?.logFilter, request)) {
       return
     }
     const store: StoreData = { beforeTime: process.hrtime.bigint() }
@@ -230,7 +232,9 @@ const buildLogger = (
 
   return {
     beginRequest: request => {
-      sampling?.begin(request)
+      if (sampling && !isExcludedRequest(sinks, request)) {
+        sampling.begin(request)
+      }
     },
     debug: (request, message, context) => {
       logWithContext('DEBUG', request, message, context)
@@ -280,5 +284,6 @@ export const createLogger = (
  */
 export const createPluginLogger = (
   options: Options,
-  contextStore: RequestContextStore
-): PluginLogger => buildLogger(options, undefined, contextStore)
+  contextStore: RequestContextStore,
+  sinks?: Sinks
+): PluginLogger => buildLogger(options, undefined, contextStore, sinks)
