@@ -59,7 +59,7 @@
     },
     "packages/logixlysia": {
       "name": "logixlysia",
-      "version": "6.11.0",
+      "version": "6.13.0",
       "dependencies": {
         "chalk": "^6.0.1",
         "pino": "^10.4.0",
@@ -75,7 +75,7 @@
       },
       "peerDependencies": {
         "@opentelemetry/api": "^1.9.0",
-        "elysia": "^1.4.30",
+        "elysia": "^1.4.30 || ^2.0.0-beta.32",
         "typescript": ">=5.0",
       },
       "optionalPeers": [

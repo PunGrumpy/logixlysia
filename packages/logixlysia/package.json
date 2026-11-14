@@ -135,7 +135,7 @@
   },
   "peerDependencies": {
     "@opentelemetry/api": "^1.9.0",
-    "elysia": "^1.4.30",
+    "elysia": "^1.4.30 || ^2.0.0-beta.32",
     "typescript": ">=5.0"
   },
   "peerDependenciesMeta": {
