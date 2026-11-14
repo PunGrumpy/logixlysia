@@ -919,6 +919,13 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
     })
     .as(scope) as Logixlysia<TFields>
 
+  // Elysia 2 keeps state off the instance, and `plugin.store.pino` is how an
+  // app reaches pino outside a handler.
+  if (!('store' in (plugin as object))) {
+    const store: LogixlysiaStore = { beforeTime: 0n, logger, pino: logger.pino }
+    Object.assign(plugin, { store })
+  }
+
   return Object.assign(plugin, { runJob, wrapWs }) as LogixlysiaPlugin<TFields>
 }
 
