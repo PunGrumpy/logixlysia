@@ -287,7 +287,7 @@ export const emit = (input: EmitInput): EmitOutcome => {
     if (decision === 'buffer') {
       sampling.buffer(request, {
         data,
-        durationMs: elapsedMs(store.beforeTime),
+        durationMs: input.durationOverride ?? elapsedMs(store.beforeTime),
         level
       })
       return 'buffered'
