@@ -57,7 +57,6 @@ jobs:
         uses: charmbracelet/vhs-action@f6d7db07a432fcd3b06772628d36a57f96d95dcf # v2.1.1
         with:
           path: apps/elysia/demo.tape
-          install-fonts: true
           # VHS 0.12.0 (2026-09-09) records nothing here: every Wait resolves
           # instantly and no GIF or MP4 is written. 0.11.0 is the last release
           # that renders this tape; bump deliberately after checking a run.
