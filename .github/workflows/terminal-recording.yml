@@ -50,13 +50,6 @@ jobs:
         run: bun run build --filter logixlysia
       - name: 📁 Prepare artifacts
         run: mkdir -p artifacts
-      # The tape sets no FontFamily, so VHS falls back to its default list,
-      # which starts with JetBrains Mono. `install-fonts: true` downloaded the
-      # whole Google Fonts repository for it, about 190 s of a 257 s step.
-      - name: 🔤 Install JetBrains Mono
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq --no-install-recommends fonts-jetbrains-mono
       - name: 🎞️ Render tape
         # Every `Wait` in the tape is an assertion: vhs exits non-zero if the
         # playground never logs the expected line, so this step is a smoke test
