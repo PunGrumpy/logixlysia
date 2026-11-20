@@ -423,6 +423,48 @@ describe('resolveOptions', () => {
     expect(resolved.config?.useTransportsOnly).toBe(true)
   })
 
+  test('throws on a transport minLevel that is not a level', () => {
+    expect(() =>
+      resolveOptions({
+        config: {
+          transports: [
+            { log: () => {} },
+            { log: () => {}, minLevel: 'error' as never }
+          ]
+        }
+      })
+    ).toThrow('transports[1].minLevel must be DEBUG, INFO, WARNING or ERROR')
+    expect(() =>
+      resolveOptions({
+        config: {
+          transports: [{ log: () => {}, minLevel: 'WARN' as never }]
+        }
+      })
+    ).toThrow('logixlysia: invalid output config')
+    expect(() =>
+      resolveOptions({
+        config: {
+          transports: [{ log: () => {}, minLevel: null as never }]
+        }
+      })
+    ).toThrow('transports[0].minLevel')
+  })
+
+  test('accepts each level and an absent minLevel on a transport', () => {
+    const transports = [
+      { log: () => {} },
+      { log: () => {}, minLevel: undefined },
+      { log: () => {}, minLevel: 'DEBUG' as const },
+      { log: () => {}, minLevel: 'INFO' as const },
+      { log: () => {}, minLevel: 'WARNING' as const },
+      { log: () => {}, minLevel: 'ERROR' as const }
+    ]
+
+    expect(resolveOptions({ config: { transports } }).config?.transports).toBe(
+      transports
+    )
+  })
+
   test('throws on a non-finite or negative flushTimeoutMs', () => {
     expect(() =>
       resolveOptions({ config: { flushTimeoutMs: Number.POSITIVE_INFINITY } })
