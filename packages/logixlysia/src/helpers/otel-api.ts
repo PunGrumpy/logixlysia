@@ -3,9 +3,15 @@ import { createRequire } from 'node:module'
 export interface OtelApi {
   context: { active: () => unknown }
   trace: {
-    getSpan: (
-      ctx: unknown
-    ) => { spanContext: () => { traceId: string; spanId: string } } | undefined
+    getSpan: (ctx: unknown) =>
+      | {
+          spanContext: () => {
+            traceId: string
+            spanId: string
+            traceFlags?: number
+          }
+        }
+      | undefined
   }
 }
 
