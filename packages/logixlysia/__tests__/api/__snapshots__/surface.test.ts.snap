@@ -69,5 +69,8 @@ exports[`published API surface every exports subpath resolves and its named expo
   "./sentry": [
     "createSentryTransport",
   ],
+  "./testing": [
+    "createMemoryTransport",
+  ],
 }
 `;

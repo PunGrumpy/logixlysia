@@ -16,6 +16,7 @@ export default defineMeta({
     'log-levels',
     'file-logging',
     'transports',
+    'testing',
     'log-rotation'
   ],
   title: 'Features'

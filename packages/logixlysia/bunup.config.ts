@@ -41,7 +41,8 @@ const config = defineConfig({
     'src/clickhouse.ts',
     'src/desertant.ts',
     'src/http.ts',
-    'src/errors.ts'
+    'src/errors.ts',
+    'src/testing.ts'
   ],
   external: ['elysia', 'chalk', 'pino', 'pino-pretty', './load-pino.cjs'],
   format: ['esm'],

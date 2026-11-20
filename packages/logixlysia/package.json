@@ -101,6 +101,11 @@
       "import": "./dist/errors.js",
       "default": "./dist/errors.js"
     },
+    "./testing": {
+      "types": "./dist/testing.d.ts",
+      "import": "./dist/testing.js",
+      "default": "./dist/testing.js"
+    },
     "./http": {
       "types": "./dist/http.d.ts",
       "import": "./dist/http.js",

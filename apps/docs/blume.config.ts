@@ -22,6 +22,7 @@ const legacyDocsPaths = [
   'features/request-context',
   'features/request-id',
   'features/startup',
+  'features/testing',
   'features/transports',
   'features/websocket',
   'integrations/ai',

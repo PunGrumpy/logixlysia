@@ -55,6 +55,7 @@
           "features/log-levels",
           "features/file-logging",
           "features/transports",
+          "features/testing",
           "features/log-rotation"
         ]
       },
