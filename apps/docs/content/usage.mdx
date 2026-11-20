@@ -238,7 +238,7 @@ app.get('/error', () => {
 })
 ```
 
-Logixlysia logs the error automatically with the request method, path, status, and error message. For an `HttpError`, it also logs `code`, `why`, `fix`, and `link`. It does not log stack traces.
+Logixlysia logs the error automatically with the request method, path, status, and error message. For an `HttpError`, it also logs `code`, `why`, `fix`, and `link`. The text console line does not print a stack trace. With the context tree on, which is the default, it can show where a server error was thrown, as `error.at`. [Transports](/docs/features/transports) and the JSON console line (`consoleFormat: 'json'`) receive a thrown `Error`'s full `stack`, unless that error's own `status` is below 500. A validation error is logged without a stack while [`logErrorPayload`](/docs/configuration#logerrorpayload) is off, which is the default.
 
 ## Examples
 
