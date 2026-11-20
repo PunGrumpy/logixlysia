@@ -55,7 +55,23 @@ app.get('/order/checkout', ({ log }) => {
 })
 ```
 
-A custom log that passes `logFilter` (`log.info`, `store.logger.info(request, …)`, `useLogger().info`) replaces that request's access line, so the request's status, its `durationMs` and the response-phase enricher fields are not logged on a separate line.
+### Logging a Caught Error
+
+`log.error` takes a message or whatever you caught. A value that is not a string is serialized like a thrown error, with its name, its `HttpError` fields and its cause.
+
+```typescript
+app.post('/pay', async ({ log }) => {
+  try {
+    await charge()
+    return { success: true }
+  } catch (err) {
+    log.error(err, { step: 'payment' })
+    return { success: false }
+  }
+})
+```
+
+A handler's own lines (`log.info`, `store.logger.info(request, …)`, `useLogger().info`) are written in addition to the request's final line: the access line, or the error line when the handler throws anything other than an Elysia `status()` result below `400`. They are written before the response exists, so they carry no status. The final line follows with the status the client got, the full `durationMs` and the response-phase enricher fields.
 
 ---
 
@@ -89,6 +105,7 @@ app.use(
 
       // Auto-redaction of PII (emails, JWTs, card numbers)
       autoRedact: true,
+      redactPatterns: [/cust_[a-z0-9]+/], // Extra value shapes to mask; needs autoRedact: true
 
       // AsyncLocalStorage integration
       useAsyncLocalStorage: true
@@ -178,11 +195,54 @@ logixlysia({
 
 The available destinations: `logixlysia/axiom`, `logixlysia/better-stack`, `logixlysia/clickhouse`, `logixlysia/datadog`, `logixlysia/hyperdx`, `logixlysia/loki`, `logixlysia/otlp`, `logixlysia/posthog`, `logixlysia/sentry`.
 
+`logixlysia/http` exports `createHttpTransport`, the batching, retrying core the built-in destinations share. For a backend that takes an HTTP POST, describe the request body and it gives you batching, retry with backoff, a bounded queue, `onDropped`, `flush` and `close`. A `log` you write yourself gets none of that.
+
+```typescript
+import { createHttpTransport, entryText } from 'logixlysia/http'
+
+const elasticsearch = createHttpTransport({
+  name: 'elasticsearch',
+  url: 'http://elasticsearch:9200/logs/_bulk',
+  headers: { 'Content-Type': 'application/x-ndjson' },
+  options: { maxBatchSize: 100, onError: console.error },
+  body: entries =>
+    entries
+      .map(entry =>
+        [
+          JSON.stringify({ index: {} }),
+          JSON.stringify({
+            ...entry.meta,
+            level: entry.level,
+            message: entryText(entry),
+            '@timestamp': entry.timestamp.toISOString()
+          })
+        ].join('\n')
+      )
+      .join('\n') + '\n'
+})
+```
+
+Set `minLevel` on any transport to send it only records at that level or louder. The levels, quietest first, are `DEBUG`, `INFO`, `WARNING` and `ERROR`.
+
+```typescript
+import { createAxiomTransport } from 'logixlysia/axiom'
+import { createSentryTransport } from 'logixlysia/sentry'
+
+logixlysia({
+  config: {
+    transports: [
+      createSentryTransport({ minLevel: 'ERROR' }),
+      createAxiomTransport()
+    ]
+  }
+})
+```
+
 ---
 
 ## 8. Sampling
 
-`config.sampling.head` keeps a percentage of records per level as they're emitted; levels left out keep everything. `config.sampling.tail` rescues head-dropped records for a request once its outcome is known, by status, duration, or path glob.
+`config.sampling.head` keeps a percentage of records per level as they're emitted; levels left out keep everything. `config.sampling.tail` rescues head-dropped records for a request once its outcome is known, by status, duration, path glob, or a `keep` predicate. `keep` receives `durationMs`, `pathname`, `status` and a copy of the request's `context`, and runs only when no other tail rule matched.
 
 ```typescript
 logixlysia({
@@ -192,7 +252,8 @@ logixlysia({
       tail: {
         status: 400,
         durationMs: 1000,
-        paths: ['/checkout/**']
+        paths: ['/checkout/**'],
+        keep: ({ context }) => context.plan === 'enterprise'
       },
       maxBufferedPerRequest: 100 // default
     }
@@ -315,7 +376,7 @@ logixlysia({
 
 ## 13. Tracing and AI usage
 
-`logixlysia/otel` merges the active OpenTelemetry span's `trace_id` and `span_id` into the request context. It needs `@opentelemetry/api` installed and an active span. Call it from `onRequest`, after the plugin:
+`logixlysia/otel` merges the active OpenTelemetry span's `trace_id`, `span_id`, `trace_flags` and `trace_sampled` into the request context. It needs `@opentelemetry/api` installed and an active span. Call it from `onRequest`, after the plugin:
 
 ```typescript
 import { Elysia } from 'elysia'
@@ -327,7 +388,7 @@ const app = new Elysia().use(logixlysia()).onRequest(({ request, store }) => {
 })
 ```
 
-`logixlysia/ai` merges LLM usage under `ai` in the request context, so it appears on the access log, or on the custom log line that replaces the access line:
+`logixlysia/ai` merges LLM usage under `ai` in the request context, so it appears on the request's access line:
 
 ```typescript
 import { mergeAIMetrics } from 'logixlysia/ai'
@@ -340,5 +401,97 @@ app.post('/chat', ({ request, store }) => {
     totalTokens: 1600
   })
   return { ok: true }
+})
+```
+
+---
+
+## 14. Choosing what is logged
+
+`config.logFilter` chooses routes by pathname glob (`**` crosses `/`, `*` and `?` do not). `exclude` silences the routes it names, `include` logs only the routes it names, and `exclude` beats `include`. An excluded request writes nothing: no access line, no handler lines and no error line, even when it answers `500`.
+
+```typescript
+logixlysia({
+  config: {
+    logFilter: {
+      include: ['/api/**'],
+      exclude: ['/api/internal/**', '/health']
+    }
+  }
+})
+```
+
+`logFilter.accessLine` hides only the access line of the paths it names. A handler's `log.*` lines still write, and a response with status `400` or above, or a thrown error, is never hidden. Use it for health checks whose failures should still be logged.
+
+```typescript
+logixlysia({
+  config: {
+    logFilter: {
+      accessLine: { exclude: ['/health', '/metrics'] }
+    }
+  }
+})
+```
+
+---
+
+## 15. Background jobs
+
+`runJob` lives on the plugin instance: `plugin.runJob(name, fn)`. It runs `fn` outside a request and writes one final line for it the way a request gets its access line: through transports, the file sink and redaction, and subject to `logFilter.level` and sampling. The line is labelled `JOB` with the job name as its path, with status `200` when `fn` returns and `500` when it throws. A thrown error is logged and then rethrown. Inside `fn`, `useLogger()` returns the job's logger without `useAsyncLocalStorage`.
+
+```typescript
+import { flushLogixlysia, logixlysia } from 'logixlysia'
+import type { Options } from 'logixlysia'
+
+const options: Options = { config: { service: 'billing' } }
+const logs = logixlysia(options)
+
+await logs.runJob('nightly-sync', async log => {
+  const rows = await loadRows()
+  log.mergeContext({ rows: rows.length })
+})
+
+// A script exits as soon as the job returns; flush so batching transports send first.
+await flushLogixlysia(options)
+```
+
+---
+
+## 16. Testing your logs
+
+`logixlysia/testing` exports `createMemoryTransport`, a transport that keeps records in memory so a test can assert on what a route logged. Pass it in `config.transports`, with `useTransportsOnly: true` to keep the console quiet. In the example below, the request writes two records: the handler's line, then the access line with the final status and an empty `message`.
+
+```typescript
+import { expect, test } from 'bun:test'
+import { Elysia } from 'elysia'
+import { logixlysia } from 'logixlysia'
+import { createMemoryTransport } from 'logixlysia/testing'
+
+test('logs the order id', async () => {
+  const memory = createMemoryTransport()
+  const app = new Elysia()
+    .use(
+      logixlysia({
+        config: {
+          showStartupMessage: false,
+          transports: [memory],
+          useTransportsOnly: true
+        }
+      })
+    )
+    .get('/orders/:id', ({ log, params }) => {
+      log.info('order loaded', { orderId: params.id })
+      return { id: params.id }
+    })
+
+  await app.handle(new Request('http://localhost/orders/42'))
+
+  const line = memory.find(record => record.message === 'order loaded')
+  expect(line?.context).toMatchObject({ orderId: '42' })
+  expect(memory.last()).toMatchObject({
+    method: 'GET',
+    path: '/orders/42',
+    status: 200
+  })
 })
 ```
