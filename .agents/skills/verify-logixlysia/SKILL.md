@@ -1,6 +1,6 @@
 ---
 name: verify-logixlysia
-description: Run a real Elysia server with the logixlysia plugin built from this checkout, send it HTTP requests on 127.0.0.1, and capture the log lines, response, files written and exit as proof. Use to verify or review a change to logging output, the access line, log.* calls, logFilter, sampling, file logging or request IDs the way an app using the plugin sees it. Never touches a real app, a real port or the network, and needs no Docker.
+description: Run a real Elysia server with the logixlysia plugin built from this checkout, send it HTTP requests on 127.0.0.1, and capture the log lines, response, files written and exit as proof. Use to verify or review a change to logging output, the access line, log.* calls, logFilter, sampling, file logging or request IDs the way an app using the plugin sees it. Serves on a loopback ephemeral port, sends HTTP it makes through a proxy that blocks it, and needs no Docker.
 ---
 
 # Verify logixlysia
@@ -16,13 +16,13 @@ RUN=my-change   # letters, digits, - and _; default "default"
 
 ## Safety contract
 
-The helper enforces these, so keep every server inside `$C run`.
+The helper sets these up for every server it starts, so keep every server inside `$C run`. The listen and network rules are checks on an app written in good faith, not a sandbox.
 
 - **Own work directory only.** The app file must resolve inside the run's `work/`, after following symlinks. A file elsewhere is refused.
-- **Loopback, ephemeral port.** The app must export its Elysia instance and must not call `.listen()`. The helper listens on `127.0.0.1` port `0`, so it never takes a port another process uses and is never reachable from outside.
-- **No network.** The server gets `HTTP_PROXY` and `HTTPS_PROXY` pointing at a loopback proxy that answers every request with 403. The evidence lists each blocked target (`CONNECT example.com:443 HTTP/1.1`). Adapters and transports therefore never deliver anything.
+- **Loopback, ephemeral port.** The app must export its Elysia instance and must not call `.listen()`. The helper listens on `127.0.0.1` port `0`, so it never takes a port another process uses and is never reachable from outside. The check reads the app file for a `.listen(` call. It does not see one in an imported module, a bracket call such as `app['listen']()`, or `Bun.serve`, so write none of those.
+- **No network.** The server gets `HTTP_PROXY` and `HTTPS_PROXY` pointing at a loopback proxy that answers every request with 403. The evidence lists each blocked target (`CONNECT example.com:443 HTTP/1.1`). The plugin's adapters and transports send with `fetch`, which goes through the proxy, so they never deliver anything. A raw socket (`node:net`, UDP, DNS) is neither blocked nor recorded, so do not open one in the app.
 - **Clean environment.** The server gets only `PATH`, a throwaway `HOME`, `XDG_*` and `TMPDIR` under the run, and `NO_COLOR=1`. stdin is closed.
-- **Kill only what it started.** `run` stops its own child with SIGTERM, then SIGKILL after 10 s. `down` kills a leftover server only when its PID is in the run's state file and its command line names this run's work dir. Nothing is killed by name.
+- **Kill only what it started.** `run` stops its own child with SIGTERM, then SIGKILL after 10 s. `down` kills a leftover server only when its PID is in the run's state file and its command line is the helper's serve command for this run, read from `/proc` or from `ps`. A PID whose command line cannot be read is left alone. Nothing is killed by name.
 
 A refusal prints `control-logixlysia: refused: <why>` and exits 64 without starting anything.
 
