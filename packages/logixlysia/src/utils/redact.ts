@@ -13,6 +13,7 @@ const IPV6_REGEX =
  * a backtrack entry per digit and gives up on a very long run.
  */
 const DIGIT_RUN_REGEX = /\b\d[\d -]*/gu
+const DIGIT_DOT_DIGIT_REGEX = /\d\.\d/u
 const WORD_CHAR_REGEX = /\w/u
 const DIGIT_GROUP_REGEX = /\d+/gu
 /**
@@ -289,14 +290,33 @@ const endsWithUrlScheme = (text: string, end: number): boolean => {
   return false
 }
 
+/**
+ * Text with none of these cannot hold what a rule below matches: each needs a
+ * `:`, `@`, `.` or whitespace, or, for a card, a digit run (see
+ * `DIGIT_RUN_REGEX`) with 13 digits. Request ids, methods and path segments
+ * rarely have any.
+ */
+const MAY_HOLD_SECRET_REGEX = /[:@.\s]|\b(?:\d[ -]*){13}/u
+/** The test is linear but not free, so only short text takes it. */
+const MAY_HOLD_SECRET_MAX_LENGTH = 256
+
 export const redactString = (
   text: string,
   patterns?: readonly RegExp[]
 ): string => {
   let result = text
 
-  for (const pattern of patterns ?? []) {
-    result = result.replaceAll(pattern, REDACTED_TEXT)
+  if (patterns !== undefined) {
+    for (const pattern of patterns) {
+      result = result.replaceAll(pattern, REDACTED_TEXT)
+    }
+  }
+
+  if (
+    result.length <= MAY_HOLD_SECRET_MAX_LENGTH &&
+    !MAY_HOLD_SECRET_REGEX.test(result)
+  ) {
+    return result
   }
 
   // A pattern is skipped only when the text lacks what every match contains.
@@ -312,8 +332,8 @@ export const redactString = (
   if (result.includes('@')) {
     result = result.replaceAll(EMAIL_REGEX, REDACTED_TEXT)
   }
-  // Every match contains `.`.
-  if (result.includes('.')) {
+  // Every match contains a digit, a `.` and a digit.
+  if (DIGIT_DOT_DIGIT_REGEX.test(result)) {
     result = result.replaceAll(IPV4_REGEX, REDACTED_TEXT)
   }
   // Every match contains `:`.
@@ -424,10 +444,13 @@ const redactRequestUrl = (urlString: string, rules?: RedactRules): string => {
 
 /**
  * A URL the parser gives back as written: a lower-case scheme and host, an
- * optional port, and a path of characters it neither escapes nor moves.
+ * optional port, a path of characters it neither escapes nor moves, and a
+ * query of characters it leaves alone.
  */
+/* oxlint-disable prefer-named-capture-group -- a named group builds a `groups` object per match */
 const PLAIN_URL_REGEX =
-  /^http(?<secure>s?):\/\/(?<host>[a-z0-9._-]+)(?::(?<port>[1-9]\d{0,4}))?\/(?<path>[\w.~!$&'()*+,;=:/-]*)$/u
+  /^http(s?):\/\/([a-z0-9._-]+)(?::([1-9]\d{0,4}))?\/([\w.~!$&'()*+,;=:/-]*)(?:\?([\w.~=&-]+))?$/u
+/* oxlint-enable prefer-named-capture-group */
 /** A last label the parser reads as a number, or a label it decodes. */
 const REWRITTEN_HOST_REGEX = /(?:^|\.)\d[^.]*\.?$|xn--/u
 const DOT_SEGMENT_REGEX = /(?:^|\/)\.\.?(?:\/|$)/u
@@ -444,14 +467,35 @@ const isPortKept = (port: string | undefined, secure: boolean): boolean => {
 }
 
 /**
- * Most request URLs have no userinfo, query, fragment or escape. Such a URL is
- * a host and plain path segments, so each is checked as text and the URL is
- * parsed only when one of them would change. A server can hand over a request
- * line it did not normalise, so only a URL that parsing leaves as written
- * takes this path.
+ * A query of characters the parser neither escapes nor decodes (no `%` or
+ * `+`), so each name and value is read as written. The masking decision is
+ * the one `redactSearchParams` makes; any pair it would change sends the URL
+ * through the full parse.
+ */
+const isQueryUnchanged = (query: string, rules?: RedactRules): boolean => {
+  for (const pair of query.split('&')) {
+    const equals = pair.indexOf('=')
+    const name = equals === -1 ? pair : pair.slice(0, equals)
+    const value = equals === -1 ? '' : pair.slice(equals + 1)
+    if (
+      isSensitiveKey(name, rules?.keys) ||
+      redactString(value, rules?.patterns) !== value
+    ) {
+      return false
+    }
+  }
+  return true
+}
+
+/**
+ * Most request URLs have no userinfo, fragment or escape. Such a URL is a host,
+ * plain path segments and perhaps a plain query, so each is checked as text
+ * and the URL is parsed only when one of them would change. A server can hand
+ * over a request line it did not normalise, so only a URL that parsing leaves
+ * as written takes this path.
  */
 const redactSerializedUrl = (url: string, rules?: RedactRules): string => {
-  const { secure, host, port, path } = PLAIN_URL_REGEX.exec(url)?.groups ?? {}
+  const [, secure, host, port, path, query] = PLAIN_URL_REGEX.exec(url) ?? []
   const isPlain =
     host !== undefined &&
     path !== undefined &&
@@ -465,6 +509,9 @@ const redactSerializedUrl = (url: string, rules?: RedactRules): string => {
     if (redactString(part, rules?.patterns) !== part) {
       return redactRequestUrl(url, rules)
     }
+  }
+  if (query !== undefined && !isQueryUnchanged(query, rules)) {
+    return redactRequestUrl(url, rules)
   }
   return url
 }
