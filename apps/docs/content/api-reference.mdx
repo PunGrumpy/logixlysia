@@ -53,7 +53,7 @@ It resolves with the value `fn` returns. If `fn` throws, the error line is writt
 
 ### `useLogger`
 
-Returns the current request's `RequestScopedLogger`. Outside a request, or without `useAsyncLocalStorage: true`, it returns a no-op logger that writes nothing. Inside `runJob` it returns the job's logger whatever the flag.
+Returns the current request's `RequestScopedLogger`. Outside a request, or without `useAsyncLocalStorage: true`, it returns a no-op logger that writes nothing. When it falls back because the plugin was created without `useAsyncLocalStorage: true`, the first call prints one warning to stderr naming the option. The warning never prints when `NODE_ENV` is `production` or when any plugin instance has the option on. Inside `runJob` it returns the job's logger whatever the flag.
 
 ```ts check=skip
 function useLogger<

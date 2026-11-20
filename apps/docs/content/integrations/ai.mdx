@@ -52,7 +52,7 @@ A failed call that lands after the line writes `ai call failed` at `WARNING` ins
 
 ## Limits
 
-- A stream the client cancels before it ends records nothing, because the call never finishes on the server.
+- A stream the client cancels before its finish chunk records nothing, because the call never finishes on the server. A stream cancelled after the client read its finish chunk is recorded with its usage and finish reason.
 - In a handler, `useLogger()` needs `useAsyncLocalStorage: true`. Without it `useLogger()` returns a no-op logger and nothing is recorded.
 - Tested against `ai` 7.
 
