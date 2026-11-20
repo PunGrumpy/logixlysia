@@ -226,7 +226,25 @@ const validateLogFilter = (config: Options['config']): void => {
   validateLogFilterPaths(filter)
 }
 
+const validateTransportLevels = (config: Options['config']): void => {
+  const transports: unknown = config?.transports
+  if (!Array.isArray(transports)) {
+    return
+  }
+  for (const [index, transport] of transports.entries()) {
+    const minLevel: unknown = (
+      transport as { minLevel?: unknown } | null | undefined
+    )?.minLevel
+    if (minLevel !== undefined && !isLogLevel(minLevel)) {
+      invalidOutput(
+        `transports[${index}].minLevel must be DEBUG, INFO, WARNING or ERROR, got ${String(minLevel)}`
+      )
+    }
+  }
+}
+
 const validateOutput = (config: Options['config']): void => {
+  validateTransportLevels(config)
   if (
     config?.useTransportsOnly === true &&
     (config.transports?.length ?? 0) === 0

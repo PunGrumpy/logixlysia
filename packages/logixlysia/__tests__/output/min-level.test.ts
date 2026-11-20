@@ -102,6 +102,12 @@ describe('transport minLevel', () => {
     ).toThrow(/minLevel/u)
   })
 
+  test('the plugin rejects a hand-written transport whose minLevel is not a level', () => {
+    expect(() => createApp([createCapture('error' as never)])).toThrow(
+      'transports[0].minLevel must be DEBUG, INFO, WARNING or ERROR, got error'
+    )
+  })
+
   test('withRedaction forwards minLevel from the wrapped transport', () => {
     const redactor: NeuralRedactor = {
       redaction: text => Promise.resolve({ redactedText: text })

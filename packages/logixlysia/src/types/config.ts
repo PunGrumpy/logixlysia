@@ -25,7 +25,8 @@ export interface Transport {
   ) => void | Promise<void>
   /**
    * The lowest level this transport receives; quieter records skip it and are
-   * not counted as dropped. Leave it out to receive every level.
+   * not counted as dropped. Leave it out to receive every level. Any other
+   * value throws when the plugin is created.
    */
   minLevel?: LogLevel
 }
