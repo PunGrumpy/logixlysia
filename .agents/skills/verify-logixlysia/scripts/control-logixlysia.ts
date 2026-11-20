@@ -208,24 +208,28 @@ const isAlive = (pid: number): boolean => {
   }
 }
 
+/** The command line of a live process, or '' when it cannot be read. */
+const commandLineOf = (pid: number): string => {
+  try {
+    return readFileSync(`/proc/${pid}/cmdline`, 'utf-8').replaceAll('\0', ' ')
+  } catch {
+    // No procfs (macOS, BSD), so ask ps. -ww keeps a long line whole.
+    const ps = Bun.spawnSync(['ps', '-ww', '-o', 'command=', '-p', String(pid)], {
+      stderr: 'ignore'
+    })
+    return ps.success ? ps.stdout.toString() : ''
+  }
+}
+
 /** True only for a serve process this helper started for this run. */
 const isOurServer = (pid: number, paths: RunPaths): boolean => {
   if (!isAlive(pid)) {
     return false
   }
-  const cmdline = (() => {
-    try {
-      return readFileSync(`/proc/${pid}/cmdline`, 'utf-8')
-    } catch {
-      return ''
-    }
-  })()
-  if (cmdline === '') {
-    // No procfs (macOS): the PID came from our own state file, written when
-    // the server was spawned, so trust it.
-    return true
-  }
-  return cmdline.includes(SERVE_ACTION) && cmdline.includes(paths.workDir)
+  // The ready file reaches the child as written, while the app path is
+  // resolved first, so this still matches when the temp directory is a symlink.
+  const cmdline = commandLineOf(pid)
+  return cmdline.includes(SERVE_ACTION) && cmdline.includes(paths.readyFile)
 }
 
 const actionUp = async (paths: RunPaths): Promise<number> => {
