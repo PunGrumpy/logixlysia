@@ -14,3 +14,7 @@ Please do NOT open a public issue for security problems.
 Report privately via GitHub's advisory flow: https://github.com/PunGrumpy/logixlysia/security/advisories/new
 
 Include reproduction steps and the affected version. You can expect an acknowledgement within 7 days. Once a fix ships, we will credit reporters in the release notes unless they prefer otherwise.
+
+## Security model
+
+What this project trusts, the assets it protects and the attackers that matter are described in [SECURITY_MODEL.md](SECURITY_MODEL.md).
