@@ -7,11 +7,16 @@ import { injectTraceContext, otelEnricher } from '../../src/otel'
 
 const fakeSpanContext = {
   spanId: '0123456789abcdef',
+  traceFlags: 1,
   traceId: 'abc123def456789012345678abcdef01'
 }
 
 interface FakeSpan {
-  spanContext: () => typeof fakeSpanContext
+  spanContext: () => {
+    spanId: string
+    traceFlags?: unknown
+    traceId: string
+  }
 }
 
 const getSpanMock = mock((): FakeSpan | undefined => ({
@@ -46,11 +51,15 @@ describe('logixlysia/otel (mocked)', () => {
 
     expect(result).toEqual({
       span_id: fakeSpanContext.spanId,
-      trace_id: fakeSpanContext.traceId
+      trace_flags: '01',
+      trace_id: fakeSpanContext.traceId,
+      trace_sampled: true
     })
     expect(logger.getContext(request)).toMatchObject({
       span_id: fakeSpanContext.spanId,
-      trace_id: fakeSpanContext.traceId
+      trace_flags: '01',
+      trace_id: fakeSpanContext.traceId,
+      trace_sampled: true
     })
   })
 
@@ -79,8 +88,56 @@ describe('logixlysia/otel (mocked)', () => {
 
     expect(fields).toEqual({
       span_id: fakeSpanContext.spanId,
-      trace_id: fakeSpanContext.traceId
+      trace_flags: '01',
+      trace_id: fakeSpanContext.traceId,
+      trace_sampled: true
     })
+  })
+
+  test('an unsampled span reports trace_flags 00 and trace_sampled false', () => {
+    resetOtelApi()
+    getSpanMock.mockImplementation(() => ({
+      spanContext: () => ({ ...fakeSpanContext, traceFlags: 0 })
+    }))
+
+    const fields = otelEnricher().request?.(new Request('http://localhost/'))
+
+    expect(fields).toEqual({
+      span_id: fakeSpanContext.spanId,
+      trace_flags: '00',
+      trace_id: fakeSpanContext.traceId,
+      trace_sampled: false
+    })
+  })
+
+  test('leaves the flags out when the span context has none it can read', () => {
+    const idsOnly = {
+      span_id: fakeSpanContext.spanId,
+      trace_id: fakeSpanContext.traceId
+    }
+    const unreadable: unknown[] = [undefined, 256, -1, 1.5, '01', null]
+
+    for (const traceFlags of unreadable) {
+      resetOtelApi()
+      getSpanMock.mockImplementation(() => ({
+        spanContext: () => ({ ...fakeSpanContext, traceFlags })
+      }))
+
+      expect(
+        otelEnricher().request?.(new Request('http://localhost/'))
+      ).toEqual(idsOnly)
+    }
+  })
+
+  test('writes the whole flags byte as two hex digits', () => {
+    resetOtelApi()
+    getSpanMock.mockImplementation(() => ({
+      spanContext: () => ({ ...fakeSpanContext, traceFlags: 0xaa })
+    }))
+
+    expect(
+      otelEnricher().request?.(new Request('http://localhost/'))
+    ).toMatchObject({ trace_flags: 'aa', trace_sampled: false })
   })
 
   test('otelEnricher puts the span ids on the access log context', async () => {
@@ -108,7 +165,9 @@ describe('logixlysia/otel (mocked)', () => {
 
     expect(events[0]?.context).toMatchObject({
       span_id: fakeSpanContext.spanId,
-      trace_id: fakeSpanContext.traceId
+      trace_flags: '01',
+      trace_id: fakeSpanContext.traceId,
+      trace_sampled: true
     })
   })
 })

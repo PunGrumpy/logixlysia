@@ -38,4 +38,6 @@ const app = new Elysia()
   .get('/', () => 'ok')
 ```
 
-When an active span exists, `trace_id` and `span_id` are merged into the request context bag and appear on the access log and on every custom log line. Logixlysia does not start an OpenTelemetry SDK—you bring your own tracer provider and instrumentation.
+When an active span exists, `trace_id`, `span_id`, `trace_flags` and `trace_sampled` are merged into the request context bag and appear on the access log and on every custom log line. `trace_flags` is the span's flags byte as two hex digits, as in a `traceparent` header, and `trace_sampled` is `true` when its sampled bit is set. The [OTLP](/docs/adapters/otlp) and [HyperDX](/docs/adapters/hyperdx) adapters copy the two ids and the flags byte into each record's native `traceId`, `spanId` and `flags`.
+
+Logixlysia does not start an OpenTelemetry SDK—you bring your own tracer provider and instrumentation.
