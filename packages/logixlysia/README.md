@@ -94,9 +94,14 @@ import logixlysia from 'logixlysia'
 import { createMemoryTransport } from 'logixlysia/testing'
 
 const memory = createMemoryTransport()
-const app = new Elysia().use(
-  logixlysia({ config: { transports: [memory], useTransportsOnly: true } })
-)
+const app = new Elysia()
+  .use(
+    logixlysia({ config: { transports: [memory], useTransportsOnly: true } })
+  )
+  .get('/orders/:id', ({ log, params }) => {
+    log.info('order loaded', { orderId: params.id })
+    return { id: params.id }
+  })
 
 await app.handle(new Request('http://localhost/orders/42'))
 

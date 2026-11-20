@@ -81,7 +81,7 @@ export interface MemoryTransport extends Transport {
   readonly records: readonly MemoryRecord[]
   /**
    * Resolves with the first record `predicate` accepts, one already kept or
-   * one that arrives. Rejects after `timeoutMs` with the records it saw.
+   * one that arrives. Rejects after `timeoutMs`, naming the records the transport holds.
    */
   waitFor: (
     predicate: (record: MemoryRecord) => boolean,

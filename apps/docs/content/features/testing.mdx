@@ -120,16 +120,28 @@ test('logs a declined card with its code', async () => {
 `app.handle` resolves once the response exists, which can be before a late line is written, such as one a background job logs. `waitFor` resolves as soon as a matching record arrives:
 
 ```ts
+import { Elysia } from 'elysia'
+import logixlysia from 'logixlysia'
 import { createMemoryTransport } from 'logixlysia/testing'
 
 const memory = createMemoryTransport()
+const app = new Elysia()
+  .use(
+    logixlysia({ config: { transports: [memory], useTransportsOnly: true } })
+  )
+  .post('/jobs', ({ log }) => {
+    setTimeout(() => log.info('job done'), 50)
+    return { queued: true }
+  })
+
+await app.handle(new Request('http://localhost/jobs', { method: 'POST' }))
 
 const done = await memory.waitFor(record => record.message === 'job done', {
   timeoutMs: 2000
 })
 ```
 
-`timeoutMs` defaults to 1000. On a timeout the promise rejects with the records it saw, so the failure says what was logged instead:
+`timeoutMs` defaults to 1000. On a timeout the promise rejects with a message that lists the records the transport holds, so the failure says what was logged instead:
 
 ```text
 [logixlysia] memory transport: no record matched within 2000ms; 2 records seen:
