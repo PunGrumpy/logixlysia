@@ -135,7 +135,7 @@ redactPatterns: [/cust_[a-z0-9]+/]
 
 ### `logErrorPayload`
 
-Log the offending payload (`found`/`errors`) from validation errors. Off by default — a failed schema validation embeds the entire request body (passwords, tokens, card fields) in the error message, so leaving this off keeps those values out of your logs and transports.
+Add the submitted value and the list of failures to the record of a failed validation, as `error.found` and `error.errors`. Each entry in `errors` keeps only the failure's `path` and `message`. Both fields are on the structured record: the JSON console line (`consoleFormat: 'json'`) and what transports receive. The text console line and the file line show the summary only. The line's message is a summary such as `Validation failed (body): /password` whether this option is on or off. Off by default, because `found` is the whole value that failed validation, such as the request body, and request bodies routinely carry passwords, tokens and card fields. Turn on [`autoRedact`](#autoredact) as well to mask sensitive keys such as `password` inside `found`, and a failure's message when its path names a sensitive key. It masks by key name, so a value that is not under a sensitive key is logged as it is: a body that is a bare string, the entries of an array of strings, or a field whose name the key rule does not recognise.
 
 - **Type:** `boolean`
 - **Default:** `false`
