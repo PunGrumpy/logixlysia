@@ -60,9 +60,86 @@ const payloadTypeOf = (message: unknown): string => {
   return typeof message
 }
 
+type GeneratorKind = 'async' | 'sync'
+
+// Only a generator is wrapped. A hand-written iterator may answer `next()` and
+// `[Symbol.iterator]()` differently, and Elysia calls both, so no wrapper can
+// forward one faithfully. The tag is read without calling into the value.
+const generatorKindOf = (value: unknown): GeneratorKind | undefined => {
+  if (typeof value !== 'object' || value === null) {
+    return
+  }
+  let tag: string
+  try {
+    tag = Object.prototype.toString.call(value)
+  } catch {
+    return
+  }
+  if (tag === '[object Generator]') {
+    return 'sync'
+  }
+  if (tag === '[object AsyncGenerator]') {
+    return 'async'
+  }
+}
+
+// `finally` writes the line once, whether the source finishes, throws or is
+// stopped early by the consumer.
+const settleIterator = function* settleIterator(
+  source: Generator<unknown, unknown>,
+  done: Settle
+): Generator<unknown, unknown> {
+  let failure: HookFailure | undefined
+  try {
+    return yield* { [Symbol.iterator]: () => source }
+  } catch (error) {
+    failure = { error }
+    throw error
+  } finally {
+    done(failure)
+  }
+}
+
+const settleAsyncIterator = async function* settleAsyncIterator(
+  source: AsyncGenerator<unknown, unknown>,
+  done: Settle
+): AsyncGenerator<unknown, unknown> {
+  let failure: HookFailure | undefined
+  try {
+    return yield* { [Symbol.asyncIterator]: () => source }
+  } catch (error) {
+    failure = { error }
+    throw error
+  } finally {
+    done(failure)
+  }
+}
+
+type SettleValue = (value: unknown, done: Settle) => unknown
+
+const settleNow: SettleValue = (value, done) => {
+  done()
+  return value
+}
+
+// Used for a hook's direct result and for what a Promise resolved to, since
+// Elysia iterates a generator in either case. A generator runs after the hook
+// returns, so its line waits for the last value.
+const settleValue: SettleValue = (value, done) => {
+  const kind = generatorKindOf(value)
+  if (kind === 'sync') {
+    return settleIterator(value as Generator<unknown, unknown>, done)
+  }
+  if (kind === 'async') {
+    return settleAsyncIterator(value as AsyncGenerator<unknown, unknown>, done)
+  }
+  return settleNow(value, done)
+}
+
 const settleHook = async (
   pending: Promise<unknown>,
-  done: Settle
+  done: Settle,
+  settle: SettleValue
 ): Promise<unknown> => {
   let value: unknown
   try {
@@ -71,23 +148,24 @@ const settleHook = async (
     done({ error })
     throw error
   }
-  done()
-  return value
+  return settle(value, done)
 }
 
 /**
- * Hands the hook's result back to Elysia untouched, so a returned value is
- * sent, a generator is iterated and a rejection reaches Elysia's catch. The
- * lifecycle line is written once the result has settled. The `instanceof
- * Promise` test is the one Elysia itself uses (`ws/index.mjs:116`).
+ * Hands the hook's result back to Elysia in a form it treats the same way, so
+ * a returned value is sent, a generator is iterated and a rejection reaches
+ * Elysia's catch. The lifecycle line is written once the result has settled.
+ * The `instanceof Promise` test is the one Elysia itself uses
+ * (`createHandleWSResponse` in `elysia/dist/ws/index.mjs`).
  */
-const afterHook = (result: unknown, done: Settle): unknown => {
-  if (result instanceof Promise) {
-    return settleHook(result, done)
-  }
-  done()
-  return result
-}
+const afterHook = (
+  result: unknown,
+  done: Settle,
+  settle: SettleValue = settleValue
+): unknown =>
+  result instanceof Promise
+    ? settleHook(result, done, settle)
+    : settle(result, done)
 
 export const createWsHandlerWrapper = (
   options: Options,
@@ -98,6 +176,12 @@ export const createWsHandlerWrapper = (
   )
 ) => {
   const wsTimings = new WeakMap<ContextKey, bigint>()
+  // Elysia keeps pulling a message hook's generator after the socket closes,
+  // so its line can come after the close has cleared the context.
+  const closedContexts = new WeakMap<
+    ContextKey,
+    Readonly<Record<string, unknown>>
+  >()
 
   const logWs = (
     key: ContextKey,
@@ -113,7 +197,9 @@ export const createWsHandlerWrapper = (
     }
     const beforeTime = wsTimings.get(key) ?? process.hrtime.bigint()
     const store: StoreData = { beforeTime }
-    const accumulated = contextStore.peekContext(key)
+    const closed = closedContexts.get(key)
+    const live = contextStore.peekContext(key)
+    const accumulated = closed ? { ...closed, ...live } : live
     const context =
       Object.keys(accumulated).length > 0 || extra
         ? { ...accumulated, ...extra, wsId }
@@ -148,6 +234,10 @@ export const createWsHandlerWrapper = (
       }
     } catch (reportFailure) {
       reportFormatError(reportFailure, options.config?.onError)
+    }
+    if (closedContexts.has(key)) {
+      // Whatever was merged after the close went into the line above.
+      contextStore.clearContext(key)
     }
   }
 
@@ -185,8 +275,9 @@ export const createWsHandlerWrapper = (
             Object.keys(extra).length > 0 ? extra : undefined,
             failure
           )
+          // The open time stays, for a message line written after this one.
+          closedContexts.set(key, contextStore.peekContext(key))
           contextStore.clearContext(key)
-          wsTimings.delete(key)
         }
         let result: unknown
         try {
@@ -195,7 +286,9 @@ export const createWsHandlerWrapper = (
           done({ error })
           throw error
         }
-        return afterHook(result, done)
+        // Elysia may never pull a generator returned here (it stops at a
+        // frame it cannot send), and the close must not wait on it.
+        return afterHook(result, done, settleNow)
       },
       message(ws, message) {
         const key = keyOf(ws)
@@ -218,6 +311,7 @@ export const createWsHandlerWrapper = (
         const key = keyOf(ws)
         const wsId = ws.id
         wsTimings.set(key, process.hrtime.bigint())
+        closedContexts.delete(key)
         const done: Settle = failure => {
           writeLine(key, wsId, path, 'WebSocket opened', undefined, failure)
         }

@@ -4,7 +4,7 @@ import type { AnyElysia } from 'elysia'
 import { logixlysia } from '../../src'
 import type { WsHandlerHooks } from '../../src/websocket/wrap-ws'
 import { awaitOpen } from '../_helpers/await-open'
-import { websocketCapability } from '../_helpers/elysia'
+import { isElysia2, websocketCapability } from '../_helpers/elysia'
 import { sleep } from '../_helpers/sleep'
 import { waitFor } from '../_helpers/wait-for'
 
@@ -227,4 +227,135 @@ test('a hook that rejects on a real socket writes one ERROR line with the error'
   expect(lines[0]?.[2]).toMatchObject({ error: { message: 'boom' } })
   expect(lines[0]?.[2]).not.toHaveProperty('status')
   expect(errors).toHaveLength(1)
+})
+
+const connect = async (
+  url: string
+): Promise<{ frames: unknown[]; socket: WebSocket }> => {
+  const socket = new WebSocket(url)
+  const frames: unknown[] = []
+  socket.addEventListener('message', event => {
+    frames.push(event.data)
+  })
+  await awaitOpen(socket)
+  return { frames, socket }
+}
+
+test('a generator hook that fails mid-stream sends what it yielded and writes one ERROR line', async () => {
+  const url = serve('/stream-fail', {
+    async *message(_ws, m) {
+      yield `${m}-1`
+      await sleep(10)
+      throw new Error('boom mid-stream')
+    }
+  })
+
+  const { frames, socket } = await connect(url)
+  socket.send('hi')
+  await waitFor(
+    () =>
+      frames.length > 0 &&
+      errors.length > 0 &&
+      recordsNamed('WebSocket message').length > 0
+  )
+  socket.close()
+
+  expect(frames).toEqual(['hi-1'])
+  expect(errors).toHaveLength(1)
+  expect(errors[0]).toHaveProperty('message', 'boom mid-stream')
+  const lines = recordsNamed('WebSocket message')
+  expect(lines.map(call => call[0])).toEqual(['ERROR'])
+  expect(lines[0]?.[2]).toMatchObject({
+    error: { message: 'boom mid-stream' }
+  })
+})
+
+// Sends what a hook returned on a route without and a route with `wrapWs`,
+// collecting each socket's frames up to the last one the hook sends.
+const framesWithAndWithout = async (
+  reply: () => unknown
+): Promise<{ unwrapped: unknown[]; wrapped: unknown[] }> => {
+  const hooks: WsHandlerHooks = { message: () => reply() }
+  app = new Elysia()
+    .use(websocketCapability())
+    .use(plugin)
+    .ws('/plain', { ...hooks })
+    .ws('/wrapped', { ...plugin.wrapWs('/wrapped', hooks) })
+    .listen(0)
+  const port = app.server?.port
+  if (port === undefined) {
+    throw new Error('server did not start')
+  }
+
+  const collect = async (path: string): Promise<unknown[]> => {
+    const { frames, socket } = await connect(`ws://localhost:${port}${path}`)
+    socket.send('go')
+    await waitFor(() => frames.includes('end'))
+    socket.close()
+    return frames
+  }
+
+  return {
+    unwrapped: await collect('/plain'),
+    wrapped: await collect('/wrapped')
+  }
+}
+
+test('a hand-written iterator sends the same frames with and without wrapWs', async () => {
+  const { unwrapped, wrapped } = await framesWithAndWithout(() => {
+    const fromNext = ['a', 'end'][Symbol.iterator]()
+    return {
+      next: () => fromNext.next(),
+      [Symbol.iterator]: () => ['b', 'end'][Symbol.iterator]()
+    }
+  })
+
+  // Elysia 1 pulls the first value with `next()` and the rest with `for…of`;
+  // Elysia 2 pulls every value with `next()`.
+  expect(unwrapped).toEqual(isElysia2 ? ['a', 'end'] : ['a', 'b', 'end'])
+  expect(wrapped).toEqual(unwrapped)
+})
+
+test('a hand-written async iterator that yields a promise sends the same frames with and without wrapWs', async () => {
+  const { unwrapped, wrapped } = await framesWithAndWithout(() => {
+    const values: unknown[] = [Promise.resolve('p'), 'end']
+    let index = 0
+    const replies = {
+      next: (): Promise<IteratorResult<unknown>> => {
+        if (index >= values.length) {
+          return Promise.resolve({ done: true, value: undefined })
+        }
+        index += 1
+        return Promise.resolve({ done: false, value: values[index - 1] })
+      },
+      [Symbol.asyncIterator]: () => replies
+    }
+    return replies
+  })
+
+  expect(unwrapped).toEqual(['{}', 'end'])
+  expect(wrapped).toEqual(unwrapped)
+})
+
+test('a generator sends the same frames with and without wrapWs', async () => {
+  const { unwrapped, wrapped } = await framesWithAndWithout(function* reply() {
+    yield 'a'
+    yield 'end'
+  })
+
+  expect(unwrapped).toEqual(['a', 'end'])
+  expect(wrapped).toEqual(unwrapped)
+})
+
+test('an async generator sends the same frames with and without wrapWs', async () => {
+  const { unwrapped, wrapped } = await framesWithAndWithout(
+    async function* reply() {
+      yield 'a'
+      await sleep(1)
+      yield 'end'
+    }
+  )
+
+  expect(unwrapped).toEqual(['a', 'end'])
+  expect(wrapped).toEqual(unwrapped)
 })
