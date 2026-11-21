@@ -72,6 +72,8 @@ try {
 
 The `finally` matters: `runJob` rethrows a job's error.
 
+To give up on a backend that does not answer, pass `{ close: true, timeoutMs }`: the call then returns within `timeoutMs`, and each adapter reports what it dropped through its `onDropped`.
+
 ## Sampling
 
 A successful job is head sampled like any other `INFO` line. With `sampling.head: { INFO: 0 }` it writes nothing, so give the jobs you care about a `tail.paths` rule:

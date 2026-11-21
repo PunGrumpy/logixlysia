@@ -63,12 +63,12 @@ function useLogger<
 
 ### `flushLogixlysia`
 
-Drains the transports in `options` and every file sink, and with `close: true` also releases them. Pass the same `options` object you gave the plugin; see [graceful shutdown](/docs/adapters/overview#graceful-shutdown).
+Drains the transports in `options` and every file sink, and with `close: true` also releases them. Pass the same `options` object you gave the plugin; see [graceful shutdown](/docs/adapters/overview#graceful-shutdown). Without `timeoutMs` it waits as long as delivery takes. With it, it waits at most that long for the flush and the close together, passes each transport `{ signal }`, which aborts at the deadline, and reports a deadline that passed through `onError` with `sink: 'shutdown'`. `0` starts the work and does not wait. It never rejects; a `timeoutMs` outside `0` to `2147483647` throws.
 
 ```ts check=skip
 function flushLogixlysia(
   options: Options,
-  flags?: { close?: boolean }
+  flags?: { close?: boolean; timeoutMs?: number }
 ): Promise<void>
 ```
 
@@ -258,13 +258,13 @@ type Transport = {
     message: string,
     meta?: Record<string, unknown>
   ) => void | Promise<void>
-  flush?: () => void | Promise<void>
-  close?: () => void | Promise<void>
+  flush?: (options?: { signal?: AbortSignal }) => void | Promise<void>
+  close?: (options?: { signal?: AbortSignal }) => void | Promise<void>
   minLevel?: LogLevel
 }
 ```
 
-`minLevel` is the lowest level the transport receives. Quieter records skip it and are not counted as dropped; see [Minimum Level](/docs/features/transports#minimum-level). `flush` drains entries the transport has queued or batched; the shutdown flush calls it when the app stops. `close` releases held sockets, timers and buffers, and is reached only through `flushLogixlysia(options, { close: true })`.
+`minLevel` is the lowest level the transport receives. Quieter records skip it and are not counted as dropped; see [Minimum Level](/docs/features/transports#minimum-level). `flush` drains entries the transport has queued or batched; the shutdown flush calls it when the app stops. `close` releases held sockets, timers and buffers, and is reached only through `flushLogixlysia(options, { close: true })`. Under a deadline both receive `{ signal }`, which aborts when it passes; a transport may ignore it.
 
 ### `LogRotationConfig`
 
