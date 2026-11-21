@@ -13,6 +13,15 @@ export interface RequestContextStore {
   peekContext: (key: ContextKey) => Readonly<Record<string, unknown>>
 }
 
+/** A store whose owner can also pin fields. Only the plugin pins. */
+export interface PinnableContextStore extends RequestContextStore {
+  /**
+   * Sets fields that later merges for this key cannot change. For values the
+   * library owns, such as the request id.
+   */
+  pinContext: (key: ContextKey, fields: Record<string, unknown>) => void
+}
+
 const MAX_MERGE_DEPTH = 8
 
 const isPlainObject = (value: unknown): value is Record<string, unknown> => {
@@ -83,8 +92,9 @@ export const keyOf = (key: ContextKey): ContextKey => {
   return typeof raw === 'object' && raw !== null ? raw : key
 }
 
-export const createRequestContextStore = (): RequestContextStore => {
+export const createRequestContextStore = (): PinnableContextStore => {
   const bags = new WeakMap<ContextKey, Record<string, unknown>>()
+  const pinned = new WeakMap<ContextKey, Set<string>>()
 
   const getOrCreate = (key: ContextKey): Record<string, unknown> => {
     const bagKey = keyOf(key)
@@ -98,7 +108,9 @@ export const createRequestContextStore = (): RequestContextStore => {
 
   return {
     clearContext(key) {
-      bags.delete(keyOf(key))
+      const bagKey = keyOf(key)
+      bags.delete(bagKey)
+      pinned.delete(bagKey)
     },
     getContext(key) {
       const bag = bags.get(keyOf(key))
@@ -109,7 +121,11 @@ export const createRequestContextStore = (): RequestContextStore => {
         return
       }
       const bag = getOrCreate(key)
+      const pins = pinned.get(keyOf(key))
       for (const field of Object.keys(partial)) {
+        if (pins?.has(field)) {
+          continue
+        }
         defineField(
           bag,
           field,
@@ -119,6 +135,19 @@ export const createRequestContextStore = (): RequestContextStore => {
     },
     peekContext(key) {
       return bags.get(keyOf(key)) ?? EMPTY_CONTEXT
+    },
+    pinContext(key, fields) {
+      const bag = getOrCreate(key)
+      const bagKey = keyOf(key)
+      let pins = pinned.get(bagKey)
+      if (!pins) {
+        pins = new Set()
+        pinned.set(bagKey, pins)
+      }
+      for (const field of Object.keys(fields)) {
+        defineField(bag, field, fields[field])
+        pins.add(field)
+      }
     }
   }
 }

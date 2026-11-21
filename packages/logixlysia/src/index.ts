@@ -517,7 +517,7 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
     logger.beginRequest(request)
     if (requestIdConfig) {
       const requestId = getOrCreateRequestId(request, requestIdConfig)
-      contextStore.mergeContext(request, { requestId })
+      contextStore.pinContext(request, { requestId })
       // Set at the start as well as at close: a short-circuited request
       // never reaches the later hooks, and the wrap runs after the Response
       // exists.
