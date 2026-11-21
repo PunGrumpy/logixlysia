@@ -193,7 +193,8 @@ logixlysia({
       transport: {
         target: 'pino/file',
         options: {
-          destination: './logs/pino-example.log'
+          destination: './logs/pino-example.log',
+          mkdir: true
         }
       }
     }
@@ -209,29 +210,32 @@ logixlysia({
 For example:
 
 ```ts
-logixlysia({
-  config: {
-    // Pino transport - only for store.pino.* logs
-    pino: {
-      transport: {
-        target: 'pino/file',
-        options: {
-          destination: './logs/pino-example.log'
-        }
+app
+  .use(
+    logixlysia({
+      config: {
+        // Pino transport - only for store.pino.* logs
+        pino: {
+          transport: {
+            target: 'pino/file',
+            options: {
+              destination: './logs/pino-example.log',
+              mkdir: true
+            }
+          }
+        },
+        // Logixlysia transports - only for HTTP request logs
+        transports: [customTransport]
       }
-    },
-    // Logixlysia transports - only for HTTP request logs
-    transports: [customTransport]
-  }
-})
+    })
+  )
+  .get('/example', ({ store }) => {
+    // This log goes to pino/file transport
+    store.pino.info({ feature: 'pino' }, 'pino log example')
 
-app.get('/example', ({ store }) => {
-  // This log goes to pino/file transport
-  store.pino.info({ feature: 'pino' }, 'pino log example')
-
-  // HTTP request logs go to Logixlysia transports (if configured)
-  // or to console/file based on logixlysia config
-})
+    // HTTP request logs go to Logixlysia transports (if configured)
+    // or to console/file based on logixlysia config
+  })
 ```
 
 This separation allows you to:
