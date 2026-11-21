@@ -66,6 +66,201 @@ describe('logixlysia/better-stack', () => {
     }
   })
 
+  test('accepts an ingesting host without a scheme from the environment', async () => {
+    const restoreEnv = stubEnv({
+      ...CLEAR_ENV,
+      BETTER_STACK_INGESTING_HOST: 's123.eu-nbg-2.betterstackdata.com'
+    })
+    const stub = stubFetch()
+    try {
+      const transport = createBetterStackTransport({ sourceToken: 'bs-token' })
+      transport.log('INFO', 'hi')
+      await transport.flush()
+      expect(stub.calls[0]?.url).toBe(
+        'https://s123.eu-nbg-2.betterstackdata.com/'
+      )
+    } finally {
+      stub.restore()
+      restoreEnv()
+    }
+  })
+
+  test('accepts an endpoint option without a scheme', async () => {
+    const restoreEnv = stubEnv(CLEAR_ENV)
+    const stub = stubFetch()
+    try {
+      const transport = createBetterStackTransport({
+        endpoint: 's123.eu-nbg-2.betterstackdata.com',
+        sourceToken: 'bs-token'
+      })
+      transport.log('INFO', 'hi')
+      await transport.flush()
+      expect(stub.calls[0]?.url).toBe(
+        'https://s123.eu-nbg-2.betterstackdata.com/'
+      )
+    } finally {
+      stub.restore()
+      restoreEnv()
+    }
+  })
+
+  test('sends a host with a port over https', async () => {
+    const restoreEnv = stubEnv(CLEAR_ENV)
+    const stub = stubFetch()
+    try {
+      const transport = createBetterStackTransport({
+        endpoint: 'localhost:8080',
+        sourceToken: 'bs-token'
+      })
+      transport.log('INFO', 'hi')
+      await transport.flush()
+      expect(stub.calls[0]?.url).toBe('https://localhost:8080/')
+    } finally {
+      stub.restore()
+      restoreEnv()
+    }
+  })
+
+  test('keeps the scheme of a full URL', async () => {
+    const restoreEnv = stubEnv(CLEAR_ENV)
+    const stub = stubFetch()
+    try {
+      const transport = createBetterStackTransport({
+        endpoint: 'http://localhost:8080',
+        sourceToken: 'bs-token'
+      })
+      transport.log('INFO', 'hi')
+      await transport.flush()
+      expect(stub.calls[0]?.url).toBe('http://localhost:8080/')
+    } finally {
+      stub.restore()
+      restoreEnv()
+    }
+  })
+
+  test('still rejects a scheme other than http or https', () => {
+    const restoreEnv = stubEnv(CLEAR_ENV)
+    try {
+      expect(() =>
+        createBetterStackTransport({
+          endpoint: 'ftp://logs.example.com',
+          sourceToken: 'bs-token'
+        })
+      ).toThrow('http or https')
+    } finally {
+      restoreEnv()
+    }
+  })
+
+  test('accepts a host with a path', async () => {
+    const restoreEnv = stubEnv(CLEAR_ENV)
+    const stub = stubFetch()
+    try {
+      const transport = createBetterStackTransport({
+        endpoint: 's1.example.com/ingest/',
+        sourceToken: 'bs-token'
+      })
+      transport.log('INFO', 'hi')
+      await transport.flush()
+      expect(stub.calls[0]?.url).toBe('https://s1.example.com/ingest')
+    } finally {
+      stub.restore()
+      restoreEnv()
+    }
+  })
+
+  test('ignores whitespace around a host', async () => {
+    const restoreEnv = stubEnv(CLEAR_ENV)
+    const stub = stubFetch()
+    try {
+      const transport = createBetterStackTransport({
+        endpoint: ' s1.example.com ',
+        sourceToken: 'bs-token'
+      })
+      transport.log('INFO', 'hi')
+      await transport.flush()
+      expect(stub.calls[0]?.url).toBe('https://s1.example.com/')
+    } finally {
+      stub.restore()
+      restoreEnv()
+    }
+  })
+
+  test('leaves a value that already parses as an http URL alone', async () => {
+    const restoreEnv = stubEnv(CLEAR_ENV)
+    const stub = stubFetch()
+    try {
+      const spaced = createBetterStackTransport({
+        endpoint: ' https://s1.example.com ',
+        sourceToken: 'bs-token'
+      })
+      spaced.log('INFO', 'hi')
+      await spaced.flush()
+      const oneSlash = createBetterStackTransport({
+        endpoint: 'http:/logs.example.com',
+        sourceToken: 'bs-token'
+      })
+      oneSlash.log('INFO', 'hi')
+      await oneSlash.flush()
+      expect(stub.calls.map(call => call.url)).toEqual([
+        'https://s1.example.com/',
+        'http://logs.example.com/'
+      ])
+    } finally {
+      stub.restore()
+      restoreEnv()
+    }
+  })
+
+  test('does not turn another scheme into a host', () => {
+    const restoreEnv = stubEnv(CLEAR_ENV)
+    try {
+      expect(() =>
+        createBetterStackTransport({
+          endpoint: 'ftp:/logs.example.com',
+          sourceToken: 'bs-token'
+        })
+      ).toThrow('http or https')
+    } finally {
+      restoreEnv()
+    }
+  })
+
+  test('does not turn a path into a host', () => {
+    const restoreEnv = stubEnv(CLEAR_ENV)
+    try {
+      expect(() =>
+        createBetterStackTransport({
+          endpoint: '/v1/logs',
+          sourceToken: 'bs-token'
+        })
+      ).toThrow("invalid endpoint URL '/v1/logs'")
+    } finally {
+      restoreEnv()
+    }
+  })
+
+  test('reports an invalid value as the caller wrote it', () => {
+    const restoreEnv = stubEnv(CLEAR_ENV)
+    try {
+      let thrown: unknown
+      try {
+        createBetterStackTransport({
+          endpoint: 'not a url',
+          sourceToken: 'bs-token'
+        })
+      } catch (error) {
+        thrown = error
+      }
+      expect(thrown).toBeInstanceOf(Error)
+      const { message } = thrown as Error
+      expect(message).toContain("'not a url'")
+      expect(message).not.toContain('https://')
+    } finally {
+      restoreEnv()
+    }
+  })
+
   test('throws for an invalid endpoint', () => {
     const restoreEnv = stubEnv(CLEAR_ENV)
     try {
