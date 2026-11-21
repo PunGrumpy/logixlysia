@@ -70,7 +70,7 @@ logRotation: {
 
 ## How Rotation Works
 
-Rotation happens on write, when either configured trigger is crossed: the in-memory byte count exceeds `maxSize`, or the live file's age (from filesystem creation time) has reached `interval`. Both are checked after every write batch — never on a timer. Empty files are not rotated.
+Rotation happens on write, when either configured trigger is crossed: the in-memory byte count exceeds `maxSize`, or the live file's age (from filesystem creation time) has reached `interval`. `interval` is checked before a write batch, so the first line written after it elapses goes into the new file, and `maxSize` is checked after one. Neither runs on a timer. Empty files are not rotated.
 
 When a log file is rotated, it's renamed with a timestamp and a high-resolution counter to guarantee uniqueness:
 
