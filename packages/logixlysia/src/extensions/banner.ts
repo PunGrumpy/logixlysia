@@ -12,7 +12,13 @@ const elysiaPkg: { version?: string } = (() => {
 const OWN_PACKAGE_PATHS = ['../package.json', '../../package.json']
 
 const logixlysiaPkg: { version?: string } = (() => {
-  const require = createRequire(import.meta.url)
+  let require: NodeJS.Require
+  try {
+    require = createRequire(import.meta.url)
+  } catch {
+    // A CommonJS bundle leaves import.meta.url undefined.
+    return {}
+  }
   for (const path of OWN_PACKAGE_PATHS) {
     try {
       const pkg = require(path) as { name?: string; version?: string }
