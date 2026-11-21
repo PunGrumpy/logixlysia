@@ -108,6 +108,9 @@ const resolveTranslateTime = (options: Options): string | undefined => {
   return isStdoutTty() ? TTY_TIMESTAMP_PATTERN : undefined
 }
 
+const isStandard = (pattern: string): boolean =>
+  pattern.toLowerCase() === 'standard'
+
 const resolveTimestampPattern = (
   pattern: string
 ): { pattern: string; utc: boolean } => {
@@ -119,6 +122,43 @@ const resolveTimestampPattern = (
     pattern: rest === 'standard' ? STANDARD_TIMESTAMP_PATTERN : rest,
     utc
   }
+}
+
+const TIMESTAMP_TOKEN = /yyyy|mm|dd|HH|MM|ss|SSS/gu
+const NEEDS_QUOTING = /[A-Za-z"]/u
+const PRETTY_STANDARD = 'yyyy-mm-dd HH:MM:ss.l o'
+const PRETTY_EMPTY_LITERAL = "''"
+
+// pino-pretty reads every letter outside quotes as a token, so text between
+// tokens is quoted. A single quote can only be written inside double quotes.
+const quotePrettyLiteral = (literal: string): string =>
+  literal
+    .split("'")
+    .map(part => (NEEDS_QUOTING.test(part) ? `'${part}'` : part))
+    .join(`"'"`)
+
+export const toPinoPrettyTranslateTime = (pattern: string): string => {
+  const prefix = pattern.slice(0, TIMESTAMP_PREFIX_LENGTH).toLowerCase()
+  const utc = prefix === 'utc:'
+  const rest =
+    utc || prefix === 'sys:' ? pattern.slice(TIMESTAMP_PREFIX_LENGTH) : pattern
+  const zone = utc ? 'UTC:' : 'SYS:'
+  if (isStandard(rest)) {
+    return `${zone}${PRETTY_STANDARD}`
+  }
+
+  let mask = ''
+  let end = 0
+  for (const match of rest.matchAll(TIMESTAMP_TOKEN)) {
+    // Two tokens with nothing between them would read as one longer token.
+    mask += match.index === end && mask !== '' ? PRETTY_EMPTY_LITERAL : ''
+    mask += quotePrettyLiteral(rest.slice(end, match.index))
+    mask += match[0] === 'SSS' ? 'l' : match[0]
+    end = match.index + match[0].length
+  }
+  mask += quotePrettyLiteral(rest.slice(end))
+  // An empty mask would make pino-pretty fall back to its default date.
+  return `${zone}${mask === '' ? PRETTY_EMPTY_LITERAL : mask}`
 }
 
 const formatTimestamp = (date: Date, pattern?: string): string => {
