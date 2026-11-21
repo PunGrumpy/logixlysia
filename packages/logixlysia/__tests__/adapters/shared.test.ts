@@ -13,7 +13,11 @@ import {
   snapshotMeta,
   stripTrailingSlashes
 } from '../../src/adapters/shared'
-import type { BatchTransportOptions, LogEntry } from '../../src/adapters/shared'
+import type {
+  BatchTransportOptions,
+  HttpTransportInput,
+  LogEntry
+} from '../../src/adapters/shared'
 import { spyConsole } from '../_helpers/console'
 import { sleep } from '../_helpers/sleep'
 import { stubFetch } from './helpers'
@@ -256,6 +260,23 @@ describe('postWithRetry', () => {
     }
   })
 
+  test('retries a 408 response and succeeds', async () => {
+    const stub = stubFetch([{ status: 408 }, { status: 200 }])
+    try {
+      await postWithRetry({
+        body: '{}',
+        headers: {},
+        name: 'Test',
+        retries: 2,
+        timeout: 1000,
+        url: 'https://example.com/ingest'
+      })
+      expect(stub.calls).toHaveLength(2)
+    } finally {
+      stub.restore()
+    }
+  })
+
   test('retries 5xx responses and succeeds', async () => {
     const stub = stubFetch([{ status: 500 }, { status: 200 }])
     try {
@@ -387,6 +408,82 @@ describe('postWithRetry', () => {
       expect((rejection as Error).message).not.toContain('\u001B')
     } finally {
       stub.restore()
+    }
+  })
+
+  test('keeps the preview of an error body when the stream fails after 1 KB', async () => {
+    const original = globalThis.fetch
+    const body = '0123456789'.repeat(103).slice(0, 1024)
+    let pulls = 0
+    globalThis.fetch = mock(() =>
+      Promise.resolve(
+        new Response(
+          new ReadableStream<Uint8Array>(
+            {
+              pull(controller) {
+                pulls += 1
+                if (pulls === 1) {
+                  controller.enqueue(new TextEncoder().encode(body))
+                  return
+                }
+                controller.error(new Error('stalled'))
+              }
+            },
+            { highWaterMark: 0 }
+          ),
+          { status: 400 }
+        )
+      )
+    ) as unknown as typeof fetch
+    try {
+      const rejection = await postWithRetry({
+        body: '{}',
+        headers: {},
+        name: 'Test',
+        retries: 0,
+        timeout: 2000,
+        url: 'https://example.com/ingest'
+      }).catch((error: Error) => error)
+      expect(rejection).toBeInstanceOf(Error)
+      expect((rejection as Error).message).toContain(
+        `HTTP 400 — ${body.slice(0, 200)}`
+      )
+    } finally {
+      globalThis.fetch = original
+    }
+  })
+
+  test('does not read again once an error body has delivered 1 KB', async () => {
+    const original = globalThis.fetch
+    let pulls = 0
+    globalThis.fetch = mock(() =>
+      Promise.resolve(
+        new Response(
+          new ReadableStream<Uint8Array>(
+            {
+              pull(controller) {
+                pulls += 1
+                controller.enqueue(new Uint8Array(1024).fill(120))
+              }
+            },
+            { highWaterMark: 0 }
+          ),
+          { status: 400 }
+        )
+      )
+    ) as unknown as typeof fetch
+    try {
+      await postWithRetry({
+        body: '{}',
+        headers: {},
+        name: 'Test',
+        retries: 0,
+        timeout: 2000,
+        url: 'https://example.com/ingest'
+      }).catch(() => {})
+      expect(pulls).toBe(1)
+    } finally {
+      globalThis.fetch = original
     }
   })
 
@@ -1389,19 +1486,23 @@ describe('createHttpTransport', () => {
   })
 })
 
-const transportWith = (options: BatchTransportOptions) =>
+const transportWith = (
+  options: BatchTransportOptions,
+  rejected?: HttpTransportInput['rejected']
+) =>
   createHttpTransport({
     body: entries => JSON.stringify(entries),
     headers: {},
     name: 'Test',
     options: { onError: () => {}, retries: 0, ...options },
+    rejected,
     url: 'https://ingest.example/v1'
   })
 
 describe('onDropped', () => {
   interface Dropped {
     count: number
-    reason: 'closed' | 'queue-full' | 'send-failed'
+    reason: 'closed' | 'queue-full' | 'rejected' | 'send-failed'
   }
 
   test('reports each entry that does not fit in the waiting bound', async () => {
@@ -1444,6 +1545,235 @@ describe('onDropped', () => {
       expect(onDropped.mock.calls).toEqual([
         [{ count: 3, reason: 'send-failed' }]
       ])
+    } finally {
+      stub.restore()
+    }
+  })
+
+  test('reports entries a successful response rejected, once, without failing flush()', async () => {
+    const stub = stubFetch([{ body: '{"rejected":2}', status: 200 }])
+    const onDropped = mock((_info: Dropped) => {})
+    const onError = mock((_error: unknown) => {})
+    try {
+      const transport = transportWith(
+        { maxBatchSize: 10, onDropped, onError },
+        () => ({ count: 2, detail: 'attribute too long' })
+      )
+      for (const message of ['a', 'b', 'c']) {
+        transport.log('INFO', message)
+      }
+
+      await transport.flush()
+
+      expect(stub.calls).toHaveLength(1)
+      expect(onDropped.mock.calls).toEqual([[{ count: 2, reason: 'rejected' }]])
+      expect(onError).toHaveBeenCalledTimes(1)
+      const [error] = onError.mock.calls[0] ?? []
+      expect((error as Error).message).toBe(
+        '[logixlysia] Test transport: backend rejected 2 of 3 entries — attribute too long'
+      )
+    } finally {
+      stub.restore()
+    }
+  })
+
+  test('reports no more rejected entries than the batch held', async () => {
+    const stub = stubFetch([{ body: '{}', status: 200 }])
+    const onDropped = mock((_info: Dropped) => {})
+    try {
+      const transport = transportWith({ maxBatchSize: 10, onDropped }, () => ({
+        count: 50
+      }))
+      transport.log('INFO', 'a')
+      transport.log('INFO', 'b')
+
+      await transport.flush()
+
+      expect(onDropped.mock.calls).toEqual([[{ count: 2, reason: 'rejected' }]])
+    } finally {
+      stub.restore()
+    }
+  })
+
+  test('does not call the hook for a body that is not JSON', async () => {
+    const stub = stubFetch([{ body: 'OK', status: 200 }])
+    const onDropped = mock((_info: Dropped) => {})
+    const onError = mock((_error: unknown) => {})
+    const rejected = mock(() => ({ count: 1 }))
+    try {
+      const transport = transportWith(
+        { maxBatchSize: 10, onDropped, onError },
+        rejected
+      )
+      transport.log('INFO', 'a')
+
+      await transport.flush()
+
+      expect(rejected).not.toHaveBeenCalled()
+      expect(onDropped).not.toHaveBeenCalled()
+      expect(onError).not.toHaveBeenCalled()
+    } finally {
+      stub.restore()
+    }
+  })
+
+  test.each([
+    ['undefined', undefined],
+    ['a zero count', { count: 0 }],
+    ['a NaN count', { count: Number.NaN }],
+    ['a fractional count', { count: 1.9 }]
+  ])('reports nothing when the hook returns %s', async (_name, result) => {
+    const stub = stubFetch([{ body: '{}', status: 200 }])
+    const onDropped = mock((_info: Dropped) => {})
+    const onError = mock((_error: unknown) => {})
+    try {
+      const transport = transportWith(
+        { maxBatchSize: 10, onDropped, onError },
+        () => result
+      )
+      transport.log('INFO', 'a')
+
+      await transport.flush()
+
+      expect(onDropped).not.toHaveBeenCalled()
+      expect(onError).not.toHaveBeenCalled()
+    } finally {
+      stub.restore()
+    }
+  })
+
+  test('parses a success body of about 200 KiB and reports its rejection', async () => {
+    const body = JSON.stringify({ pad: 'x'.repeat(200 * 1024) })
+    const stub = stubFetch([{ body, status: 200 }])
+    const onDropped = mock((_info: Dropped) => {})
+    const rejected = mock((_response: unknown) => ({ count: 1 }))
+    try {
+      const transport = transportWith({ maxBatchSize: 10, onDropped }, rejected)
+      transport.log('INFO', 'a')
+
+      await transport.flush()
+
+      expect(rejected).toHaveBeenCalledTimes(1)
+      expect(onDropped.mock.calls).toEqual([[{ count: 1, reason: 'rejected' }]])
+    } finally {
+      stub.restore()
+    }
+  })
+
+  test('does not parse a success body longer than 1 MiB', async () => {
+    const body = JSON.stringify({ pad: 'x'.repeat(1_048_576 + 1024) })
+    const stub = stubFetch([{ body, status: 200 }])
+    const onDropped = mock((_info: Dropped) => {})
+    const onError = mock((_error: unknown) => {})
+    const rejected = mock((_response: unknown) => ({ count: 1 }))
+    try {
+      const transport = transportWith(
+        { maxBatchSize: 10, onDropped, onError },
+        rejected
+      )
+      transport.log('INFO', 'a')
+
+      await transport.flush()
+
+      expect(rejected).not.toHaveBeenCalled()
+      expect(onDropped).not.toHaveBeenCalled()
+      expect(onError).not.toHaveBeenCalled()
+    } finally {
+      stub.restore()
+    }
+  })
+
+  test.each([
+    ['exactly 1 MiB', 1_048_576, 1],
+    ['one byte over 1 MiB', 1_048_577, 0]
+  ])(
+    'treats a success body of %s against the limit',
+    async (_name, byteLength, expectedCalls) => {
+      const padding = 'x'.repeat(byteLength - '{"pad":""}'.length)
+      const body = JSON.stringify({ pad: padding })
+      expect(new TextEncoder().encode(body).byteLength).toBe(byteLength)
+      const stub = stubFetch([{ body, status: 200 }])
+      const rejected = mock((_response: unknown) => ({ count: 1 }))
+      try {
+        const transport = transportWith({ maxBatchSize: 10 }, rejected)
+        transport.log('INFO', 'a')
+
+        await transport.flush()
+
+        expect(rejected).toHaveBeenCalledTimes(expectedCalls)
+      } finally {
+        stub.restore()
+      }
+    }
+  )
+
+  test.each([
+    ['about 200 KiB', 200 * 1024, 1],
+    ['more than 1 MiB', 1_048_576 + 1024, 0]
+  ])(
+    'applies the same limit to a body of %s delivered in 16 KiB chunks',
+    async (_name, padLength, expectedCalls) => {
+      const chunkSize = 16 * 1024
+      const bytes = new TextEncoder().encode(
+        JSON.stringify({ pad: 'x'.repeat(padLength) })
+      )
+      const original = globalThis.fetch
+      globalThis.fetch = (() => {
+        let offset = 0
+        return Promise.resolve(
+          new Response(
+            new ReadableStream<Uint8Array>({
+              pull: controller => {
+                if (offset >= bytes.length) {
+                  controller.close()
+                  return
+                }
+                controller.enqueue(bytes.slice(offset, offset + chunkSize))
+                offset += chunkSize
+              }
+            }),
+            { status: 200 }
+          )
+        )
+      }) as unknown as typeof fetch
+      const onDropped = mock((_info: Dropped) => {})
+      const rejected = mock((_response: unknown) => ({ count: 1 }))
+      try {
+        const transport = transportWith(
+          { maxBatchSize: 10, onDropped },
+          rejected
+        )
+        transport.log('INFO', 'a')
+
+        await transport.flush()
+
+        expect(rejected).toHaveBeenCalledTimes(expectedCalls)
+        expect(onDropped.mock.calls).toEqual(
+          expectedCalls === 1 ? [[{ count: 1, reason: 'rejected' }]] : []
+        )
+      } finally {
+        globalThis.fetch = original
+      }
+    }
+  )
+
+  test('reports nothing and still resolves flush() when the hook throws', async () => {
+    const stub = stubFetch([{ body: '{}', status: 200 }])
+    const onDropped = mock((_info: Dropped) => {})
+    const onError = mock((_error: unknown) => {})
+    try {
+      const transport = transportWith(
+        { maxBatchSize: 10, onDropped, onError },
+        () => {
+          throw new Error('bad hook')
+        }
+      )
+      transport.log('INFO', 'a')
+
+      await expect(transport.flush()).resolves.toBeUndefined()
+
+      expect(onDropped).not.toHaveBeenCalled()
+      expect(onError).not.toHaveBeenCalled()
     } finally {
       stub.restore()
     }

@@ -3,6 +3,7 @@ import {
   defaultBody,
   flattenMeta,
   getPath,
+  isPlainObject,
   OTEL_SEVERITY,
   toUnixNanos
 } from './shared'
@@ -10,7 +11,8 @@ import type {
   AdapterTransport,
   BatchTransportOptions,
   FlatValue,
-  LogEntry
+  LogEntry,
+  RejectedEntries
 } from './shared'
 
 interface OtlpAnyValue {
@@ -88,6 +90,29 @@ const traceFields = (meta: Record<string, unknown>): OtlpTraceFields => {
   }
 }
 
+const INT64_DIGITS = /^\d+$/u
+
+const rejectedLogRecords = (response: unknown): RejectedEntries | undefined => {
+  if (!isPlainObject(response)) {
+    return
+  }
+  const { partialSuccess } = response
+  if (!isPlainObject(partialSuccess)) {
+    return
+  }
+  const { errorMessage, rejectedLogRecords: count } = partialSuccess
+  if (
+    typeof count !== 'number' &&
+    !(typeof count === 'string' && INT64_DIGITS.test(count))
+  ) {
+    return
+  }
+  return {
+    count: Number(count),
+    detail: typeof errorMessage === 'string' ? errorMessage : undefined
+  }
+}
+
 export interface OtlpCoreInput {
   headers: Record<string, string>
   name: string
@@ -133,6 +158,7 @@ export const createOtlpCore = (input: OtlpCoreInput): AdapterTransport => {
     },
     name: input.name,
     options: input.options,
+    rejected: rejectedLogRecords,
     url: input.url
   })
 }

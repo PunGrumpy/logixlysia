@@ -54,7 +54,7 @@ Trigger a request and the access log appears in your platform's log explorer.
 All adapters share the same core:
 
 - **Batching** — entries buffer and flush either when `maxBatchSize` is reached (default 20) or after `flushIntervalMs` (default 2000 ms), whichever comes first. Entries that arrive while a request is in flight join the next request.
-- **Retries** — network errors, `429`, and `5xx` responses retry with linear backoff (default 2 retries). Other `4xx` responses fail immediately.
+- **Retries** — network errors, `408`, `429`, and `5xx` responses retry with linear backoff (default 2 retries). Other `4xx` responses fail immediately.
 - **Timeout** — each request aborts after `timeout` ms (default 5000).
 - **Non-blocking** — sends run in the background and never delay your HTTP responses. A failure of a request that a `log()` or `flush()` call started reaches [`config.onError`](/docs/configuration#onerror) (sink `'transport'`); a failure of a request the adapter started on its own, on the interval timer or after a request returned with a full batch waiting, reaches the adapter's `onError`. Without a hook, either goes to stderr, rate-limited.
 - **Copied at log time** — each record's `meta` is turned into a plain JSON copy when the adapter receives it, so a later change to a logged object is not shipped, and a value that cannot be serialized is replaced by `"[Unserializable]"` for that field only, an `Error` stored in a field keeps its `name`, `message`, `cause` and own fields (not its stack; the record's own `error` is already a plain object and keeps the `stack` of a server error), a `Map` becomes an object and a `Set` an array (behind `withRedaction` the copy is taken when the wrapper delivers the record).
@@ -69,7 +69,7 @@ Every adapter accepts these options on top of its platform-specific ones:
 | `maxEntriesPerRequest` | `number` | `500` | The most entries one request carries (100 for Sentry) |
 | `flushIntervalMs` | `number` | `2000` | Max time an entry waits before the buffer is sent |
 | `timeout` | `number` | `5000` | Per-request timeout in milliseconds |
-| `retries` | `number` | `2` | Retry attempts on network errors, 429, and 5xx |
+| `retries` | `number` | `2` | Retry attempts on network errors, 408, 429, and 5xx |
 | `maxPendingBatches` | `number` | `32` | Bound on waiting entries, as a multiple of `maxBatchSize` |
 | `minLevel` | `'DEBUG' \| 'INFO' \| 'WARNING' \| 'ERROR'` | — | Lowest level the adapter receives; quieter records skip it and are not counted as dropped |
 | `onError` | `(error: unknown) => void` | — | Called when a request the adapter started on its own fails after retries, or entries are dropped |
@@ -91,7 +91,7 @@ Requests are sent one at a time, so entries arrive in the order they were logged
 
 ### Counting lost entries
 
-`onDropped` receives `{ count, reason }` each time entries are lost. `reason` is `'queue-full'` when too many entries were already waiting (`count` is `1`, whichever entry was dropped), `'send-failed'` when a request failed after its retries (`count` is the size of that batch), and `'closed'` for a `log()` after `close()` (`count` is `1`).
+`onDropped` receives `{ count, reason }` each time entries are lost. `reason` is `'queue-full'` when too many entries were already waiting (`count` is `1`, whichever entry was dropped), `'send-failed'` when a request failed after its retries (`count` is the size of that batch), `'rejected'` when the backend answered with success and reported that it did not store part of the batch (`count` is how many it rejected; the OTLP, HyperDX and Axiom adapters read this), and `'closed'` for a `log()` after `close()` (`count` is `1`). A rejected batch is not retried, and its explanation reaches the adapter's `onError`.
 
 ```ts
 let lost = 0

@@ -1,13 +1,34 @@
 import {
   createHttpTransport,
   envString,
+  isPlainObject,
   stripTrailingSlashes,
   transportError
 } from './adapters/shared'
-import type { AdapterTransport, BatchTransportOptions } from './adapters/shared'
+import type {
+  AdapterTransport,
+  BatchTransportOptions,
+  RejectedEntries
+} from './adapters/shared'
 import { stringifyForLog } from './utils/json'
 
 const DEFAULT_BASE_URL = 'https://api.axiom.co'
+
+const failedEvents = (response: unknown): RejectedEntries | undefined => {
+  if (!isPlainObject(response)) {
+    return
+  }
+  const { failed, failures } = response
+  if (typeof failed !== 'number') {
+    return
+  }
+  const [first] = Array.isArray(failures) ? failures : []
+  const error = isPlainObject(first) ? first.error : undefined
+  return {
+    count: failed,
+    detail: typeof error === 'string' ? error : undefined
+  }
+}
 
 export interface AxiomTransportOptions extends BatchTransportOptions {
   /**
@@ -83,6 +104,7 @@ export const createAxiomTransport = (
     headers,
     name: 'Axiom',
     options,
+    rejected: failedEvents,
     url: `${baseUrl}/v1/datasets/${encodeURIComponent(dataset)}/ingest`
   })
 }
