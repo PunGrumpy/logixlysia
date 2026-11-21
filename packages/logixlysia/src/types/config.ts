@@ -7,17 +7,20 @@ export interface Transport {
    * Flush, then release held resources (sockets, timers, buffers). Must be
    * idempotent. The plugin never calls this automatically; it is reached
    * through `flushLogixlysia(options, { close: true })`. After it resolves,
-   * further `log()` calls should be dropped rather than throw.
+   * further `log()` calls should be dropped rather than throw. Given a
+   * `timeoutMs`, the plugin passes `{ signal }`, which aborts at that
+   * deadline; it stops waiting then whether or not the transport reads it.
    */
-  close?: () => void | Promise<void>
+  close?: (options?: { signal?: AbortSignal }) => void | Promise<void>
   /**
    * Drain any queued or batched entries. Called during graceful shutdown
    * (see `OutputConfig.flushTimeoutMs`) and may be called directly, e.g.
    * before a serverless function is frozen. Omit when `log()` already
    * writes durably. Errors are reported like `log()` errors and do not
-   * stop other transports from flushing.
+   * stop other transports from flushing. Under a deadline the plugin
+   * passes `{ signal }`, as for `close`; without one it passes nothing.
    */
-  flush?: () => void | Promise<void>
+  flush?: (options?: { signal?: AbortSignal }) => void | Promise<void>
   log: (
     level: LogLevel,
     message: string,
@@ -262,7 +265,9 @@ export interface OutputConfig {
   disableInternalLogger?: boolean
   /**
    * How long the plugin waits for transports and the file sink to flush
-   * when the app stops. `0` starts the flush but does not wait.
+   * when the app stops. `0` starts the flush but does not wait. Transports
+   * receive the deadline as `{ signal }`; past it, the retries of the
+   * built-in adapters no longer hold the process open.
    * @default 5000
    */
   flushTimeoutMs?: number

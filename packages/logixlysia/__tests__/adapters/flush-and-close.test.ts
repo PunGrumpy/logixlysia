@@ -6,7 +6,7 @@ import type {
 } from '../../src/adapters/shared'
 import { sleep } from '../_helpers/sleep'
 import { waitFor } from '../_helpers/wait-for'
-import { stubFetch } from './helpers'
+import { holdFetch, settlesWithin, stubFetch, watchTimers } from './helpers'
 
 /** The delay a `Retry-After: 30` answer asks for. */
 const RETRY_SLEEP_MS = 30_000
@@ -21,115 +21,6 @@ const SETTLE_MS = 10
 interface Dropped {
   count: number
   reason: 'closed' | 'queue-full' | 'rejected' | 'send-failed'
-}
-
-interface WatchedTimer {
-  /** Set once the code under test clears the timer. */
-  cleared: boolean
-  /** Runs the timer's callback now, as if its delay had passed. */
-  fire: () => void
-  timer: ReturnType<typeof setTimeout>
-}
-
-/**
- * Records every timer set for `delayMs`, so a test can read whether it holds
- * the process or was cleared, and fire it without waiting.
- */
-const watchTimers = (
-  delayMs: number
-): { restore: () => void; timers: WatchedTimer[] } => {
-  const originalSet = globalThis.setTimeout
-  const originalClear = globalThis.clearTimeout
-  const timers: WatchedTimer[] = []
-  const watchedSet = (
-    handler: () => void,
-    ms?: number
-  ): ReturnType<typeof setTimeout> => {
-    const timer = originalSet(handler, ms)
-    if (ms === delayMs) {
-      timers.push({
-        cleared: false,
-        fire: () => {
-          originalClear(timer)
-          handler()
-        },
-        timer
-      })
-    }
-    return timer
-  }
-  const watchedClear = (timer?: ReturnType<typeof setTimeout>): void => {
-    const watched = timers.find(item => item.timer === timer)
-    if (watched) {
-      watched.cleared = true
-    }
-    originalClear(timer)
-  }
-  globalThis.setTimeout = watchedSet as unknown as typeof setTimeout
-  globalThis.clearTimeout = watchedClear as unknown as typeof clearTimeout
-  return {
-    restore: () => {
-      globalThis.setTimeout = originalSet
-      globalThis.clearTimeout = originalClear
-    },
-    timers
-  }
-}
-
-interface HeldRequest {
-  body: string
-  respond: (response: Response) => void
-  signal: AbortSignal
-}
-
-/**
- * A fetch whose requests stay open until the test answers them. Aborting a
- * request's signal rejects it, as it does a real one.
- */
-const holdFetch = (): { requests: HeldRequest[]; restore: () => void } => {
-  const original = globalThis.fetch
-  const requests: HeldRequest[] = []
-  const held = (
-    _url: string | URL | Request,
-    init?: RequestInit
-  ): Promise<Response> => {
-    const { promise, reject, resolve }: PromiseWithResolvers<Response> =
-      Promise.withResolvers()
-    const signal = init?.signal ?? new AbortController().signal
-    signal.addEventListener('abort', () => reject(signal.reason), {
-      once: true
-    })
-    requests.push({
-      body: typeof init?.body === 'string' ? init.body : '',
-      respond: resolve,
-      signal
-    })
-    return promise
-  }
-  globalThis.fetch = held as unknown as typeof fetch
-  return {
-    requests,
-    restore: () => {
-      globalThis.fetch = original
-    }
-  }
-}
-
-const PENDING = Symbol('pending')
-
-/** Whether `promise` resolves or rejects within `ms`. */
-const settlesWithin = async (
-  promise: Promise<unknown>,
-  ms: number
-): Promise<boolean> => {
-  const outcome = await Promise.race([
-    promise.then(
-      () => 'settled' as const,
-      () => 'settled' as const
-    ),
-    sleep(ms).then(() => PENDING)
-  ])
-  return outcome !== PENDING
 }
 
 const ok = (): Response => new Response('{}', { status: 200 })

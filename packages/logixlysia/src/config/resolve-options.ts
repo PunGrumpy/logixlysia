@@ -243,6 +243,15 @@ const validateTransportLevels = (config: Options['config']): void => {
   }
 }
 
+/** Throws unless `value` is a delay `setTimeout` honours, from 0 to 2^31 - 1 ms. */
+export const validateTimeoutMs = (name: string, value: number): void => {
+  if (!(isNonNegativeNumber(value) && value <= MAX_TIMER_DELAY_MS)) {
+    invalidOutput(
+      `${name} must be a finite number of milliseconds between 0 and ${MAX_TIMER_DELAY_MS}, got ${value}`
+    )
+  }
+}
+
 const validateOutput = (config: Options['config']): void => {
   validateTransportLevels(config)
   if (
@@ -254,17 +263,8 @@ const validateOutput = (config: Options['config']): void => {
     )
   }
 
-  const flushTimeoutMs = config?.flushTimeoutMs
-  if (
-    flushTimeoutMs !== undefined &&
-    !(
-      isNonNegativeNumber(flushTimeoutMs) &&
-      flushTimeoutMs <= MAX_TIMER_DELAY_MS
-    )
-  ) {
-    invalidOutput(
-      `flushTimeoutMs must be a finite number of milliseconds between 0 and ${MAX_TIMER_DELAY_MS}, got ${flushTimeoutMs}`
-    )
+  if (config?.flushTimeoutMs !== undefined) {
+    validateTimeoutMs('flushTimeoutMs', config.flushTimeoutMs)
   }
 }
 
