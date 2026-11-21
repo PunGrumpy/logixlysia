@@ -1,4 +1,5 @@
 import { LINE_SETTLED } from './context/line-settled'
+import { REQUEST_LOGGER } from './context/request-logger'
 import type { Logger, RequestScopedLogger } from './interfaces'
 
 export interface AIMetrics {
@@ -78,6 +79,19 @@ const foldInto = (
   return Object.fromEntries(total)
 }
 
+const requestKey = (logger: object, request: Request): object => {
+  if (
+    REQUEST_LOGGER in logger &&
+    typeof logger[REQUEST_LOGGER] === 'function'
+  ) {
+    const log = logger[REQUEST_LOGGER](request)
+    if (typeof log === 'object' && log !== null) {
+      return log
+    }
+  }
+  return request
+}
+
 /**
  * Adds LLM usage to the request's context, under `ai`, for its next log line.
  * Several calls in one request accumulate: counts and durations are summed,
@@ -95,7 +109,7 @@ export const mergeAIMetrics = (...args: MergeAIMetricsArgs): void => {
     return
   }
   const [logger, request, metrics] = args
-  const ai = foldInto(request, metrics)
+  const ai = foldInto(requestKey(logger, request), metrics)
   if (ai) {
     logger.mergeContext(request, { ai })
   }

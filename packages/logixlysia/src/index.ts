@@ -7,6 +7,7 @@ import {
 } from './context/enrich'
 import { LINE_SETTLED } from './context/line-settled'
 import { createRequestContextStore } from './context/request-context'
+import { REQUEST_LOGGER } from './context/request-logger'
 import {
   loggerStorage,
   noopRequestLogger,
@@ -504,6 +505,10 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
     requestLoggers.set(request, log)
     return log
   }
+  Object.defineProperty(logger, REQUEST_LOGGER, {
+    enumerable: false,
+    value: getRequestScopedLogger
+  })
 
   const openRequestScope = (
     request: Request,
