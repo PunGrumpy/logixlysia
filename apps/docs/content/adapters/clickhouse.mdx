@@ -108,5 +108,5 @@ ClickHouse loves large batches — for high-volume services, raise `maxBatchSize
 ## Troubleshooting
 
 - **`404` / `UNKNOWN_TABLE`** — create the table first (DDL above), or check `CLICKHOUSE_DATABASE` / `CLICKHOUSE_TABLE`.
-- **`516`** — authentication failed; ClickHouse returns this for bad credentials.
+- **`403` with `Code: 516` in the body** — the login failed. Check the `username` and the `password`.
 - **`Cannot parse` errors** — the table schema doesn't match the row shape; align it with the DDL above or adjust column types.
