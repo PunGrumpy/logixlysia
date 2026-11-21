@@ -569,4 +569,76 @@ describe('mergeAIMetrics', () => {
 
     expect(lines[0]?.ai).toEqual({ calls: 1, inputTokens: 3 })
   })
+
+  test('adds what log and store.logger record in one request', async () => {
+    const { lines, plugin } = capturingPlugin()
+    const app = new Elysia()
+      .use(plugin)
+      .post('/', ({ log, request, store }) => {
+        mergeAIMetrics(log, { inputTokens: 5 })
+        mergeAIMetrics(store.logger, request, { inputTokens: 7 })
+        return 'ok'
+      })
+
+    await app.handle(post('/'))
+
+    expect(lines[0]?.ai).toEqual({ calls: 2, inputTokens: 12 })
+  })
+
+  test('adds them in the other order too', async () => {
+    const { lines, plugin } = capturingPlugin()
+    const app = new Elysia()
+      .use(plugin)
+      .post('/', ({ log, request, store }) => {
+        mergeAIMetrics(store.logger, request, { inputTokens: 7 })
+        mergeAIMetrics(log, { inputTokens: 5 })
+        return 'ok'
+      })
+
+    await app.handle(post('/'))
+
+    expect(lines[0]?.ai).toEqual({ calls: 2, inputTokens: 12 })
+  })
+
+  test('keeps the totals of an app a request is forwarded to apart, through log', async () => {
+    const outerCapture = capturingPlugin()
+    const innerCapture = capturingPlugin()
+    const inner = new Elysia().use(innerCapture.plugin).post('/', ({ log }) => {
+      mergeAIMetrics(log, { inputTokens: 7 })
+      return 'ok'
+    })
+    const outer = new Elysia()
+      .use(outerCapture.plugin)
+      .post('/', ({ log, request }) => {
+        mergeAIMetrics(log, { inputTokens: 5 })
+        return inner.handle(request)
+      })
+
+    await outer.handle(post('/'))
+
+    expect(innerCapture.lines[0]?.ai).toEqual({ calls: 1, inputTokens: 7 })
+    expect(outerCapture.lines[0]?.ai).toEqual({ calls: 1, inputTokens: 5 })
+  })
+
+  test('keeps them apart through store.logger too', async () => {
+    const outerCapture = capturingPlugin()
+    const innerCapture = capturingPlugin()
+    const inner = new Elysia()
+      .use(innerCapture.plugin)
+      .post('/', ({ request, store }) => {
+        mergeAIMetrics(store.logger, request, { inputTokens: 7 })
+        return 'ok'
+      })
+    const outer = new Elysia()
+      .use(outerCapture.plugin)
+      .post('/', ({ request, store }) => {
+        mergeAIMetrics(store.logger, request, { inputTokens: 5 })
+        return inner.handle(request)
+      })
+
+    await outer.handle(post('/'))
+
+    expect(innerCapture.lines[0]?.ai).toEqual({ calls: 1, inputTokens: 7 })
+    expect(outerCapture.lines[0]?.ai).toEqual({ calls: 1, inputTokens: 5 })
+  })
 })
