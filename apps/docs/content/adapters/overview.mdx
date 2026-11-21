@@ -91,7 +91,7 @@ Requests are sent one at a time, so entries arrive in the order they were logged
 
 ### Counting lost entries
 
-`onDropped` receives `{ count, reason }` each time entries are lost. `reason` is `'queue-full'` when too many entries were already waiting (`count` is `1`, whichever entry was dropped), `'send-failed'` when a request failed after its retries (`count` is the size of that batch), and `'closed'` for a `log()` after `close()` (`count` is `1`).
+`onDropped` receives `{ count, reason }` each time entries are lost. `reason` is `'queue-full'` when too many entries were already waiting (`count` is `1`, whichever entry was dropped), `'send-failed'` when a request failed after its retries (`count` is the size of that batch), `'rejected'` when the backend answered with success and reported that it did not store part of the batch (`count` is how many it rejected; the OTLP, HyperDX and Axiom adapters read this), and `'closed'` for a `log()` after `close()` (`count` is `1`). A rejected batch is not retried, and its explanation reaches the adapter's `onError`.
 
 ```ts
 let lost = 0

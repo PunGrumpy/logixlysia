@@ -69,6 +69,12 @@ const elasticsearchTransport = createHttpTransport({
   url: 'http://elasticsearch:9200/logs/_bulk',
   headers: { 'Content-Type': 'application/x-ndjson' },
   options: { maxBatchSize: 100, onError: console.error },
+  rejected: response => {
+    const { items = [] } = response as {
+      items?: { index?: { error?: unknown } }[]
+    }
+    return { count: items.filter(item => item.index?.error).length }
+  },
   body: entries =>
     entries
       .map(entry =>
@@ -85,6 +91,8 @@ const elasticsearchTransport = createHttpTransport({
       .join('\n') + '\n'
 })
 ```
+
+Elasticsearch answers `200` when single documents in a `_bulk` request failed, so the example adds a `rejected` hook. It receives the parsed JSON body of a successful response and returns how many entries the backend did not store. Those entries reach `onDropped` with the reason `'rejected'` and are not retried. A response body larger than 1 MiB is not parsed, and nothing is counted from it.
 
 ### MongoDB
 
