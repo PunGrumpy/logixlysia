@@ -847,13 +847,7 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
     )
     .derive(({ request }) => ({ log: getRequestScopedLogger(request) }))
     .onStart(({ server }): void => {
-      if (server) {
-        startServer(server, options)
-      } else {
-        const port = Number(process.env.PORT) || 3000
-        const hostname = process.env.HOST || 'localhost'
-        startServer({ hostname, port, protocol: 'http' }, options)
-      }
+      startServer(server ?? undefined, options)
     })
     .onStop(async () => {
       const timeoutMs =
