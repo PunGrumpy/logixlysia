@@ -9,13 +9,21 @@ const elysiaPkg: { version?: string } = (() => {
   }
 })()
 
+const OWN_PACKAGE_PATHS = ['../package.json', '../../package.json']
+
 const logixlysiaPkg: { version?: string } = (() => {
-  try {
-    const require = createRequire(import.meta.url)
-    return require('../../package.json') as { version?: string }
-  } catch {
-    return {}
+  const require = createRequire(import.meta.url)
+  for (const path of OWN_PACKAGE_PATHS) {
+    try {
+      const pkg = require(path) as { name?: string; version?: string }
+      if (pkg.name === 'logixlysia') {
+        return pkg
+      }
+    } catch {
+      // Not at this depth; try the next one.
+    }
   }
+  return {}
 })()
 
 const centerText = (text: string, width: number): string => {
