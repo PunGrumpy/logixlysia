@@ -193,11 +193,28 @@ class FileSinkImpl implements FileSink {
   }
 
   async close(): Promise<void> {
-    await this.flush()
+    // Same yield as flush(): a batch still pending when close() was called,
+    // including lines that join it later in this tick, is chained ahead of
+    // the close. A write that starts a new batch after this call goes behind.
+    await Promise.resolve()
+    const closed = this.closeAfter(this.flushChain)
+    // A handle that fails to close rejects this call, not a later flush().
+    const step = settle(closed)
+    this.flushChain = step
+    await closed
+    // A write issued while the handle was closing is queued behind that step
+    // and reopens the file, so the sink stays registered for the next close.
+    const idle = this.flushChain === step && this.pendingBatch === null
+    if (idle && sinks.get(this.filePath) === this) {
+      sinks.delete(this.filePath)
+    }
+  }
+
+  private async closeAfter(prior: Promise<void>): Promise<void> {
+    await settle(prior)
     const { handle } = this
     this.handle = null
     await handle?.close()
-    sinks.delete(this.filePath)
   }
 }
 
