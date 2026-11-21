@@ -30,6 +30,7 @@ The fields land in the line's `context.ai`.
 | `model`, `provider` | The last call's model and provider |
 | `finishReason` | The last call's finish reason, such as `stop` |
 | `inputTokens`, `outputTokens`, `reasoningTokens` | Tokens the provider reported |
+| `cacheReadTokens`, `cacheWriteTokens` | The part of `inputTokens` read from, and written to, the provider's prompt cache. Each appears when at least one call reported a number above zero |
 | `totalTokens` | Input plus output tokens |
 | `msToFinish` | Time from the call to its last chunk |
 | `msToFirstChunk` | Streams only: the last call's time to its first text |
