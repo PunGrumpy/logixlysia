@@ -100,6 +100,21 @@ const pathnameOf = (url: string): string => {
   }
 }
 
+const toRecordError = (error: unknown): MemoryRecordError | undefined => {
+  if (typeof error === 'string') {
+    return { message: error }
+  }
+  if (!isRecordObject(error)) {
+    return
+  }
+  const { message } = error
+  return {
+    ...error,
+    message:
+      typeof message === 'string' ? message : (JSON.stringify(message) ?? '')
+  }
+}
+
 const toMemoryRecord = (
   level: LogLevel,
   message: string,
@@ -115,7 +130,7 @@ const toMemoryRecord = (
   return {
     context: plainContext,
     durationMs: typeof durationMs === 'number' ? durationMs : undefined,
-    error: isRecordObject(error) ? (error as MemoryRecordError) : undefined,
+    error: toRecordError(error),
     level,
     message,
     meta,
