@@ -162,13 +162,19 @@ app.get('/orders/:id', ({ store, params }) => {
 **Use `runJob`** for a unit of work such as a cron job, a queue consumer or a script. It writes one final line with the duration, the outcome and the context you accumulated, through every sink:
 
 ```ts check=skip
-import logixlysia from 'logixlysia'
+import logixlysia, { flushLogixlysia } from 'logixlysia'
+import type { Options } from 'logixlysia'
 
-const logs = logixlysia({ config: { service: 'billing' } })
+const options: Options = { config: { service: 'billing' } }
+const logs = logixlysia(options)
 
-await logs.runJob('nightly-sync', async log => {
-  log.mergeContext({ rows: await syncRows() })
-})
+try {
+  await logs.runJob('nightly-sync', async log => {
+    log.mergeContext({ rows: await syncRows() })
+  })
+} finally {
+  await flushLogixlysia(options)
+}
 ```
 
 See [Background Jobs](/docs/features/background-jobs) for the outcome rules, `useLogger()` inside helpers, flushing a script and sampling.

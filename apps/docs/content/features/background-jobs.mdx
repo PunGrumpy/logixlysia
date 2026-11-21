@@ -61,11 +61,16 @@ import type { Options } from 'logixlysia'
 const options: Options = { config: { service: 'billing' } }
 const logs = logixlysia(options)
 
-await logs.runJob('backfill', log => {
-  log.mergeContext({ batch: 7 })
-})
-await flushLogixlysia(options)
+try {
+  await logs.runJob('backfill', log => {
+    log.mergeContext({ batch: 7 })
+  })
+} finally {
+  await flushLogixlysia(options)
+}
 ```
+
+The `finally` matters: `runJob` rethrows a job's error.
 
 ## Sampling
 
