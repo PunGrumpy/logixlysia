@@ -4,9 +4,13 @@ import path from 'node:path'
 import { spawnSync } from 'bun'
 import packageJson from '../../package.json'
 import { CHILD_PROCESS_TIMEOUT_MS } from '../_helpers/child-process'
+import { isElysia2 } from '../_helpers/elysia'
 
 const packageRoot = path.join(import.meta.dir, '..', '..')
 const entry = path.join(packageRoot, 'dist', 'index.js')
+const MIN_PORT = 20_000
+const PORT_SPAN = 20_000
+const hasNode = Bun.which('node') !== null
 
 const describeFailure = (
   what: string,
@@ -52,6 +56,34 @@ describe('startup banner from the built package', () => {
     'shows the logixlysia version row',
     () => {
       expect(startApp()).toContain(`logixlysia v${packageJson.version}`)
+    },
+    CHILD_PROCESS_TIMEOUT_MS
+  )
+
+  test.skipIf(!(existsSync(entry) && hasNode) || isElysia2)(
+    'prints no URL under the Node adapter',
+    () => {
+      const port = MIN_PORT + Math.floor(Math.random() * PORT_SPAN)
+      const script = `
+        import { Elysia } from 'elysia'
+        import { node } from '@elysiajs/node'
+        import { logixlysia } from './dist/index.js'
+        new Elysia({ adapter: node() })
+          .use(logixlysia())
+          .listen({ port: ${port} }, server => {
+            server.stop()
+          })
+      `
+      const proc = spawnSync(['node', '--input-type=module', '-e', script], {
+        cwd: packageRoot,
+        timeout: CHILD_PROCESS_TIMEOUT_MS
+      })
+      if (proc.exitCode !== 0) {
+        throw new Error(describeFailure('the app under node', proc))
+      }
+      const output = proc.stdout.toString()
+      expect(output).toContain(`logixlysia v${packageJson.version}`)
+      expect(output).not.toContain('http')
     },
     CHILD_PROCESS_TIMEOUT_MS
   )

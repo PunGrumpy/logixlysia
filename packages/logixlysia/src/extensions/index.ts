@@ -2,7 +2,9 @@ import type { Options } from '../interfaces'
 import { getLogixlysiaVersionLine, renderBanner } from './banner'
 
 export const startServer = (
-  server: { port?: number; hostname?: string; protocol?: string | null },
+  server:
+    | { port?: number; hostname?: string; protocol?: string | null }
+    | undefined,
   options: Options
 ): void => {
   const showStartupMessage = options.config?.showStartupMessage ?? true
@@ -10,20 +12,22 @@ export const startServer = (
     return
   }
 
-  const { port, hostname, protocol } = server
-  if (port === undefined || !hostname || !protocol) {
-    return
+  let url: string | null = null
+  if (server) {
+    const { port, hostname, protocol } = server
+    if (port === undefined || !hostname || !protocol) {
+      return
+    }
+    url = `${protocol}://${hostname}:${port}`
   }
-
-  const url = `${protocol}://${hostname}:${port}`
-  const message = `🦊 Elysia is running at ${url}`
-  const urlDisplayLine = `🦊  ${url}`
 
   const format = options.config?.startupMessageFormat ?? 'banner'
   if (format === 'simple') {
-    console.log(message)
+    console.log(url ? `🦊 Elysia is running at ${url}` : '🦊 Elysia is running')
     return
   }
 
-  console.log(renderBanner(urlDisplayLine, getLogixlysiaVersionLine()))
+  console.log(
+    renderBanner(url ? `🦊  ${url}` : null, getLogixlysiaVersionLine())
+  )
 }
