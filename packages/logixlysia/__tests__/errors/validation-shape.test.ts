@@ -2,10 +2,11 @@ import { describe, expect, mock, test } from 'bun:test'
 import { Elysia, t } from 'elysia'
 import { logixlysia } from '../../src'
 import { normalizeLoggedError } from '../../src/utils/error'
+import { isSensitiveKey } from '../../src/utils/redact'
 
 const body = { email: 'a@b.co', password: 'hunter2' }
 
-// Elysia 1.x: a JSON Pointer per failure in `all`, the payload in the message.
+// Elysia 1.x: a JSON Pointer per failure in `all`, the payload also in the message.
 const elysia1Error = (): Error =>
   Object.assign(new Error(JSON.stringify({ found: body })), {
     all: [{ message: 'too short', path: '/password' }],
@@ -69,19 +70,265 @@ describe('a validation error on either Elysia line', () => {
   })
 
   test('logs the payload Elysia 2 keeps off the message when it is wanted', () => {
-    const { error } = normalizeLoggedError(elysia2Error(), true)
+    const { error, message } = normalizeLoggedError(elysia2Error(), true)
 
+    expect(message).toBe('Validation failed (body): /user/a.b')
     expect(error.found).toEqual(body)
+    expect(error.errors).toEqual([{ message: 'too short', path: '/user/a.b' }])
+  })
+
+  test('logs an Elysia 1.x payload as fields, never inside the message', () => {
+    const { error, message } = normalizeLoggedError(elysia1Error(), true)
+
+    expect(message).toBe('Validation failed (body): /password')
+    expect(error).toEqual({
+      errors: [{ message: 'too short', path: '/password' }],
+      failedPaths: ['/password'],
+      found: body,
+      message: 'Validation failed (body): /password',
+      name: 'ValidationError',
+      type: 'body'
+    })
+  })
+
+  test('keeps only the path and message of each failure', () => {
+    const elysia1 = Object.assign(elysia1Error(), {
+      all: [
+        {
+          message: 'Expected string',
+          path: '/pin',
+          summary: "Expected property 'pin' to be string but found: 4111111",
+          value: 4_111_111
+        }
+      ]
+    })
+    const standard = Object.assign(standardSchemaError(), {
+      errors: [
+        {
+          input: 'hunter2',
+          message: 'email required',
+          path: ['user', { key: 'email' }]
+        }
+      ]
+    })
+
+    expect(normalizeLoggedError(elysia1, true).error.errors).toEqual([
+      { message: 'Expected string', path: '/pin' }
+    ])
+    expect(normalizeLoggedError(standard, true).error.errors).toEqual([
+      { message: 'email required', path: '/user/email' }
+    ])
+  })
+})
+
+const QUOTED_SECRET = 'not-a-real-password'
+
+// A validator that quotes the failed value in its own message, as some
+// Standard Schema validators and a schema's custom `error` text do.
+const quotingError = (paths: string[]): Error =>
+  Object.assign(new Error('invalid'), {
+    all: paths.map(path => ({
+      message: `got "${QUOTED_SECRET}"`,
+      path
+    })),
+    code: 'VALIDATION',
+    name: 'ValidationError',
+    type: 'body',
+    value: { password: QUOTED_SECRET }
+  })
+
+const QUOTING_PATHS = [
+  '/password',
+  '/user/password',
+  'user.password',
+  '/vaultKey',
+  '/email'
+]
+const QUOTED_MESSAGE = `got "${QUOTED_SECRET}"`
+const isSensitivePathKey = (key: string): boolean =>
+  isSensitiveKey(key, ['vaultKey'])
+
+describe('a failure message that quotes the submitted value', () => {
+  test('is masked when its path names a sensitive key and autoRedact is on', () => {
+    const { error } = normalizeLoggedError(
+      quotingError(QUOTING_PATHS),
+      true,
+      isSensitivePathKey
+    )
+
     expect(error.errors).toEqual([
-      { instancePath: '/user/a.b', message: 'too short' }
+      { message: '[REDACTED]', path: '/password' },
+      { message: '[REDACTED]', path: '/user/password' },
+      { message: '[REDACTED]', path: 'user.password' },
+      { message: '[REDACTED]', path: '/vaultKey' },
+      { message: QUOTED_MESSAGE, path: '/email' }
     ])
   })
 
-  test('adds nothing to an Elysia 1.x error, whose message has the payload', () => {
-    const { error } = normalizeLoggedError(elysia1Error(), true)
+  test('is kept as it is when autoRedact is off', () => {
+    const { error } = normalizeLoggedError(quotingError(QUOTING_PATHS), true)
 
-    expect(error.message).toContain('hunter2')
-    expect('found' in error).toBe(false)
+    expect(error.errors).toEqual(
+      QUOTING_PATHS.map(path => ({ message: QUOTED_MESSAGE, path }))
+    )
+  })
+
+  test('is masked in the cause of another error as well', () => {
+    const wrapper = new Error('save failed', {
+      cause: quotingError(['/password'])
+    })
+
+    const { error } = normalizeLoggedError(wrapper, true, isSensitivePathKey)
+
+    expect(error.cause).toMatchObject({
+      errors: [{ message: '[REDACTED]', path: '/password' }]
+    })
+  })
+
+  test('is masked for a Standard Schema issue whose path is an array of keys', () => {
+    const { error } = normalizeLoggedError(
+      Object.assign(standardSchemaError(), {
+        errors: [
+          { message: QUOTED_MESSAGE, path: ['user', { key: 'password' }] }
+        ]
+      }),
+      true,
+      isSensitivePathKey
+    )
+
+    expect(error.errors).toEqual([
+      { message: '[REDACTED]', path: '/user/password' }
+    ])
+  })
+})
+
+const countingError = (): { error: Error; reads: () => number } => {
+  let reads = 0
+  const error = Object.assign(new Error('invalid'), {
+    code: 'VALIDATION',
+    name: 'ValidationError',
+    type: 'body',
+    value: body
+  })
+  Object.defineProperty(error, 'all', {
+    get: () => {
+      reads += 1
+      return [{ message: 'too short', path: '/password' }]
+    }
+  })
+  return { error, reads: () => reads }
+}
+
+const throwingAll = (): Error => {
+  const error = Object.assign(new Error('invalid'), {
+    code: 'VALIDATION',
+    name: 'ValidationError',
+    type: 'body',
+    value: body
+  })
+  Object.defineProperty(error, 'all', {
+    get: () => {
+      throw new Error('validator re-entered')
+    }
+  })
+  return error
+}
+
+describe('reading the failures of a validation error', () => {
+  test('runs the validator at most once', () => {
+    for (const logErrorPayload of [true, false]) {
+      const { error, reads } = countingError()
+
+      const logged = normalizeLoggedError(error, logErrorPayload).error
+
+      expect(logged.failedPaths).toEqual(['/password'])
+      expect(reads()).toBeLessThanOrEqual(1)
+    }
+  })
+
+  test('still logs the summary when the validator throws, with the payload wanted', () => {
+    expect(normalizeLoggedError(throwingAll(), true)).toEqual({
+      error: {
+        errors: [],
+        failedPaths: [],
+        found: body,
+        message: 'Validation failed (body)',
+        name: 'ValidationError',
+        type: 'body'
+      },
+      message: 'Validation failed (body)'
+    })
+  })
+
+  test('still logs the summary when the validator throws, with the payload not wanted', () => {
+    expect(normalizeLoggedError(throwingAll(), false)).toEqual({
+      error: {
+        failedPaths: [],
+        message: 'Validation failed (body)',
+        name: 'ValidationError',
+        type: 'body'
+      },
+      message: 'Validation failed (body)'
+    })
+  })
+
+  test('still logs the summary when a failure has a getter that throws', () => {
+    const failure = {
+      get message(): string {
+        throw new Error('no message')
+      },
+      get path(): string {
+        throw new Error('no path')
+      }
+    }
+    const error = Object.assign(elysia1Error(), { all: [failure] })
+
+    expect(normalizeLoggedError(error, true).error).toEqual({
+      errors: [],
+      failedPaths: [],
+      found: body,
+      message: 'Validation failed (body)',
+      name: 'ValidationError',
+      type: 'body'
+    })
+  })
+
+  test('still logs the summary when the submitted value cannot be read', () => {
+    const error = elysia1Error()
+    Object.defineProperty(error, 'value', {
+      get: () => {
+        throw new Error('no value')
+      }
+    })
+
+    expect(normalizeLoggedError(error, true).error).toEqual({
+      errors: [{ message: 'too short', path: '/password' }],
+      failedPaths: ['/password'],
+      found: undefined,
+      message: 'Validation failed (body): /password',
+      name: 'ValidationError',
+      type: 'body'
+    })
+  })
+
+  test('does not read a failure message when the payload is not wanted', () => {
+    const failure = {
+      get message(): string {
+        throw new Error('no message')
+      },
+      path: '/password'
+    }
+    const error = Object.assign(elysia1Error(), { all: [failure] })
+
+    expect(normalizeLoggedError(error, false)).toEqual({
+      error: {
+        failedPaths: ['/password'],
+        message: 'Validation failed (body): /password',
+        name: 'ValidationError',
+        type: 'body'
+      },
+      message: 'Validation failed (body): /password'
+    })
   })
 })
 

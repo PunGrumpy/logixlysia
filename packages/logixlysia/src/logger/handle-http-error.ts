@@ -7,6 +7,7 @@ import {
 import type { LogLevel, Options, RequestInfo, StoreData } from '../interfaces'
 import type { SamplingRuntime } from '../sampling'
 import { normalizeLoggedError } from '../utils/error'
+import { isSensitiveKey } from '../utils/redact'
 import type { FormatContext } from './create-logger'
 import { emit, isSuppressed, reportFormatError } from './emit'
 import type { Sinks } from './emit'
@@ -50,7 +51,10 @@ export const handleHttpError = (
   try {
     const { error: safeError, message } = normalizeLoggedError(
       error,
-      config?.logErrorPayload === true
+      config?.logErrorPayload === true,
+      config?.autoRedact === true
+        ? key => isSensitiveKey(key, config.redactKeys)
+        : undefined
     )
 
     const data: Record<string, unknown> = { error: safeError, message, status }

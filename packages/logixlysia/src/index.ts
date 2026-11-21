@@ -49,6 +49,7 @@ import {
 import { resolveAccessLineFilter } from './sampling/access-line'
 import { elapsedMs } from './utils/duration'
 import { normalizeLoggedError } from './utils/error'
+import { isSensitiveKey } from './utils/redact'
 import { parseRequestUrlOnce } from './utils/request-url'
 import { syntheticRequest } from './utils/synthetic-request'
 import { createWsHandlerWrapper } from './websocket/wrap-ws'
@@ -482,7 +483,10 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
         }
         const normalized = normalizeLoggedError(
           error,
-          options.config?.logErrorPayload === true
+          options.config?.logErrorPayload === true,
+          options.config?.autoRedact === true
+            ? key => isSensitiveKey(key, options.config?.redactKeys)
+            : undefined
         )
         emitCustomLog(
           'ERROR',

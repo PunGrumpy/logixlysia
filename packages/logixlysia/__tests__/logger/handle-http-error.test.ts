@@ -106,6 +106,98 @@ describe('handleHttpError', () => {
     expect(serialized).toContain(SECRET_PASSWORD)
   })
 
+  test('with logErrorPayload, autoRedact masks the payload of a failed validation', async () => {
+    const { events, transport } = createCaptureTransport()
+    const app = buildLoginApp({
+      config: {
+        autoRedact: true,
+        disableFileLogging: true,
+        disableInternalLogger: true,
+        logErrorPayload: true,
+        transports: [{ log: transport }]
+      }
+    })
+
+    const res = await app.handle(
+      new Request('http://localhost/login', {
+        body: JSON.stringify({ email: 'a@b.co', password: SECRET_PASSWORD }),
+        headers: { 'content-type': 'application/json' },
+        method: 'POST'
+      })
+    )
+
+    expect(res.status).toBe(422)
+    expect(events).toHaveLength(1)
+    expect(events[0]?.message).toBe('Validation failed (body): /password')
+    expect(events[0]?.meta.error).toEqual({
+      errors: [{ message: expect.any(String), path: '/password' }],
+      failedPaths: ['/password'],
+      found: { email: '[REDACTED]', password: '[REDACTED]' },
+      message: 'Validation failed (body): /password',
+      name: 'ValidationError',
+      type: 'body'
+    })
+    expect(JSON.stringify(events)).not.toContain(SECRET_PASSWORD)
+  })
+
+  test('with logErrorPayload, autoRedact masks a failure message that quotes the value', async () => {
+    const { events, transport } = createCaptureTransport()
+    const { restore, spies } = spyConsole(['error', 'warn'])
+    try {
+      const quotingSchema = {
+        '~standard': {
+          types: undefined,
+          validate: (value: unknown) => ({
+            issues: [
+              {
+                message: `got ${JSON.stringify((value as { password: string }).password)}`,
+                path: ['password']
+              }
+            ]
+          }),
+          vendor: 'probe',
+          version: 1
+        }
+      }
+      const app = new Elysia()
+        .use(
+          logixlysia({
+            config: {
+              autoRedact: true,
+              consoleFormat: 'json',
+              disableFileLogging: true,
+              logErrorPayload: true,
+              transports: [{ log: transport }]
+            }
+          })
+        )
+        .post('/login', () => 'ok', { body: quotingSchema })
+
+      const res = await app.handle(
+        new Request('http://localhost/login', {
+          body: JSON.stringify({ password: SECRET_PASSWORD }),
+          headers: { 'content-type': 'application/json' },
+          method: 'POST'
+        })
+      )
+
+      expect(res.status).toBe(422)
+      expect(events).toHaveLength(1)
+      expect(events[0]?.meta.error).toEqual({
+        errors: [{ message: '[REDACTED]', path: 'password' }],
+        failedPaths: ['password'],
+        found: { password: '[REDACTED]' },
+        message: 'Validation failed (body): password',
+        name: 'ValidationError',
+        type: 'body'
+      })
+      expect(JSON.stringify(events)).not.toContain(SECRET_PASSWORD)
+      expect(joinConsoleOutput(spies)).not.toContain(SECRET_PASSWORD)
+    } finally {
+      restore()
+    }
+  })
+
   test('normalizes a thrown HttpError into a serializable, minimal shape', async () => {
     const { events, transport } = createCaptureTransport()
     const options: Options = {
@@ -458,6 +550,70 @@ describe('non-Error values', () => {
       expect(output).toContain('422 ')
       expect(output).toContain(' Validation failed (body)')
       expect(output).not.toContain('[object Object]')
+    } finally {
+      restore()
+    }
+  })
+
+  test('with logErrorPayload, the console line prints the summary, not the body', async () => {
+    const { restore, spies } = spyConsole(['error', 'warn'])
+    try {
+      const app = buildLoginApp({
+        config: {
+          disableFileLogging: true,
+          logErrorPayload: true,
+          useColors: false
+        }
+      })
+
+      const res = await app.handle(
+        new Request('http://localhost/login', {
+          body: JSON.stringify({ email: 'a@b.co', password: SECRET_PASSWORD }),
+          headers: { 'content-type': 'application/json' },
+          method: 'POST'
+        })
+      )
+
+      expect(res.status).toBe(422)
+      const output = joinConsoleOutput(spies)
+      expect(output).toEndWith(' Validation failed (body): /password')
+      expect(output).not.toContain(SECRET_PASSWORD)
+    } finally {
+      restore()
+    }
+  })
+
+  test('with logErrorPayload, the JSON console line masks the payload with autoRedact', async () => {
+    const { restore, spies } = spyConsole(['error', 'warn'])
+    try {
+      const app = buildLoginApp({
+        config: {
+          autoRedact: true,
+          consoleFormat: 'json',
+          disableFileLogging: true,
+          logErrorPayload: true
+        }
+      })
+
+      await app.handle(
+        new Request('http://localhost/login', {
+          body: JSON.stringify({ email: 'a@b.co', password: SECRET_PASSWORD }),
+          headers: { 'content-type': 'application/json' },
+          method: 'POST'
+        })
+      )
+
+      const output = joinConsoleOutput(spies)
+      const line = JSON.parse(output) as {
+        error: Record<string, unknown>
+        message: string
+      }
+      expect(line.message).toBe('Validation failed (body): /password')
+      expect(line.error.found).toEqual({
+        email: '[REDACTED]',
+        password: '[REDACTED]'
+      })
+      expect(output).not.toContain(SECRET_PASSWORD)
     } finally {
       restore()
     }
