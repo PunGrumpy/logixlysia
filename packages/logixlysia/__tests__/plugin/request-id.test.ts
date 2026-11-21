@@ -6,6 +6,31 @@ import type { Options, SinkErrorContext } from '../../src/interfaces'
 const UUID_V4_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu
 
+interface Meta {
+  context?: { requestId?: unknown }
+}
+
+const clientRequest = (path: string) =>
+  new Request(`http://localhost${path}`, {
+    headers: { 'x-request-id': 'client-abc' }
+  })
+
+const capture = () => {
+  const records: { message: unknown; meta: Meta | undefined }[] = []
+  const transport = {
+    log: (_level: unknown, message: unknown, meta?: unknown) => {
+      records.push({ message, meta: meta as Meta | undefined })
+    }
+  }
+  const config: Options['config'] = {
+    disableFileLogging: true,
+    disableInternalLogger: true,
+    requestId: true,
+    transports: [transport]
+  }
+  return { config, records }
+}
+
 describe('request ID plugin integration', () => {
   test('auto-merges requestId into log context', async () => {
     const transport = mock<
@@ -285,5 +310,76 @@ describe('request ID plugin integration', () => {
     const responseId = response.headers.get('X-Request-Id')
     expect(responseId).toBeDefined()
     expect(responseId).toMatch(UUID_V4_REGEX)
+  })
+
+  describe('a requestId merged into the context', () => {
+    test('keeps the request id on every line when a handler merges its own requestId', async () => {
+      const { config, records } = capture()
+      const app = new Elysia()
+        .use(logixlysia({ config }))
+        .get('/s', ({ log }) => {
+          log.info('before')
+          log.mergeContext({ requestId: 'upstream-123' })
+          log.info('after')
+          return 'ok'
+        })
+
+      const response = await app.handle(clientRequest('/s'))
+
+      expect(response.headers.get('X-Request-Id')).toBe('client-abc')
+      expect(records.map(r => r.meta?.context?.requestId)).toEqual([
+        'client-abc',
+        'client-abc',
+        'client-abc'
+      ])
+    })
+
+    test("echoes the plugin's id when the hook path would have read a merged one", async () => {
+      const { config } = capture()
+      const app = new Elysia({ aot: false })
+        .use(logixlysia({ config }))
+        .get('/s', ({ log }) => {
+          log.mergeContext({ requestId: 'upstream-123' })
+          return 'ok'
+        })
+
+      const response = await app.handle(clientRequest('/s'))
+
+      expect(response.headers.get('X-Request-Id')).toBe('client-abc')
+    })
+
+    test('that is not a header value does not break the response', async () => {
+      const { config } = capture()
+      const app = new Elysia({ aot: false })
+        .use(logixlysia({ config }))
+        .get('/s', ({ log }) => {
+          log.mergeContext({ requestId: 'a\r\nSet-Cookie: s=1' })
+          return 'ok'
+        })
+
+      const response = await app.handle(clientRequest('/s'))
+
+      expect(response.status).toBe(200)
+      expect(response.headers.get('X-Request-Id')).toBe('client-abc')
+      expect(response.headers.get('set-cookie')).toBeNull()
+    })
+
+    test('cannot be replaced by an enricher', async () => {
+      const { config, records } = capture()
+      const app = new Elysia()
+        .use(
+          logixlysia({
+            config: {
+              ...config,
+              enrichers: [() => ({ requestId: 'from-enricher' })]
+            }
+          })
+        )
+        .get('/s', () => 'ok')
+
+      await app.handle(clientRequest('/s'))
+
+      expect(records.at(-1)?.meta?.context?.requestId).toBe('client-abc')
+    })
   })
 })

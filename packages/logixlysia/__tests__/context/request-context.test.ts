@@ -17,6 +17,30 @@ describe('request context store', () => {
     expect(store.getContext(request)).toEqual({ plan: 'pro', userId: 'u1' })
   })
 
+  test('pinContext keeps a field through later merges and still applies the rest', () => {
+    const store = createRequestContextStore()
+    const request = new Request('http://localhost/')
+
+    store.pinContext(request, { requestId: 'plugin-id' })
+    store.mergeContext(request, { plan: 'pro', requestId: 'handler-id' })
+
+    expect(store.getContext(request)).toEqual({
+      plan: 'pro',
+      requestId: 'plugin-id'
+    })
+  })
+
+  test('clearContext forgets a pinned field', () => {
+    const store = createRequestContextStore()
+    const request = new Request('http://localhost/')
+
+    store.pinContext(request, { requestId: 'plugin-id' })
+    store.clearContext(request)
+    store.mergeContext(request, { requestId: 'handler-id' })
+
+    expect(store.getContext(request)).toEqual({ requestId: 'handler-id' })
+  })
+
   test('mergeContext keeps an own __proto__ key as a key', () => {
     const store = createRequestContextStore()
     const request = new Request('http://localhost/')
