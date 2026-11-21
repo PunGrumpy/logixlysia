@@ -66,7 +66,11 @@ export interface NeuralRedactionOptions {
   maxQueue?: number
   /** Neural confidence threshold, `0..1`. Deterministic recognizers always apply. */
   minimumConfidence?: number
-  /** Called with the reason each time a record is lost: `closed`, `queue-full`, or `redaction-failed`. */
+  /**
+   * Called with how many records were lost and why: `closed` for a record
+   * logged after `close()` or still waiting for the model when a close
+   * reached its deadline, `queue-full`, or `redaction-failed`.
+   */
   onDropped?: (info: {
     count: number
     reason: 'closed' | 'queue-full' | 'redaction-failed'
@@ -84,10 +88,23 @@ export interface NeuralRedactionOptions {
 
 /** A {@link Transport} whose records pass through the model before delivery. */
 export interface RedactingTransport extends Transport {
-  /** Awaits the records already queued, then flushes the wrapped transport. */
-  flush: () => Promise<void>
-  /** Awaits the queued records, closes the wrapped transport, then drops later records. */
-  close: () => Promise<void>
+  // The signature without an argument keeps `promise.then(transport.flush)`
+  // type-checking for a promise of any type.
+  /**
+   * Awaits the records already queued, then flushes the wrapped transport
+   * with the same options. If `signal` aborts first, it stops waiting; the
+   * queued records are still delivered once the model is done with them.
+   */
+  flush: (() => Promise<void>) &
+    ((options?: { signal?: AbortSignal }) => Promise<void>)
+  /**
+   * Awaits the queued records, closes the wrapped transport with the same
+   * options, then drops later records. If `signal` aborts first, the records
+   * still waiting for the model are reported in one
+   * `onDropped({ count, reason: 'closed' })` and never delivered.
+   */
+  close: (() => Promise<void>) &
+    ((options?: { signal?: AbortSignal }) => Promise<void>)
 }
 
 interface WalkContext {
@@ -247,6 +264,8 @@ const walker = {
 interface Queue {
   drain: () => Promise<void>
   push: (task: () => Promise<void>) => boolean
+  /** Records accepted and not yet delivered or dropped. */
+  size: () => number
 }
 
 const createQueue = (maxQueue: number): Queue => {
@@ -274,7 +293,34 @@ const createQueue = (maxQueue: number): Queue => {
       pending += 1
       tail = runAfter(tail, task)
       return true
-    }
+    },
+    size: () => pending
+  }
+}
+
+/**
+ * Waits for `work` until `signal` aborts, and tells whether `work` settled
+ * first.
+ */
+const settlesBefore = async (
+  work: Promise<void>,
+  signal: AbortSignal | undefined
+): Promise<boolean> => {
+  if (!signal) {
+    await work
+    return true
+  }
+  if (signal.aborted) {
+    return false
+  }
+  const { promise: aborted, resolve }: PromiseWithResolvers<boolean> =
+    Promise.withResolvers()
+  const stop = (): void => resolve(false)
+  signal.addEventListener('abort', stop, { once: true })
+  try {
+    return await Promise.race([work.then(() => true), aborted])
+  } finally {
+    signal.removeEventListener('abort', stop)
   }
 }
 
@@ -319,6 +365,8 @@ export const withRedaction = (
   const getRedactor = loadRedactorOnce(source)
   const queue = createQueue(maxQueue)
   let closed = false
+  /** Set when a close gave up on the records still waiting for the model. */
+  let abandoned = false
 
   const report = (error: unknown): void => {
     if (onError === undefined) {
@@ -332,10 +380,11 @@ export const withRedaction = (
   }
 
   const notifyDropped = (
-    reason: 'closed' | 'queue-full' | 'redaction-failed'
+    reason: 'closed' | 'queue-full' | 'redaction-failed',
+    count = 1
   ): void => {
     try {
-      onDropped?.({ count: 1, reason })
+      onDropped?.({ count, reason })
     } catch {
       // A hook that throws must not take the log pipeline with it.
     }
@@ -416,6 +465,9 @@ export const withRedaction = (
           redactRecord(redactor, message, meta, group)
         )
       } catch (error) {
+        if (abandoned) {
+          return
+        }
         report(error)
         if (onFailure !== 'forward') {
           notifyDropped('redaction-failed')
@@ -426,6 +478,9 @@ export const withRedaction = (
         } catch (deliveryError) {
           report(deliveryError)
         }
+        return
+      }
+      if (abandoned) {
         return
       }
 
@@ -442,15 +497,26 @@ export const withRedaction = (
     }
   }
 
+  const wrapped = transport as Partial<AdapterTransport>
+
   return {
-    close: async () => {
+    close: async (closeOptions?: { signal?: AbortSignal }) => {
       closed = true
-      await settleDeliveries()
-      await (transport as Partial<AdapterTransport>).close?.()
+      if (!(await settlesBefore(settleDeliveries(), closeOptions?.signal))) {
+        abandoned = true
+        if (queue.size() > 0) {
+          notifyDropped('closed', queue.size())
+        }
+      }
+      await (closeOptions === undefined
+        ? wrapped.close?.()
+        : wrapped.close?.(closeOptions))
     },
-    flush: async () => {
-      await settleDeliveries()
-      await (transport as Partial<AdapterTransport>).flush?.()
+    flush: async (flushOptions?: { signal?: AbortSignal }) => {
+      await settlesBefore(settleDeliveries(), flushOptions?.signal)
+      await (flushOptions === undefined
+        ? wrapped.flush?.()
+        : wrapped.flush?.(flushOptions))
     },
     log,
     minLevel: transport.minLevel
