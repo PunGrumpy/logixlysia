@@ -192,13 +192,10 @@ const NANOS_PER_MILLI = 1_000_000n
 export const toUnixNanos = (date: Date): string =>
   String(BigInt(date.getTime()) * NANOS_PER_MILLI)
 
-const sleep = (ms: number, keepAlive: boolean): Promise<void> => {
+const sleepWithoutHolding = (ms: number): Promise<void> => {
   const { promise, resolve }: PromiseWithResolvers<void> =
     Promise.withResolvers()
-  const timer = setTimeout(resolve, ms)
-  if (!keepAlive) {
-    timer.unref?.()
-  }
+  setTimeout(resolve, ms).unref?.()
   return promise
 }
 
@@ -212,12 +209,15 @@ export interface RejectedEntries {
 export interface PostWithRetryInput {
   body: string
   headers: Record<string, string>
-  /** Keeps the retry backoff timer ref'd, for a caller awaiting this send. */
-  keepAlive?: boolean
   name: string
   /** Reads a successful response; see `HttpTransportInput.rejected`. */
   rejected?: (response: unknown) => RejectedEntries | undefined
   retries: number
+  /**
+   * Waits out the delay before a retry. Without it the wait does not hold
+   * the process open.
+   */
+  sleep?: (ms: number) => Promise<void>
   timeout: number
   url: string
 }
@@ -376,7 +376,7 @@ const attemptPost = async (
     if (attempt >= input.retries) {
       throw error
     }
-    await sleep(delayMs, input.keepAlive ?? false)
+    await (input.sleep ?? sleepWithoutHolding)(delayMs)
     return attemptPost(input, attempt + 1)
   }
 
@@ -482,7 +482,7 @@ export const createBatchQueue = (input: {
   onError?: (error: unknown) => void
   send: (
     entries: LogEntry[],
-    keepAlive: boolean
+    retry: { sleep: (ms: number) => Promise<void> }
   ) => Promise<RejectedEntries | ReturnType<() => void>>
 }): BatchQueue => {
   let buffer: LogEntry[] = []
@@ -491,6 +491,8 @@ export const createBatchQueue = (input: {
   let dropped = 0
   let accepted = 0
   let settled = 0
+  let callers = 0
+  const sleeping = new Set<ReturnType<typeof setTimeout>>()
 
   const report = createQueueReporter(input.name, input.onError)
   const reportDrops = createQueueReporter(input.name, input.onError)
@@ -533,13 +535,55 @@ export const createBatchQueue = (input: {
     )
   }
 
+  const setCallers = (count: number): void => {
+    const held = callers > 0
+    callers = count
+    if (held === callers > 0) {
+      return
+    }
+    for (const sleeper of sleeping) {
+      if (callers > 0) {
+        sleeper.ref?.()
+      } else {
+        sleeper.unref?.()
+      }
+    }
+  }
+
+  /**
+   * Runs `work` for a caller who awaits it. A retry sleep holds the process
+   * open only while there is such a caller, whichever send it belongs to.
+   */
+  const awaited = async (work: () => Promise<void>): Promise<void> => {
+    setCallers(callers + 1)
+    try {
+      await work()
+    } finally {
+      setCallers(callers - 1)
+    }
+  }
+
+  const sleep = (ms: number): Promise<void> => {
+    const { promise, resolve }: PromiseWithResolvers<void> =
+      Promise.withResolvers()
+    const sleeper = setTimeout(() => {
+      sleeping.delete(sleeper)
+      resolve()
+    }, ms)
+    if (callers === 0) {
+      sleeper.unref?.()
+    }
+    sleeping.add(sleeper)
+    return promise
+  }
+
   const runSend = async (
     entries: LogEntry[],
     background: boolean
   ): Promise<void> => {
     try {
       await Promise.resolve()
-      const rejected = await input.send(entries, !background)
+      const rejected = await input.send(entries, { sleep })
       if (rejected) {
         reportRejected(entries.length, rejected)
       }
@@ -587,7 +631,7 @@ export const createBatchQueue = (input: {
     return drainUntil(target, failure)
   }
 
-  const flush = (): Promise<void> => {
+  const drain = (): Promise<void> => {
     if (timer) {
       clearTimeout(timer)
       timer = undefined
@@ -595,9 +639,11 @@ export const createBatchQueue = (input: {
     return drainUntil(accepted)
   }
 
+  const flush = (): Promise<void> => awaited(drain)
+
   const flushFromTimer = async (): Promise<void> => {
     try {
-      await flush()
+      await drain()
     } catch (error) {
       report(error)
     }
@@ -638,7 +684,7 @@ export const createBatchQueue = (input: {
       timer.unref?.()
     }
     if (buffer.length >= input.maxBatchSize) {
-      return inFlight ? undefined : flush()
+      return inFlight ? undefined : drain()
     }
   }
 
@@ -768,14 +814,14 @@ export const createHttpTransport = (
     name: input.name,
     onDropped: input.options.onDropped,
     onError: input.options.onError,
-    send: (entries, keepAlive) =>
+    send: (entries, { sleep }) =>
       postWithRetry({
         body: input.body(entries),
         headers: input.headers,
-        keepAlive,
         name: input.name,
         rejected: input.rejected,
         retries,
+        sleep,
         timeout,
         url
       })
