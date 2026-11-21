@@ -83,7 +83,7 @@ logixlysia({
 
 `include` and `exclude` take the same globs as [`sampling.tail.paths`](/docs/features/sampling#path-globs). Precedence, in order:
 
-- A response with status `400` or above, or a thrown error, is never hidden.
+- An error line is never hidden, and neither is an access line whose status is `400` or above. Every other access line follows the path rules.
 - A pathname longer than 2048 characters is never hidden.
 - `exclude` beats `include`.
 - With a non-empty `include`, a path it does not match is hidden.

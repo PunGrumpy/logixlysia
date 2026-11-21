@@ -421,7 +421,7 @@ logixlysia({
 })
 ```
 
-`logFilter.accessLine` hides only the access line of the paths it names. A handler's `log.*` lines still write, and a response with status `400` or above, or a thrown error, is never hidden. Use it for health checks whose failures should still be logged.
+`logFilter.accessLine` hides only the access line of the paths it names. A handler's `log.*` lines still write. An error line is never hidden, and neither is an access line whose status is `400` or above. Every other access line follows the path rules. Use it for health checks whose failures should still be logged.
 
 ```typescript
 logixlysia({

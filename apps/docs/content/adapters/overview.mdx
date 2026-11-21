@@ -104,7 +104,7 @@ const transport = createDatadogTransport({
 
 `onDropped` adds to `onError` and does not replace it. A hook that throws is ignored.
 
-Every built-in adapter transport has `close()`, which stops accepting entries and flushes the ones it already has; [`flushLogixlysia(options, { close: true })`](#graceful-shutdown) calls it (a transport wrapped in [`withRedaction`](/docs/integrations/desertant) is not closed through the wrapper yet).
+Every built-in adapter transport has `close()`, which stops accepting entries and flushes the ones it already has; [`flushLogixlysia(options, { close: true })`](#graceful-shutdown) calls it (a transport wrapped in [`withRedaction`](/docs/integrations/desertant) drains its own queue first, then closes the transport it wraps).
 
 ## Your Own Backend
 
@@ -169,6 +169,8 @@ process.on('SIGTERM', async () => {
   process.exit(0)
 })
 ```
+
+Under `@elysiajs/node`, `app.stop()` fails with `Elysia isn't running`, because the adapter does not attach its server to the app. Stop the server object that the `listen` callback receives instead, then call `flushLogixlysia`.
 
 For workers, scripts, and anything else that logs outside the Elysia lifecycle, drain the sinks directly:
 

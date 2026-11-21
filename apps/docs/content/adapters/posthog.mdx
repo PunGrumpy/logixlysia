@@ -93,6 +93,6 @@ Point `distinctIdField` at any other meta path (dot notation) if your identifier
 
 ## Troubleshooting
 
-- **`401`** — the key is not a project API key; it must start with `phc_`.
-- **Events missing** — check the region: EU projects must use `https://eu.i.posthog.com`.
+- **`401`** — check that the key is the project API key, which starts with `phc_`, and not a personal API key (`phx_…`).
+- **Events missing, with no error** — check the key, then the region: EU projects must use `https://eu.i.posthog.com`. The adapter counts a `200` from `/batch/` as delivered, so if PostHog answers `200` for a key it does not recognise, nothing is reported.
 - **High event volume** — log levels you don't need can be excluded with [`logFilter`](/docs/features/filtering) before they reach the transport.

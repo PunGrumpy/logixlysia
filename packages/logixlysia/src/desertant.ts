@@ -71,7 +71,7 @@ export interface NeuralRedactionOptions {
     count: number
     reason: 'closed' | 'queue-full' | 'redaction-failed'
   }) => void
-  /** Called when loading or redaction fails, and when a record is dropped. */
+  /** Called when loading, redaction or the wrapped transport's `log()` fails, and when a record is dropped because the queue is full. */
   onError?: (error: unknown) => void
   /**
    * What to do with a record the model could not process. `'drop'` keeps the

@@ -41,7 +41,7 @@ evlog:
 log.emit({ status: 200 })
 ```
 
-Logixlysia emits the access log automatically once Elysia has produced the response. Use a custom log only when you need to skip the default line:
+Logixlysia emits the access log automatically once Elysia has produced the response. A line you log yourself does not replace it:
 
 ```ts
 store.logger.info(request, 'handled manually')
@@ -115,7 +115,7 @@ logixlysia({
 
 ## Sampling
 
-evlog's `sampling.rates` maps to `config.sampling.head`. evlog's tail `keep` maps to `config.sampling.tail` rules by status, duration, or path. Logixlysia has no predicate form: you write the rule directly.
+evlog's `sampling.rates` maps to `config.sampling.head`. evlog's tail `keep` maps to `config.sampling.tail`: rules by status, duration, or path, and a `keep` predicate, which [Sampling](/docs/features/sampling) describes. Like every tail rule, `keep` does nothing without head rates, and it runs only if no status, duration, or path rule matches.
 
 ```ts
 logixlysia({

@@ -72,7 +72,7 @@ sizeEnricher()
 // → requestBytes, responseBytes
 ```
 
-Both come from `content-length`, the only size available without buffering a body. A chunked or streamed response has no `content-length`, so `responseBytes` is omitted rather than guessed.
+Both come from `content-length`, the only size available without buffering a body. Each is recorded only when the enricher can read the header and it holds a non-negative number. A `content-length` that the server adds only as it sends the response is not visible to the enricher.
 
 ## Writing Your Own
 
@@ -111,7 +111,7 @@ The response phase runs before the request's final log line on both the success 
 
 ### Response headers
 
-`headers` holds the headers the client received. When a handler returns a `Response` and also sets `set.headers`, the `Response`'s value wins. `set.headers` only fills in headers the `Response` lacks. This matches what Elysia sends, so `sizeEnricher`'s `responseBytes` matches the wire.
+`headers` holds the response headers logixlysia can read once the outcome is known. A header added after that, such as one the server adds as it sends the response, is not in it. When a handler returns a `Response` and also sets `set.headers`, the `Response`'s value wins. `set.headers` only fills in headers the `Response` lacks. `sizeEnricher` reads `responseBytes` from these headers; it does not measure the body.
 
 `headers['set-cookie']` holds the cookies from both sources, except that a `set.headers` array of cookies is dropped when the `Response` sets its own, as Elysia does. It is a string for one cookie and an array for several, so a custom enricher that reads it must handle both:
 

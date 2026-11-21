@@ -104,7 +104,7 @@ logger.info(request, 'Signup', { profile: Object.fromEntries(profile) })
 | `maxQueue` | `number` | `1000` | Records allowed to await the model before new ones are dropped |
 | `minimumConfidence` | `number` | model default | Neural confidence threshold; deterministic recognizers always apply |
 | `onDropped` | `(info: { count, reason }) => void` | — | Called for each lost record, with `reason` `'closed'`, `'queue-full'`, or `'redaction-failed'` |
-| `onError` | `(error: unknown) => void` | — | Called on load failure, redaction failure, and dropped records |
+| `onError` | `(error: unknown) => void` | — | Called on load failure, redaction failure, a failure of the wrapped transport's `log()`, and a record dropped because the queue was full. A record logged after `close()` reaches `onDropped` only |
 | `onFailure` | `'drop' \| 'forward'` | `'drop'` | What to do with a record the model could not process |
 
 The returned transport exposes `flush()`, which awaits the queued records and then flushes the wrapped transport — call it before process exit.
