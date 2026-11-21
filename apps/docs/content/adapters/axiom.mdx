@@ -44,7 +44,9 @@ const app = new Elysia()
 | `AXIOM_API_KEY` | Yes | API token with ingest permission (`xaat-…`) |
 | `AXIOM_DATASET` | Yes | Target dataset name |
 | `AXIOM_ORG_ID` | For personal access tokens | Organization ID |
-| `AXIOM_URL` | No | API base URL (default `https://api.axiom.co`) |
+| `AXIOM_URL` | No | Base URL of the default ingest endpoint (default `https://api.axiom.co`) |
+| `AXIOM_EDGE` | No | Edge domain to ingest through, such as `eu-central-1.aws.edge.axiom.co` |
+| `AXIOM_EDGE_URL` | No | Full URL of an edge endpoint or of a proxy in front of one |
 
 ## Options
 
@@ -62,13 +64,29 @@ const axiom = createAxiomTransport({
 | `apiKey` | `string` | `AXIOM_API_KEY` | API token with ingest permission |
 | `dataset` | `string` | `AXIOM_DATASET` | Target dataset name |
 | `orgId` | `string` | `AXIOM_ORG_ID` | Required when using a personal access token |
-| `baseUrl` | `string` | `https://api.axiom.co` | API base URL |
+| `baseUrl` | `string` | `https://api.axiom.co` | Base URL of the default ingest endpoint |
+| `edge` | `string` | `AXIOM_EDGE` | Edge domain to ingest through, without a scheme or a path; a port is allowed |
+| `edgeUrl` | `string` | `AXIOM_EDGE_URL` | Full URL of an edge endpoint or of a proxy in front of one |
 
 Plus the shared options in the [overview table](/docs/adapters/overview#shared-behavior).
 
+## Regions
+
+Axiom ingests through regional [edge deployments](https://axiom.co/docs/reference/edge-deployments). By default the transport posts to `https://api.axiom.co/v1/datasets/{dataset}/ingest`, which Axiom's API reference describes as a legacy endpoint that ingests into US East 1. For a dataset in another deployment, set the edge domain Axiom lists for it:
+
+```bash
+AXIOM_EDGE=eu-central-1.aws.edge.axiom.co
+```
+
+The transport then posts to `https://{edge}/v1/ingest/{dataset}`. Axiom's reference says that endpoint supports API tokens only, not personal access tokens.
+
+`edgeUrl` takes a full URL instead, without a user name or a password, for a proxy in front of an edge endpoint. Trailing slashes are removed from its path. If nothing is left, the path becomes `/v1/ingest/{dataset}`; otherwise it is kept.
+
+`edgeUrl` wins over `edge`, and `edge` wins over `baseUrl`. If you pass any of the three as an option, `AXIOM_EDGE_URL`, `AXIOM_EDGE` and `AXIOM_URL` are not read.
+
 ## Payload
 
-Each log becomes one event in `POST /v1/datasets/{dataset}/ingest`:
+Each log becomes one event in the body of the ingest request:
 
 ```json
 {
@@ -88,4 +106,5 @@ Query it in Axiom with APL, e.g. `['your-dataset'] | where level == "ERROR" and 
 
 - **`401`** — the token is invalid or expired; generate a new one in Axiom settings.
 - **`403` with a personal access token** — set `AXIOM_ORG_ID` (personal tokens are not scoped to an organization).
+- **Dataset in another edge deployment** — see [Regions](#regions).
 - **Nothing arrives** — logs flush in batches (2 s by default); check that the process lived long enough, or call `flush()` before exit.
