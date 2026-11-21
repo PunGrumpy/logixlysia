@@ -58,17 +58,17 @@ const isStdoutTty = (): boolean =>
 
 type ChalkInstance = typeof chalkModule
 
-const requireChalk = createRequire(import.meta.url)
-
 let loadedChalk: ChalkInstance | null | undefined
 
 // chalk detects color support as it loads, a third of this package's import
 // time, so it loads when a text logger is created on a terminal and any other
-// logger never pays for it. Node before 22.12 cannot require an ES module, so there
-// the lines stay plain.
+// logger never pays for it. Node before 22.12 cannot require an ES module, and
+// a CommonJS bundle leaves import.meta.url undefined so createRequire throws;
+// either way the lines stay plain.
 const loadChalk = (): ChalkInstance | null => {
   if (loadedChalk === undefined) {
     try {
+      const requireChalk = createRequire(import.meta.url)
       loadedChalk = (requireChalk('chalk') as { default: ChalkInstance })
         .default
     } catch {
