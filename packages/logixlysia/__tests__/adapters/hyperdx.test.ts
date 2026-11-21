@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'bun:test'
+import { describe, expect, mock, test } from 'bun:test'
 import { createHyperDXTransport } from '../../src/hyperdx'
 import { stubEnv, stubFetch } from './helpers'
 
@@ -35,6 +35,34 @@ describe('logixlysia/hyperdx', () => {
     try {
       expect(() => createHyperDXTransport()).toThrow('HYPERDX_API_KEY')
     } finally {
+      restoreEnv()
+    }
+  })
+
+  test('reports the records a partial success rejected', async () => {
+    const restoreEnv = stubEnv({ ...CLEAR_ENV, HYPERDX_API_KEY: 'hdx-key' })
+    const stub = stubFetch([
+      {
+        body: '{"partialSuccess":{"rejectedLogRecords":2,"errorMessage":"attribute too long"}}',
+        status: 200
+      }
+    ])
+    const onDropped = mock((_info: unknown) => {})
+    const onError = mock((_error: unknown) => {})
+    try {
+      const transport = createHyperDXTransport({ onDropped, onError })
+      for (const message of ['a', 'b', 'c']) {
+        transport.log('INFO', message)
+      }
+      await transport.flush()
+
+      expect(onDropped.mock.calls).toEqual([[{ count: 2, reason: 'rejected' }]])
+      const [error] = onError.mock.calls[0] ?? []
+      expect((error as Error).message).toEndWith(
+        'backend rejected 2 of 3 entries — attribute too long'
+      )
+    } finally {
+      stub.restore()
       restoreEnv()
     }
   })

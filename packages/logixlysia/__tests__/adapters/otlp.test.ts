@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'bun:test'
+import { describe, expect, mock, test } from 'bun:test'
 import { createOtlpTransport } from '../../src/otlp'
 import { stubEnv, stubFetch } from './helpers'
 
@@ -74,6 +74,96 @@ describe('logixlysia/otlp', () => {
       restoreEnv()
     }
   })
+
+  test('reports the records a partial success rejected', async () => {
+    const restoreEnv = stubEnv(CLEAR_ENV)
+    const stub = stubFetch([
+      {
+        body: '{"partialSuccess":{"rejectedLogRecords":"2","errorMessage":"attribute too long"}}',
+        status: 200
+      }
+    ])
+    const onDropped = mock((_info: unknown) => {})
+    const onError = mock((_error: unknown) => {})
+    try {
+      const transport = createOtlpTransport({
+        endpoint: 'http://collector:4318',
+        onDropped,
+        onError
+      })
+      for (const message of ['a', 'b', 'c']) {
+        transport.log('INFO', message)
+      }
+      await transport.flush()
+
+      expect(stub.calls).toHaveLength(1)
+      expect(onDropped.mock.calls).toEqual([[{ count: 2, reason: 'rejected' }]])
+      const [error] = onError.mock.calls[0] ?? []
+      expect((error as Error).message).toEndWith(
+        'backend rejected 2 of 3 entries — attribute too long'
+      )
+    } finally {
+      stub.restore()
+      restoreEnv()
+    }
+  })
+
+  test('reports nothing for an empty partial success', async () => {
+    const restoreEnv = stubEnv(CLEAR_ENV)
+    const stub = stubFetch([
+      {
+        body: '{"partialSuccess":{"rejectedLogRecords":"0","errorMessage":"some attributes were dropped"}}',
+        status: 200
+      }
+    ])
+    const onDropped = mock((_info: unknown) => {})
+    const onError = mock((_error: unknown) => {})
+    try {
+      const transport = createOtlpTransport({
+        endpoint: 'http://collector:4318',
+        onDropped,
+        onError
+      })
+      transport.log('INFO', 'a')
+      await transport.flush()
+
+      expect(onDropped).not.toHaveBeenCalled()
+      expect(onError).not.toHaveBeenCalled()
+    } finally {
+      stub.restore()
+      restoreEnv()
+    }
+  })
+
+  test.each(['true', '[2]', '2.5', '"two"'])(
+    'reports nothing when rejectedLogRecords is %s',
+    async value => {
+      const restoreEnv = stubEnv(CLEAR_ENV)
+      const stub = stubFetch([
+        {
+          body: `{"partialSuccess":{"rejectedLogRecords":${value}}}`,
+          status: 200
+        }
+      ])
+      const onDropped = mock((_info: unknown) => {})
+      const onError = mock((_error: unknown) => {})
+      try {
+        const transport = createOtlpTransport({
+          endpoint: 'http://collector:4318',
+          onDropped,
+          onError
+        })
+        transport.log('INFO', 'a')
+        await transport.flush()
+
+        expect(onDropped).not.toHaveBeenCalled()
+        expect(onError).not.toHaveBeenCalled()
+      } finally {
+        stub.restore()
+        restoreEnv()
+      }
+    }
+  )
 
   test('sends a whole number past the safe-integer range as doubleValue', async () => {
     // The collector parses intValue as an int64 string, so "1e+21" or a
