@@ -98,8 +98,9 @@ app.post('/pay', async ({ log }) => {
     await charge()
   } catch (err) {
     log.error(err, { step: 'payment' })
+    return { success: false }
   }
-  return { success: false }
+  return { success: true }
 })
 ```
 
