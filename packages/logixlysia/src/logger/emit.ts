@@ -144,6 +144,8 @@ const formatTextLine = (
   return contextLines.length > 0 ? `${main}\n${contextLines.join('\n')}` : main
 }
 
+const LINE_OWNED_KEYS: ReadonlySet<string> = new Set(['level', 'timestamp'])
+
 const formatJsonLine = (
   level: LogLevel,
   data: Record<string, unknown>,
@@ -160,7 +162,13 @@ const formatJsonLine = (
     ...rest
   } = toRecordMeta({ data, options, precomputed, request })
   const service = options.config?.service?.trim() || undefined
-  const restEntries = Object.entries(rest)
+  const restEntries = Object.entries(rest).filter(
+    ([key]) =>
+      !(
+        LINE_OWNED_KEYS.has(key) ||
+        (service !== undefined && key === 'service')
+      )
+  )
   // Entries, not an object literal, because `bun run format` sorts literal
   // keys and this order is the line's key order.
   return stringifyForLog(
@@ -174,9 +182,7 @@ const formatJsonLine = (
       ['durationMs', durationMs],
       ['context', context],
       ['error', error],
-      ...(service === undefined
-        ? restEntries
-        : restEntries.filter(([key]) => key !== 'service'))
+      ...restEntries
     ])
   )
 }
