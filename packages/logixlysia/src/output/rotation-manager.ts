@@ -12,12 +12,13 @@ import {
 } from '../utils/rotation'
 import { createKeyedMutex } from './keyed-mutex'
 
-const requireBuiltin = createRequire(import.meta.url)
-
 // Required on first use because only a rotation that compresses needs them.
 // A dynamic import() would do, but the bundler then links its runtime chunk
-// into every entry, the dependency-free `logixlysia/errors` included.
+// into every entry, the dependency-free `logixlysia/errors` included. A
+// CommonJS bundle leaves import.meta.url undefined, so createRequire throws
+// here, where compressFile reports it, and not when the package is imported.
 const gzipAsync = async (content: Buffer): Promise<Buffer> => {
+  const requireBuiltin = createRequire(import.meta.url)
   const util = requireBuiltin('node:util') as { promisify: typeof Promisify }
   const zlib = requireBuiltin('node:zlib') as { gzip: typeof Gzip }
   return await util.promisify(zlib.gzip)(content)
