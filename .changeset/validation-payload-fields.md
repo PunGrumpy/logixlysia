@@ -1,0 +1,5 @@
+---
+'logixlysia': patch
+---
+
+With `logErrorPayload: true`, a failed validation is now logged with the `Validation failed (…)` summary as its message, the same as with the option off. Before, on Elysia 1.4, the message was Elysia's own validation message, which by default is a JSON text that includes the value that failed (the request body for a `body` validation, but also the value of a failed `query`, `headers`, `params`, `cookie` or `response` validation), or a schema's custom `error` text, and `autoRedact` could not mask it. The submitted value is now in `error.found` and the failures in `error.errors`, each with only its `path` and `message`, on the structured record (the JSON console line and what transports receive). `autoRedact` masks keys such as `password` inside `found`, and a failure's message when its path names a sensitive key. If you read the JSON text out of the message, read these fields instead. `error.code` and `error.status` no longer appear on that error object; the record's `status` still does.
