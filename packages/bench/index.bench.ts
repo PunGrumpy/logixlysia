@@ -110,21 +110,30 @@ const sink = (): void => {
   onLine?.(null)
 }
 
-const expectOneLine = async (
+const expectLines = async (
   label: string,
+  expected: number,
   run: () => unknown
 ): Promise<void> => {
   const before = linesWritten
   await run()
   await tick()
   const written = linesWritten - before
-  if (written !== 1) {
-    throw new Error(`${label}: expected 1 log line, got ${written}`)
+  if (written !== expected) {
+    throw new Error(`${label}: expected ${expected} log lines, got ${written}`)
   }
 }
 
+// The timed loop repeats one call with the same arguments, so a library that
+// drops repeats would be timed doing something other than logging.
+const BURST = 20
+
 const plainCase = async (label: string, fn: () => void): Promise<Case> => {
-  await expectOneLine(label, fn)
+  await expectLines(label, BURST, () => {
+    for (let call = 0; call < BURST; call += 1) {
+      fn()
+    }
+  })
   return [label, fn]
 }
 
@@ -135,7 +144,7 @@ interface Handler {
 const requestCase = async (label: string, app: Handler): Promise<Case> => {
   const send = (): Promise<Response> =>
     app.handle(new Request('http://localhost/'))
-  await expectOneLine(label, send)
+  await expectLines(label, 1, send)
   return [
     label,
     async () => {
@@ -156,8 +165,10 @@ const logix = createLogger({
   config: { transports: [{ log: sink }], useTransportsOnly: true }
 })
 const p = pino({}, { write: sink } as never)
-// Under vitest consola defaults to a level that drops info, so set it.
-const c = consola.create({ level: 3, reporters: [{ log: sink }] })
+// Under vitest consola defaults to a level that drops info, so set it. Its
+// default throttle drops a message repeated within a second, which is all the
+// timed loop does.
+const c = consola.create({ level: 3, reporters: [{ log: sink }], throttle: 0 })
 const w = winston.createLogger({
   transports: [
     new winston.transports.Stream({
