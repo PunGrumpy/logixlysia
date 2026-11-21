@@ -2,6 +2,7 @@ import { expect, test } from 'bun:test'
 import { existsSync } from 'node:fs'
 import path from 'node:path'
 import { spawnSync } from 'bun'
+import { CHILD_PROCESS_TIMEOUT_MS } from '../_helpers/child-process'
 
 const packageRoot = path.join(import.meta.dir, '..', '..')
 const distEntry = path.join(packageRoot, 'dist', 'index.js')
@@ -34,5 +35,6 @@ run(
     }
     const { byElysia, byPlugin } = JSON.parse(proc.stdout.toString())
     expect(byPlugin).toEqual(byElysia)
-  }
+  },
+  CHILD_PROCESS_TIMEOUT_MS
 )

@@ -3,6 +3,7 @@ import { existsSync } from 'node:fs'
 import path from 'node:path'
 import { spawnSync } from 'bun'
 import packageJson from '../../package.json'
+import { CHILD_PROCESS_TIMEOUT_MS } from '../_helpers/child-process'
 
 const packageRoot = path.join(import.meta.dir, '..', '..')
 const distReady = existsSync(path.join(packageRoot, 'dist', 'index.js'))
@@ -62,7 +63,8 @@ describe('published API surface', () => {
     'every exports subpath resolves and its named exports match the snapshot',
     () => {
       expect(resolveSurface()).toMatchSnapshot()
-    }
+    },
+    CHILD_PROCESS_TIMEOUT_MS
   )
 
   test('every bunup entry has an exports subpath and vice versa', async () => {

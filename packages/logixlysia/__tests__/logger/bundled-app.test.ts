@@ -3,6 +3,7 @@ import { existsSync, writeFileSync } from 'node:fs'
 import { mkdtemp } from 'node:fs/promises'
 import path from 'node:path'
 import { spawnSync } from 'bun'
+import { CHILD_PROCESS_TIMEOUT_MS } from '../_helpers/child-process'
 import { createTempDir, removeTempDir } from '../_helpers/tmp'
 
 const packageRoot = path.join(import.meta.dir, '..', '..')
@@ -56,16 +57,24 @@ describe('an app bundled into one file', () => {
     expect(() => Bun.resolveSync('pino', runDir)).toThrow()
   })
 
-  test.skipIf(!distReady)('logs through store.pino', () => {
-    const output = runBundledApp('plain', '{}')
-    expect(output).toContain('"msg":"via pino"')
-    expect(output).toContain('status 200')
-  })
+  test.skipIf(!distReady)(
+    'logs through store.pino',
+    () => {
+      const output = runBundledApp('plain', '{}')
+      expect(output).toContain('"msg":"via pino"')
+      expect(output).toContain('status 200')
+    },
+    CHILD_PROCESS_TIMEOUT_MS
+  )
 
-  test.skipIf(!distReady)('logs through pino-pretty with prettyPrint', () => {
-    const output = runBundledApp('pretty', '{ pino: { prettyPrint: true } }')
-    expect(output).toContain('INFO')
-    expect(output).toContain('via pino')
-    expect(output).toContain('status 200')
-  })
+  test.skipIf(!distReady)(
+    'logs through pino-pretty with prettyPrint',
+    () => {
+      const output = runBundledApp('pretty', '{ pino: { prettyPrint: true } }')
+      expect(output).toContain('INFO')
+      expect(output).toContain('via pino')
+      expect(output).toContain('status 200')
+    },
+    CHILD_PROCESS_TIMEOUT_MS
+  )
 })
