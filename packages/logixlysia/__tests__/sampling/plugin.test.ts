@@ -4,6 +4,7 @@ import { logixlysia } from '../../src'
 import { HttpError } from '../../src/interfaces'
 import type { Options, SinkErrorContext } from '../../src/interfaces'
 import type { RequestOutcome } from '../../src/sampling'
+import { waitFor } from '../_helpers/wait-for'
 
 interface CapturedEvent {
   level: string
@@ -69,9 +70,36 @@ const buildApp = (
       log.debug('looking up the order')
       return status(404, 'no order')
     })
+    .get('/stream-fails', function* streamFails({ log }) {
+      log.info('sent the first chunk')
+      yield 'a'
+      throw new Error('stream failed')
+    })
+    .get('/stream-ok', function* streamOk({ log }) {
+      log.info('sent the first chunk')
+      yield 'a'
+    })
+    .get('/accepted', ({ log, status }) => {
+      log.info('queued the work')
+      throw status(202, 'queued')
+    })
+    .get('/missing', ({ log }) => {
+      log.info('looked up the order')
+      throw new HttpError(404, 'no order')
+    })
 
 const get = (app: ReturnType<typeof buildApp>, path: string) =>
   app.handle(new Request(`http://localhost${path}`))
+
+const readStream = async (
+  app: ReturnType<typeof buildApp>,
+  path: string,
+  events: CapturedEvent[]
+): Promise<void> => {
+  const response = await get(app, path)
+  await response.text().catch(() => '')
+  await waitFor(() => events.some(event => event.level === 'ERROR'))
+}
 
 describe('sampling through the plugin', () => {
   test('head sampling at 0% silences INFO but keeps ERROR', async () => {
@@ -200,6 +228,177 @@ describe('sampling through the plugin', () => {
   })
 })
 
+describe('tail status and a request that ends in a logged error', () => {
+  test('keeps the trail of a stream that fails after its first chunk', async () => {
+    const { events, transport } = createCaptureTransport()
+    const app = buildApp(
+      { sampling: { head: { INFO: 0 }, tail: { status: 500 } } },
+      transport
+    )
+
+    await readStream(app, '/stream-fails', events)
+
+    expect(
+      events.map(event => [event.level, event.message, event.meta.status])
+    ).toEqual([
+      ['INFO', 'sent the first chunk', undefined],
+      ['ERROR', 'stream failed', 200]
+    ])
+  })
+
+  test('keeps the trail of an error that onError answered with a redirect', async () => {
+    const { events, transport } = createCaptureTransport()
+    const app = new Elysia()
+      .use(
+        logixlysia({
+          config: {
+            disableFileLogging: true,
+            disableInternalLogger: true,
+            sampling: { head: { INFO: 0 }, tail: { status: 500 } },
+            transports: [{ log: transport }]
+          }
+        })
+      )
+      .onError(({ set }) => {
+        set.status = 302
+        set.headers.location = '/login'
+        return 'moved'
+      })
+      .get('/account', ({ log }) => {
+        log.info('read the session')
+        throw new Error('session expired')
+      })
+
+    const response = await app.handle(new Request('http://localhost/account'))
+
+    expect(response.status).toBe(302)
+    expect(
+      events.map(event => [event.level, event.message, event.meta.status])
+    ).toEqual([
+      ['INFO', 'read the session', undefined],
+      ['ERROR', 'session expired', 302]
+    ])
+  })
+
+  test('a thrown value that cannot be inspected still gets its response', async () => {
+    const hostile = Object.defineProperty({}, 'constructor', {
+      get() {
+        throw new Error('no constructor')
+      }
+    })
+    const app = new Elysia()
+      .use(
+        logixlysia({
+          config: { disableFileLogging: true, disableInternalLogger: true }
+        })
+      )
+      .onError(({ set }) => {
+        set.status = 302
+        set.headers.location = '/login'
+        return 'moved'
+      })
+      .get('/account', () => {
+        throw hostile
+      })
+
+    const response = await app.handle(new Request('http://localhost/account'))
+
+    expect(response.status).toBe(302)
+  })
+
+  test('a failed stream counts as a 500 against the threshold', async () => {
+    const above = createCaptureTransport()
+    const keptUnder400 = buildApp(
+      { sampling: { head: { INFO: 0 }, tail: { status: 400 } } },
+      above.transport
+    )
+    const below = createCaptureTransport()
+    const droppedUnder503 = buildApp(
+      { sampling: { head: { INFO: 0 }, tail: { status: 503 } } },
+      below.transport
+    )
+
+    await readStream(keptUnder400, '/stream-fails', above.events)
+    await readStream(droppedUnder503, '/stream-fails', below.events)
+
+    expect(above.events.map(event => [event.level, event.message])).toEqual([
+      ['INFO', 'sent the first chunk'],
+      ['ERROR', 'stream failed']
+    ])
+    expect(below.events.map(event => [event.level, event.message])).toEqual([
+      ['ERROR', 'stream failed']
+    ])
+  })
+
+  test('a 5xx error below the threshold is not kept', async () => {
+    const { events, transport } = createCaptureTransport()
+    const app = buildApp(
+      { sampling: { head: { INFO: 0 }, tail: { status: 504 } } },
+      transport
+    )
+
+    await get(app, '/boom-logged')
+
+    expect(events.map(event => [event.level, event.message])).toEqual([
+      ['ERROR', 'downstream']
+    ])
+  })
+
+  test('a stream that completes is not kept', async () => {
+    const { events, transport } = createCaptureTransport()
+    const app = buildApp(
+      { sampling: { head: { INFO: 0 }, tail: { status: 500 } } },
+      transport
+    )
+
+    const response = await get(app, '/stream-ok')
+
+    expect(await response.text()).toBe('a')
+    expect(events).toHaveLength(0)
+  })
+
+  test('a thrown status() result below 400 is not a failure', async () => {
+    const { events, transport } = createCaptureTransport()
+    const app = buildApp(
+      { sampling: { head: { INFO: 0 }, tail: { status: 500 } } },
+      transport
+    )
+
+    const response = await get(app, '/accepted')
+
+    expect(response.status).toBe(202)
+    expect(events).toHaveLength(0)
+  })
+
+  test('a thrown 4xx below the threshold is not kept', async () => {
+    const { events, transport } = createCaptureTransport()
+    const app = buildApp(
+      { sampling: { head: { INFO: 0 }, tail: { status: 500 } } },
+      transport
+    )
+
+    await get(app, '/missing')
+
+    expect(events.map(event => [event.level, event.message])).toEqual([
+      ['WARNING', 'no order']
+    ])
+  })
+
+  test('a logged error keeps nothing when tail.status is not set', async () => {
+    const { events, transport } = createCaptureTransport()
+    const app = buildApp(
+      { sampling: { head: { INFO: 0 }, tail: { durationMs: 60_000 } } },
+      transport
+    )
+
+    await readStream(app, '/stream-fails', events)
+
+    expect(events.map(event => [event.level, event.message])).toEqual([
+      ['ERROR', 'stream failed']
+    ])
+  })
+})
+
 describe('tail keep predicate through the plugin', () => {
   test('replays the records of a request whose context the predicate accepts', async () => {
     const { events, transport } = createCaptureTransport()
@@ -235,6 +434,56 @@ describe('tail keep predicate through the plugin', () => {
     expect(received?.pathname).toBe('/plan/free')
     expect(received?.status).toBe(200)
     expect(received?.context).toMatchObject({ plan: 'free' })
+  })
+
+  test('hands the predicate what a stream threw after its first chunk', async () => {
+    const { events, transport } = createCaptureTransport()
+    const keep = mock((_outcome: RequestOutcome) => false)
+    const app = buildApp(
+      { sampling: { head: { INFO: 0 }, tail: { keep } } },
+      transport
+    )
+
+    await readStream(app, '/stream-fails', events)
+
+    const [received] = keep.mock.calls[0] ?? []
+    expect(received?.status).toBe(200)
+    expect(received?.error).toBeInstanceOf(Error)
+    expect((received?.error as Error | undefined)?.message).toBe(
+      'stream failed'
+    )
+  })
+
+  test('hands the predicate what a handler threw', async () => {
+    const { transport } = createCaptureTransport()
+    const keep = mock((_outcome: RequestOutcome) => false)
+    const app = buildApp(
+      { sampling: { head: { INFO: 0 }, tail: { keep } } },
+      transport
+    )
+
+    await get(app, '/missing')
+
+    const [received] = keep.mock.calls[0] ?? []
+    expect(received?.status).toBe(404)
+    expect(received?.error).toBeInstanceOf(HttpError)
+  })
+
+  test('leaves error out when nothing was thrown or a status() below 400 was', async () => {
+    const { transport } = createCaptureTransport()
+    const keep = mock((_outcome: RequestOutcome) => false)
+    const app = buildApp(
+      { sampling: { head: { INFO: 0 }, tail: { keep } } },
+      transport
+    )
+
+    await get(app, '/plan/free')
+    await get(app, '/accepted')
+
+    expect(keep.mock.calls.map(([outcome]) => 'error' in outcome)).toEqual([
+      false,
+      false
+    ])
   })
 
   test('a predicate that mutates its context does not change later lines', async () => {

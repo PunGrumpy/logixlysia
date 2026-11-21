@@ -150,6 +150,64 @@ describe('tail sampling', () => {
     expect(rescued(`/api/${'a'.repeat(100)}`)).toHaveLength(1)
   })
 
+  test('replays a request that ended in an error below the status threshold', () => {
+    const sampling = resolveSampling(config, () => 0.99)
+    const key = {}
+    sampling?.begin(key)
+    sampling?.buffer(key, { data: {}, durationMs: 1, level: 'INFO' })
+
+    const failedStream = outcome({
+      error: new Error('stream failed'),
+      status: 200
+    })
+    expect(sampling?.finalize(key, failedStream)).toHaveLength(1)
+  })
+
+  test('an error the client got below 400 counts as a 500, not more', () => {
+    const sampling = resolveSampling(
+      { head: { INFO: 0 }, tail: { status: 503 } },
+      () => 0.99
+    )
+    const key = {}
+    sampling?.begin(key)
+    sampling?.buffer(key, { data: {}, durationMs: 1, level: 'INFO' })
+
+    const failedStream = outcome({
+      error: new Error('stream failed'),
+      status: 200
+    })
+    expect(sampling?.finalize(key, failedStream)).toHaveLength(0)
+  })
+
+  test('an error with a 4xx below the status threshold is not replayed', () => {
+    const sampling = resolveSampling(
+      { head: { INFO: 0 }, tail: { status: 500 } },
+      () => 0.99
+    )
+    const key = {}
+    sampling?.begin(key)
+    sampling?.buffer(key, { data: {}, durationMs: 1, level: 'INFO' })
+
+    const notFound = outcome({ error: new Error('no order'), status: 404 })
+    expect(sampling?.finalize(key, notFound)).toHaveLength(0)
+  })
+
+  test('an error rescues nothing without a status rule', () => {
+    const sampling = resolveSampling(
+      { head: { INFO: 0 }, tail: { durationMs: 1000 } },
+      () => 0.99
+    )
+    const key = {}
+    sampling?.begin(key)
+    sampling?.buffer(key, { data: {}, durationMs: 1, level: 'INFO' })
+
+    const failedStream = outcome({
+      error: new Error('stream failed'),
+      status: 200
+    })
+    expect(sampling?.finalize(key, failedStream)).toHaveLength(0)
+  })
+
   test('discards buffered records when nothing matches', () => {
     const sampling = resolveSampling(config, () => 0.99)
     const key = {}

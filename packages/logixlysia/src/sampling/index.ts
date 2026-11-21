@@ -100,12 +100,23 @@ const matchesKeep = (
   }
 }
 
+const CLIENT_ERROR_STATUS = 400
+const SERVER_ERROR_STATUS = 500
+
+// A thrown error the client got below 400 for (a stream that failed after its
+// first chunk, an error answered with a redirect) is still logged at ERROR, so
+// the status rule weighs it as the 500 it is logged as.
+const statusForVerdict = (outcome: RequestOutcome): number =>
+  outcome.error !== undefined && outcome.status < CLIENT_ERROR_STATUS
+    ? SERVER_ERROR_STATUS
+    : outcome.status
+
 const matchesTail = (
   tail: ResolvedTail,
   outcome: RequestOutcome,
   onError: ((context: SinkErrorContext) => void) | undefined
 ): boolean => {
-  if (tail.status !== undefined && outcome.status >= tail.status) {
+  if (tail.status !== undefined && statusForVerdict(outcome) >= tail.status) {
     return true
   }
   if (tail.durationMs !== undefined && outcome.durationMs >= tail.durationMs) {
