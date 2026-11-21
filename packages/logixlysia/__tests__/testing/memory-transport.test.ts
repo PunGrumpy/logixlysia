@@ -292,6 +292,39 @@ describe('createMemoryTransport', () => {
       status: undefined
     })
   })
+
+  test('an error whose message is not a string gets it as text', () => {
+    const memory = createMemoryTransport()
+
+    memory.log('ERROR', 'failed', { error: { message: { detail: 'nope' } } })
+
+    expect(memory.last()?.error?.message).toBe('{"detail":"nope"}')
+  })
+
+  test('an error without a message gets an empty one', () => {
+    const memory = createMemoryTransport()
+
+    memory.log('ERROR', 'failed', { error: { code: 'E1' } })
+
+    expect(memory.last()?.error).toEqual({ code: 'E1', message: '' })
+  })
+
+  test('a string error becomes the message', () => {
+    const memory = createMemoryTransport()
+
+    memory.log('ERROR', 'failed', { error: 'a string error' })
+
+    expect(memory.last()?.error).toEqual({ message: 'a string error' })
+  })
+
+  test('meta keeps the error as it was given', () => {
+    const memory = createMemoryTransport()
+
+    memory.log('ERROR', 'failed', { error: { message: 42 } })
+
+    expect(memory.last()?.meta.error).toEqual({ message: 42 })
+    expect(memory.last()?.error?.message).toBe('42')
+  })
 })
 
 describe('MemoryTransport.waitFor', () => {
