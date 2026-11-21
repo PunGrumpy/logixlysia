@@ -210,3 +210,21 @@ test('an async close hook still sees the request context', async () => {
   const [closed] = recordsNamed('WebSocket closed')
   expect(closed?.[2]).toMatchObject({ context: { farewell: true } })
 })
+
+test('a hook that rejects on a real socket writes one ERROR line with the error', async () => {
+  const url = serve('/reject-logged', {
+    async message() {
+      await sleep(1)
+      throw new Error('boom')
+    }
+  })
+
+  await exchange(url, 'hi')
+  await waitFor(() => recordsNamed('WebSocket message').length > 0)
+
+  const lines = recordsNamed('WebSocket message')
+  expect(lines.map(call => call[0])).toEqual(['ERROR'])
+  expect(lines[0]?.[2]).toMatchObject({ error: { message: 'boom' } })
+  expect(lines[0]?.[2]).not.toHaveProperty('status')
+  expect(errors).toHaveLength(1)
+})

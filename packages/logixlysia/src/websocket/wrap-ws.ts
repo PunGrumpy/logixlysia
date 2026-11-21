@@ -1,8 +1,13 @@
 import { keyOf } from '../context/request-context'
-import type { RequestContextStore } from '../context/request-context'
+import type {
+  ContextKey,
+  RequestContextStore
+} from '../context/request-context'
 import type { Logger, Options, StoreData } from '../interfaces'
+import { reportFormatError } from '../logger/emit'
 import { resolvePathFilter } from '../logger/path-filter'
 import type { PathFilter } from '../logger/path-filter'
+import { normalizeLoggedError } from '../utils/error'
 import { syntheticRequest } from '../utils/synthetic-request'
 
 export interface WebSocketLike {
@@ -23,6 +28,13 @@ export interface WsHandlerHooks<
   open?: (ws: TWs) => unknown
 }
 
+// Boxed so that a hook which throws `undefined` still counts as a failure.
+interface HookFailure {
+  error: unknown
+}
+
+type Settle = (failure?: HookFailure) => void
+
 const wsRequestCache = new Map<string, Request>()
 
 const wsSyntheticRequest = (path: string): Request => {
@@ -35,8 +47,12 @@ const wsSyntheticRequest = (path: string): Request => {
 }
 
 const payloadTypeOf = (message: unknown): string => {
-  if (message instanceof ArrayBuffer || ArrayBuffer.isView(message)) {
-    return 'binary'
+  try {
+    if (message instanceof ArrayBuffer || ArrayBuffer.isView(message)) {
+      return 'binary'
+    }
+  } catch {
+    // A revoked Proxy throws on `instanceof`; it is still an object.
   }
   if (typeof message === 'string') {
     return 'string'
@@ -46,13 +62,13 @@ const payloadTypeOf = (message: unknown): string => {
 
 const settleHook = async (
   pending: Promise<unknown>,
-  done: () => void
+  done: Settle
 ): Promise<unknown> => {
   let value: unknown
   try {
     value = await pending
   } catch (error) {
-    done()
+    done({ error })
     throw error
   }
   done()
@@ -65,7 +81,7 @@ const settleHook = async (
  * lifecycle line is written once the result has settled. The `instanceof
  * Promise` test is the one Elysia itself uses (`ws/index.mjs:116`).
  */
-const afterHook = (result: unknown, done: () => void): unknown => {
+const afterHook = (result: unknown, done: Settle): unknown => {
   if (result instanceof Promise) {
     return settleHook(result, done)
   }
@@ -81,28 +97,58 @@ export const createWsHandlerWrapper = (
     options.config?.logFilter
   )
 ) => {
-  const wsTimings = new WeakMap<object, bigint>()
+  const wsTimings = new WeakMap<ContextKey, bigint>()
 
   const logWs = (
-    level: 'INFO' | 'WARNING' | 'ERROR',
-    ws: WebSocketLike,
+    key: ContextKey,
+    wsId: string | undefined,
     path: string,
     message: string,
-    extra?: Record<string, unknown>
+    extra: Record<string, unknown> | undefined,
+    failure: HookFailure | undefined
   ): void => {
     const request = wsSyntheticRequest(path)
     if (pathFilter?.excludes(request)) {
       return
     }
-    const beforeTime = wsTimings.get(keyOf(ws)) ?? process.hrtime.bigint()
+    const beforeTime = wsTimings.get(key) ?? process.hrtime.bigint()
     const store: StoreData = { beforeTime }
-    const accumulated = contextStore.peekContext(ws)
+    const accumulated = contextStore.peekContext(key)
     const context =
       Object.keys(accumulated).length > 0 || extra
-        ? { ...accumulated, ...extra, wsId: ws.id }
-        : { wsId: ws.id }
+        ? { ...accumulated, ...extra, wsId }
+        : { wsId }
 
-    logger.log(level, request, { context, message, status: 200 }, store)
+    if (!failure) {
+      logger.log('INFO', request, { context, message, status: 200 }, store)
+      return
+    }
+    // No status: a failed hook sends the client none, as with a line from
+    // `log.error`.
+    const { error } = normalizeLoggedError(
+      failure.error,
+      options.config?.logErrorPayload === true
+    )
+    logger.log('ERROR', request, { context, error, message }, store)
+  }
+
+  // Runs while the hook's own result or error is on its way to Elysia, so a
+  // failure here is reported and never thrown in its place.
+  const writeLine = (
+    key: ContextKey,
+    wsId: string | undefined,
+    path: string,
+    message: string,
+    extra?: Record<string, unknown>,
+    failure?: HookFailure
+  ): void => {
+    try {
+      if (options.config?.disableWebSocketLogging !== true) {
+        logWs(key, wsId, path, message, extra, failure)
+      }
+    } catch (reportFailure) {
+      reportFormatError(reportFailure, options.config?.onError)
+    }
   }
 
   return <
@@ -121,64 +167,65 @@ export const createWsHandlerWrapper = (
     return {
       ...hooks,
       close(ws, code, reason) {
-        const done = (): void => {
-          if (options.config?.disableWebSocketLogging !== true) {
-            const extra: Record<string, unknown> = {}
-            if (code !== undefined) {
-              extra.code = code
-            }
-            if (reason !== undefined) {
-              extra.reason = reason
-            }
-            logWs(
-              'INFO',
-              ws,
-              path,
-              'WebSocket closed',
-              Object.keys(extra).length > 0 ? extra : undefined
-            )
-          }
-          contextStore.clearContext(ws)
-          wsTimings.delete(keyOf(ws))
+        const key = keyOf(ws)
+        const wsId = ws.id
+        const extra: Record<string, unknown> = {}
+        if (code !== undefined) {
+          extra.code = code
+        }
+        if (reason !== undefined) {
+          extra.reason = reason
+        }
+        const done: Settle = failure => {
+          writeLine(
+            key,
+            wsId,
+            path,
+            'WebSocket closed',
+            Object.keys(extra).length > 0 ? extra : undefined,
+            failure
+          )
+          contextStore.clearContext(key)
+          wsTimings.delete(key)
         }
         let result: unknown
         try {
           result = hooks.close?.(ws, code, reason)
         } catch (error) {
-          done()
+          done({ error })
           throw error
         }
         return afterHook(result, done)
       },
       message(ws, message) {
-        const done = (): void => {
-          if (options.config?.disableWebSocketLogging !== true) {
-            logWs('INFO', ws, path, 'WebSocket message', {
-              payloadType: payloadTypeOf(message)
-            })
-          }
+        const key = keyOf(ws)
+        const wsId = ws.id
+        // Read now: the hook may change or revoke the message it is given.
+        const extra = { payloadType: payloadTypeOf(message) }
+        const done: Settle = failure => {
+          writeLine(key, wsId, path, 'WebSocket message', extra, failure)
         }
         let result: unknown
         try {
           result = hooks.message?.(ws, message)
         } catch (error) {
-          done()
+          done({ error })
           throw error
         }
         return afterHook(result, done)
       },
       open(ws) {
-        wsTimings.set(keyOf(ws), process.hrtime.bigint())
-        const done = (): void => {
-          if (options.config?.disableWebSocketLogging !== true) {
-            logWs('INFO', ws, path, 'WebSocket opened')
-          }
+        const key = keyOf(ws)
+        const wsId = ws.id
+        wsTimings.set(key, process.hrtime.bigint())
+        const done: Settle = failure => {
+          writeLine(key, wsId, path, 'WebSocket opened', undefined, failure)
         }
         let result: unknown
         try {
           result = hooks.open?.(ws)
         } catch (error) {
-          done()
+          done({ error })
           throw error
         }
         return afterHook(result, done)
