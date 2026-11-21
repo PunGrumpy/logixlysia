@@ -287,6 +287,21 @@ describe('formatLogOutput timestamp prefixes', () => {
     expect(renderTimestamp('SYS:standard')).toMatch(STANDARD_TIMESTAMP_REGEX)
   })
 
+  test("'SYS:STANDARD' renders the standard local pattern", () => {
+    setSystemTime(new Date(2026, 0, 2, 3, 4, 5, 123))
+    expect(renderTimestamp('SYS:STANDARD')).toMatch(STANDARD_TIMESTAMP_REGEX)
+  })
+
+  test("'UTC:Standard' renders the standard UTC pattern", () => {
+    setSystemTime(new Date(Date.UTC(2026, 0, 2, 3, 4, 5, 123)))
+    expect(renderTimestamp('UTC:Standard')).toBe('2026-01-02 03:04:05.123')
+  })
+
+  test("a bare 'STANDARD' renders the standard local pattern", () => {
+    setSystemTime(new Date(2026, 0, 2, 3, 4, 5, 123))
+    expect(renderTimestamp('STANDARD')).toMatch(STANDARD_TIMESTAMP_REGEX)
+  })
+
   test("'UTC:HH:MM' renders the UTC hour and minute", () => {
     const fixed = new Date(Date.UTC(2026, 0, 2, 13, 45, 0))
     setSystemTime(fixed)
