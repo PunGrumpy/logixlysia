@@ -228,3 +228,25 @@ test('a hook that rejects on a real socket writes one ERROR line with the error'
   expect(lines[0]?.[2]).not.toHaveProperty('status')
   expect(errors).toHaveLength(1)
 })
+
+test('a generator hook that fails mid-stream sends what it yielded and writes one ERROR line', async () => {
+  const url = serve('/stream-fail', {
+    async *message(_ws, m) {
+      yield `${m}-1`
+      await sleep(10)
+      throw new Error('boom mid-stream')
+    }
+  })
+
+  const { messages } = await exchange(url, 'hi')
+  await waitFor(() => recordsNamed('WebSocket message').length > 0)
+
+  expect(messages).toEqual(['hi-1'])
+  expect(errors).toHaveLength(1)
+  expect(errors[0]).toHaveProperty('message', 'boom mid-stream')
+  const lines = recordsNamed('WebSocket message')
+  expect(lines.map(call => call[0])).toEqual(['ERROR'])
+  expect(lines[0]?.[2]).toMatchObject({
+    error: { message: 'boom mid-stream' }
+  })
+})

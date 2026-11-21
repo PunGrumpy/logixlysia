@@ -53,6 +53,59 @@ const payloadTypeOf = (message: unknown): string => {
   return typeof message
 }
 
+const isIterator = (
+  value: unknown
+): value is AsyncIterator<unknown> | Iterator<unknown> =>
+  typeof value === 'object' &&
+  value !== null &&
+  typeof (value as { next?: unknown }).next === 'function' &&
+  (Symbol.asyncIterator in value || Symbol.iterator in value)
+
+// `finally` writes the line once, whether the source finishes, throws or is
+// stopped early by the consumer.
+const settleIterator = function* settleIterator(
+  source: Iterator<unknown>,
+  done: Settle
+): Generator<unknown, unknown> {
+  let failure: HookFailure | undefined
+  try {
+    return yield* { [Symbol.iterator]: () => source }
+  } catch (error) {
+    failure = { error }
+    throw error
+  } finally {
+    done(failure)
+  }
+}
+
+const settleAsyncIterator = async function* settleAsyncIterator(
+  source: AsyncIterator<unknown>,
+  done: Settle
+): AsyncGenerator<unknown, unknown> {
+  let failure: HookFailure | undefined
+  try {
+    return yield* { [Symbol.asyncIterator]: () => source }
+  } catch (error) {
+    failure = { error }
+    throw error
+  } finally {
+    done(failure)
+  }
+}
+
+// Used for a hook's direct result and for what a Promise resolved to, since
+// Elysia iterates an iterator in either case. A returned iterator is pulled
+// after the hook returns, so its line waits for the last value.
+const settleValue = (value: unknown, done: Settle): unknown => {
+  if (isIterator(value)) {
+    return Symbol.asyncIterator in value
+      ? settleAsyncIterator(value as AsyncIterator<unknown>, done)
+      : settleIterator(value as Iterator<unknown>, done)
+  }
+  done()
+  return value
+}
+
 const settleHook = async (
   pending: Promise<unknown>,
   done: Settle
@@ -64,23 +117,20 @@ const settleHook = async (
     done({ error })
     throw error
   }
-  done()
-  return value
+  return settleValue(value, done)
 }
 
 /**
- * Hands the hook's result back to Elysia untouched, so a returned value is
- * sent, a generator is iterated and a rejection reaches Elysia's catch. The
- * lifecycle line is written once the result has settled. The `instanceof
- * Promise` test is the one Elysia itself uses (`ws/index.mjs:116`).
+ * Hands the hook's result back to Elysia in a form it treats the same way, so
+ * a returned value is sent, a generator is iterated and a rejection reaches
+ * Elysia's catch. The lifecycle line is written once the result has settled.
+ * The `instanceof Promise` and `next` tests are the ones Elysia itself uses
+ * (`createHandleWSResponse` in `elysia/dist/ws/index.mjs`).
  */
-const afterHook = (result: unknown, done: Settle): unknown => {
-  if (result instanceof Promise) {
-    return settleHook(result, done)
-  }
-  done()
-  return result
-}
+const afterHook = (result: unknown, done: Settle): unknown =>
+  result instanceof Promise
+    ? settleHook(result, done)
+    : settleValue(result, done)
 
 export const createWsHandlerWrapper = (
   options: Options,
@@ -91,6 +141,12 @@ export const createWsHandlerWrapper = (
   )
 ) => {
   const wsTimings = new WeakMap<object, bigint>()
+  // Elysia keeps pulling a message hook's iterator after the socket closes, so
+  // its line can come after the close has cleared the context.
+  const closedContexts = new WeakMap<
+    object,
+    Readonly<Record<string, unknown>>
+  >()
 
   const logWs = (
     ws: WebSocketLike,
@@ -105,7 +161,11 @@ export const createWsHandlerWrapper = (
     }
     const beforeTime = wsTimings.get(keyOf(ws)) ?? process.hrtime.bigint()
     const store: StoreData = { beforeTime }
-    const accumulated = contextStore.peekContext(ws)
+    const live = contextStore.peekContext(ws)
+    const accumulated =
+      Object.keys(live).length > 0
+        ? live
+        : (closedContexts.get(keyOf(ws)) ?? live)
     const context =
       Object.keys(accumulated).length > 0 || extra
         ? { ...accumulated, ...extra, wsId: ws.id }
@@ -162,8 +222,9 @@ export const createWsHandlerWrapper = (
               failure
             )
           }
+          // The open time stays, for a message line written after this one.
+          closedContexts.set(keyOf(ws), contextStore.peekContext(ws))
           contextStore.clearContext(ws)
-          wsTimings.delete(keyOf(ws))
         }
         let result: unknown
         try {
@@ -197,6 +258,7 @@ export const createWsHandlerWrapper = (
       },
       open(ws) {
         wsTimings.set(keyOf(ws), process.hrtime.bigint())
+        closedContexts.delete(keyOf(ws))
         const done: Settle = failure => {
           if (options.config?.disableWebSocketLogging !== true) {
             logWs(ws, path, 'WebSocket opened', undefined, failure)
