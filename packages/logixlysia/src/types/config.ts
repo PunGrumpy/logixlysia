@@ -99,7 +99,16 @@ export interface RequestOutcome {
    */
   context: Readonly<Record<string, unknown>>
   durationMs: number
+  /**
+   * The value recorded for a failed request, such as what a handler or a
+   * hook threw, or what a generator or SSE response failed with after its
+   * first chunk. It is the thrown value itself, not a copy. Absent when
+   * nothing was recorded, and for a thrown `status()` result, which is a
+   * response.
+   */
+  error?: unknown
   pathname: string
+  /** The status the client got, also for a response that failed mid-stream. */
   status: number
 }
 
@@ -120,7 +129,12 @@ export interface TailSamplingConfig {
    * `**` crosses `/`, `*` and `?` do not — e.g. `/checkout/**`.
    */
   paths?: string[]
-  /** Rescue when the response status is at or above this code, e.g. `400`. */
+  /**
+   * Rescue when the response status is at or above this code, e.g. `400`.
+   * A request that ended in an error the plugin logs at `ERROR` counts as a
+   * `500` here when the client got less than `400`, such as a stream that
+   * failed after its status went out.
+   */
   status?: number
 }
 

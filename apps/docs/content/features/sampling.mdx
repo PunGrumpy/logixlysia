@@ -46,9 +46,11 @@ logixlysia({
 
 Rules are OR-ed — a single match replays the whole request, including the access log line that would otherwise have been sampled away.
 
+A request that ends in an error the plugin logs at `ERROR` counts as a `500` for `status` when the client got a status below `400`. That covers a generator or SSE response that fails after a `2xx` status and its first chunk went out, and an error an `onError` hook answers with a redirect: a `status` of `500` or lower keeps their buffered lines. A response that went out with `400` or more is compared by that status, so a stream that fails after sending a `404` is not kept under `500`. A thrown `status()` result is a response, not an error.
+
 ### Custom rules
 
-`keep` rescues on anything the handler learned. It receives `durationMs`, `pathname`, `status`, and a copy of the `context` merged into the request so far.
+`keep` rescues on anything the handler learned. It receives `durationMs`, `pathname`, `status` (the status the client got), a copy of the `context` merged into the request so far, and `error`, the value the plugin recorded for a failed request, such as what a handler or a hook threw, or what a generator or SSE response failed with. `error` is the thrown value itself, not a copy. It is absent when nothing was recorded and for a thrown `status()` result.
 
 ```ts
 logixlysia({
