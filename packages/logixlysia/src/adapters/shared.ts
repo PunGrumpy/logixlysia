@@ -29,6 +29,7 @@ const HTTP_TOO_MANY_REQUESTS = 429
 const HTTP_SERVER_ERROR_MIN = 500
 const ERROR_BODY_PREVIEW_LENGTH = 200
 const ERROR_BODY_MAX_READ = 1024
+const SUCCESS_BODY_MAX_READ = 1_048_576
 const FLATTEN_MAX_DEPTH = 3
 
 export interface BatchTransportOptions {
@@ -67,11 +68,13 @@ export interface BatchTransportOptions {
   /**
    * Called with how many entries were lost and why: `queue-full` when too many
    * were already waiting, `send-failed` when a request failed after retries,
-   * `closed` for a `log()` after `close()`. Add up `count` for a running total.
+   * `rejected` when the backend answered with success and said it did not
+   * store part of the batch, `closed` for a `log()` after `close()`. Add up
+   * `count` for a running total.
    */
   onDropped?: (info: {
     count: number
-    reason: 'closed' | 'queue-full' | 'send-failed'
+    reason: 'closed' | 'queue-full' | 'rejected' | 'send-failed'
   }) => void
   /**
    * Called when a request fails after retries, or when entries are dropped
@@ -199,12 +202,21 @@ const sleep = (ms: number, keepAlive: boolean): Promise<void> => {
   return promise
 }
 
+/** Entries a backend said it did not store, in a response that otherwise succeeded. */
+export interface RejectedEntries {
+  count: number
+  /** The backend's own explanation, when it gave one. */
+  detail?: string
+}
+
 export interface PostWithRetryInput {
   body: string
   headers: Record<string, string>
   /** Keeps the retry backoff timer ref'd, for a caller awaiting this send. */
   keepAlive?: boolean
   name: string
+  /** Reads a successful response; see `HttpTransportInput.rejected`. */
+  rejected?: (response: unknown) => RejectedEntries | undefined
   retries: number
   timeout: number
   url: string
@@ -242,7 +254,7 @@ export const resolveRetryDelay = (
   )
 }
 
-const readChunks = async (
+const readPreviewChunks = async (
   reader: ReadableStreamDefaultReader<Uint8Array>,
   decoder: TextDecoder,
   text: string,
@@ -255,7 +267,7 @@ const readChunks = async (
   if (done) {
     return text
   }
-  return readChunks(
+  return readPreviewChunks(
     reader,
     decoder,
     text + decoder.decode(value, { stream: true }),
@@ -263,14 +275,14 @@ const readChunks = async (
   )
 }
 
-const readBodyText = async (response: Response): Promise<string> => {
+const readErrorPreview = async (response: Response): Promise<string> => {
   const reader = response.body?.getReader()
   if (!reader) {
     return ''
   }
   let text = ''
   try {
-    text = await readChunks(reader, new TextDecoder(), '', 0)
+    text = await readPreviewChunks(reader, new TextDecoder(), '', 0)
   } catch {
     text = ''
   } finally {
@@ -279,14 +291,88 @@ const readBodyText = async (response: Response): Promise<string> => {
   return text
 }
 
+const readWholeChunks = async (
+  reader: ReadableStreamDefaultReader<Uint8Array>,
+  decoder: TextDecoder,
+  text: string,
+  bytesRead: number
+): Promise<string | undefined> => {
+  const { done, value } = await reader.read()
+  if (done) {
+    return text
+  }
+  const total = bytesRead + value.byteLength
+  if (total > SUCCESS_BODY_MAX_READ) {
+    return
+  }
+  return readWholeChunks(
+    reader,
+    decoder,
+    text + decoder.decode(value, { stream: true }),
+    total
+  )
+}
+
+/** The whole body, or `undefined` when it is longer than the limit or unreadable. */
+const readWholeBody = async (
+  response: Response
+): Promise<string | undefined> => {
+  const reader = response.body?.getReader()
+  if (!reader) {
+    return ''
+  }
+  try {
+    return await readWholeChunks(reader, new TextDecoder(), '', 0)
+  } catch {
+    return undefined
+  } finally {
+    await settle(reader.cancel())
+  }
+}
+
+const readRejected = async (
+  response: Response,
+  hook: NonNullable<PostWithRetryInput['rejected']>
+): Promise<RejectedEntries | undefined> => {
+  const text = await readWholeBody(response)
+  if (text === undefined) {
+    return
+  }
+  let result: RejectedEntries | undefined
+  try {
+    result = hook(JSON.parse(text))
+  } catch {
+    return
+  }
+  const count = result?.count
+  if (
+    !(
+      result &&
+      typeof count === 'number' &&
+      Number.isInteger(count) &&
+      count > 0
+    )
+  ) {
+    return
+  }
+  return typeof result.detail === 'string'
+    ? {
+        count,
+        detail: sanitizeLogText(
+          result.detail.slice(0, ERROR_BODY_PREVIEW_LENGTH)
+        )
+      }
+    : { count }
+}
+
 const attemptPost = async (
   input: PostWithRetryInput,
   attempt: number
-): Promise<void> => {
+): Promise<RejectedEntries | undefined> => {
   const retryOrRethrow = async (
     error: Error,
     delayMs: number
-  ): Promise<void> => {
+  ): Promise<RejectedEntries | undefined> => {
     if (attempt >= input.retries) {
       throw error
     }
@@ -314,12 +400,15 @@ const attemptPost = async (
     )
   }
   if (response.ok) {
+    if (input.rejected) {
+      return readRejected(response, input.rejected)
+    }
     if (response.body) {
       await settle(response.body.cancel())
     }
     return
   }
-  const body = await readBodyText(response)
+  const body = await readErrorPreview(response)
   const detail = sanitizeLogText(body.slice(0, ERROR_BODY_PREVIEW_LENGTH))
   const httpError = new Error(
     `[logixlysia] ${input.name} transport: HTTP ${response.status}${
@@ -336,8 +425,9 @@ const attemptPost = async (
   return retryOrRethrow(httpError, resolveRetryDelay(response, attempt))
 }
 
-export const postWithRetry = (input: PostWithRetryInput): Promise<void> =>
-  attemptPost(input, 0)
+export const postWithRetry = (
+  input: PostWithRetryInput
+): Promise<RejectedEntries | undefined> => attemptPost(input, 0)
 
 export interface BatchQueue {
   flush: () => Promise<void>
@@ -373,7 +463,7 @@ const createQueueReporter = (
 const notifyDropped = (
   onDropped: BatchTransportOptions['onDropped'],
   count: number,
-  reason: 'closed' | 'queue-full' | 'send-failed'
+  reason: 'closed' | 'queue-full' | 'rejected' | 'send-failed'
 ): void => {
   try {
     onDropped?.({ count, reason })
@@ -390,7 +480,10 @@ export const createBatchQueue = (input: {
   name: string
   onDropped?: BatchTransportOptions['onDropped']
   onError?: (error: unknown) => void
-  send: (entries: LogEntry[], keepAlive: boolean) => Promise<void>
+  send: (
+    entries: LogEntry[],
+    keepAlive: boolean
+  ) => Promise<RejectedEntries | ReturnType<() => void>>
 }): BatchQueue => {
   let buffer: LogEntry[] = []
   let timer: ReturnType<typeof setTimeout> | undefined
@@ -428,13 +521,28 @@ export const createBatchQueue = (input: {
     }
   }
 
+  const reportRejected = (sent: number, rejected: RejectedEntries): void => {
+    const count = Math.min(rejected.count, sent)
+    notifyDropped(input.onDropped, count, 'rejected')
+    report(
+      new Error(
+        `[logixlysia] ${input.name} transport: backend rejected ${count} of ${sent} entries${
+          rejected.detail ? ` — ${rejected.detail}` : ''
+        }`
+      )
+    )
+  }
+
   const runSend = async (
     entries: LogEntry[],
     background: boolean
   ): Promise<void> => {
     try {
       await Promise.resolve()
-      await input.send(entries, !background)
+      const rejected = await input.send(entries, !background)
+      if (rejected) {
+        reportRejected(entries.length, rejected)
+      }
     } catch (error) {
       notifyDropped(input.onDropped, entries.length, 'send-failed')
       if (!background) {
@@ -552,6 +660,13 @@ export interface HttpTransportInput {
    * your caller gave you straight through.
    */
   options: BatchTransportOptions
+  /**
+   * Reads a successful response for entries the backend did not store. It
+   * receives the parsed JSON body; a body that is not JSON is taken as
+   * nothing rejected. Rejected entries are not retried: they are reported
+   * to `onDropped` with reason `rejected`, and to `onError`.
+   */
+  rejected?: (response: unknown) => RejectedEntries | undefined
   /** Where each batch is POSTed. Must be an `http:` or `https:` URL. */
   url: string
 }
@@ -659,6 +774,7 @@ export const createHttpTransport = (
         headers: input.headers,
         keepAlive,
         name: input.name,
+        rejected: input.rejected,
         retries,
         timeout,
         url

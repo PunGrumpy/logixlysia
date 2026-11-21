@@ -6,6 +6,7 @@ export type {
   AdapterTransport,
   BatchTransportOptions,
   HttpTransportInput,
-  LogEntry
+  LogEntry,
+  RejectedEntries
 } from './adapters/shared'
 export type { LogLevel } from './interfaces'
