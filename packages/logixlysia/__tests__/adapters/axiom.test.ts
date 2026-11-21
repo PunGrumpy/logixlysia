@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'bun:test'
+import { describe, expect, mock, test } from 'bun:test'
 import { createAxiomTransport } from '../../src/axiom'
 import { stubEnv, stubFetch } from './helpers'
 
@@ -51,6 +51,93 @@ describe('logixlysia/axiom', () => {
       restoreEnv()
     }
   })
+
+  test('reports the events an ingest response failed', async () => {
+    const restoreEnv = stubEnv(CLEAR_ENV)
+    const stub = stubFetch([
+      {
+        body: '{"ingested":1,"failed":2,"failures":[{"error":"invalid timestamp"}]}',
+        status: 200
+      }
+    ])
+    const onDropped = mock((_info: unknown) => {})
+    const onError = mock((_error: unknown) => {})
+    try {
+      const transport = createAxiomTransport({
+        apiKey: 'xaat-test',
+        dataset: 'my-logs',
+        onDropped,
+        onError
+      })
+      for (const message of ['a', 'b', 'c']) {
+        transport.log('INFO', message)
+      }
+      await transport.flush()
+
+      expect(stub.calls).toHaveLength(1)
+      expect(onDropped.mock.calls).toEqual([[{ count: 2, reason: 'rejected' }]])
+      const [error] = onError.mock.calls[0] ?? []
+      expect((error as Error).message).toEndWith(
+        'backend rejected 2 of 3 entries — invalid timestamp'
+      )
+    } finally {
+      stub.restore()
+      restoreEnv()
+    }
+  })
+
+  test('reports nothing when no event failed', async () => {
+    const restoreEnv = stubEnv(CLEAR_ENV)
+    const stub = stubFetch([{ body: '{"ingested":3,"failed":0}', status: 200 }])
+    const onDropped = mock((_info: unknown) => {})
+    const onError = mock((_error: unknown) => {})
+    try {
+      const transport = createAxiomTransport({
+        apiKey: 'xaat-test',
+        dataset: 'my-logs',
+        onDropped,
+        onError
+      })
+      for (const message of ['a', 'b', 'c']) {
+        transport.log('INFO', message)
+      }
+      await transport.flush()
+
+      expect(onDropped).not.toHaveBeenCalled()
+      expect(onError).not.toHaveBeenCalled()
+    } finally {
+      stub.restore()
+      restoreEnv()
+    }
+  })
+
+  test.each(['true', '"2"', '[2]'])(
+    'reports nothing when failed is %s instead of a number',
+    async failed => {
+      const restoreEnv = stubEnv(CLEAR_ENV)
+      const stub = stubFetch([
+        { body: `{"ingested":1,"failed":${failed}}`, status: 200 }
+      ])
+      const onDropped = mock((_info: unknown) => {})
+      const onError = mock((_error: unknown) => {})
+      try {
+        const transport = createAxiomTransport({
+          apiKey: 'xaat-test',
+          dataset: 'my-logs',
+          onDropped,
+          onError
+        })
+        transport.log('INFO', 'a')
+        await transport.flush()
+
+        expect(onDropped).not.toHaveBeenCalled()
+        expect(onError).not.toHaveBeenCalled()
+      } finally {
+        stub.restore()
+        restoreEnv()
+      }
+    }
+  )
 
   test('sends events with _time, level, message, and meta', async () => {
     const restoreEnv = stubEnv(CLEAR_ENV)
