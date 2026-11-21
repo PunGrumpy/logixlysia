@@ -24,6 +24,7 @@ const MAX_RETRY_AFTER_MS = 30_000
 /** `setTimeout` runs a timer above 2^31 - 1 ms after 1 ms. */
 const MAX_TIMER_DELAY_MS = 2_147_483_647
 const MILLIS_PER_SECOND = 1000
+const HTTP_REQUEST_TIMEOUT = 408
 const HTTP_TOO_MANY_REQUESTS = 429
 const HTTP_SERVER_ERROR_MIN = 500
 const ERROR_BODY_PREVIEW_LENGTH = 200
@@ -83,7 +84,7 @@ export interface BatchTransportOptions {
    */
   onError?: (error: unknown) => void
   /**
-   * Retry attempts on network errors, 429, and 5xx responses.
+   * Retry attempts on network errors and on 408, 429 and 5xx responses.
    * @default 2
    */
   retries?: number
@@ -326,6 +327,7 @@ const attemptPost = async (
     }`
   )
   const retryable =
+    response.status === HTTP_REQUEST_TIMEOUT ||
     response.status === HTTP_TOO_MANY_REQUESTS ||
     response.status >= HTTP_SERVER_ERROR_MIN
   if (!retryable) {
