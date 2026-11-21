@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import path from 'node:path'
+import { CHILD_PROCESS_TIMEOUT_MS } from '../_helpers/child-process'
 
 const srcEntry = path.resolve(import.meta.dir, '../../src/index.ts')
 
@@ -43,32 +44,48 @@ const countWarnings = (stderr: string): number =>
     .length
 
 describe('useLogger() fallback warning', () => {
-  test('warns once, naming the option, when the fallback loses request context', async () => {
-    const stderr = await runApp({ nodeEnv: 'development' })
+  test(
+    'warns once, naming the option, when the fallback loses request context',
+    async () => {
+      const stderr = await runApp({ nodeEnv: 'development' })
 
-    expect(countWarnings(stderr)).toBe(1)
-    expect(stderr).toContain('[logixlysia]')
-    expect(stderr).toContain('useAsyncLocalStorage: true')
-  })
+      expect(countWarnings(stderr)).toBe(1)
+      expect(stderr).toContain('[logixlysia]')
+      expect(stderr).toContain('useAsyncLocalStorage: true')
+    },
+    CHILD_PROCESS_TIMEOUT_MS
+  )
 
-  test('stays silent when useAsyncLocalStorage is on', async () => {
-    const stderr = await runApp({
-      nodeEnv: 'development',
-      useAsyncLocalStorage: true
-    })
+  test(
+    'stays silent when useAsyncLocalStorage is on',
+    async () => {
+      const stderr = await runApp({
+        nodeEnv: 'development',
+        useAsyncLocalStorage: true
+      })
 
-    expect(countWarnings(stderr)).toBe(0)
-  })
+      expect(countWarnings(stderr)).toBe(0)
+    },
+    CHILD_PROCESS_TIMEOUT_MS
+  )
 
-  test('stays silent in production', async () => {
-    const stderr = await runApp({ nodeEnv: 'production' })
+  test(
+    'stays silent in production',
+    async () => {
+      const stderr = await runApp({ nodeEnv: 'production' })
 
-    expect(countWarnings(stderr)).toBe(0)
-  })
+      expect(countWarnings(stderr)).toBe(0)
+    },
+    CHILD_PROCESS_TIMEOUT_MS
+  )
 
-  test('stays silent when no plugin was created', async () => {
-    const stderr = await runApp({ nodeEnv: 'development', withPlugin: false })
+  test(
+    'stays silent when no plugin was created',
+    async () => {
+      const stderr = await runApp({ nodeEnv: 'development', withPlugin: false })
 
-    expect(countWarnings(stderr)).toBe(0)
-  })
+      expect(countWarnings(stderr)).toBe(0)
+    },
+    CHILD_PROCESS_TIMEOUT_MS
+  )
 })

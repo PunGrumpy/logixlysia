@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import { spawnSync } from 'bun'
+import { CHILD_PROCESS_TIMEOUT_MS } from '../_helpers/child-process'
 
 // The "not installed" branch needs @opentelemetry/api to be unresolvable, but
 // mock.module registrations from otel-mock.test.ts persist for the whole test
@@ -23,16 +24,20 @@ if (Object.keys(logger.getContext(request)).length > 0) {
 `
 
 describe('logixlysia/otel', () => {
-  test('injectTraceContext is a no-op when OpenTelemetry is not installed', () => {
-    const result = spawnSync({
-      cmd: ['bun', '-e', script],
-      cwd: `${import.meta.dir}/../..`,
-      stderr: 'pipe'
-    })
+  test(
+    'injectTraceContext is a no-op when OpenTelemetry is not installed',
+    () => {
+      const result = spawnSync({
+        cmd: ['bun', '-e', script],
+        cwd: `${import.meta.dir}/../..`,
+        stderr: 'pipe'
+      })
 
-    if (result.exitCode !== 0) {
-      throw new Error(`Subprocess failed:\n${result.stderr.toString()}`)
-    }
-    expect(result.exitCode).toBe(0)
-  })
+      if (result.exitCode !== 0) {
+        throw new Error(`Subprocess failed:\n${result.stderr.toString()}`)
+      }
+      expect(result.exitCode).toBe(0)
+    },
+    CHILD_PROCESS_TIMEOUT_MS
+  )
 })

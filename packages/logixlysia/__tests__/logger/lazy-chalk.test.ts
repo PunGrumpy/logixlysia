@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test'
 import { existsSync } from 'node:fs'
 import path from 'node:path'
 import { spawnSync } from 'bun'
+import { CHILD_PROCESS_TIMEOUT_MS } from '../_helpers/child-process'
 
 const packageRoot = path.join(import.meta.dir, '..', '..')
 const srcEntry = path.join(packageRoot, 'src', 'index.ts')
@@ -91,22 +92,34 @@ describe('lazy chalk', () => {
   for (const [name, runtime, entry, runnable] of targets) {
     const run = runnable ? test : test.skip
 
-    run(`${name}: a logger without a terminal never loads chalk`, () => {
-      const seen = observe(runtime, entry, false)
-      expect(seen).toMatchObject({ afterImport: false, afterLine: false })
-      expect(seen.line).not.toContain('\u001B[')
-    })
+    run(
+      `${name}: a logger without a terminal never loads chalk`,
+      () => {
+        const seen = observe(runtime, entry, false)
+        expect(seen).toMatchObject({ afterImport: false, afterLine: false })
+        expect(seen.line).not.toContain('\u001B[')
+      },
+      CHILD_PROCESS_TIMEOUT_MS
+    )
 
-    run(`${name}: a logger on a terminal loads chalk and colors`, () => {
-      const seen = observe(runtime, entry, true)
-      expect(seen).toMatchObject({ afterImport: false, afterLine: true })
-      expect(seen.line).toContain('\u001B[')
-    })
+    run(
+      `${name}: a logger on a terminal loads chalk and colors`,
+      () => {
+        const seen = observe(runtime, entry, true)
+        expect(seen).toMatchObject({ afterImport: false, afterLine: true })
+        expect(seen.line).toContain('\u001B[')
+      },
+      CHILD_PROCESS_TIMEOUT_MS
+    )
 
-    run(`${name}: a JSON logger on a terminal never loads chalk`, () => {
-      const seen = observe(runtime, entry, true, JSON_CONFIG)
-      expect(seen).toMatchObject({ afterImport: false, afterLine: false })
-      expect(JSON.parse(seen.line).message).toBe('hi')
-    })
+    run(
+      `${name}: a JSON logger on a terminal never loads chalk`,
+      () => {
+        const seen = observe(runtime, entry, true, JSON_CONFIG)
+        expect(seen).toMatchObject({ afterImport: false, afterLine: false })
+        expect(JSON.parse(seen.line).message).toBe('hi')
+      },
+      CHILD_PROCESS_TIMEOUT_MS
+    )
   }
 })

@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test'
 import { existsSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 import { spawnSync } from 'bun'
+import { CHILD_PROCESS_TIMEOUT_MS } from '../_helpers/child-process'
 
 const packageRoot = path.join(import.meta.dir, '..', '..')
 const distDir = path.join(packageRoot, 'dist')
@@ -72,7 +73,8 @@ describe('logixlysia/errors', () => {
         status: 402
       })
       expect(guard).toBe(true)
-    }
+    },
+    CHILD_PROCESS_TIMEOUT_MS
   )
 
   test.skipIf(!distReady)(
@@ -85,6 +87,7 @@ describe('logixlysia/errors', () => {
       `)
 
       expect(output.trim()).toBe('true')
-    }
+    },
+    CHILD_PROCESS_TIMEOUT_MS
   )
 })

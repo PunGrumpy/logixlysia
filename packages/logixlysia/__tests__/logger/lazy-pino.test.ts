@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test'
 import { existsSync } from 'node:fs'
 import path from 'node:path'
 import { spawnSync } from 'bun'
+import { CHILD_PROCESS_TIMEOUT_MS } from '../_helpers/child-process'
 
 const packageRoot = path.join(import.meta.dir, '..', '..')
 const srcEntry = path.join(packageRoot, 'src', 'index.ts')
@@ -64,27 +65,46 @@ describe('lazy pino', () => {
   for (const [name, runtime, entry, runnable] of targets) {
     const run = runnable ? test : test.skip
 
-    run(`${name}: a default config never loads pino or pino-pretty`, () => {
-      const seen = observe(runtime, entry, {})
-      expect(seen.loadedAfterPlugin).toEqual({ pino: false, pinoPretty: false })
-    })
+    run(
+      `${name}: a default config never loads pino or pino-pretty`,
+      () => {
+        const seen = observe(runtime, entry, {})
+        expect(seen.loadedAfterPlugin).toEqual({
+          pino: false,
+          pinoPretty: false
+        })
+      },
+      CHILD_PROCESS_TIMEOUT_MS
+    )
 
-    run(`${name}: store.pino still works synchronously on first use`, () => {
-      const seen = observe(runtime, entry, {})
-      expect(seen.loadedAfterUse.pino).toBe(true)
-      expect(JSON.parse(seen.stdout).msg).toBe('from-store')
-    })
+    run(
+      `${name}: store.pino still works synchronously on first use`,
+      () => {
+        const seen = observe(runtime, entry, {})
+        expect(seen.loadedAfterUse.pino).toBe(true)
+        expect(JSON.parse(seen.stdout).msg).toBe('from-store')
+      },
+      CHILD_PROCESS_TIMEOUT_MS
+    )
 
-    run(`${name}: config.pino loads pino and logs through it`, () => {
-      const seen = observe(runtime, entry, { pino: { level: 'info' } })
-      expect(seen.loadedAfterPlugin.pino).toBe(true)
-      expect(JSON.parse(seen.stdout).msg).toBe('from-store')
-    })
+    run(
+      `${name}: config.pino loads pino and logs through it`,
+      () => {
+        const seen = observe(runtime, entry, { pino: { level: 'info' } })
+        expect(seen.loadedAfterPlugin.pino).toBe(true)
+        expect(JSON.parse(seen.stdout).msg).toBe('from-store')
+      },
+      CHILD_PROCESS_TIMEOUT_MS
+    )
 
-    run(`${name}: prettyPrint loads pino-pretty and logs through it`, () => {
-      const seen = observe(runtime, entry, { pino: { prettyPrint: true } })
-      expect(seen.loadedAfterPlugin.pinoPretty).toBe(true)
-      expect(seen.stdout).toContain('from-store')
-    })
+    run(
+      `${name}: prettyPrint loads pino-pretty and logs through it`,
+      () => {
+        const seen = observe(runtime, entry, { pino: { prettyPrint: true } })
+        expect(seen.loadedAfterPlugin.pinoPretty).toBe(true)
+        expect(seen.stdout).toContain('from-store')
+      },
+      CHILD_PROCESS_TIMEOUT_MS
+    )
   }
 })
