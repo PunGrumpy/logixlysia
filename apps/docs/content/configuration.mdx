@@ -192,6 +192,8 @@ Without a `timestamp` option or a `customLogFormat`, the default line prints loc
   }
   ```
 
+With `pino.prettyPrint` on and no `pino.transport` set, a pattern set here also formats the time on lines written through `store.pino`, so they show the same clock reading as the text console line; a transport you configure is left alone. `standard` is the one pattern where the two lines differ: the pino line keeps pino-pretty's own standard form, which ends with the zone offset (`2026-01-02 10:04:05.678 +0700`), and the console line has no offset. A `translateTime` set inside `pino.prettyPrint` is passed to pino-pretty as written and takes precedence.
+
 ## Formatting Options
 
 ### `consoleFormat`
