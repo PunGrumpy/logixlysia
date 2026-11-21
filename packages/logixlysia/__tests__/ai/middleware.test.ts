@@ -52,6 +52,42 @@ const mockModel = (): MockLanguageModelV4 =>
     provider: 'mock-provider'
   })
 
+const cachedModel = (): MockLanguageModelV4 =>
+  new MockLanguageModelV4({
+    doGenerate: () =>
+      Promise.resolve({
+        content: [{ text: 'hi', type: 'text' }],
+        finishReason,
+        usage: {
+          ...usage,
+          inputTokens: {
+            cacheRead: 900,
+            cacheWrite: 100,
+            noCache: 200,
+            total: 1200
+          }
+        },
+        warnings: []
+      }),
+    modelId: 'cached-model',
+    provider: 'mock-provider'
+  })
+
+const modelReporting = (
+  reported: Record<string, unknown>
+): MockLanguageModelV4 =>
+  new MockLanguageModelV4({
+    doGenerate: () =>
+      Promise.resolve({
+        content: [{ text: 'hi', type: 'text' }],
+        finishReason,
+        usage: reported as typeof usage,
+        warnings: []
+      }),
+    modelId: 'reporting-model',
+    provider: 'mock-provider'
+  })
+
 const wrapped = (log: RequestScopedLogger, model = mockModel()) =>
   wrapLanguageModel({ middleware: aiMiddleware(log), model })
 
@@ -521,6 +557,90 @@ describe('aiMiddleware', () => {
     })
   })
 
+  test('a call records the tokens read from and written to the prompt cache', async () => {
+    const { lines, plugin } = capturingPlugin()
+    const app = new Elysia().use(plugin).post('/', async ({ log }) => {
+      await generateText({ model: wrapped(log, cachedModel()), prompt: 'x' })
+      return 'ok'
+    })
+
+    await app.handle(post('/'))
+
+    expect(lines[0]?.ai).toMatchObject({
+      cacheReadTokens: 900,
+      cacheWriteTokens: 100,
+      inputTokens: 1200
+    })
+  })
+
+  test('cache tokens of two calls in one request sum', async () => {
+    const { lines, plugin } = capturingPlugin()
+    const app = new Elysia().use(plugin).post('/', async ({ log }) => {
+      const model = wrapped(log, cachedModel())
+      await generateText({ model, prompt: 'x' })
+      await generateText({ model, prompt: 'y' })
+      return 'ok'
+    })
+
+    await app.handle(post('/'))
+
+    expect(lines[0]?.ai).toMatchObject({
+      cacheReadTokens: 1800,
+      cacheWriteTokens: 200
+    })
+  })
+
+  test('a provider that reports no cache tokens adds no cache fields', async () => {
+    const { lines, plugin } = capturingPlugin()
+    const app = new Elysia().use(plugin).post('/', async ({ log }) => {
+      await generateText({ model: wrapped(log), prompt: 'x' })
+      return 'ok'
+    })
+
+    await app.handle(post('/'))
+
+    const ai = lines[0]?.ai ?? {}
+    expect('cacheReadTokens' in ai).toBe(false)
+    expect('cacheWriteTokens' in ai).toBe(false)
+  })
+
+  test('a usage with no cache keys still records the input tokens', async () => {
+    const { lines, plugin } = capturingPlugin()
+    const model = modelReporting({
+      inputTokens: { total: 12 },
+      outputTokens: { reasoning: undefined, total: 5 }
+    })
+    const app = new Elysia().use(plugin).post('/', async ({ log }) => {
+      await generateText({ model: wrapped(log, model), prompt: 'x' })
+      return 'ok'
+    })
+
+    await app.handle(post('/'))
+
+    const ai = lines[0]?.ai ?? {}
+    expect(ai.inputTokens).toBe(12)
+    expect('cacheReadTokens' in ai).toBe(false)
+    expect('cacheWriteTokens' in ai).toBe(false)
+  })
+
+  test('a cache count that is not a number is not recorded', async () => {
+    const { lines, plugin } = capturingPlugin()
+    const model = modelReporting({
+      inputTokens: { cacheRead: '900', cacheWrite: 100, total: 1200 },
+      outputTokens: { reasoning: undefined, total: 5 }
+    })
+    const app = new Elysia().use(plugin).post('/', async ({ log }) => {
+      await generateText({ model: wrapped(log, model), prompt: 'x' })
+      return 'ok'
+    })
+
+    await app.handle(post('/'))
+
+    const ai = lines[0]?.ai ?? {}
+    expect('cacheReadTokens' in ai).toBe(false)
+    expect(ai.cacheWriteTokens).toBe(100)
+  })
+
   test('a failure while recording leaves the model call intact', async () => {
     const log = {
       info: mock(),
@@ -556,6 +676,19 @@ describe('mergeAIMetrics', () => {
 
     expect(lines).toHaveLength(1)
     expect(lines[0]?.ai).toEqual({ calls: 2, inputTokens: 7, model: 'b' })
+  })
+
+  test('adds up the cache token counts', async () => {
+    const { lines, plugin } = capturingPlugin()
+    const app = new Elysia().use(plugin).post('/', ({ log }) => {
+      mergeAIMetrics(log, { cacheReadTokens: 5 })
+      mergeAIMetrics(log, { cacheReadTokens: 5 })
+      return 'ok'
+    })
+
+    await app.handle(post('/'))
+
+    expect(lines[0]?.ai).toEqual({ cacheReadTokens: 10, calls: 2 })
   })
 
   test('still takes store.logger with the request', async () => {

@@ -3,6 +3,10 @@ import { REQUEST_LOGGER } from './context/request-logger'
 import type { Logger, RequestScopedLogger } from './interfaces'
 
 export interface AIMetrics {
+  /** Part of `inputTokens`: the tokens the provider read from its prompt cache. */
+  cacheReadTokens?: number
+  /** Part of `inputTokens`: the tokens the provider wrote to its prompt cache. */
+  cacheWriteTokens?: number
   calls?: number
   /**
    * Calls that failed: the call rejected, its stream failed or ended without
@@ -22,6 +26,8 @@ export interface AIMetrics {
 }
 
 const COMBINE: Record<keyof AIMetrics, 'last' | 'sum'> = {
+  cacheReadTokens: 'sum',
+  cacheWriteTokens: 'sum',
   calls: 'sum',
   errors: 'sum',
   finishReason: 'last',
@@ -116,7 +122,11 @@ export const mergeAIMetrics = (...args: MergeAIMetricsArgs): void => {
 }
 
 interface AIUsage {
-  inputTokens: { total: number | undefined }
+  inputTokens: {
+    cacheRead?: number | undefined
+    cacheWrite?: number | undefined
+    total: number | undefined
+  }
   outputTokens: { reasoning: number | undefined; total: number | undefined }
 }
 
@@ -150,6 +160,9 @@ type AILog = Pick<RequestScopedLogger, 'info' | 'mergeContext' | 'warn'>
 
 const MS_PER_SECOND = 1000
 
+const positive = (tokens: unknown): number | undefined =>
+  typeof tokens === 'number' && tokens > 0 ? tokens : undefined
+
 const isFinishChunk = (
   chunk: AIStreamChunk
 ): chunk is AIStreamChunk & AIFinish => chunk.type === 'finish'
@@ -174,6 +187,8 @@ const recordCall = (
       msToFirstChunk === undefined ? 0 : msToFinish - msToFirstChunk
     const failed = finishReason.unified === 'error'
     mergeAIMetrics(log, {
+      cacheReadTokens: positive(usage.inputTokens.cacheRead),
+      cacheWriteTokens: positive(usage.inputTokens.cacheWrite),
       errors: failed ? 1 : undefined,
       finishReason: finishReason.unified,
       inputTokens,
