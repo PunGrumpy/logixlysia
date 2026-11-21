@@ -78,4 +78,4 @@ app.post('/chat', ({ log }) => {
 })
 ```
 
-`mergeAIMetrics(store.logger, request, metrics)` works the same way when you have no `log`.
+`mergeAIMetrics(store.logger, request, metrics)` works the same way when you have no `log`. Both forms, and `aiMiddleware`, add to one total per request, so you can mix them. An app with more than one `logixlysia()` instance keeps one total per instance.
