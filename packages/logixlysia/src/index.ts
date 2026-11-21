@@ -111,6 +111,20 @@ interface RequestRecord {
   streamStatus?: number
 }
 
+/**
+ * Whether what a request threw is a `status()` result, which is a response
+ * and not an error. Inspecting a thrown value can itself throw (a getter on
+ * a hand-built object), and that must never reach the request, so such a
+ * value counts as an error.
+ */
+const threwStatusResponse = (thrown: unknown): boolean => {
+  try {
+    return isStatusResponse(thrown)
+  } catch {
+    return false
+  }
+}
+
 const responseStatus = (response: unknown): number =>
   response instanceof Response ? response.status : DEFAULT_STATUS
 
@@ -542,7 +556,8 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
     request: Request,
     setHeaders: Record<string, string | number>,
     status: number,
-    responseHeaders?: Headers
+    responseHeaders?: Headers,
+    error?: unknown
   ): StoreData => {
     if (requestIdConfig) {
       const id = contextStore.getContext(request).requestId as
@@ -572,7 +587,7 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
       )
     }
 
-    logger.finalizeRequest(request, store, status)
+    logger.finalizeRequest(request, store, status, error)
     return store
   }
 
@@ -618,6 +633,8 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
       return
     }
     record.phase = 'closed'
+    const answered = threwStatusResponse(record.error)
+    const error = answered ? undefined : record.error
     const owner = lineOwners.get(request)
     const lineWrittenByAnotherInstance =
       record.seenByWrap && owner !== undefined && owner !== instance
@@ -626,7 +643,8 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
         logger.finalizeRequest(
           request,
           { beforeTime: record.startedAt },
-          status
+          status,
+          error
         )
       } catch (failure) {
         reportFormatError(failure, onSinkError)
@@ -638,15 +656,13 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
         request,
         record.setHeaders ?? {},
         status,
-        responseHeaders
+        responseHeaders,
+        error
       )
       if (isExcluded(request)) {
         return
       }
-      if (
-        record.error !== undefined &&
-        (status >= 400 || !isStatusResponse(record.error))
-      ) {
+      if (record.error !== undefined && (status >= 400 || !answered)) {
         logger.handleHttpError(request, record.error, { ...store, status })
       } else if (!hidesAccessLine(request, status)) {
         emitAccessLine(request, status, store)

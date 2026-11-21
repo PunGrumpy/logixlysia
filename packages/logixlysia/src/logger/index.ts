@@ -12,6 +12,7 @@ import type {
   StoreData
 } from '../interfaces'
 import { resolveSampling } from '../sampling'
+import type { RequestOutcome } from '../sampling'
 import { stdoutWantsColor } from '../utils/color'
 import { elapsedMs } from '../utils/duration'
 import { buildPinoRedactPaths } from '../utils/redact'
@@ -136,7 +137,8 @@ export interface PluginLogger extends Logger {
   finalizeRequest: (
     request: RequestInfo,
     store: StoreData,
-    status: number
+    status: number,
+    error?: unknown
   ) => number
   log: (
     level: LogLevel,
@@ -186,19 +188,23 @@ const buildLogger = (
   const finalizeRequest = (
     request: RequestInfo,
     store: StoreData,
-    status: number
+    status: number,
+    error?: unknown
   ): number => {
     if (!sampling || isExcludedRequest(sinks, request)) {
       return 0
     }
 
-    const outcome = {
+    const outcome: RequestOutcome = {
       context: config?.sampling?.tail?.keep
         ? contextStore.getContext(request)
         : NO_CONTEXT,
       durationMs: elapsedMs(store.beforeTime),
       pathname: parseRequestUrlOnce(request).pathname,
       status
+    }
+    if (error !== undefined) {
+      outcome.error = error
     }
 
     const replayed = sampling.finalize(request, outcome)
