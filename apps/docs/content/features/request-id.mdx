@@ -61,6 +61,14 @@ const app = new Elysia().use(
 | `header` | `string` | `'X-Request-Id'` | The header key to check on incoming requests (honoring upstream proxies) and to set on responses. It must be a valid HTTP header name with no spaces; a value such as `'X Request Id'` throws `logixlysia: invalid requestId config` when the plugin is constructed. An empty or blank value falls back to `'X-Request-Id'`. An inbound value is used only when it matches `^[A-Za-z0-9._-]{1,128}$`; otherwise a new id is generated. |
 | `generator` | `() => string` | `crypto.randomUUID` | A function that returns a unique string to use as the request ID. |
 
+### The id belongs to the plugin
+
+While `requestId` is on, the `requestId` field of a request's context is set by Logixlysia and stays as it was set. `log.mergeContext({ requestId })` and an enricher field of that name are ignored, so the id on a request's lines is the id in its response header. A `requestId` passed to a single call, as in `log.info('msg', { requestId })`, still labels that one line. The same holds inside `runJob`. To record another service's id, use a different key:
+
+```ts check=skip
+log.mergeContext({ upstreamRequestId: response.headers.get('x-request-id') })
+```
+
 ### Generator failures
 
 If `generator` throws or returns a value that does not match `^[A-Za-z0-9._-]{1,128}$`, Logixlysia replaces it with a random UUID for that request. The request continues normally and no error line is logged for it.
