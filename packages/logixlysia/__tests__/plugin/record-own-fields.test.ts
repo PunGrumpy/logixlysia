@@ -5,6 +5,7 @@ import { spyConsole } from '../_helpers/console'
 import { sleep } from '../_helpers/sleep'
 
 const ISO_TIMESTAMP = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/u
+const OWN_REQUEST = { method: 'GET', url: 'http://localhost/orders' }
 
 const logDataNamedLikeTheRecord = async () => {
   const metas: Record<string, unknown>[] = []
@@ -64,5 +65,17 @@ describe('data keys named like the record', () => {
 
     expect(line?.level).toBe('INFO')
     expect(line?.timestamp).toMatch(ISO_TIMESTAMP)
+  })
+
+  test('the JSON line keeps the request it belongs to', async () => {
+    const { line } = await logDataNamedLikeTheRecord()
+
+    expect(line?.request).toEqual(OWN_REQUEST)
+  })
+
+  test('a transport receives the request the record belongs to', async () => {
+    const { meta } = await logDataNamedLikeTheRecord()
+
+    expect(meta?.request).toEqual(OWN_REQUEST)
   })
 })

@@ -77,16 +77,20 @@ export const toRecordMeta = ({
   options,
   precomputed,
   request
-}: Omit<LogToTransportsInput, 'level' | 'store'>): Record<string, unknown> => ({
-  request: {
-    method: request.method,
-    url: options.config?.logQueryParams
-      ? request.url
-      : withoutQuery(request.url)
-  },
-  ...data,
-  durationMs: precomputed.durationMs
-})
+}: Omit<LogToTransportsInput, 'level' | 'store'>): Record<string, unknown> => {
+  // The record's request wins over a `request` key in the data.
+  const { request: _dataRequest, ...ownData } = data
+  return {
+    request: {
+      method: request.method,
+      url: options.config?.logQueryParams
+        ? request.url
+        : withoutQuery(request.url)
+    },
+    ...ownData,
+    durationMs: precomputed.durationMs
+  }
+}
 
 export const logToTransports = (input: LogToTransportsInput): void => {
   const { level, data, options } = input
