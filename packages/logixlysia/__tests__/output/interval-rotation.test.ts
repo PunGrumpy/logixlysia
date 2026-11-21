@@ -21,7 +21,7 @@ describe('interval rotation', () => {
     restoreRealClock()
   })
 
-  test('rotates on the first write after the interval elapses', async () => {
+  test('the first line after the interval elapses opens the new file', async () => {
     const dir = await createTempDir()
     try {
       const filePath = path.join(dir, 'logs', 'interval.log')
@@ -65,7 +65,7 @@ describe('interval rotation', () => {
         'utf-8'
       )
       expect(rotatedContent).toContain('msg-1')
-      expect(rotatedContent).toContain('msg-2')
+      expect(rotatedContent).not.toContain('msg-2')
 
       restoreRealClock()
 
@@ -81,9 +81,9 @@ describe('interval rotation', () => {
       })
 
       const liveContent = await fs.readFile(filePath, 'utf-8')
-      expect(liveContent).toContain('msg-3')
       expect(liveContent).not.toContain('msg-1')
-      expect(liveContent).not.toContain('msg-2')
+      expect(liveContent).toContain('msg-2')
+      expect(liveContent).toContain('msg-3')
     } finally {
       await removeTempDir(dir)
     }
@@ -201,7 +201,7 @@ describe('interval rotation', () => {
     }
   })
 
-  test('restart simulation: birthtime survives, fresh sink rotates immediately', async () => {
+  test('restart simulation: birthtime survives, the old file rotates before the first write', async () => {
     const dir = await createTempDir()
     try {
       const logsDir = path.join(dir, 'logs')
@@ -233,8 +233,76 @@ describe('interval rotation', () => {
         path.join(logsDir, rotated[0]),
         'utf-8'
       )
-      expect(rotatedContent).toContain('seed')
-      expect(rotatedContent).toContain('after-restart')
+      expect(rotatedContent).toBe('seed\n')
+
+      const liveContent = await fs.readFile(filePath, 'utf-8')
+      expect(liveContent).toContain('after-restart')
+    } finally {
+      await removeTempDir(dir)
+    }
+  })
+
+  test('lines written in one tick after the interval stay together in the new file', async () => {
+    const dir = await createTempDir()
+    try {
+      const logsDir = path.join(dir, 'logs')
+      const filePath = path.join(logsDir, 'batch.log')
+      const options: Options = {
+        config: { logRotation: { interval: '1h' } }
+      }
+
+      const firstRequest = createMockRequest('http://localhost/first')
+      await logToFile({
+        data: { message: 'msg-1' },
+        filePath,
+        level: 'INFO',
+        options,
+        precomputed: precomputedFor(firstRequest),
+        request: firstRequest,
+        store: { beforeTime: 0n }
+      })
+
+      setSystemTime(new Date(Date.now() + TWO_HOURS_MS))
+
+      const secondRequest = createMockRequest('http://localhost/second')
+      const thirdRequest = createMockRequest('http://localhost/third')
+      await Promise.all([
+        logToFile({
+          data: { message: 'msg-2' },
+          filePath,
+          level: 'INFO',
+          options,
+          precomputed: precomputedFor(secondRequest),
+          request: secondRequest,
+          store: { beforeTime: 0n }
+        }),
+        logToFile({
+          data: { message: 'msg-3' },
+          filePath,
+          level: 'INFO',
+          options,
+          precomputed: precomputedFor(thirdRequest),
+          request: thirdRequest,
+          store: { beforeTime: 0n }
+        })
+      ])
+
+      const entries = await fs.readdir(logsDir)
+      const rotated = entries.filter(name => name.startsWith('batch.log.'))
+      expect(rotated.length).toBe(1)
+
+      const rotatedContent = await fs.readFile(
+        path.join(logsDir, rotated[0]),
+        'utf-8'
+      )
+      expect(rotatedContent.split('\n').filter(Boolean)).toHaveLength(1)
+      expect(rotatedContent).toContain('msg-1')
+
+      const liveContent = await fs.readFile(filePath, 'utf-8')
+      const liveLines = liveContent.split('\n').filter(Boolean)
+      expect(liveLines).toHaveLength(2)
+      expect(liveLines[0]).toContain('msg-2')
+      expect(liveLines[1]).toContain('msg-3')
     } finally {
       await removeTempDir(dir)
     }
