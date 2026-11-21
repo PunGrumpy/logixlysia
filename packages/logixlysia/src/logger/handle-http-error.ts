@@ -50,7 +50,8 @@ export const handleHttpError = (
   try {
     const { error: safeError, message } = normalizeLoggedError(
       error,
-      config?.logErrorPayload === true
+      config?.logErrorPayload === true,
+      config?.autoRedact === true
     )
 
     const data: Record<string, unknown> = { error: safeError, message, status }

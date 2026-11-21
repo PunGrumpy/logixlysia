@@ -43,7 +43,7 @@ const looksLikeCredential = (token: string): boolean =>
 const PAN_MIN_LEN = 13
 const PAN_MAX_LEN = 19
 
-const REDACTED_TEXT = '[REDACTED]'
+export const REDACTED_TEXT = '[REDACTED]'
 const CIRCULAR_REF = '[Circular]'
 const UNSERIALIZABLE_TEXT = '[Unserializable]'
 

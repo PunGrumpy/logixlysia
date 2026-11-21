@@ -1,4 +1,5 @@
 import { asStatusResponse } from '../helpers/status'
+import { REDACTED_TEXT } from './redact'
 import { toText } from './sanitize'
 import { STATUS_TEXT } from './status-text'
 
@@ -82,7 +83,7 @@ const isValidationErrorLike = (
     value.name === 'ValidationError' ||
     value.constructor?.name === 'ValidationError')
 
-const pathOf = (failure: unknown, key: string): string => {
+const textOf = (failure: unknown, key: string): string => {
   if (typeof failure !== 'object' || failure === null || !(key in failure)) {
     return ''
   }
@@ -103,7 +104,7 @@ const pointerSegment = (segment: unknown): string => {
  * keys, which is turned into the same pointer.
  */
 const pointerOf = (failure: unknown): string => {
-  const pointer = pathOf(failure, 'instancePath')
+  const pointer = textOf(failure, 'instancePath')
   if (pointer || typeof failure !== 'object' || failure === null) {
     return pointer
   }
@@ -113,29 +114,115 @@ const pointerOf = (failure: unknown): string => {
     : ''
 }
 
-/**
- * JSON Pointers to the values that failed. Elysia 1.x gives them as each
- * failure's `path`; 2.x writes a dotted `path` that cannot tell a nested
- * key from one containing a dot, and keeps the pointer on `errors`.
- */
-const failedPaths = (error: { all?: unknown[]; errors?: unknown }): string[] =>
-  Array.isArray(error.errors)
-    ? error.errors.map(pointerOf).filter(Boolean)
-    : (Array.isArray(error.all) ? error.all : [])
-        .map(failure => pathOf(failure, 'path'))
-        .filter(Boolean)
+interface ValidationFailure {
+  message?: string
+  path: string
+}
 
 /**
- * Elysia 1.x puts a validation error's payload in its message; 2.x keeps it
- * on the error, so it is copied over only when the payload is wanted.
+ * Each failure's JSON Pointer and, when wanted, its message. Elysia 1.x gives
+ * the pointer as a failure's `path`; 2.x writes a dotted `path` that cannot
+ * tell a nested key from one containing a dot, and keeps the pointer on
+ * `errors`. A failure also carries the value that failed (1.x in `value` and
+ * in some summaries, Standard Schema issues in `input`), under a name the
+ * `autoRedact` key rule cannot tie to the field, so nothing else is kept.
+ * A message is the validator's free text and can quote any submitted value,
+ * whatever the failure's path says, so `maskMessages` replaces every one.
+ * `all` is read once: on 1.x it runs the validator again.
  */
-const addValidationPayload = (
-  safe: Record<string, unknown>,
-  error: Error
-): void => {
-  if (isValidationErrorLike(error) && Array.isArray(error.errors)) {
-    safe.found = error.value
-    safe.errors = error.errors
+const validationFailures = (
+  error: { all?: unknown[]; errors?: unknown },
+  withMessages: boolean,
+  maskMessages: boolean
+): ValidationFailure[] => {
+  const { errors } = error
+  const fromErrors = Array.isArray(errors)
+  const list = fromErrors ? errors : error.all
+  return (Array.isArray(list) ? list : []).map(failure => {
+    const path = fromErrors ? pointerOf(failure) : textOf(failure, 'path')
+    if (!withMessages) {
+      return { path }
+    }
+    return {
+      message: maskMessages ? REDACTED_TEXT : textOf(failure, 'message'),
+      path
+    }
+  })
+}
+
+// Reading the failures can run the validator again, and a failure's fields
+// can throw; neither may cost the log line.
+const readValidationFailures = (
+  error: { all?: unknown[]; errors?: unknown },
+  withMessages: boolean,
+  maskMessages: boolean
+): ValidationFailure[] => {
+  try {
+    return validationFailures(error, withMessages, maskMessages)
+  } catch {
+    return []
+  }
+}
+
+const readSubmittedValue = (error: { value?: unknown }): unknown => {
+  try {
+    return error.value
+  } catch {
+    return undefined
+  }
+}
+
+const readValidationScope = (error: unknown): string => {
+  try {
+    const { type } = error as { type?: unknown }
+    return typeof type === 'string' ? type : 'request'
+  } catch {
+    return 'request'
+  }
+}
+
+// An error is only given the payload fields when it carries validation data;
+// an application error that merely has `code: 'VALIDATION'` keeps its own
+// message. `in` does not run Elysia 1.x's `all` getter.
+const carriesValidationData = (error: {
+  all?: unknown[]
+  errors?: unknown
+}): boolean => 'all' in error || Array.isArray(error.errors)
+
+interface ValidationRecord {
+  failures: ValidationFailure[]
+  found: unknown
+  scope: string
+}
+
+/**
+ * Everything the summary needs from a validation error, or `undefined` when
+ * the error takes the generic path. Whatever throws while deciding or reading
+ * leaves the summary with no failures and no value.
+ */
+const readValidationRecord = (
+  error: unknown,
+  logErrorPayload: boolean,
+  maskMessages: boolean
+): ValidationRecord | undefined => {
+  try {
+    if (!isValidationErrorLike(error)) {
+      return undefined
+    }
+    if (logErrorPayload && !carriesValidationData(error)) {
+      return undefined
+    }
+    return {
+      failures: readValidationFailures(error, logErrorPayload, maskMessages),
+      found: logErrorPayload ? readSubmittedValue(error) : undefined,
+      scope: readValidationScope(error)
+    }
+  } catch {
+    return {
+      failures: [],
+      found: undefined,
+      scope: readValidationScope(error)
+    }
   }
 }
 
@@ -168,6 +255,7 @@ const FIRST_SERVER_ERROR_STATUS = 500
 export const normalizeLoggedError = (
   error: unknown,
   logErrorPayload: boolean,
+  maskFailureMessages = false,
   depth = 0
 ): NormalizedLoggedError => {
   const withCause = (
@@ -180,7 +268,12 @@ export const normalizeLoggedError = (
     }
     safe.cause =
       cause instanceof Error || isStructuredError(cause) || isPlainObject(cause)
-        ? normalizeLoggedError(cause, logErrorPayload, depth + 1).error
+        ? normalizeLoggedError(
+            cause,
+            logErrorPayload,
+            maskFailureMessages,
+            depth + 1
+          ).error
         : cause
     return safe
   }
@@ -198,22 +291,32 @@ export const normalizeLoggedError = (
     }
   }
 
-  if (isValidationErrorLike(error) && !logErrorPayload) {
-    const paths = failedPaths(error)
-    const scope = typeof error.type === 'string' ? error.type : 'request'
+  // Elysia 1.x writes the submitted value into a validation error's message,
+  // so that message is never logged. The value goes in `found` instead, where
+  // `autoRedact` masks its sensitive keys.
+  const validation = readValidationRecord(
+    error,
+    logErrorPayload,
+    maskFailureMessages
+  )
+  if (validation) {
+    const { failures, found, scope } = validation
+    const paths = failures.map(failure => failure.path).filter(Boolean)
     const message =
       paths.length > 0
         ? `Validation failed (${scope}): ${paths.join(', ')}`
         : `Validation failed (${scope})`
-    return {
-      error: {
-        failedPaths: paths,
-        message,
-        name: 'ValidationError',
-        type: scope
-      },
-      message
+    const logged: Record<string, unknown> = {
+      failedPaths: paths,
+      message,
+      name: 'ValidationError',
+      type: scope
     }
+    if (logErrorPayload) {
+      logged.found = found
+      logged.errors = failures
+    }
+    return { error: logged, message }
   }
 
   if (error instanceof Error) {
@@ -234,7 +337,6 @@ export const normalizeLoggedError = (
     if (!isClientError && error.stack !== undefined) {
       safe.stack = error.stack
     }
-    addValidationPayload(safe, error)
     return {
       error: withCause(safe, error as unknown as Record<string, unknown>),
       message: parseError(error)
