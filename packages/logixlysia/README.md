@@ -10,7 +10,7 @@
 bun add logixlysia
 ```
 
-Works with Elysia 1.4 and the Elysia 2 prereleases. To try Elysia 2, install it from its `rc` tag (`bun add elysia@rc`); [what changes on Elysia 2](https://logixlysia.vercel.app/docs/usage#elysia-2-beta).
+Works with Elysia 1.4 and the Elysia 2 prereleases. To try Elysia 2, install it from its `rc` tag (`bun add elysia@rc`). On Elysia 2 the plugin's types still describe Elysia 1.4: `log` and `store` work at run time but are not part of a handler's context type, so TypeScript reports `Property 'log' does not exist` on the example below. See [what changes on Elysia 2](https://logixlysia.vercel.app/docs/usage#elysia-2-beta).
 
 ## `📝` Usage
 
@@ -105,7 +105,7 @@ const app = new Elysia()
 
 await app.handle(new Request('http://localhost/orders/42'))
 
-memory.last() // { level, message, method, path, status, durationMs, requestId, context, error }
+memory.last() // { level, message, method, path, status, durationMs, requestId, context, error, meta, timestamp }
 await memory.waitFor(record => record.message === 'order loaded')
 ```
 
