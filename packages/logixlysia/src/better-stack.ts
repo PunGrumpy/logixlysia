@@ -3,17 +3,29 @@ import {
   defaultBody,
   envString,
   stripTrailingSlashes,
-  transportError
+  transportError,
+  tryParseUrl
 } from './adapters/shared'
 import type { AdapterTransport, BatchTransportOptions } from './adapters/shared'
 import { stringifyForLog } from './utils/json'
 
 const DEFAULT_ENDPOINT = 'https://in.logs.betterstack.com'
+const LOOKS_LIKE_HOST = /^[a-z0-9][a-z0-9.-]*(?::\d+)?(?:\/.*)?$/iu
+
+const withScheme = (endpoint: string): string => {
+  const protocol = tryParseUrl(endpoint)?.protocol
+  if (protocol === 'http:' || protocol === 'https:') {
+    return endpoint
+  }
+  const trimmed = endpoint.trim()
+  return LOOKS_LIKE_HOST.test(trimmed) ? `https://${trimmed}` : endpoint
+}
 
 export interface BetterStackTransportOptions extends BatchTransportOptions {
   /**
-   * Ingesting URL shown next to the source token — newer sources get a
-   * dedicated host like `https://s123456.eu-nbg-2.betterstackdata.com`.
+   * Ingesting host or URL shown next to the source token — newer sources get
+   * a dedicated host like `s123456.eu-nbg-2.betterstackdata.com`. A host
+   * without a scheme is sent over `https`.
    * Falls back to `BETTER_STACK_INGESTING_HOST`.
    * @default 'https://in.logs.betterstack.com'
    */
@@ -61,9 +73,11 @@ export const createBetterStackTransport = (
     name: 'Better Stack',
     options,
     url: stripTrailingSlashes(
-      options.endpoint ??
-        envString('BETTER_STACK_INGESTING_HOST') ??
-        DEFAULT_ENDPOINT
+      withScheme(
+        options.endpoint ??
+          envString('BETTER_STACK_INGESTING_HOST') ??
+          DEFAULT_ENDPOINT
+      )
     )
   })
 }
