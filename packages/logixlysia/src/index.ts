@@ -496,7 +496,8 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
         }
         const normalized = normalizeLoggedError(
           error,
-          options.config?.logErrorPayload === true
+          options.config?.logErrorPayload === true,
+          options.config?.autoRedact === true
         )
         emitCustomLog(
           'ERROR',
