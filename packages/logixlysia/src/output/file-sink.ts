@@ -193,11 +193,15 @@ class FileSinkImpl implements FileSink {
   }
 
   async close(): Promise<void> {
+    // Unregister before the first await: a write issued while this close
+    // runs then opens a new sink that a later close can still find.
+    if (sinks.get(this.filePath) === this) {
+      sinks.delete(this.filePath)
+    }
     await this.flush()
     const { handle } = this
     this.handle = null
     await handle?.close()
-    sinks.delete(this.filePath)
   }
 }
 

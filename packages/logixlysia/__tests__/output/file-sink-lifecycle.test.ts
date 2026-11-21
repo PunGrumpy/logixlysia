@@ -1,7 +1,19 @@
-import { describe, expect, mock, test } from 'bun:test'
-import { chmod, mkdir, readdir, readFile, writeFile } from 'node:fs/promises'
+import { describe, expect, mock, spyOn, test } from 'bun:test'
+import type { FileHandle } from 'node:fs/promises'
+import {
+  chmod,
+  mkdir,
+  open,
+  readdir,
+  readFile,
+  writeFile
+} from 'node:fs/promises'
 import path from 'node:path'
-import { flushAllFileSinks, getFileSink } from '../../src/output/file-sink'
+import {
+  closeAllFileSinks,
+  flushAllFileSinks,
+  getFileSink
+} from '../../src/output/file-sink'
 import type { FileSink, FileSinkOptions } from '../../src/output/file-sink'
 import { createTempDir, removeTempDir } from '../_helpers/tmp'
 
@@ -15,6 +27,32 @@ const writeSequentially = async (
   }
   await sink.write('a\n', options)
   await writeSequentially(sink, count - 1, options)
+}
+
+interface HandleTracker {
+  openDescriptors: () => number[]
+  restore: () => void
+}
+
+// Records every FileHandle the sink writes through. A closed FileHandle
+// reports fd -1, so any other fd is a descriptor still open.
+const trackWrittenHandles = async (dir: string): Promise<HandleTracker> => {
+  const probe = await open(path.join(dir, 'probe'), 'a')
+  const prototype = Object.getPrototypeOf(probe) as FileHandle
+  await probe.close()
+  const originalWrite = prototype.write
+  const handles = new Set<FileHandle>()
+  const spy = spyOn(prototype, 'write').mockImplementation(
+    function recordHandle(this: FileHandle, ...args: unknown[]) {
+      handles.add(this)
+      return Reflect.apply(originalWrite, this, args)
+    } as FileHandle['write']
+  )
+  return {
+    openDescriptors: () =>
+      [...handles].map(handle => handle.fd).filter(fd => fd !== -1),
+    restore: () => spy.mockRestore()
+  }
 }
 
 describe('file sink lifecycle', () => {
@@ -52,6 +90,50 @@ describe('file sink lifecycle', () => {
       expect(contents).toContain('before-close')
       expect(contents).toContain('after-close')
     } finally {
+      await removeTempDir(dir)
+    }
+  })
+
+  test('a write issued while close() runs is released by the next close', async () => {
+    const dir = await createTempDir()
+    const tracker = await trackWrittenHandles(dir)
+    try {
+      const filePath = path.join(dir, 'logs', 'close-race.log')
+      const sink = getFileSink(filePath)
+      await sink.write('before-close\n', {})
+
+      const closing = sink.close()
+      const late = getFileSink(filePath).write('during-close\n', {})
+      await closing
+      await late
+      await closeAllFileSinks()
+
+      expect(tracker.openDescriptors()).toEqual([])
+      expect(await readFile(filePath, 'utf-8')).toBe(
+        'before-close\nduring-close\n'
+      )
+    } finally {
+      tracker.restore()
+      await closeAllFileSinks()
+      await removeTempDir(dir)
+    }
+  })
+
+  test('closing a sink again leaves the sink now registered for its path', async () => {
+    const dir = await createTempDir()
+    try {
+      const filePath = path.join(dir, 'logs', 'close-twice.log')
+      const first = getFileSink(filePath)
+      await first.write('first\n', {})
+      await first.close()
+
+      const second = getFileSink(filePath)
+      await second.write('second\n', {})
+      await first.close()
+
+      expect(getFileSink(filePath)).toBe(second)
+    } finally {
+      await closeAllFileSinks()
       await removeTempDir(dir)
     }
   })
