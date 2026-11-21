@@ -12,7 +12,7 @@ Send logs to [Better Stack](https://betterstack.com) (formerly Logtail). Logs ar
 
 ```bash
 BETTER_STACK_SOURCE_TOKEN=your-source-token
-BETTER_STACK_INGESTING_HOST=https://s123456.eu-nbg-2.betterstackdata.com # if your source shows one
+BETTER_STACK_INGESTING_HOST=s123456.eu-nbg-2.betterstackdata.com # if your source shows one
 ```
 
 3. Wire the transport:
@@ -41,7 +41,7 @@ const app = new Elysia()
 | Variable | Required | Description |
 | --- | --- | --- |
 | `BETTER_STACK_SOURCE_TOKEN` | Yes | Source token, sent as a Bearer token |
-| `BETTER_STACK_INGESTING_HOST` | No | Dedicated ingesting URL (default `https://in.logs.betterstack.com`) |
+| `BETTER_STACK_INGESTING_HOST` | No | Dedicated ingesting host or URL; a value without a scheme is sent over `https` (default `https://in.logs.betterstack.com`) |
 
 ## Options
 
@@ -51,10 +51,10 @@ const betterStack = createBetterStackTransport({
 })
 ```
 
-| Option        | Type     | Default                           | Description   |
-| ------------- | -------- | --------------------------------- | ------------- |
-| `sourceToken` | `string` | `BETTER_STACK_SOURCE_TOKEN`       | Source token  |
-| `endpoint`    | `string` | `https://in.logs.betterstack.com` | Ingesting URL |
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `sourceToken` | `string` | `BETTER_STACK_SOURCE_TOKEN` | Source token |
+| `endpoint` | `string` | `https://in.logs.betterstack.com` | Ingesting host or URL; a value without a scheme is sent over `https` |
 
 Plus the shared options in the [overview table](/docs/adapters/overview#shared-behavior).
 
