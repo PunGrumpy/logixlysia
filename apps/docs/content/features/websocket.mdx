@@ -36,9 +36,11 @@ const app = new Elysia().use(plugin).ws('/chat', {
 
 The hooks type the socket as the plugin's `WebSocketLike`, which does not declare `send`, so the example casts it to a local `ChatWs`; a typed default is a planned library improvement.
 
-A hook may reply by returning a value, a promise or a generator; `wrapWs` passes whatever Elysia accepts from a hook on to Elysia unchanged, so a wrapped hook replies exactly as an unwrapped one does.
+A hook may reply by returning a value, a promise or a generator, and Elysia sends a wrapped hook's reply as it sends an unwrapped one's: the value, what the promise resolves to, or each value the generator yields. `wrapWs` passes a generator (what a `function*` or `async function*` returns) through a wrapper of its own so it can log when the generator ends. Any other value, a hand-written iterator included, reaches Elysia as it is.
 
-Each lifecycle event logs with HTTP method `WS`, the route path, the connection's age (shown where an HTTP line shows its duration), status `200` on every line, and optional `wsId` in context. Your `close` hook receives the WebSocket's close `code` and `reason`, and the "WebSocket closed" line logs them too.
+Each lifecycle event logs with HTTP method `WS`, the route path, the connection's age (shown where an HTTP line shows its duration), status `200`, and optional `wsId` in context. Your `close` hook receives the WebSocket's close `code` and `reason`, and the "WebSocket closed" line logs them too.
+
+A hook that throws or rejects gets an `ERROR` line in place of its usual line. That line carries the error in its `error` field, as an HTTP error line does, and no status, since the client was sent none; the error still reaches Elysia's `onError`. An `open` or `message` hook that returns a generator is logged when the generator finishes, so the connection's age on that line includes the time spent sending, and a throw inside the generator gets the same `ERROR` line. Any other value is logged when the hook returns or its promise settles. A `close` hook is always logged then, whatever it returned, and the connection's context is cleared at that point.
 
 ## Request context on WebSockets
 
