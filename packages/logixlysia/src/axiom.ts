@@ -3,7 +3,8 @@ import {
   envString,
   isPlainObject,
   stripTrailingSlashes,
-  transportError
+  transportError,
+  tryParseUrl
 } from './adapters/shared'
 import type {
   AdapterTransport,
@@ -13,6 +14,55 @@ import type {
 import { stringifyForLog } from './utils/json'
 
 const DEFAULT_BASE_URL = 'https://api.axiom.co'
+const EDGE_INGEST_PATH = '/v1/ingest'
+
+const EDGE_DOMAIN = /^[a-z0-9][a-z0-9.-]*(?::\d+)?$/iu
+
+const isPassed = <T>(value: T | null | undefined): value is T =>
+  value !== undefined && value !== null
+
+const edgeIngestUrl = (edgeUrl: string, dataset: string): string => {
+  const parsed = tryParseUrl(edgeUrl)
+  if (!parsed || parsed.username || parsed.password) {
+    throw transportError(
+      'Axiom',
+      "edgeUrl (AXIOM_EDGE_URL) must be a full URL without credentials, such as 'https://eu-central-1.aws.edge.axiom.co'"
+    )
+  }
+  const path = stripTrailingSlashes(parsed.pathname)
+  parsed.pathname = path || `${EDGE_INGEST_PATH}/${encodeURIComponent(dataset)}`
+  return parsed.toString()
+}
+
+const edgeDomainUrl = (edge: string, dataset: string): string => {
+  const url = `https://${edge}${EDGE_INGEST_PATH}/${encodeURIComponent(dataset)}`
+  if (!(EDGE_DOMAIN.test(edge) && tryParseUrl(url))) {
+    throw transportError(
+      'Axiom',
+      "edge (AXIOM_EDGE) must be a domain without a scheme or a path, such as 'eu-central-1.aws.edge.axiom.co'. Pass a full URL as edgeUrl"
+    )
+  }
+  return url
+}
+
+const ingestUrl = (options: AxiomTransportOptions, dataset: string): string => {
+  const useEnv =
+    !isPassed(options.edgeUrl) &&
+    !isPassed(options.edge) &&
+    !isPassed(options.baseUrl)
+  const edgeUrl = useEnv ? envString('AXIOM_EDGE_URL') : options.edgeUrl
+  if (isPassed(edgeUrl)) {
+    return edgeIngestUrl(edgeUrl, dataset)
+  }
+  const edge = useEnv ? envString('AXIOM_EDGE') : options.edge
+  if (isPassed(edge)) {
+    return edgeDomainUrl(edge, dataset)
+  }
+  const baseUrl = stripTrailingSlashes(
+    (useEnv ? envString('AXIOM_URL') : options.baseUrl) ?? DEFAULT_BASE_URL
+  )
+  return `${baseUrl}/v1/datasets/${encodeURIComponent(dataset)}/ingest`
+}
 
 const failedEvents = (response: unknown): RejectedEntries | undefined => {
   if (!isPlainObject(response)) {
@@ -37,8 +87,9 @@ export interface AxiomTransportOptions extends BatchTransportOptions {
    */
   apiKey?: string
   /**
-   * API base URL.
-   * Falls back to `AXIOM_URL`.
+   * Base URL of the legacy ingest endpoint, `/v1/datasets/{dataset}/ingest`.
+   * Not used when `edge` or `edgeUrl` is set. Read from `AXIOM_URL` when none
+   * of the three is passed.
    * @default 'https://api.axiom.co'
    */
   baseUrl?: string
@@ -47,6 +98,21 @@ export interface AxiomTransportOptions extends BatchTransportOptions {
    * Falls back to `AXIOM_DATASET`.
    */
   dataset?: string
+  /**
+   * Edge domain to ingest through, without a scheme or a path, such as
+   * `eu-central-1.aws.edge.axiom.co`; a port is allowed. Posts to
+   * `/v1/ingest/{dataset}` on it. Read from `AXIOM_EDGE` when none of
+   * `edgeUrl`, `edge` and `baseUrl` is passed.
+   */
+  edge?: string
+  /**
+   * Full URL of an edge endpoint, or of a proxy in front of one, without a
+   * user name or a password. Wins over `edge`. Trailing slashes are removed
+   * from its path; if nothing is left, the path becomes
+   * `/v1/ingest/{dataset}`. Read from `AXIOM_EDGE_URL` when none of
+   * `edgeUrl`, `edge` and `baseUrl` is passed.
+   */
+  edgeUrl?: string
   /**
    * Organization ID — required when using a personal access token.
    * Falls back to `AXIOM_ORG_ID`.
@@ -78,9 +144,6 @@ export const createAxiomTransport = (
       'missing dataset. Set AXIOM_DATASET or pass dataset to createAxiomTransport()'
     )
   }
-  const baseUrl = stripTrailingSlashes(
-    options.baseUrl ?? envString('AXIOM_URL') ?? DEFAULT_BASE_URL
-  )
   const orgId = options.orgId ?? envString('AXIOM_ORG_ID')
 
   const headers: Record<string, string> = {
@@ -105,7 +168,7 @@ export const createAxiomTransport = (
     name: 'Axiom',
     options,
     rejected: failedEvents,
-    url: `${baseUrl}/v1/datasets/${encodeURIComponent(dataset)}/ingest`
+    url: ingestUrl(options, dataset)
   })
 }
 
