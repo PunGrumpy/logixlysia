@@ -17,7 +17,7 @@ import { stdoutWantsColor } from '../utils/color'
 import { elapsedMs } from '../utils/duration'
 import { buildPinoRedactPaths } from '../utils/redact'
 import { parseRequestUrlOnce } from '../utils/request-url'
-import { createFormatContext } from './create-logger'
+import { createFormatContext, toPinoPrettyTranslateTime } from './create-logger'
 import { emit, isExcludedRequest, isSuppressed, resolveSinks } from './emit'
 import type { EmitOutcome, Sinks } from './emit'
 import { handleHttpError } from './handle-http-error'
@@ -74,13 +74,17 @@ const createLazyPino = (
       : {})
   }
 
-  const prettyStream = (): ReturnType<typeof pretty> =>
-    loadPretty()({
+  const prettyStream = (): ReturnType<typeof pretty> => {
+    const translateTime = config?.timestamp?.translateTime
+    return loadPretty()({
       colorize: stdoutWantsColor(),
-      translateTime: config?.timestamp?.translateTime,
+      translateTime: translateTime
+        ? toPinoPrettyTranslateTime(translateTime)
+        : translateTime,
       ...prettyPrintOptions,
       ...outputKeys
     } as Record<string, unknown>)
+  }
 
   let realPino: Pino | undefined
 

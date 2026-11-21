@@ -239,7 +239,13 @@ export interface FormattingConfig {
      * `'yyyy-mm-dd HH:MM:ss'`, rendered with local time. Also accepts
      * pino-pretty's prefixed forms: `'SYS:standard'` or `'SYS:<pattern>'`
      * for local time, and `'UTC:standard'` or `'UTC:<pattern>'` for UTC.
-     * `standard` expands to `yyyy-mm-dd HH:MM:ss.SSS`.
+     * `standard` expands to `yyyy-mm-dd HH:MM:ss.SSS`. With
+     * `pino.prettyPrint` on and no `pino.transport`, a pattern also formats
+     * the time on `store.pino` lines as on the text console line, except
+     * that `standard` keeps pino-pretty's own form, which ends with the zone
+     * offset. A
+     * `translateTime` inside `pino.prettyPrint` is passed to pino-pretty as
+     * written.
      */
     translateTime?: string
   }
