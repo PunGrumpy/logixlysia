@@ -9,11 +9,16 @@ import type { AdapterTransport, BatchTransportOptions } from './adapters/shared'
 import { stringifyForLog } from './utils/json'
 
 const DEFAULT_ENDPOINT = 'https://in.logs.betterstack.com'
+const HAS_SCHEME = /^[a-z][a-z0-9+.-]*:\/\//iu
+
+const withScheme = (endpoint: string): string =>
+  HAS_SCHEME.test(endpoint) ? endpoint : `https://${endpoint}`
 
 export interface BetterStackTransportOptions extends BatchTransportOptions {
   /**
-   * Ingesting URL shown next to the source token — newer sources get a
-   * dedicated host like `https://s123456.eu-nbg-2.betterstackdata.com`.
+   * Ingesting host or URL shown next to the source token — newer sources get
+   * a dedicated host like `s123456.eu-nbg-2.betterstackdata.com`. A value
+   * without a scheme is sent over `https`.
    * Falls back to `BETTER_STACK_INGESTING_HOST`.
    * @default 'https://in.logs.betterstack.com'
    */
@@ -61,9 +66,11 @@ export const createBetterStackTransport = (
     name: 'Better Stack',
     options,
     url: stripTrailingSlashes(
-      options.endpoint ??
-        envString('BETTER_STACK_INGESTING_HOST') ??
-        DEFAULT_ENDPOINT
+      withScheme(
+        options.endpoint ??
+          envString('BETTER_STACK_INGESTING_HOST') ??
+          DEFAULT_ENDPOINT
+      )
     )
   })
 }
