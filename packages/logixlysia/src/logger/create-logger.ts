@@ -119,7 +119,7 @@ const resolveTimestampPattern = (
   const rest =
     utc || prefix === 'sys:' ? pattern.slice(TIMESTAMP_PREFIX_LENGTH) : pattern
   return {
-    pattern: rest === 'standard' ? STANDARD_TIMESTAMP_PATTERN : rest,
+    pattern: isStandard(rest) ? STANDARD_TIMESTAMP_PATTERN : rest,
     utc
   }
 }
