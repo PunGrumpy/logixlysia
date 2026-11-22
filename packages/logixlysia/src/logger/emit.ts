@@ -144,7 +144,11 @@ const formatTextLine = (
   return contextLines.length > 0 ? `${main}\n${contextLines.join('\n')}` : main
 }
 
-const LINE_OWNED_KEYS: ReadonlySet<string> = new Set(['level', 'timestamp'])
+const LINE_OWNED_KEYS: ReadonlySet<string> = new Set([
+  'level',
+  'message',
+  'timestamp'
+])
 
 const formatJsonLine = (
   level: LogLevel,
