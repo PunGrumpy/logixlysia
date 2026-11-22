@@ -176,6 +176,11 @@ export const performRotation = async (
     return
   }
 
+  // rename keeps the live file's mtime. A file that sat longer than maxFiles
+  // would be deleted in the cleanup below, in the same call that archived it.
+  const rotatedAt = new Date()
+  await fs.utimes(rotated, rotatedAt, rotatedAt)
+
   const shouldCompress = config.compress === true
   if (shouldCompress) {
     const algo = config.compression ?? 'gzip'

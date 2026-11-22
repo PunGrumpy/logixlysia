@@ -356,6 +356,122 @@ describe('interval rotation', () => {
     }
   })
 
+  test('an expired empty file starts a new period instead of archiving the next line', async () => {
+    const dir = await createTempDir()
+    try {
+      const logsDir = path.join(dir, 'logs')
+      const filePath = path.join(logsDir, 'empty.log')
+      await fs.mkdir(logsDir, { recursive: true })
+      await fs.writeFile(filePath, '')
+
+      setSystemTime(new Date(Date.now() + TWO_HOURS_MS))
+
+      const options: Options = {
+        config: { logRotation: { interval: '1h' } }
+      }
+      const firstRequest = createMockRequest('http://localhost/first')
+      await logToFile({
+        data: { message: 'msg-1' },
+        filePath,
+        level: 'INFO',
+        options,
+        precomputed: precomputedFor(firstRequest),
+        request: firstRequest,
+        store: { beforeTime: 0n }
+      })
+      const secondRequest = createMockRequest('http://localhost/second')
+      await logToFile({
+        data: { message: 'msg-2' },
+        filePath,
+        level: 'INFO',
+        options,
+        precomputed: precomputedFor(secondRequest),
+        request: secondRequest,
+        store: { beforeTime: 0n }
+      })
+
+      const entries = await fs.readdir(logsDir)
+      expect(entries.filter(name => name.startsWith('empty.log.'))).toEqual([])
+      const liveContent = await fs.readFile(filePath, 'utf-8')
+      expect(liveContent).toContain('msg-1')
+      expect(liveContent).toContain('msg-2')
+
+      setSystemTime(new Date(Date.now() + TWO_HOURS_MS))
+      const thirdRequest = createMockRequest('http://localhost/third')
+      await logToFile({
+        data: { message: 'msg-3' },
+        filePath,
+        level: 'INFO',
+        options,
+        precomputed: precomputedFor(thirdRequest),
+        request: thirdRequest,
+        store: { beforeTime: 0n }
+      })
+
+      const after = await fs.readdir(logsDir)
+      const rotated = after.filter(name => name.startsWith('empty.log.'))
+      expect(rotated).toHaveLength(1)
+      const archived = await fs.readFile(
+        path.join(logsDir, rotated[0]),
+        'utf-8'
+      )
+      expect(archived).toContain('msg-1')
+      expect(archived).toContain('msg-2')
+      expect(archived).not.toContain('msg-3')
+      const liveAfter = await fs.readFile(filePath, 'utf-8')
+      expect(liveAfter).toContain('msg-3')
+      expect(liveAfter).not.toContain('msg-1')
+    } finally {
+      await removeTempDir(dir)
+    }
+  })
+
+  test('time retention keeps the archive of a file that was last written before maxFiles', async () => {
+    const dir = await createTempDir()
+    try {
+      const logsDir = path.join(dir, 'logs')
+      const filePath = path.join(logsDir, 'retain.log')
+      const options: Options = {
+        config: { logRotation: { interval: '1h', maxFiles: '1d' } }
+      }
+      const firstRequest = createMockRequest('http://localhost/first')
+      await logToFile({
+        data: { message: 'msg-1' },
+        filePath,
+        level: 'INFO',
+        options,
+        precomputed: precomputedFor(firstRequest),
+        request: firstRequest,
+        store: { beforeTime: 0n }
+      })
+
+      setSystemTime(new Date(Date.now() + 2 * 86_400_000))
+
+      const secondRequest = createMockRequest('http://localhost/second')
+      await logToFile({
+        data: { message: 'msg-2' },
+        filePath,
+        level: 'INFO',
+        options,
+        precomputed: precomputedFor(secondRequest),
+        request: secondRequest,
+        store: { beforeTime: 0n }
+      })
+
+      const entries = await fs.readdir(logsDir)
+      const rotated = entries.filter(name => name.startsWith('retain.log.'))
+      expect(rotated).toHaveLength(1)
+      const archived = await fs.readFile(
+        path.join(logsDir, rotated[0]),
+        'utf-8'
+      )
+      expect(archived).toContain('msg-1')
+      expect(archived).not.toContain('msg-2')
+    } finally {
+      await removeTempDir(dir)
+    }
+  })
+
   test('resolveOpenedAt falls back to now when birthtimeMs is 0 or absent', () => {
     expect(resolveOpenedAt(0, 123)).toBe(123)
     expect(resolveOpenedAt(undefined, 123)).toBe(123)

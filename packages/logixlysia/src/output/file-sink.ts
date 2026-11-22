@@ -1,5 +1,5 @@
 import type { FileHandle } from 'node:fs/promises'
-import { open } from 'node:fs/promises'
+import { open, rm } from 'node:fs/promises'
 import path from 'node:path'
 import type { LogRotationConfig } from '../interfaces'
 import { parseInterval, parseSize } from '../utils/rotation'
@@ -51,6 +51,9 @@ class FileSinkImpl implements FileSink {
   private handle: FileHandle | null = null
   private bytesWritten = 0
   private openedAt = 0
+  // Set when an expired empty file was replaced. The new file's birthtime is
+  // the wall clock, which can lag a test clock, so the period starts at now.
+  private restartInterval = false
   private rotationFailed = false
   private latestOptions: FileSinkOptions = {}
   private pendingBatch: PendingBatch | null = null
@@ -137,7 +140,10 @@ class FileSinkImpl implements FileSink {
     this.handle = handle
     this.bytesWritten = this.rotationFailed ? 0 : stat.size
     this.rotationFailed = false
-    this.openedAt = resolveOpenedAt(stat.birthtimeMs, Date.now())
+    this.openedAt = this.restartInterval
+      ? Date.now()
+      : resolveOpenedAt(stat.birthtimeMs, Date.now())
+    this.restartInterval = false
   }
 
   private shouldRotateNow(
@@ -156,6 +162,25 @@ class FileSinkImpl implements FileSink {
     )
   }
 
+  private async emptyLiveFile(): Promise<boolean> {
+    if (!this.handle) {
+      return false
+    }
+    const stat = await this.handle.stat()
+    return stat.size === 0
+  }
+
+  // An empty file is not archived. Replacing it drops the old creation time,
+  // so the next write is not archived as if another interval had elapsed.
+  private async replaceExpiredEmptyFile(): Promise<void> {
+    const { handle } = this
+    this.handle = null
+    this.bytesWritten = 0
+    await handle?.close()
+    await rm(this.filePath, { force: true })
+    this.restartInterval = true
+  }
+
   private async maybeRotate(
     options: FileSinkOptions,
     trigger: RotationTrigger
@@ -170,6 +195,11 @@ class FileSinkImpl implements FileSink {
 
     try {
       if (!this.shouldRotateNow(rotation, trigger)) {
+        return
+      }
+
+      if (trigger === 'interval' && (await this.emptyLiveFile())) {
+        await this.replaceExpiredEmptyFile()
         return
       }
 

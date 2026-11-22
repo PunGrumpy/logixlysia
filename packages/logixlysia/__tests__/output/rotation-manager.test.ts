@@ -116,6 +116,22 @@ describe('performRotation retention', () => {
     expect(entries).toContain('app.log.2026-01-01-00-00-00-000')
   })
 
+  test('time retention keeps the file just rotated when its previous mtime is old', async () => {
+    const filePath = path.join(dir, 'app.log')
+    await fs.writeFile(filePath, 'stale live')
+    const staleSeconds = (Date.now() - 10 * DAY_MS) / 1000
+    await fs.utimes(filePath, staleSeconds, staleSeconds)
+
+    await performRotation(filePath, { maxFiles: '1d' })
+
+    const entries = await fs.readdir(dir)
+    const rotated = entries.filter(name => name.startsWith('app.log.'))
+    expect(rotated).toHaveLength(1)
+    expect(await fs.readFile(path.join(dir, rotated[0]), 'utf-8')).toBe(
+      'stale live'
+    )
+  })
+
   test('is a no-op for an empty live file', async () => {
     const filePath = path.join(dir, 'app.log')
     await fs.writeFile(filePath, '')
