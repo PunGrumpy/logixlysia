@@ -22,9 +22,70 @@ import { emit, isExcludedRequest, isSuppressed, resolveSinks } from './emit'
 import type { EmitOutcome, Sinks } from './emit'
 import { handleHttpError } from './handle-http-error'
 import { loadPino, loadPretty } from './load-pino.cjs'
+import { maskPinoKeys } from './pino-key-mask'
 
 const ZERO_STORE: StoreData = { beforeTime: 0n }
 const NO_CONTEXT: Readonly<Record<string, unknown>> = Object.freeze({})
+
+type PinoHooks = NonNullable<pino.LoggerOptions['hooks']>
+
+const PINO_SERIALIZERS = Symbol.for('pino.serializers')
+
+// pino hands a top-level key to its serializer, and `errorKey` to the `err`
+// serializer when it has none of its own.
+const serializedBy = (
+  logger: object,
+  errorKey: string
+): ((key: string) => boolean) => {
+  const serializers = (logger as Record<symbol, unknown>)[PINO_SERIALIZERS] as
+    | Record<string, unknown>
+    | undefined
+  return key =>
+    Boolean(serializers?.[key]) ||
+    (key === errorKey && Boolean(serializers?.err))
+}
+
+const keyMaskingHooks = (
+  hooks: PinoHooks | undefined,
+  extraKeys: readonly string[] | undefined,
+  errorKey: string
+): PinoHooks => {
+  const userLogMethod = hooks?.logMethod
+  return {
+    ...hooks,
+    logMethod(args, method, level) {
+      const isSerialized = serializedBy(this, errorKey)
+      // A user's hook may reorder the arguments, so the mask runs on what it
+      // finally passes to pino.
+      const masked = function masked(this: unknown, ...passed: unknown[]) {
+        if (passed.length > 0) {
+          passed[0] = maskPinoKeys(passed[0], extraKeys, isSerialized)
+        }
+        return (method as (...args: unknown[]) => unknown).apply(this, passed)
+      }
+      if (userLogMethod) {
+        userLogMethod.call(this, args, masked, level)
+        return
+      }
+      masked.apply(this, args)
+    }
+  }
+}
+
+const autoRedactOptions = (
+  config: Options['config'],
+  pinoOptions: pino.LoggerOptions,
+  errorKey: string
+): pino.LoggerOptions =>
+  config?.autoRedact === true && pinoOptions.redact === undefined
+    ? {
+        hooks: keyMaskingHooks(pinoOptions.hooks, config?.redactKeys, errorKey),
+        redact: {
+          censor: '[REDACTED]',
+          paths: buildPinoRedactPaths(config?.redactKeys)
+        }
+      }
+    : {}
 
 const createLazyPino = (
   config: Options['config'],
@@ -64,14 +125,7 @@ const createLazyPino = (
     ...pinoOptions,
     ...outputKeys,
     level: pinoOptions.level ?? 'info',
-    ...(config?.autoRedact === true && pinoOptions.redact === undefined
-      ? {
-          redact: {
-            censor: '[REDACTED]',
-            paths: buildPinoRedactPaths(config?.redactKeys)
-          }
-        }
-      : {})
+    ...autoRedactOptions(config, pinoOptions, errorKey ?? 'err')
   }
 
   const prettyStream = (): ReturnType<typeof pretty> => {
