@@ -1,5 +1,5 @@
 import type { FileHandle } from 'node:fs/promises'
-import { lstat, open, rm } from 'node:fs/promises'
+import { open } from 'node:fs/promises'
 import path from 'node:path'
 import type { LogRotationConfig } from '../interfaces'
 import { parseInterval, parseSize } from '../utils/rotation'
@@ -51,9 +51,6 @@ class FileSinkImpl implements FileSink {
   private handle: FileHandle | null = null
   private bytesWritten = 0
   private openedAt = 0
-  // Set when an expired empty file was replaced. The new file's birthtime is
-  // the wall clock, which can lag a test clock, so the period starts at now.
-  private restartInterval = false
   private rotationFailed = false
   private latestOptions: FileSinkOptions = {}
   private pendingBatch: PendingBatch | null = null
@@ -108,8 +105,6 @@ class FileSinkImpl implements FileSink {
 
     try {
       await this.ensureOpen(options)
-      // A line belongs in the file of the period it was written in, so an
-      // elapsed interval rotates before the batch is written.
       await this.maybeRotate(options, 'interval')
       await this.ensureOpen(options)
       const handle = this.handle as FileHandle
@@ -140,10 +135,7 @@ class FileSinkImpl implements FileSink {
     this.handle = handle
     this.bytesWritten = this.rotationFailed ? 0 : stat.size
     this.rotationFailed = false
-    this.openedAt = this.restartInterval
-      ? Date.now()
-      : resolveOpenedAt(stat.birthtimeMs, Date.now())
-    this.restartInterval = false
+    this.openedAt = resolveOpenedAt(stat.birthtimeMs, Date.now())
   }
 
   private shouldRotateNow(
@@ -170,37 +162,6 @@ class FileSinkImpl implements FileSink {
     return stat.size === 0
   }
 
-  // An empty regular file is not archived. Replacing it drops the old
-  // creation time, so the next write is not archived as if another interval
-  // had elapsed. The path is removed only when it still names this handle:
-  // a symlink, or a file swapped in at the same path, is left alone.
-  private async replaceExpiredEmptyFile(): Promise<void> {
-    const { handle } = this
-    if (!handle) {
-      return
-    }
-    const openStat = await handle.stat()
-    let sameFile = false
-    try {
-      const pathStat = await lstat(this.filePath)
-      sameFile =
-        pathStat.isFile() &&
-        pathStat.dev === openStat.dev &&
-        pathStat.ino === openStat.ino
-    } catch {
-      sameFile = false
-    }
-    if (!sameFile) {
-      this.openedAt = Date.now()
-      return
-    }
-    this.handle = null
-    this.bytesWritten = 0
-    await handle.close()
-    await rm(this.filePath, { force: true })
-    this.restartInterval = true
-  }
-
   private async maybeRotate(
     options: FileSinkOptions,
     trigger: RotationTrigger
@@ -219,7 +180,9 @@ class FileSinkImpl implements FileSink {
       }
 
       if (trigger === 'interval' && (await this.emptyLiveFile())) {
-        await this.replaceExpiredEmptyFile()
+        // An empty file is never archived, so its age is not a period that
+        // ended. The handle stays open, which keeps this start until a restart.
+        this.openedAt = Date.now()
         return
       }
 
