@@ -455,6 +455,8 @@ await logs.runJob('nightly-sync', async log => {
 await flushLogixlysia(options)
 ```
 
+To give up on a backend that does not answer, pass `{ close: true, timeoutMs }`: the call returns within `timeoutMs`, and each adapter reports what it dropped through its `onDropped`.
+
 ---
 
 ## 16. Testing your logs

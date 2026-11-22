@@ -3,7 +3,8 @@ import type {
   LogLevel,
   Options,
   SinkErrorContext,
-  StoreData
+  StoreData,
+  Transport
 } from '../interfaces'
 import type { PrecomputedLogParts } from '../logger/create-logger'
 import type { LoggedRequest } from '../utils/redact'
@@ -118,29 +119,68 @@ export const logToTransports = (input: LogToTransportsInput): void => {
   }
 }
 
+/** Resolves when `work` settles or `signal` aborts, whichever comes first. */
+export const untilSettledOrAborted = async (
+  work: Promise<unknown>,
+  signal: AbortSignal
+): Promise<void> => {
+  if (signal.aborted) {
+    return
+  }
+  const { promise: aborted, resolve }: PromiseWithResolvers<void> =
+    Promise.withResolvers()
+  const stop = (): void => resolve()
+  signal.addEventListener('abort', stop, { once: true })
+  try {
+    await Promise.race([work, aborted])
+  } finally {
+    signal.removeEventListener('abort', stop)
+  }
+}
+
+const callTransport = async (
+  transport: Transport,
+  method: 'close' | 'flush',
+  signal: AbortSignal | undefined,
+  onError: ((context: SinkErrorContext) => void) | undefined
+): Promise<void> => {
+  try {
+    await (signal ? transport[method]?.({ signal }) : transport[method]?.())
+  } catch (error) {
+    reportTransportError(error, onError)
+  }
+}
+
 const runTransportLifecycle = (
   options: Options,
-  method: 'close' | 'flush'
+  method: 'close' | 'flush',
+  signal?: AbortSignal
 ): Promise<unknown>[] => {
   const onError = options.config?.onError
   return (options.config?.transports ?? []).map(async transport => {
-    try {
-      // Yield first so the method is called from a microtask, never inline.
-      await Promise.resolve()
-      await transport[method]?.()
-    } catch (error) {
-      reportTransportError(error, onError)
-    }
+    // Yield first so the method is called from a microtask, never inline.
+    await Promise.resolve()
+    const call = callTransport(transport, method, signal, onError)
+    // Stops waiting at the deadline whether or not the transport reads the
+    // signal. A failure after that is still reported.
+    await (signal ? untilSettledOrAborted(call, signal) : call)
   })
 }
 
-export const flushTransports = async (options: Options): Promise<void> => {
+export const flushTransports = async (
+  options: Options,
+  signal?: AbortSignal
+): Promise<void> => {
+  const logged = Promise.allSettled(pendingTransportWork)
   await Promise.allSettled([
-    ...pendingTransportWork,
-    ...runTransportLifecycle(options, 'flush')
+    signal ? untilSettledOrAborted(logged, signal) : logged,
+    ...runTransportLifecycle(options, 'flush', signal)
   ])
 }
 
-export const closeTransports = async (options: Options): Promise<void> => {
-  await Promise.allSettled(runTransportLifecycle(options, 'close'))
+export const closeTransports = async (
+  options: Options,
+  signal?: AbortSignal
+): Promise<void> => {
+  await Promise.allSettled(runTransportLifecycle(options, 'close', signal))
 }

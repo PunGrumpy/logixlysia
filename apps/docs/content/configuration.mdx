@@ -387,7 +387,7 @@ onError: ({ sink, error }) => {
 
 ### `flushTimeoutMs`
 
-How long the plugin waits for transports and the file sink to flush when the app stops. `0` starts the flush but does not wait. A flush that exceeds the budget is reported through `onError` with `sink: 'shutdown'`.
+How long the plugin waits for transports and the file sink to flush when the app stops. `0` starts the flush but does not wait. A flush that exceeds the budget is reported through `onError` with `sink: 'shutdown'`. Transports receive the deadline as `{ signal }`, so once it passes, the retries the built-in adapters started no longer hold the process open.
 
 - **Type:** `number`
 - **Default:** `5000`

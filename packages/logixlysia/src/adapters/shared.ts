@@ -69,8 +69,9 @@ export interface BatchTransportOptions {
    * Called with how many entries were lost and why: `queue-full` when too many
    * were already waiting, `send-failed` when a request failed after retries,
    * `rejected` when the backend answered with success and said it did not
-   * store part of the batch, `closed` for a `log()` after `close()`. Add up
-   * `count` for a running total.
+   * store part of the batch, `closed` when the transport closed: for a
+   * `log()` after `close()`, and for the entries a close still held at its
+   * deadline. Add up `count` for a running total.
    */
   onDropped?: (info: {
     count: number
@@ -100,10 +101,25 @@ export interface BatchTransportOptions {
 
 /** A {@link Transport} that batches entries and can be flushed on demand. */
 export interface AdapterTransport extends Transport {
-  /** Stops accepting entries, then flushes the ones already accepted. Idempotent. */
-  close: () => Promise<void>
-  /** Sends any buffered entries immediately. Call before process exit. */
-  flush: () => Promise<void>
+  // The signature without an argument keeps `promise.then(transport.flush)`
+  // type-checking for a promise of any type.
+  /**
+   * Stops accepting entries, then flushes the ones already accepted.
+   * Idempotent. If `signal` aborts first, the request in flight is aborted,
+   * a retry sleep ends, and every entry still held is given up: one
+   * `onDropped({ count, reason: 'closed' })` covers them all, and the
+   * promise rejects with how many there were.
+   */
+  close: (() => Promise<void>) &
+    ((options?: { signal?: AbortSignal }) => Promise<void>)
+  /**
+   * Sends any buffered entries immediately. Call before process exit. If
+   * `signal` aborts first, it resolves without waiting further: the request
+   * in flight is left to finish, and what is still buffered goes out on the
+   * interval timer. Read `signal.aborted` to tell the two apart.
+   */
+  flush: (() => Promise<void>) &
+    ((options?: { signal?: AbortSignal }) => Promise<void>)
 }
 
 /** One record, as the transport received it. */
@@ -192,13 +208,10 @@ const NANOS_PER_MILLI = 1_000_000n
 export const toUnixNanos = (date: Date): string =>
   String(BigInt(date.getTime()) * NANOS_PER_MILLI)
 
-const sleep = (ms: number, keepAlive: boolean): Promise<void> => {
+const sleepWithoutHolding = (ms: number): Promise<void> => {
   const { promise, resolve }: PromiseWithResolvers<void> =
     Promise.withResolvers()
-  const timer = setTimeout(resolve, ms)
-  if (!keepAlive) {
-    timer.unref?.()
-  }
+  setTimeout(resolve, ms).unref?.()
   return promise
 }
 
@@ -212,12 +225,17 @@ export interface RejectedEntries {
 export interface PostWithRetryInput {
   body: string
   headers: Record<string, string>
-  /** Keeps the retry backoff timer ref'd, for a caller awaiting this send. */
-  keepAlive?: boolean
   name: string
   /** Reads a successful response; see `HttpTransportInput.rejected`. */
   rejected?: (response: unknown) => RejectedEntries | undefined
   retries: number
+  /** Aborts the request in flight and ends the retries; an abort is not retried. */
+  signal?: AbortSignal
+  /**
+   * Waits out the delay before a retry. Without it the wait does not hold
+   * the process open.
+   */
+  sleep?: (ms: number) => Promise<void>
   timeout: number
   url: string
 }
@@ -373,13 +391,15 @@ const attemptPost = async (
     error: Error,
     delayMs: number
   ): Promise<RejectedEntries | undefined> => {
-    if (attempt >= input.retries) {
+    if (attempt >= input.retries || input.signal?.aborted) {
       throw error
     }
-    await sleep(delayMs, input.keepAlive ?? false)
+    await (input.sleep ?? sleepWithoutHolding)(delayMs)
     return attemptPost(input, attempt + 1)
   }
 
+  input.signal?.throwIfAborted()
+  const timeout = AbortSignal.timeout(input.timeout)
   let response: Response
   try {
     response = await fetch(input.url, {
@@ -387,7 +407,7 @@ const attemptPost = async (
       headers: input.headers,
       method: 'POST',
       redirect: 'error',
-      signal: AbortSignal.timeout(input.timeout)
+      signal: input.signal ? AbortSignal.any([input.signal, timeout]) : timeout
     })
   } catch (fetchError) {
     return retryOrRethrow(
@@ -430,8 +450,46 @@ export const postWithRetry = (
 ): Promise<RejectedEntries | undefined> => attemptPost(input, 0)
 
 export interface BatchQueue {
-  flush: () => Promise<void>
+  close: (options?: { signal?: AbortSignal }) => Promise<void>
+  flush: (options?: { signal?: AbortSignal }) => Promise<void>
   push: (entry: LogEntry) => Promise<void> | undefined
+}
+
+/** Entries taken from the buffer for one request, kept until they end. */
+interface Batch {
+  ended: boolean
+  entries: LogEntry[]
+}
+
+type BatchEnd =
+  | { outcome: 'closed' }
+  | { outcome: 'delivered'; rejected?: RejectedEntries }
+  | { outcome: 'failed' }
+
+/**
+ * Waits for `work` until `signal` aborts, and tells whether `work` settled
+ * first. A rejection of `work` before the abort passes through.
+ */
+const settlesBefore = async (
+  work: Promise<void>,
+  signal: AbortSignal | undefined
+): Promise<boolean> => {
+  if (!signal) {
+    await work
+    return true
+  }
+  if (signal.aborted) {
+    return false
+  }
+  const { promise: aborted, resolve }: PromiseWithResolvers<boolean> =
+    Promise.withResolvers()
+  const stop = (): void => resolve(false)
+  signal.addEventListener('abort', stop, { once: true })
+  try {
+    return await Promise.race([work.then(() => true), aborted])
+  } finally {
+    signal.removeEventListener('abort', stop)
+  }
 }
 
 const createQueueReporter = (
@@ -482,15 +540,22 @@ export const createBatchQueue = (input: {
   onError?: (error: unknown) => void
   send: (
     entries: LogEntry[],
-    keepAlive: boolean
+    retry: { signal: AbortSignal; sleep: (ms: number) => Promise<void> }
   ) => Promise<RejectedEntries | ReturnType<() => void>>
 }): BatchQueue => {
   let buffer: LogEntry[] = []
   let timer: ReturnType<typeof setTimeout> | undefined
   let inFlight: Promise<void> | undefined
+  /** The batch on the wire or sleeping before a retry. */
+  let sending: Batch | undefined
   let dropped = 0
   let accepted = 0
   let settled = 0
+  let callers = 0
+  let closed = false
+  const sleeping = new Set<ReturnType<typeof setTimeout>>()
+  /** Aborted when a close gives up at its deadline. */
+  const closing = new AbortController()
 
   const report = createQueueReporter(input.name, input.onError)
   const reportDrops = createQueueReporter(input.name, input.onError)
@@ -499,10 +564,10 @@ export const createBatchQueue = (input: {
     input.maxBatchSize
   const maxPerRequest = input.maxEntriesPerRequest ?? maxWaiting
 
-  const takeBatch = (): LogEntry[] => {
+  const takeBatch = (): Batch => {
     const entries = buffer.slice(0, maxPerRequest)
     buffer = buffer.slice(maxPerRequest)
-    return entries
+    return { ended: false, entries }
   }
 
   const reportDropped = (): void => {
@@ -533,29 +598,106 @@ export const createBatchQueue = (input: {
     )
   }
 
-  const runSend = async (
-    entries: LogEntry[],
-    background: boolean
-  ): Promise<void> => {
+  /**
+   * Ends a batch: delivered, with what the backend said it rejected; failed
+   * after its retries; or given up by a close. A batch ends once. A later
+   * call for it does nothing and returns false, so a response that lands
+   * after a close gave its batch up is not counted again.
+   */
+  const endBatch = (batch: Batch, end: BatchEnd): boolean => {
+    if (batch.ended) {
+      return false
+    }
+    batch.ended = true
+    settled += batch.entries.length
+    if (end.outcome === 'failed') {
+      notifyDropped(input.onDropped, batch.entries.length, 'send-failed')
+    } else if (end.outcome === 'delivered' && end.rejected) {
+      reportRejected(batch.entries.length, end.rejected)
+    }
+    return true
+  }
+
+  const setCallers = (count: number): void => {
+    const held = callers > 0
+    callers = count
+    if (held === callers > 0) {
+      return
+    }
+    for (const sleeper of sleeping) {
+      if (callers > 0) {
+        sleeper.ref?.()
+      } else {
+        sleeper.unref?.()
+      }
+    }
+  }
+
+  /**
+   * Runs `work` for a caller who awaits it. A retry sleep holds the process
+   * open only while there is such a caller, whichever send it belongs to.
+   */
+  const awaited = async (work: () => Promise<void>): Promise<void> => {
+    setCallers(callers + 1)
+    try {
+      await work()
+    } finally {
+      setCallers(callers - 1)
+    }
+  }
+
+  const sleep = async (ms: number): Promise<void> => {
+    const { promise, resolve }: PromiseWithResolvers<void> =
+      Promise.withResolvers()
+    const sleeper = setTimeout(resolve, ms)
+    if (callers === 0) {
+      sleeper.unref?.()
+    }
+    const wake = (): void => {
+      clearTimeout(sleeper)
+      resolve()
+    }
+    sleeping.add(sleeper)
+    closing.signal.addEventListener('abort', wake, { once: true })
+    try {
+      await promise
+    } finally {
+      sleeping.delete(sleeper)
+      closing.signal.removeEventListener('abort', wake)
+    }
+  }
+
+  const runSend = async (batch: Batch, background: boolean): Promise<void> => {
+    sending = batch
     try {
       await Promise.resolve()
-      const rejected = await input.send(entries, !background)
-      if (rejected) {
-        reportRejected(entries.length, rejected)
-      }
+      const rejected = await input.send(batch.entries, {
+        signal: closing.signal,
+        sleep
+      })
+      endBatch(batch, { outcome: 'delivered', rejected: rejected || undefined })
     } catch (error) {
-      notifyDropped(input.onDropped, entries.length, 'send-failed')
-      if (!background) {
-        throw error
+      if (endBatch(batch, { outcome: 'failed' })) {
+        if (!background) {
+          throw error
+        }
+        report(error)
       }
-      report(error)
     } finally {
-      settled += entries.length
+      sending = undefined
       inFlight = undefined
       if (buffer.length >= input.maxBatchSize) {
         inFlight = runSend(takeBatch(), true)
       }
       reportDropped()
+    }
+  }
+
+  const reportFailure = async (send: Promise<void>): Promise<void> => {
+    try {
+      await send
+    } catch (error) {
+      report(error)
     }
   }
 
@@ -565,8 +707,10 @@ export const createBatchQueue = (input: {
     return send
   }
 
+  /** Sends until `target` entries have ended, or until `signal` aborts. */
   const drainUntil = async (
     target: number,
+    signal: AbortSignal | undefined,
     failure?: unknown
   ): Promise<void> => {
     if (settled >= target) {
@@ -575,31 +719,117 @@ export const createBatchQueue = (input: {
       }
       return
     }
+    let error = failure
+    let finished: boolean
     if (inFlight) {
-      await inFlight
-      return drainUntil(target, failure)
+      finished = await settlesBefore(inFlight, signal)
+    } else {
+      const send = startSend()
+      try {
+        finished = await settlesBefore(send, signal)
+      } catch (sendError) {
+        error ??= sendError
+        finished = true
+      }
+      if (!finished) {
+        // Nobody awaits this send any more, so a failure is reported like
+        // one the queue started on its own.
+        reportFailure(send)
+      }
     }
-    try {
-      await startSend()
-    } catch (error) {
-      return drainUntil(target, failure ?? error)
+    if (finished && !signal?.aborted) {
+      return drainUntil(target, signal, error)
     }
-    return drainUntil(target, failure)
+    if (error !== undefined) {
+      throw error
+    }
   }
 
-  const flush = (): Promise<void> => {
+  const drain = (signal?: AbortSignal): Promise<void> => {
     if (timer) {
       clearTimeout(timer)
       timer = undefined
     }
-    return drainUntil(accepted)
+    return drainUntil(accepted, signal)
   }
 
   const flushFromTimer = async (): Promise<void> => {
     try {
-      await flush()
+      await drain()
     } catch (error) {
       report(error)
+    }
+  }
+
+  const armTimer = (): void => {
+    timer = setTimeout(flushFromTimer, input.flushIntervalMs)
+    timer.unref?.()
+  }
+
+  const flush = (options?: { signal?: AbortSignal }): Promise<void> =>
+    awaited(async () => {
+      try {
+        await drain(options?.signal)
+      } finally {
+        // A flush that stopped at its deadline cleared the interval timer;
+        // what it left buffered goes out on the timer, as in normal running.
+        if (buffer.length > 0 && !timer) {
+          armTimer()
+        }
+      }
+    })
+
+  /**
+   * Gives up everything the queue still holds, for a close at its deadline:
+   * the buffer, and the batch on the wire or sleeping before a retry, whose
+   * request and sleep end now. Reports them once and returns how many.
+   */
+  const abandon = (): number => {
+    if (timer) {
+      clearTimeout(timer)
+      timer = undefined
+    }
+    let count = buffer.length
+    settled += buffer.length
+    buffer = []
+    if (sending && endBatch(sending, { outcome: 'closed' })) {
+      count += sending.entries.length
+    }
+    closing.abort()
+    if (count > 0) {
+      notifyDropped(input.onDropped, count, 'closed')
+    }
+    return count
+  }
+
+  const close = async (options?: { signal?: AbortSignal }): Promise<void> => {
+    closed = true
+    const signal = options?.signal
+    let lost = 0
+    // Gives up in the turn the deadline passes, before a response that
+    // lands in that turn can end the batch.
+    const giveUp = (): void => {
+      lost = abandon()
+    }
+    if (signal?.aborted) {
+      giveUp()
+    } else {
+      signal?.addEventListener('abort', giveUp, { once: true })
+      try {
+        await awaited(() => drain(signal))
+      } catch (error) {
+        if (lost === 0) {
+          throw error
+        }
+      } finally {
+        signal?.removeEventListener('abort', giveUp)
+      }
+    }
+    if (lost > 0) {
+      throw transportError(
+        input.name,
+        `close gave up on ${lost} entries at its deadline`
+      )
     }
   }
 
@@ -622,6 +852,10 @@ export const createBatchQueue = (input: {
   }
 
   const push = (entry: LogEntry): Promise<void> | undefined => {
+    if (closed) {
+      notifyDropped(input.onDropped, 1, 'closed')
+      return
+    }
     if (inFlight && buffer.length >= maxWaiting) {
       dropped += 1
       notifyDropped(input.onDropped, 1, 'queue-full')
@@ -634,15 +868,14 @@ export const createBatchQueue = (input: {
     buffer.push(entry)
     accepted += 1
     if (!timer) {
-      timer = setTimeout(flushFromTimer, input.flushIntervalMs)
-      timer.unref?.()
+      armTimer()
     }
     if (buffer.length >= input.maxBatchSize) {
-      return inFlight ? undefined : flush()
+      return inFlight ? undefined : drain()
     }
   }
 
-  return { flush, push }
+  return { close, flush, push }
 }
 
 export interface HttpTransportInput {
@@ -768,39 +1001,30 @@ export const createHttpTransport = (
     name: input.name,
     onDropped: input.options.onDropped,
     onError: input.options.onError,
-    send: (entries, keepAlive) =>
+    send: (entries, { signal, sleep }) =>
       postWithRetry({
         body: input.body(entries),
         headers: input.headers,
-        keepAlive,
         name: input.name,
         rejected: input.rejected,
         retries,
+        signal,
+        sleep,
         timeout,
         url
       })
   })
 
-  let closed = false
-
   return {
-    close: async () => {
-      closed = true
-      await queue.flush()
-    },
+    close: queue.close,
     flush: queue.flush,
-    log: (level, message, meta) => {
-      if (closed) {
-        notifyDropped(input.options.onDropped, 1, 'closed')
-        return
-      }
-      return queue.push({
+    log: (level, message, meta) =>
+      queue.push({
         level,
         message,
         meta: snapshotMeta(meta ?? {}),
         timestamp: new Date()
-      })
-    },
+      }),
     minLevel
   }
 }

@@ -630,6 +630,114 @@ describe('logixlysia/desertant', () => {
     expect(errors).toEqual([failure])
   })
 
+  test('a close past its deadline reports the records awaiting the model once and never delivers them', async () => {
+    const model: PromiseWithResolvers<void> = Promise.withResolvers()
+    const redactor = createStubRedactor({
+      redaction: async (text: string) => {
+        await model.promise
+        return { redactedText: text }
+      }
+    })
+    const delivered: string[] = []
+    const closeCalls: unknown[][] = []
+    const dropped: unknown[] = []
+    const transport = withRedaction(
+      {
+        close: (...args: unknown[]) => {
+          closeCalls.push(args)
+        },
+        log: (_level, message) => {
+          delivered.push(message)
+        }
+      },
+      redactor,
+      { onDropped: info => dropped.push(info) }
+    )
+
+    transport.log('INFO', 'one')
+    transport.log('INFO', 'two')
+    const deadline = new AbortController()
+    const options = { signal: deadline.signal }
+    const closed = transport.close(options)
+    deadline.abort()
+
+    expect(await settlesWithin(closed, 1000)).toBe(true)
+    expect(dropped).toEqual([{ count: 2, reason: 'closed' }])
+    expect(closeCalls).toHaveLength(1)
+    expect(closeCalls[0]?.[0]).toBe(options)
+
+    model.resolve()
+    await sleep(SETTLE_WINDOW_MS)
+    expect(delivered).toEqual([])
+    expect(dropped).toEqual([{ count: 2, reason: 'closed' }])
+  })
+
+  test('a flush past its deadline resolves, and the records awaiting the model are delivered later', async () => {
+    const model: PromiseWithResolvers<void> = Promise.withResolvers()
+    const redactor = createStubRedactor({
+      redaction: async (text: string) => {
+        await model.promise
+        return { redactedText: text }
+      }
+    })
+    const delivered: string[] = []
+    const flushCalls: unknown[][] = []
+    const dropped: unknown[] = []
+    const transport = withRedaction(
+      {
+        flush: (...args: unknown[]) => {
+          flushCalls.push(args)
+        },
+        log: (_level, message) => {
+          delivered.push(message)
+        }
+      },
+      redactor,
+      { onDropped: info => dropped.push(info) }
+    )
+
+    transport.log('INFO', 'one')
+    transport.log('INFO', 'two')
+    const deadline = new AbortController()
+    const options = { signal: deadline.signal }
+    const flushed = transport.flush(options)
+    deadline.abort()
+
+    expect(await settlesWithin(flushed, 1000)).toBe(true)
+    expect(flushCalls).toHaveLength(1)
+    expect(flushCalls[0]?.[0]).toBe(options)
+
+    model.resolve()
+    await waitFor(() => delivered.length === 2)
+    expect(delivered).toEqual(['one', 'two'])
+    expect(dropped).toEqual([])
+  })
+
+  test('flush() and close() without an argument call the wrapped ones without one', async () => {
+    const calls: [string, number][] = []
+    const transport = withRedaction(
+      {
+        close: (...args: unknown[]) => {
+          calls.push(['close', args.length])
+        },
+        flush: (...args: unknown[]) => {
+          calls.push(['flush', args.length])
+        },
+        log: () => {}
+      },
+      createStubRedactor()
+    )
+
+    transport.log('INFO', 'one')
+    await transport.flush()
+    await transport.close()
+
+    expect(calls).toEqual([
+      ['flush', 0],
+      ['close', 0]
+    ])
+  })
+
   test('skips the model for empty strings', async () => {
     const sink = createSink()
     const redactor = createStubRedactor()

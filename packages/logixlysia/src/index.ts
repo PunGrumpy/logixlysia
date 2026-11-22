@@ -1,5 +1,5 @@
 import { Elysia } from 'elysia'
-import { resolveOptions } from './config/resolve-options'
+import { resolveOptions, validateTimeoutMs } from './config/resolve-options'
 import {
   applyRequestEnrichers,
   applyResponseEnrichers,
@@ -41,11 +41,7 @@ import {
 } from './middleware/request-id'
 import { closeTransports } from './output'
 import { closeAllFileSinks } from './output/file-sink'
-import {
-  flushAll,
-  raceWithTimeout,
-  reportShutdownTimeout
-} from './output/shutdown'
+import { flushAll, shutdownWithin } from './output/shutdown'
 import { resolveAccessLineFilter } from './sampling/access-line'
 import { elapsedMs } from './utils/duration'
 import { normalizeLoggedError } from './utils/error'
@@ -867,13 +863,11 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
       startServer(server ?? undefined, options)
     })
     .onStop(async () => {
-      const timeoutMs =
-        options.config?.flushTimeoutMs ?? DEFAULT_FLUSH_TIMEOUT_MS
-      const timedOut = await raceWithTimeout(flushAll(options), timeoutMs)
-      const waitWasRequested = timeoutMs > 0
-      if (timedOut && waitWasRequested) {
-        reportShutdownTimeout(options.config?.onError, timeoutMs)
-      }
+      await shutdownWithin(
+        options,
+        options.config?.flushTimeoutMs ?? DEFAULT_FLUSH_TIMEOUT_MS,
+        { close: false }
+      )
     })
     .onRequest(({ request, set, store }) => {
       const record = openRecord(request)
@@ -945,19 +939,37 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
   return Object.assign(plugin, { runJob, wrapWs }) as LogixlysiaPlugin<TFields>
 }
 
-/**
- * Drains every transport and file sink; with `close: true` also releases
- * them. For processes that stop without Elysia's `onStop` (workers,
- * scripts, custom signal handlers). Safe to call more than once.
- */
-export const flushLogixlysia = async (
+const flushAndClose = async (
   options: Options,
-  { close = false }: { close?: boolean } = {}
+  close: boolean
 ): Promise<void> => {
   await flushAll(options)
   if (close) {
     await Promise.allSettled([closeTransports(options), closeAllFileSinks()])
   }
+}
+
+/**
+ * Drains every transport and file sink; with `close: true` also releases
+ * them. For processes that stop without Elysia's `onStop` (workers,
+ * scripts, custom signal handlers). Safe to call more than once.
+ *
+ * Without `timeoutMs` it waits as long as delivery takes. With it, it waits
+ * at most that long for the flush and the close together: transports get
+ * `{ signal }`, which aborts at the deadline, and a deadline that passes is
+ * reported once through `config.onError` with `sink: 'shutdown'`. `0`
+ * starts the work and does not wait. The promise never rejects; a
+ * `timeoutMs` outside 0 to 2147483647 throws.
+ */
+export const flushLogixlysia = (
+  options: Options,
+  { close = false, timeoutMs }: { close?: boolean; timeoutMs?: number } = {}
+): Promise<void> => {
+  if (timeoutMs === undefined) {
+    return flushAndClose(options, close)
+  }
+  validateTimeoutMs('timeoutMs', timeoutMs)
+  return shutdownWithin(options, timeoutMs, { close })
 }
 
 export { resolveOptions } from './config/resolve-options'
