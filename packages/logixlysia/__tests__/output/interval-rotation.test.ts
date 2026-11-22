@@ -445,7 +445,9 @@ describe('interval rotation', () => {
         store: { beforeTime: 0n }
       })
 
-      setSystemTime(new Date(Date.now() + 2 * 86_400_000))
+      const twoDaysAgo = new Date(Date.now() - 2 * 86_400_000)
+      await fs.utimes(filePath, twoDaysAgo, twoDaysAgo)
+      setSystemTime(new Date(Date.now() + TWO_HOURS_MS))
 
       const secondRequest = createMockRequest('http://localhost/second')
       await logToFile({
@@ -464,6 +466,54 @@ describe('interval rotation', () => {
       const liveContent = await fs.readFile(filePath, 'utf-8')
       expect(liveContent).toContain('msg-2')
       expect(liveContent).not.toContain('msg-1')
+    } finally {
+      await removeTempDir(dir)
+    }
+  })
+
+  test('time retention keeps the archive of a file that was written within maxFiles', async () => {
+    const dir = await createTempDir()
+    try {
+      const logsDir = path.join(dir, 'logs')
+      const filePath = path.join(logsDir, 'retain.log')
+      const options: Options = {
+        config: { logRotation: { interval: '1h', maxFiles: '1d' } }
+      }
+      const firstRequest = createMockRequest('http://localhost/first')
+      await logToFile({
+        data: { message: 'msg-1' },
+        filePath,
+        level: 'INFO',
+        options,
+        precomputed: precomputedFor(firstRequest),
+        request: firstRequest,
+        store: { beforeTime: 0n }
+      })
+
+      setSystemTime(new Date(Date.now() + TWO_HOURS_MS))
+
+      const secondRequest = createMockRequest('http://localhost/second')
+      await logToFile({
+        data: { message: 'msg-2' },
+        filePath,
+        level: 'INFO',
+        options,
+        precomputed: precomputedFor(secondRequest),
+        request: secondRequest,
+        store: { beforeTime: 0n }
+      })
+
+      const entries = await fs.readdir(logsDir)
+      const rotated = entries.filter(name => name.startsWith('retain.log.'))
+      expect(rotated).toHaveLength(1)
+      const archived = await fs.readFile(
+        path.join(logsDir, rotated[0]),
+        'utf-8'
+      )
+      expect(archived).toContain('msg-1')
+      expect(archived).not.toContain('msg-2')
+      const liveContent = await fs.readFile(filePath, 'utf-8')
+      expect(liveContent).toContain('msg-2')
     } finally {
       await removeTempDir(dir)
     }
