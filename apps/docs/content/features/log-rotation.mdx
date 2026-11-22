@@ -89,7 +89,7 @@ app.log.2026-07-27-14-30-05-123-45678901234567 → app.log.2026-07-27-14-30-05-1
 `maxFiles` controls how many rotated files are kept:
 
 - A **number** (e.g. `10`) keeps that many most-recent rotated files, deleting older ones. It must be a positive integer; `0` or a negative value is rejected at startup.
-- A **string** (e.g. `'7d'`) keeps rotated files younger than that age, deleting older ones. The age is counted from the rotated file's modification time: the last line written to it, or the moment it was compressed. A file that sat idle for longer than that age is therefore deleted when it is rotated, unless `compress` is on.
+- A **string** (e.g. `'7d'`) keeps rotated files younger than that age, deleting older ones. The age is counted from the rotated file's modification time: the last line written to it, or the moment it was compressed. When `interval` rotates a file that sat idle for longer than that age, the file is therefore deleted at once, unless `compress` has just written a compressed copy of it.
 
 ## Example Configurations
 
