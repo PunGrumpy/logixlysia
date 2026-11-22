@@ -166,6 +166,7 @@ const formatJsonLine = (
     ...rest
   } = toRecordMeta({ data, options, precomputed, request })
   const service = options.config?.service?.trim() || undefined
+  const { message } = data
   const restEntries = Object.entries(rest).filter(
     ([key]) =>
       !(
@@ -180,7 +181,7 @@ const formatJsonLine = (
       ['timestamp', new Date().toISOString()],
       ['level', level],
       ...(service === undefined ? [] : [['service', service]]),
-      ['message', typeof data.message === 'string' ? data.message : ''],
+      ['message', typeof message === 'string' ? message : ''],
       ['request', requestMeta],
       ['status', status],
       ['durationMs', durationMs],

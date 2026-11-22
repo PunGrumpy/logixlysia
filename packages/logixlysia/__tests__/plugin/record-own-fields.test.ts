@@ -114,6 +114,22 @@ describe('data keys named like the record', () => {
     expect(line?.split('hello')).toHaveLength(2)
   })
 
+  test("the JSON line's message is read once", async () => {
+    let reads = 0
+    const data = {}
+    Object.defineProperty(data, 'message', {
+      enumerable: true,
+      get() {
+        reads += 1
+        return reads <= 2 ? 'text' : 42
+      }
+    })
+    const raw = await rawLinesLoggedWithJsonFormat(data)
+
+    const [line] = ownLines(raw)
+    expect(line?.message).toBe('text')
+  })
+
   test('the JSON line keeps the level it was logged at and the time it was written', async () => {
     const { line } = await logDataNamedLikeTheRecord()
 
