@@ -207,7 +207,7 @@ test('a hook that revokes the message it was given still fails with its own erro
 
 test('a close hook that revokes its socket still fails with its own error', () => {
   const onError = mock((_context: unknown) => {})
-  const { wrapWs } = setup({ onError })
+  const { transport, wrapWs } = setup({ onError })
   const { proxy: raw, revoke } = Proxy.revocable({}, {})
   const failure = new Error('own')
   const hooks = wrapWs('/chat', {
@@ -225,10 +225,9 @@ test('a close hook that revokes its socket still fails with its own error', () =
   }
 
   expect(caught).toBe(failure)
-  expect(onError).toHaveBeenCalled()
-  for (const [context] of onError.mock.calls) {
-    expect(context).toMatchObject({ sink: 'format' })
-  }
+  expect(levelsFrom(transport)).toEqual(['ERROR'])
+  expect(recordAt(transport, 0).error).toMatchObject({ message: 'own' })
+  expect(onError).not.toHaveBeenCalled()
 })
 
 test('a returned value is not asked for its string tag', () => {
@@ -268,6 +267,77 @@ test('a generator from another realm is returned unchanged', () => {
   expect(hooks.message({ id: 'ws-1' }, 'sync')).toBe(sync)
   expect(hooks.message({ id: 'ws-2' }, 'async')).toBe(asyncGenerator)
   expect(levelsFrom(transport)).toEqual(['INFO', 'INFO'])
+})
+
+test('a socket whose id cannot be read still runs every hook', () => {
+  const onError = mock((_context: unknown) => {})
+  const { wrapWs } = setup({ onError })
+  const socket = {
+    get id(): string {
+      throw new Error('no id')
+    },
+    raw: {}
+  }
+  let ran = 0
+  const hooks = wrapWs('/chat', {
+    close(_ws) {
+      ran += 1
+      return 'closed'
+    },
+    message(_ws, _message) {
+      ran += 1
+      return 'echoed'
+    },
+    open(_ws) {
+      ran += 1
+      return 'opened'
+    }
+  })
+
+  expect(hooks.open(socket)).toBe('opened')
+  expect(hooks.message(socket, 'hi')).toBe('echoed')
+  expect(hooks.close(socket)).toBe('closed')
+  expect(ran).toBe(3)
+  expect(onError).toHaveBeenCalled()
+})
+
+test('disableWebSocketLogging reads nothing from the socket around a message hook', () => {
+  const onError = mock((_context: unknown) => {})
+  const { wrapWs } = setup({ disableWebSocketLogging: true, onError })
+  const innerRaw = {}
+  const reads = { id: 0, raw: 0 }
+  const socket = {
+    get id(): string {
+      reads.id += 1
+      return 'ws-1'
+    },
+    get raw(): object {
+      reads.raw += 1
+      return innerRaw
+    }
+  }
+  let ran = 0
+  const hooks = wrapWs('/chat', {
+    close(_ws) {
+      ran += 1
+    },
+    message(_ws, _message) {
+      ran += 1
+      return 'echoed'
+    },
+    open(_ws) {
+      ran += 1
+    }
+  })
+
+  expect(hooks.message(socket, 'hi')).toBe('echoed')
+  expect(ran).toBe(1)
+  expect(reads).toEqual({ id: 0, raw: 0 })
+  expect(onError).not.toHaveBeenCalled()
+
+  hooks.open(socket)
+  hooks.close(socket)
+  expect(reads.id).toBe(0)
 })
 
 test('a hook that returns a revoked proxy returns it and logs', () => {

@@ -207,8 +207,8 @@ export const createWsHandlerWrapper = (
   >()
 
   const logWs = (
+    ws: WebSocketLike,
     key: ContextKey,
-    wsId: string | undefined,
     path: string,
     message: string,
     extra: Record<string, unknown> | undefined,
@@ -221,8 +221,9 @@ export const createWsHandlerWrapper = (
     const beforeTime = wsTimings.get(key) ?? process.hrtime.bigint()
     const store: StoreData = { beforeTime }
     const closed = closedContexts.get(key)
-    const live = contextStore.peekContext(key)
+    const live = contextStore.peekContext(ws)
     const accumulated = closed ? { ...closed, ...live } : live
+    const wsId = ws.id
     const context =
       Object.keys(accumulated).length > 0 || extra
         ? { ...accumulated, ...extra, wsId }
@@ -245,11 +246,21 @@ export const createWsHandlerWrapper = (
     reportFormatError(failure, options.config?.onError)
   }
 
+  // Read once the hook is done: a socket that cannot be read must not
+  // keep the hook from running or replace its error.
+  const keyAfterHook = (ws: WebSocketLike): ContextKey | undefined => {
+    try {
+      return keyOf(ws)
+    } catch (failure) {
+      reportSettleFailure(failure)
+    }
+  }
+
   // Runs while the hook's own result or error is on its way to Elysia, so a
   // failure here is reported and never thrown in its place.
   const writeLine = (
+    ws: WebSocketLike,
     key: ContextKey,
-    wsId: string | undefined,
     path: string,
     message: string,
     extra?: Record<string, unknown>,
@@ -257,7 +268,7 @@ export const createWsHandlerWrapper = (
   ): void => {
     try {
       if (options.config?.disableWebSocketLogging !== true) {
-        logWs(key, wsId, path, message, extra, failure)
+        logWs(ws, key, path, message, extra, failure)
       }
     } catch (reportFailure) {
       reportSettleFailure(reportFailure)
@@ -265,7 +276,7 @@ export const createWsHandlerWrapper = (
     try {
       if (closedContexts.has(key)) {
         // Whatever was merged after the close went into the line above.
-        contextStore.clearContext(key)
+        contextStore.clearContext(ws)
       }
     } catch (cleanupFailure) {
       reportSettleFailure(cleanupFailure)
@@ -288,8 +299,6 @@ export const createWsHandlerWrapper = (
     return {
       ...hooks,
       close(ws, code, reason) {
-        const key = keyOf(ws)
-        const wsId = ws.id
         const extra: Record<string, unknown> = {}
         if (code !== undefined) {
           extra.code = code
@@ -298,9 +307,13 @@ export const createWsHandlerWrapper = (
           extra.reason = reason
         }
         const done: Settle = failure => {
+          const key = keyAfterHook(ws)
+          if (key === undefined) {
+            return
+          }
           writeLine(
+            ws,
             key,
-            wsId,
             path,
             'WebSocket closed',
             Object.keys(extra).length > 0 ? extra : undefined,
@@ -308,8 +321,8 @@ export const createWsHandlerWrapper = (
           )
           // The open time stays, for a message line written after this one.
           try {
-            closedContexts.set(key, contextStore.peekContext(key))
-            contextStore.clearContext(key)
+            closedContexts.set(key, contextStore.peekContext(ws))
+            contextStore.clearContext(ws)
           } catch (cleanupFailure) {
             reportSettleFailure(cleanupFailure)
           }
@@ -326,12 +339,17 @@ export const createWsHandlerWrapper = (
         return afterHook(result, done, settleNow)
       },
       message(ws, message) {
-        const key = keyOf(ws)
-        const wsId = ws.id
         // Read now: the hook may change or revoke the message it is given.
         const extra = { payloadType: payloadTypeOf(message) }
         const done: Settle = failure => {
-          writeLine(key, wsId, path, 'WebSocket message', extra, failure)
+          if (options.config?.disableWebSocketLogging === true) {
+            return
+          }
+          const key = keyAfterHook(ws)
+          if (key === undefined) {
+            return
+          }
+          writeLine(ws, key, path, 'WebSocket message', extra, failure)
         }
         let result: unknown
         try {
@@ -344,11 +362,10 @@ export const createWsHandlerWrapper = (
       },
       open(ws) {
         const key = keyOf(ws)
-        const wsId = ws.id
         wsTimings.set(key, process.hrtime.bigint())
         closedContexts.delete(key)
         const done: Settle = failure => {
-          writeLine(key, wsId, path, 'WebSocket opened', undefined, failure)
+          writeLine(ws, key, path, 'WebSocket opened', undefined, failure)
         }
         let result: unknown
         try {
