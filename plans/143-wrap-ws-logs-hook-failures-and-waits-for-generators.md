@@ -1,17 +1,8 @@
 # Plan 143: `wrapWs` logs a failed hook as an error and logs a generator hook when it finishes
 
-> **Executor instructions**: Follow this plan step by step. Run every
-> verification command and confirm the expected result before moving to the
-> next step. If anything in the "STOP conditions" section occurs, stop and
-> report. Do not improvise. Skip any instruction to update `plans/README.md`:
-> the coordinator maintains the index.
+> **Executor instructions**: Follow this plan step by step. Run every verification command and confirm the expected result before moving to the next step. If anything in the "STOP conditions" section occurs, stop and report. Do not improvise. Skip any instruction to update `plans/README.md`: the coordinator maintains the index.
 >
-> **Drift check (run first)**: `git diff --stat c019a4f..HEAD -- packages/logixlysia/src/websocket/wrap-ws.ts packages/logixlysia/src/logger/emit.ts packages/logixlysia/src/utils/error.ts packages/logixlysia/__tests__/websocket apps/docs/content/features/websocket.mdx`
-> If any in-scope file changed since this plan was written, compare the
-> "Current state" excerpts against the live code before proceeding. On a
-> mismatch, treat it as a STOP condition. (`emit.ts` and `error.ts` are only
-> imported from, not edited; they are in the check because the plan relies on
-> two of their exports.)
+> **Drift check (run first)**: `git diff --stat c019a4f..HEAD -- packages/logixlysia/src/websocket/wrap-ws.ts packages/logixlysia/src/logger/emit.ts packages/logixlysia/src/utils/error.ts packages/logixlysia/__tests__/websocket apps/docs/content/features/websocket.mdx` If any in-scope file changed since this plan was written, compare the "Current state" excerpts against the live code before proceeding. On a mismatch, treat it as a STOP condition. (`emit.ts` and `error.ts` are only imported from, not edited; they are in the check because the plan relies on two of their exports.)
 
 ## Status
 
@@ -100,27 +91,27 @@ const afterHook = (result: unknown, done: () => void): unknown => {
 Lines 86 to 106, `logWs`, write every line with `status: 200`. Its `level` parameter is always passed `'INFO'`:
 
 ```ts
-  const logWs = (
-    level: 'INFO' | 'WARNING' | 'ERROR',
-    ws: WebSocketLike,
-    path: string,
-    message: string,
-    extra?: Record<string, unknown>
-  ): void => {
-    const request = wsSyntheticRequest(path)
-    if (pathFilter?.excludes(request)) {
-      return
-    }
-    const beforeTime = wsTimings.get(keyOf(ws)) ?? process.hrtime.bigint()
-    const store: StoreData = { beforeTime }
-    const accumulated = contextStore.peekContext(ws)
-    const context =
-      Object.keys(accumulated).length > 0 || extra
-        ? { ...accumulated, ...extra, wsId: ws.id }
-        : { wsId: ws.id }
-
-    logger.log(level, request, { context, message, status: 200 }, store)
+const logWs = (
+  level: 'INFO' | 'WARNING' | 'ERROR',
+  ws: WebSocketLike,
+  path: string,
+  message: string,
+  extra?: Record<string, unknown>
+): void => {
+  const request = wsSyntheticRequest(path)
+  if (pathFilter?.excludes(request)) {
+    return
   }
+  const beforeTime = wsTimings.get(keyOf(ws)) ?? process.hrtime.bigint()
+  const store: StoreData = { beforeTime }
+  const accumulated = contextStore.peekContext(ws)
+  const context =
+    Object.keys(accumulated).length > 0 || extra
+      ? { ...accumulated, ...extra, wsId: ws.id }
+      : { wsId: ws.id }
+
+  logger.log(level, request, { context, message, status: 200 }, store)
+}
 ```
 
 `beforeTime` is the connection's open time (set in `open` at line 171), so a line's `durationMs` is the connection's age. The docs call it that.
@@ -148,8 +139,8 @@ Lines 153 to 169, the `message` wrapper. A synchronous throw and a normal return
 ```
 
 ```ts
-          contextStore.clearContext(ws)
-          wsTimings.delete(keyOf(ws))
+contextStore.clearContext(ws)
+wsTimings.delete(keyOf(ws))
 ```
 
 `disableWebSocketLogging` is read only in these three `done` functions (`grep -n disableWebSocketLogging src/websocket/wrap-ws.ts` lists lines 125, 155, 173). It silences every WebSocket line. This plan keeps that: the new `ERROR` lines are silenced by it too.
@@ -216,16 +207,16 @@ Conventions: `bun:test`, `const` arrow functions with explicit types, comments s
 
 Run lint and format from the worktree root. Run the rest from the directory shown.
 
-| Purpose        | Command                                                                       | Expected on success                                   |
-| -------------- | ----------------------------------------------------------------------------- | ----------------------------------------------------- |
-| Install        | `bun install --frozen-lockfile` (root)                                        | exit 0                                                |
-| Build          | `cd packages/logixlysia && bun run build`                                     | `dist/` written; the API-snapshot test reads it       |
-| Lint           | `bun run lint` (root)                                                         | exit 0                                                |
-| Format         | `bun run format` (root)                                                       | exit 0; read the diff it makes                        |
-| Typecheck      | `cd packages/logixlysia && bun run typecheck`                                 | exit 0                                                |
-| One area       | `cd packages/logixlysia && bun test ./__tests__/websocket/`                   | judge by pass and fail counts (exit is 1 on a subset) |
-| Full suite     | `cd packages/logixlysia && bun test`                                          | 0 fail (1249 tests in 100 files at `c019a4f`)          |
-| Docs typecheck | `cd apps/docs && bun run typecheck`                                           | exit 0                                                |
+| Purpose | Command | Expected on success |
+| --- | --- | --- |
+| Install | `bun install --frozen-lockfile` (root) | exit 0 |
+| Build | `cd packages/logixlysia && bun run build` | `dist/` written; the API-snapshot test reads it |
+| Lint | `bun run lint` (root) | exit 0 |
+| Format | `bun run format` (root) | exit 0; read the diff it makes |
+| Typecheck | `cd packages/logixlysia && bun run typecheck` | exit 0 |
+| One area | `cd packages/logixlysia && bun test ./__tests__/websocket/` | judge by pass and fail counts (exit is 1 on a subset) |
+| Full suite | `cd packages/logixlysia && bun test` | 0 fail (1249 tests in 100 files at `c019a4f`) |
+| Docs typecheck | `cd apps/docs && bun run typecheck` | exit 0 |
 
 `bun test` on a subset exits 1 even with no failure, because the coverage threshold covers the whole tree. Judge a subset by its `pass` and `fail` lines only. On a loaded machine, tests in `__tests__/logger/lazy-pino.test.ts`, `lazy-chalk.test.ts` and `bundled-app.test.ts` can time out at 5 s while starting a child process; that is a known load effect unrelated to this plan (they passed on an idle run and in CI). Rerun those files alone before treating them as a failure.
 
@@ -483,7 +474,7 @@ Edit `src/websocket/wrap-ws.ts` so it matches this diff against `c019a4f` exactl
 @@ after the WsHandlerHooks interface
    open?: (ws: TWs) => unknown
  }
- 
+
 +// Boxed so that a hook which throws `undefined` still counts as a failure.
 +interface HookFailure {
 +  error: unknown
@@ -869,7 +860,7 @@ Edit `src/websocket/wrap-ws.ts` so it matches this diff against your commit 1 ex
 @@ after payloadTypeOf
    return typeof message
  }
- 
+
 +const isIterator = (
 +  value: unknown
 +): value is AsyncIterator<unknown> | Iterator<unknown> =>
@@ -934,7 +925,7 @@ Edit `src/websocket/wrap-ws.ts` so it matches this diff against your commit 1 ex
 -  return value
 +  return settleValue(value, done)
  }
- 
+
  /**
 - * Hands the hook's result back to Elysia untouched, so a returned value is
 - * sent, a generator is iterated and a rejection reaches Elysia's catch. The
@@ -957,7 +948,7 @@ Edit `src/websocket/wrap-ws.ts` so it matches this diff against your commit 1 ex
 +  result instanceof Promise
 +    ? settleHook(result, done)
 +    : settleValue(result, done)
- 
+
 @@ inside createWsHandlerWrapper
    const wsTimings = new WeakMap<object, bigint>()
 +  // Elysia keeps pulling a message hook's iterator after the socket closes, so
@@ -966,7 +957,7 @@ Edit `src/websocket/wrap-ws.ts` so it matches this diff against your commit 1 ex
 +    object,
 +    Readonly<Record<string, unknown>>
 +  >()
- 
+
 @@ inside logWs
      const beforeTime = wsTimings.get(keyOf(ws)) ?? process.hrtime.bigint()
      const store: StoreData = { beforeTime }

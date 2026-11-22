@@ -1,23 +1,8 @@
 # Plan 146: Interval rotation rotates before the first line of a new period, so that line opens the new file
 
-> **Executor instructions**: Follow this plan step by step. Run every
-> verification command and confirm the expected result before moving to the
-> next step. If anything in the "STOP conditions" section occurs, stop and
-> report. Do not improvise. Skip any instruction to update `plans/README.md`:
-> the coordinator maintains the index.
+> **Executor instructions**: Follow this plan step by step. Run every verification command and confirm the expected result before moving to the next step. If anything in the "STOP conditions" section occurs, stop and report. Do not improvise. Skip any instruction to update `plans/README.md`: the coordinator maintains the index.
 >
-> **Drift check (run first)**: `git diff --stat c019a4f..HEAD -- packages/logixlysia/src/output/file-sink.ts packages/logixlysia/src/types/config.ts packages/logixlysia/__tests__/output/interval-rotation.test.ts`
-> This plan lands after plan 145, which changes `close()` in
-> `packages/logixlysia/src/output/file-sink.ts`, so the drift check will list
-> that file. The excerpts below are of the file before plan 145. For that file,
-> compare only the excerpts of the lines this plan changes (`flushBatch`,
-> `shouldRotateNow` and `maybeRotate`, `src/output/file-sink.ts:100-186` at
-> `c019a4f`) against the live code; a change inside `close()` or near the
-> `sinks` registry is expected and is not drift. Run
-> `git diff c019a4f..HEAD -- packages/logixlysia/src/output/file-sink.ts`: if
-> it touches anything other than `close()`, or if any other in-scope file
-> changed, compare the "Current state" excerpts against the live code. On a
-> mismatch, treat it as a STOP condition.
+> **Drift check (run first)**: `git diff --stat c019a4f..HEAD -- packages/logixlysia/src/output/file-sink.ts packages/logixlysia/src/types/config.ts packages/logixlysia/__tests__/output/interval-rotation.test.ts` This plan lands after plan 145, which changes `close()` in `packages/logixlysia/src/output/file-sink.ts`, so the drift check will list that file. The excerpts below are of the file before plan 145. For that file, compare only the excerpts of the lines this plan changes (`flushBatch`, `shouldRotateNow` and `maybeRotate`, `src/output/file-sink.ts:100-186` at `c019a4f`) against the live code; a change inside `close()` or near the `sinks` registry is expected and is not drift. Run `git diff c019a4f..HEAD -- packages/logixlysia/src/output/file-sink.ts`: if it touches anything other than `close()`, or if any other in-scope file changed, compare the "Current state" excerpts against the live code. On a mismatch, treat it as a STOP condition.
 
 ## Status
 
@@ -192,16 +177,16 @@ Conventions to match:
 
 Run lint and format from the worktree root. Run the rest from the directory shown.
 
-| Purpose       | Command                                                                                   | Expected on success                                   |
-| ------------- | ----------------------------------------------------------------------------------------- | ----------------------------------------------------- |
-| Install       | `bun install --frozen-lockfile` (root)                                                    | exit 0                                                |
-| Build         | `cd packages/logixlysia && bun run build`                                                 | `Build completed`                                     |
-| Lint          | `bun run lint` (root)                                                                     | exit 0                                                |
-| Format        | `bun run format` (root)                                                                   | exit 0; read the diff it makes                        |
-| Typecheck     | `cd packages/logixlysia && bun run typecheck`                                             | exit 0                                                |
-| One test file | `cd packages/logixlysia && bun test ./__tests__/output/interval-rotation.test.ts`         | judge by pass and fail counts (exit is 1 on a subset) |
-| Output tests  | `cd packages/logixlysia && bun test ./__tests__/output/`                                  | 0 fail                                                |
-| Full suite    | `cd packages/logixlysia && bun test`                                                      | 0 fail (one test more than before this plan)          |
+| Purpose | Command | Expected on success |
+| --- | --- | --- |
+| Install | `bun install --frozen-lockfile` (root) | exit 0 |
+| Build | `cd packages/logixlysia && bun run build` | `Build completed` |
+| Lint | `bun run lint` (root) | exit 0 |
+| Format | `bun run format` (root) | exit 0; read the diff it makes |
+| Typecheck | `cd packages/logixlysia && bun run typecheck` | exit 0 |
+| One test file | `cd packages/logixlysia && bun test ./__tests__/output/interval-rotation.test.ts` | judge by pass and fail counts (exit is 1 on a subset) |
+| Output tests | `cd packages/logixlysia && bun test ./__tests__/output/` | 0 fail |
+| Full suite | `cd packages/logixlysia && bun test` | 0 fail (one test more than before this plan) |
 
 On a heavily loaded machine these file tests can pass Bun's 5 second default because removing a temp directory is slow. If a test fails with a timeout and no assertion message, run the file again with `--timeout 60000` and judge by that run.
 
@@ -242,17 +227,17 @@ In `__tests__/output/interval-rotation.test.ts`:
 1. Rename `'rotates on the first write after the interval elapses'` to `'the first line after the interval elapses opens the new file'`. In its body, change the archive assertions to:
 
    ```ts
-      expect(rotatedContent).toContain('msg-1')
-      expect(rotatedContent).not.toContain('msg-2')
+   expect(rotatedContent).toContain('msg-1')
+   expect(rotatedContent).not.toContain('msg-2')
    ```
 
    and the live file assertions at the end to:
 
    ```ts
-      const liveContent = await fs.readFile(filePath, 'utf-8')
-      expect(liveContent).not.toContain('msg-1')
-      expect(liveContent).toContain('msg-2')
-      expect(liveContent).toContain('msg-3')
+   const liveContent = await fs.readFile(filePath, 'utf-8')
+   expect(liveContent).not.toContain('msg-1')
+   expect(liveContent).toContain('msg-2')
+   expect(liveContent).toContain('msg-3')
    ```
 
    Leave the rest of the test, including `expect(rotated.length).toBe(1)`, as it is.
@@ -260,23 +245,19 @@ In `__tests__/output/interval-rotation.test.ts`:
 2. Rename `'restart simulation: birthtime survives, fresh sink rotates immediately'` to `'restart simulation: birthtime survives, the old file rotates before the first write'`. Replace its last two assertions (`toContain('seed')` and `toContain('after-restart')` on `rotatedContent`) with:
 
    ```ts
-      expect(rotatedContent).toBe('seed\n')
+   expect(rotatedContent).toBe('seed\n')
 
-      const liveContent = await fs.readFile(filePath, 'utf-8')
-      expect(liveContent).toContain('after-restart')
+   const liveContent = await fs.readFile(filePath, 'utf-8')
+   expect(liveContent).toContain('after-restart')
    ```
 
 3. Add a new test directly before `test('idle process does not rotate until the next write', …)`:
 
    ```ts
-  test('lines written in one tick after the interval stay together in the new file', async () => {
-    const dir = await createTempDir()
-    try {
-      const logsDir = path.join(dir, 'logs')
-      const filePath = path.join(logsDir, 'batch.log')
-      const options: Options = {
-        config: { logRotation: { interval: '1h' } }
-      }
+
+   ```
+
+test('lines written in one tick after the interval stay together in the new file', async () => { const dir = await createTempDir() try { const logsDir = path.join(dir, 'logs') const filePath = path.join(logsDir, 'batch.log') const options: Options = { config: { logRotation: { interval: '1h' } } }
 
       const firstRequest = createMockRequest('http://localhost/first')
       await logToFile({
@@ -333,10 +314,12 @@ In `__tests__/output/interval-rotation.test.ts`:
     } finally {
       await removeTempDir(dir)
     }
-  })
-   ```
 
-   Both `logToFile` calls must start before anything is awaited, so that `msg-2` and `msg-3` are one batch.
+})
+
+````
+
+Both `logToFile` calls must start before anything is awaited, so that `msg-2` and `msg-3` are one batch.
 
 **Verify**: `cd packages/logixlysia && bun test ./__tests__/output/interval-rotation.test.ts` reports 5 pass and 3 fail. The three failures are the three tests this step changed or added:
 
@@ -352,55 +335,45 @@ In `src/output/file-sink.ts`:
 
 1. Directly above `const sinks = new Map<string, FileSink>()`, add:
 
-   ```ts
-   type RotationTrigger = 'interval' | 'size'
-   ```
+```ts
+type RotationTrigger = 'interval' | 'size'
+````
 
 2. Give `shouldRotateNow` a trigger, so each call checks one condition:
 
    ```ts
-  private shouldRotateNow(
-    rotation: LogRotationConfig,
-    trigger: RotationTrigger
-  ): boolean {
-    if (trigger === 'size') {
-      return (
-        rotation.maxSize !== undefined &&
-        this.bytesWritten > parseSize(rotation.maxSize)
-      )
-    }
-    return (
-      rotation.interval !== undefined &&
-      Date.now() - this.openedAt >= parseInterval(rotation.interval)
-    )
-  }
+
    ```
+
+private shouldRotateNow( rotation: LogRotationConfig, trigger: RotationTrigger ): boolean { if (trigger === 'size') { return ( rotation.maxSize !== undefined && this.bytesWritten > parseSize(rotation.maxSize) ) } return ( rotation.interval !== undefined && Date.now() - this.openedAt >= parseInterval(rotation.interval) ) }
+
+````
 
 3. Give `maybeRotate` the same parameter and pass it on. Its signature becomes `private async maybeRotate(options: FileSinkOptions, trigger: RotationTrigger): Promise<void>`, and its check becomes `if (!this.shouldRotateNow(rotation, trigger)) {`. Leave the rest of its body as it is.
 
 4. In `flushBatch`, check the interval after the file is open and before the write, and the size where the single check is today:
 
-   ```ts
-    try {
-      await this.ensureOpen(options)
-      // A line belongs in the file of the period it was written in, so an
-      // elapsed interval rotates before the batch is written.
-      await this.maybeRotate(options, 'interval')
-      await this.ensureOpen(options)
-      const handle = this.handle as FileHandle
-      await handle.write(text)
-      this.bytesWritten += Buffer.byteLength(text)
-    } catch (error) {
-      for (const resolver of batch.resolvers) {
-        resolver.reject(error)
-      }
-      return
-    }
+```ts
+ try {
+   await this.ensureOpen(options)
+   // A line belongs in the file of the period it was written in, so an
+   // elapsed interval rotates before the batch is written.
+   await this.maybeRotate(options, 'interval')
+   await this.ensureOpen(options)
+   const handle = this.handle as FileHandle
+   await handle.write(text)
+   this.bytesWritten += Buffer.byteLength(text)
+ } catch (error) {
+   for (const resolver of batch.resolvers) {
+     resolver.reject(error)
+   }
+   return
+ }
 
-    await this.maybeRotate(options, 'size')
-   ```
+ await this.maybeRotate(options, 'size')
+````
 
-   The first `ensureOpen` is needed: on a sink's first batch it reads the existing file's birthtime into `openedAt`, which is how a restart sees that yesterday's file is already past its interval. The second `ensureOpen` reopens the live file after a rotation and does nothing otherwise. A failed rotation is reported inside `maybeRotate` as today, and the batch is still written to the live file.
+The first `ensureOpen` is needed: on a sink's first batch it reads the existing file's birthtime into `openedAt`, which is how a restart sees that yesterday's file is already past its interval. The second `ensureOpen` reopens the live file after a rotation and does nothing otherwise. A failed rotation is reported inside `maybeRotate` as today, and the batch is still written to the live file.
 
 **Verify**: `cd packages/logixlysia && bun test ./__tests__/output/interval-rotation.test.ts` reports 8 pass and 0 fail. Then `bun test ./__tests__/output/` reports 0 fail; `a size rotation rolls the file over once it passes maxSize` and `maxSize fires first when both triggers are configured` must be among the passes. (In a scratch copy of the source with plan 145's `close()` change and this step applied, all 66 tests in `__tests__/output/` passed: the 65 at `c019a4f` plus the new one. With plan 145's two tests in the base, expect 68.)
 
@@ -409,12 +382,12 @@ In `src/output/file-sink.ts`:
 In `src/types/config.ts`, replace the doc comment of `interval` (lines 37 to 41 at `c019a4f`) with:
 
 ```ts
-  /**
-   * Rotate when the live file's age reaches a fixed interval. The age is
-   * checked before each write, so the first line written after the interval
-   * goes into the new file. An idle process rotates on its next write, not
-   * on a timer. Format: number + 'h' | 'd' | 'w', e.g. '12h', '1d', '1w'.
-   */
+/**
+ * Rotate when the live file's age reaches a fixed interval. The age is
+ * checked before each write, so the first line written after the interval
+ * goes into the new file. An idle process rotates on its next write, not
+ * on a timer. Format: number + 'h' | 'd' | 'w', e.g. '12h', '1d', '1w'.
+ */
 ```
 
 **Verify**: `bun run format` (root), read its diff, then `bun run lint` exits 0 and `cd packages/logixlysia && bun run typecheck` exits 0.

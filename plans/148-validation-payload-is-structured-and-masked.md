@@ -1,15 +1,8 @@
 # Plan 148: With `logErrorPayload`, a failed validation's payload is logged as fields `autoRedact` can mask, never inside the message
 
-> **Executor instructions**: Follow this plan step by step. Run every
-> verification command and confirm the expected result before moving to the
-> next step. If anything in the "STOP conditions" section occurs, stop and
-> report. Do not improvise. Skip any instruction to update `plans/README.md`:
-> the coordinator maintains the index.
+> **Executor instructions**: Follow this plan step by step. Run every verification command and confirm the expected result before moving to the next step. If anything in the "STOP conditions" section occurs, stop and report. Do not improvise. Skip any instruction to update `plans/README.md`: the coordinator maintains the index.
 >
-> **Drift check (run first)**: `git diff --stat c019a4f..HEAD -- packages/logixlysia/src/utils/error.ts packages/logixlysia/__tests__/errors/validation-shape.test.ts packages/logixlysia/__tests__/logger/handle-http-error.test.ts apps/docs/content/configuration.mdx`
-> If any in-scope file changed since this plan was written, compare the
-> "Current state" excerpts against the live code before proceeding. On a
-> mismatch, treat it as a STOP condition.
+> **Drift check (run first)**: `git diff --stat c019a4f..HEAD -- packages/logixlysia/src/utils/error.ts packages/logixlysia/__tests__/errors/validation-shape.test.ts packages/logixlysia/__tests__/logger/handle-http-error.test.ts apps/docs/content/configuration.mdx` If any in-scope file changed since this plan was written, compare the "Current state" excerpts against the live code before proceeding. On a mismatch, treat it as a STOP condition.
 
 ## Status
 
@@ -109,23 +102,23 @@ const addValidationPayload = (
 `src/utils/error.ts:201-217`, inside `normalizeLoggedError`. The summary is used only when the option is off:
 
 ```ts
-  if (isValidationErrorLike(error) && !logErrorPayload) {
-    const paths = failedPaths(error)
-    const scope = typeof error.type === 'string' ? error.type : 'request'
-    const message =
-      paths.length > 0
-        ? `Validation failed (${scope}): ${paths.join(', ')}`
-        : `Validation failed (${scope})`
-    return {
-      error: {
-        failedPaths: paths,
-        message,
-        name: 'ValidationError',
-        type: scope
-      },
-      message
-    }
+if (isValidationErrorLike(error) && !logErrorPayload) {
+  const paths = failedPaths(error)
+  const scope = typeof error.type === 'string' ? error.type : 'request'
+  const message =
+    paths.length > 0
+      ? `Validation failed (${scope}): ${paths.join(', ')}`
+      : `Validation failed (${scope})`
+  return {
+    error: {
+      failedPaths: paths,
+      message,
+      name: 'ValidationError',
+      type: scope
+    },
+    message
   }
+}
 ```
 
 With the option on, a validation error falls through to the generic branch at `src/utils/error.ts:219-242`, which copies `error.message` (line 223), calls `addValidationPayload(safe, error)` (line 237), and returns `message: parseError(error)` (line 240), which is `error.message` again.
@@ -197,7 +190,7 @@ logErrorPayload: true
 ```
 ````
 
-The page links to sections of itself as `` [`logQueryParams`](#logqueryparams) `` (line 108). The `autoRedact` section is at line 82, so its anchor is `#autoredact`.
+The page links to sections of itself as ``[`logQueryParams`](#logqueryparams)`` (line 108). The `autoRedact` section is at line 82, so its anchor is `#autoredact`.
 
 Conventions to match:
 
@@ -258,56 +251,56 @@ On a busy machine, tests that start a child process (`lazy pino`, `lazy chalk`, 
 **1a.** In `__tests__/errors/validation-shape.test.ts`, replace the two tests at lines 71-85 (`'logs the payload Elysia 2 keeps off the message when it is wanted'` and `'adds nothing to an Elysia 1.x error, whose message has the payload'`) with these three, inside the same `describe('a validation error on either Elysia line', …)`:
 
 ```ts
-  test('logs the payload Elysia 2 keeps off the message when it is wanted', () => {
-    const { error, message } = normalizeLoggedError(elysia2Error(), true)
+test('logs the payload Elysia 2 keeps off the message when it is wanted', () => {
+  const { error, message } = normalizeLoggedError(elysia2Error(), true)
 
-    expect(message).toBe('Validation failed (body): /user/a.b')
-    expect(error.found).toEqual(body)
-    expect(error.errors).toEqual([{ message: 'too short', path: '/user/a.b' }])
+  expect(message).toBe('Validation failed (body): /user/a.b')
+  expect(error.found).toEqual(body)
+  expect(error.errors).toEqual([{ message: 'too short', path: '/user/a.b' }])
+})
+
+test('logs an Elysia 1.x payload as fields, never inside the message', () => {
+  const { error, message } = normalizeLoggedError(elysia1Error(), true)
+
+  expect(message).toBe('Validation failed (body): /password')
+  expect(error).toEqual({
+    errors: [{ message: 'too short', path: '/password' }],
+    failedPaths: ['/password'],
+    found: body,
+    message: 'Validation failed (body): /password',
+    name: 'ValidationError',
+    type: 'body'
+  })
+})
+
+test('keeps only the path and message of each failure', () => {
+  const elysia1 = Object.assign(elysia1Error(), {
+    all: [
+      {
+        message: 'Expected string',
+        path: '/pin',
+        summary: "Expected property 'pin' to be string but found: 4111111",
+        value: 4_111_111
+      }
+    ]
+  })
+  const standard = Object.assign(standardSchemaError(), {
+    errors: [
+      {
+        input: 'hunter2',
+        message: 'email required',
+        path: ['user', { key: 'email' }]
+      }
+    ]
   })
 
-  test('logs an Elysia 1.x payload as fields, never inside the message', () => {
-    const { error, message } = normalizeLoggedError(elysia1Error(), true)
-
-    expect(message).toBe('Validation failed (body): /password')
-    expect(error).toEqual({
-      errors: [{ message: 'too short', path: '/password' }],
-      failedPaths: ['/password'],
-      found: body,
-      message: 'Validation failed (body): /password',
-      name: 'ValidationError',
-      type: 'body'
-    })
-  })
-
-  test('keeps only the path and message of each failure', () => {
-    const elysia1 = Object.assign(elysia1Error(), {
-      all: [
-        {
-          message: 'Expected string',
-          path: '/pin',
-          summary: "Expected property 'pin' to be string but found: 4111111",
-          value: 4_111_111
-        }
-      ]
-    })
-    const standard = Object.assign(standardSchemaError(), {
-      errors: [
-        {
-          input: 'hunter2',
-          message: 'email required',
-          path: ['user', { key: 'email' }]
-        }
-      ]
-    })
-
-    expect(normalizeLoggedError(elysia1, true).error.errors).toEqual([
-      { message: 'Expected string', path: '/pin' }
-    ])
-    expect(normalizeLoggedError(standard, true).error.errors).toEqual([
-      { message: 'email required', path: '/user/email' }
-    ])
-  })
+  expect(normalizeLoggedError(elysia1, true).error.errors).toEqual([
+    { message: 'Expected string', path: '/pin' }
+  ])
+  expect(normalizeLoggedError(standard, true).error.errors).toEqual([
+    { message: 'email required', path: '/user/email' }
+  ])
+})
 ```
 
 Also change the comment above `elysia1Error` (line 8). Today it reads:
@@ -327,15 +320,54 @@ The fixture itself does not change.
 **1b.** In `__tests__/logger/handle-http-error.test.ts`, add this test directly after `'logs the full payload when logErrorPayload is enabled'` (which ends at line 107), inside `describe('handleHttpError', …)`:
 
 ```ts
-  test('with logErrorPayload, autoRedact masks the payload of a failed validation', async () => {
-    const { events, transport } = createCaptureTransport()
+test('with logErrorPayload, autoRedact masks the payload of a failed validation', async () => {
+  const { events, transport } = createCaptureTransport()
+  const app = buildLoginApp({
+    config: {
+      autoRedact: true,
+      disableFileLogging: true,
+      disableInternalLogger: true,
+      logErrorPayload: true,
+      transports: [{ log: transport }]
+    }
+  })
+
+  const res = await app.handle(
+    new Request('http://localhost/login', {
+      body: JSON.stringify({ email: 'a@b.co', password: SECRET_PASSWORD }),
+      headers: { 'content-type': 'application/json' },
+      method: 'POST'
+    })
+  )
+
+  expect(res.status).toBe(422)
+  expect(events).toHaveLength(1)
+  expect(events[0]?.message).toBe('Validation failed (body): /password')
+  expect(events[0]?.meta.error).toEqual({
+    errors: [{ message: expect.any(String), path: '/password' }],
+    failedPaths: ['/password'],
+    found: { email: '[REDACTED]', password: '[REDACTED]' },
+    message: 'Validation failed (body): /password',
+    name: 'ValidationError',
+    type: 'body'
+  })
+  expect(JSON.stringify(events)).not.toContain(SECRET_PASSWORD)
+})
+```
+
+`message: expect.any(String)` is deliberate: the validator's wording on Elysia 1.4 is `Expected string length greater or equal to 60`, Elysia 2 may word it differently, and CI runs this file on both.
+
+**1c.** In the same file, add these two tests directly after `'a validation failure prints its message on the console line'` (which ends at line 464), inside `describe('non-Error values', …)`:
+
+```ts
+test('with logErrorPayload, the console line prints the summary, not the body', async () => {
+  const { restore, spies } = spyConsole(['error', 'warn'])
+  try {
     const app = buildLoginApp({
       config: {
-        autoRedact: true,
         disableFileLogging: true,
-        disableInternalLogger: true,
         logErrorPayload: true,
-        transports: [{ log: transport }]
+        useColors: false
       }
     })
 
@@ -348,88 +380,49 @@ The fixture itself does not change.
     )
 
     expect(res.status).toBe(422)
-    expect(events).toHaveLength(1)
-    expect(events[0]?.message).toBe('Validation failed (body): /password')
-    expect(events[0]?.meta.error).toEqual({
-      errors: [{ message: expect.any(String), path: '/password' }],
-      failedPaths: ['/password'],
-      found: { email: '[REDACTED]', password: '[REDACTED]' },
-      message: 'Validation failed (body): /password',
-      name: 'ValidationError',
-      type: 'body'
-    })
-    expect(JSON.stringify(events)).not.toContain(SECRET_PASSWORD)
-  })
-```
+    const output = joinConsoleOutput(spies)
+    expect(output).toEndWith(' Validation failed (body): /password')
+    expect(output).not.toContain(SECRET_PASSWORD)
+  } finally {
+    restore()
+  }
+})
 
-`message: expect.any(String)` is deliberate: the validator's wording on Elysia 1.4 is `Expected string length greater or equal to 60`, Elysia 2 may word it differently, and CI runs this file on both.
-
-**1c.** In the same file, add these two tests directly after `'a validation failure prints its message on the console line'` (which ends at line 464), inside `describe('non-Error values', …)`:
-
-```ts
-  test('with logErrorPayload, the console line prints the summary, not the body', async () => {
-    const { restore, spies } = spyConsole(['error', 'warn'])
-    try {
-      const app = buildLoginApp({
-        config: {
-          disableFileLogging: true,
-          logErrorPayload: true,
-          useColors: false
-        }
-      })
-
-      const res = await app.handle(
-        new Request('http://localhost/login', {
-          body: JSON.stringify({ email: 'a@b.co', password: SECRET_PASSWORD }),
-          headers: { 'content-type': 'application/json' },
-          method: 'POST'
-        })
-      )
-
-      expect(res.status).toBe(422)
-      const output = joinConsoleOutput(spies)
-      expect(output).toEndWith(' Validation failed (body): /password')
-      expect(output).not.toContain(SECRET_PASSWORD)
-    } finally {
-      restore()
-    }
-  })
-
-  test('with logErrorPayload, the JSON console line masks the payload with autoRedact', async () => {
-    const { restore, spies } = spyConsole(['error', 'warn'])
-    try {
-      const app = buildLoginApp({
-        config: {
-          autoRedact: true,
-          consoleFormat: 'json',
-          disableFileLogging: true,
-          logErrorPayload: true
-        }
-      })
-
-      await app.handle(
-        new Request('http://localhost/login', {
-          body: JSON.stringify({ email: 'a@b.co', password: SECRET_PASSWORD }),
-          headers: { 'content-type': 'application/json' },
-          method: 'POST'
-        })
-      )
-
-      const output = joinConsoleOutput(spies)
-      const line = JSON.parse(output) as {
-        error: Record<string, unknown>
-        message: string
+test('with logErrorPayload, the JSON console line masks the payload with autoRedact', async () => {
+  const { restore, spies } = spyConsole(['error', 'warn'])
+  try {
+    const app = buildLoginApp({
+      config: {
+        autoRedact: true,
+        consoleFormat: 'json',
+        disableFileLogging: true,
+        logErrorPayload: true
       }
-      expect(line.message).toBe('Validation failed (body): /password')
-      expect(line.error.found).toEqual({
-        email: '[REDACTED]',
-        password: '[REDACTED]'
+    })
+
+    await app.handle(
+      new Request('http://localhost/login', {
+        body: JSON.stringify({ email: 'a@b.co', password: SECRET_PASSWORD }),
+        headers: { 'content-type': 'application/json' },
+        method: 'POST'
       })
-      expect(output).not.toContain(SECRET_PASSWORD)
-    } finally {
-      restore()
+    )
+
+    const output = joinConsoleOutput(spies)
+    const line = JSON.parse(output) as {
+      error: Record<string, unknown>
+      message: string
     }
-  })
+    expect(line.message).toBe('Validation failed (body): /password')
+    expect(line.error.found).toEqual({
+      email: '[REDACTED]',
+      password: '[REDACTED]'
+    })
+    expect(output).not.toContain(SECRET_PASSWORD)
+  } finally {
+    restore()
+  }
+})
 ```
 
 **Verify**: `cd packages/logixlysia && bun test ./__tests__/errors/validation-shape.test.ts ./__tests__/logger/handle-http-error.test.ts` reports **25 pass and 6 fail**. The six failures are exactly the five new tests and the rewritten `'logs the payload Elysia 2 keeps off the message when it is wanted'`. You should see, among others:
@@ -490,29 +483,29 @@ The pointers it yields are the ones `failedPaths` yielded: the same branch on `e
 **2c.** Replace the validation branch at lines 201-217 with:
 
 ```ts
-  // Elysia 1.x writes the submitted value into a validation error's message,
-  // so that message is never logged. The value goes in `found` instead, where
-  // `autoRedact` masks its sensitive keys.
-  if (isValidationErrorLike(error)) {
-    const failures = validationFailures(error)
-    const paths = failures.map(failure => failure.path).filter(Boolean)
-    const scope = typeof error.type === 'string' ? error.type : 'request'
-    const message =
-      paths.length > 0
-        ? `Validation failed (${scope}): ${paths.join(', ')}`
-        : `Validation failed (${scope})`
-    const logged: Record<string, unknown> = {
-      failedPaths: paths,
-      message,
-      name: 'ValidationError',
-      type: scope
-    }
-    if (logErrorPayload) {
-      logged.found = error.value
-      logged.errors = failures
-    }
-    return { error: logged, message }
+// Elysia 1.x writes the submitted value into a validation error's message,
+// so that message is never logged. The value goes in `found` instead, where
+// `autoRedact` masks its sensitive keys.
+if (isValidationErrorLike(error)) {
+  const failures = validationFailures(error)
+  const paths = failures.map(failure => failure.path).filter(Boolean)
+  const scope = typeof error.type === 'string' ? error.type : 'request'
+  const message =
+    paths.length > 0
+      ? `Validation failed (${scope}): ${paths.join(', ')}`
+      : `Validation failed (${scope})`
+  const logged: Record<string, unknown> = {
+    failedPaths: paths,
+    message,
+    name: 'ValidationError',
+    type: scope
   }
+  if (logErrorPayload) {
+    logged.found = error.value
+    logged.errors = failures
+  }
+  return { error: logged, message }
+}
 ```
 
 With the option off the result is exactly what it was: the same four fields and the same message.
@@ -527,7 +520,7 @@ With the option off the result is exactly what it was: the same four fields and 
 
 ### Step 3: Say what the option does in the docs
 
-In `apps/docs/content/configuration.mdx`, replace the one paragraph under `### \`logErrorPayload\`` (line 138) with a paragraph that states these facts and nothing more. Each was observed on the patched code with the `/login` app from Step 1:
+In `apps/docs/content/configuration.mdx`, replace the one paragraph under `### \`logErrorPayload\``(line 138) with a paragraph that states these facts and nothing more. Each was observed on the patched code with the`/login` app from Step 1:
 
 1. It adds the submitted value and the list of failures to the record of a failed validation, as `error.found` and `error.errors`.
 2. Each entry in `errors` keeps only the failure's `path` and `message`.

@@ -1,15 +1,8 @@
 # Plan 140: Tests that start a child process get their own timeout
 
-> **Executor instructions**: Follow this plan step by step. Run every
-> verification command and confirm the expected result before moving to the
-> next step. If anything in the "STOP conditions" section occurs, stop and
-> report. Do not improvise. Skip any instruction to update `plans/README.md`:
-> the coordinator maintains the index.
+> **Executor instructions**: Follow this plan step by step. Run every verification command and confirm the expected result before moving to the next step. If anything in the "STOP conditions" section occurs, stop and report. Do not improvise. Skip any instruction to update `plans/README.md`: the coordinator maintains the index.
 >
-> **Drift check (run first)**: `git diff --stat c019a4f..HEAD -- packages/logixlysia/__tests__/api packages/logixlysia/__tests__/context/use-logger-fallback-warning.test.ts packages/logixlysia/__tests__/logger/bundled-app.test.ts packages/logixlysia/__tests__/logger/lazy-chalk.test.ts packages/logixlysia/__tests__/logger/lazy-pino.test.ts packages/logixlysia/__tests__/otel/otel.test.ts packages/logixlysia/__tests__/_helpers`
-> If any in-scope file changed since this plan was written, compare the
-> "Current state" excerpts against the live code before proceeding. On a
-> mismatch, treat it as a STOP condition.
+> **Drift check (run first)**: `git diff --stat c019a4f..HEAD -- packages/logixlysia/__tests__/api packages/logixlysia/__tests__/context/use-logger-fallback-warning.test.ts packages/logixlysia/__tests__/logger/bundled-app.test.ts packages/logixlysia/__tests__/logger/lazy-chalk.test.ts packages/logixlysia/__tests__/logger/lazy-pino.test.ts packages/logixlysia/__tests__/otel/otel.test.ts packages/logixlysia/__tests__/_helpers` If any in-scope file changed since this plan was written, compare the "Current state" excerpts against the live code before proceeding. On a mismatch, treat it as a STOP condition.
 
 ## Status
 
@@ -102,15 +95,15 @@ Ran 35 tests across 8 files.
 
 Run lint from the worktree root. Run everything else from `packages/logixlysia`.
 
-| Purpose                 | Command                                             | Expected on success                    |
-| ----------------------- | --------------------------------------------------- | -------------------------------------- |
-| Install                 | `bun install --frozen-lockfile` (root)              | exit 0                                 |
-| Build                   | `cd packages/logixlysia && bun run build`           | `Build completed`                      |
-| Lint                    | `bun run lint` (root)                               | exit 0                                 |
-| Format                  | `bun run format` (root)                             | exit 0; read the diff it makes         |
-| Typecheck               | `cd packages/logixlysia && bun run typecheck`       | exit 0                                 |
-| Full suite              | `cd packages/logixlysia && bun test`                | 0 fail                                 |
-| The eight files, strict | the `bun test --timeout 100 …` command shown above  | see Step 3                             |
+| Purpose | Command | Expected on success |
+| --- | --- | --- |
+| Install | `bun install --frozen-lockfile` (root) | exit 0 |
+| Build | `cd packages/logixlysia && bun run build` | `Build completed` |
+| Lint | `bun run lint` (root) | exit 0 |
+| Format | `bun run format` (root) | exit 0; read the diff it makes |
+| Typecheck | `cd packages/logixlysia && bun run typecheck` | exit 0 |
+| Full suite | `cd packages/logixlysia && bun test` | 0 fail |
+| The eight files, strict | the `bun test --timeout 100 …` command shown above | see Step 3 |
 
 `bun test <files>` exits 1 on a subset even with zero failures, because the coverage threshold applies to the whole tree. Judge a subset by its pass and fail counts. The `dist/` directory must exist (run the build first), or the `dist` tests are skipped and prove nothing.
 

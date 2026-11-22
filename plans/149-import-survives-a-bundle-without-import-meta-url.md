@@ -1,13 +1,8 @@
 # Plan 149: An app bundled to CommonJS imports the package and logs its requests
 
-> **Executor instructions**: Follow this plan step by step. Run every
-> verification command and confirm the expected result before moving to the
-> next step. If anything in the "STOP conditions" section occurs, stop and
-> report. Do not improvise. Skip any instruction to update `plans/README.md`:
-> the coordinator maintains the index.
+> **Executor instructions**: Follow this plan step by step. Run every verification command and confirm the expected result before moving to the next step. If anything in the "STOP conditions" section occurs, stop and report. Do not improvise. Skip any instruction to update `plans/README.md`: the coordinator maintains the index.
 >
-> **Drift check (run first)**: `git diff --stat c019a4f..HEAD -- packages/logixlysia/src/logger/create-logger.ts packages/logixlysia/src/output/rotation-manager.ts packages/logixlysia/src/helpers/otel-api.ts packages/logixlysia/__tests__/logger/commonjs-bundle.test.ts`
-> `create-logger.ts` may show a change from another pull request that adds a function after `resolveTimestampPattern` (around line 122). That is expected. Only the excerpts of the lines this plan touches (the `requireChalk` constant and `loadChalk`, lines 59 to 79) must match the live code. Any other mismatch in an in-scope file is a STOP condition.
+> **Drift check (run first)**: `git diff --stat c019a4f..HEAD -- packages/logixlysia/src/logger/create-logger.ts packages/logixlysia/src/output/rotation-manager.ts packages/logixlysia/src/helpers/otel-api.ts packages/logixlysia/__tests__/logger/commonjs-bundle.test.ts` `create-logger.ts` may show a change from another pull request that adds a function after `resolveTimestampPattern` (around line 122). That is expected. Only the excerpts of the lines this plan touches (the `requireChalk` constant and `loadChalk`, lines 59 to 79) must match the live code. Any other mismatch in an in-scope file is a STOP condition.
 
 ## Status
 
@@ -382,14 +377,14 @@ const gzipAsync = async (content: Buffer): Promise<Buffer> => {
 `src/helpers/otel-api.ts`: delete line 18 (`const requireOtel = createRequire(import.meta.url)`) and the blank line after it, and change the `try` block in `getOtelApi` to:
 
 ```ts
-  try {
-    // A CommonJS bundle leaves import.meta.url undefined and createRequire
-    // throws, which reads the same as OpenTelemetry not being installed.
-    const requireOtel = createRequire(import.meta.url)
-    otelApi = requireOtel('@opentelemetry/api') as OtelApi
-  } catch {
-    otelApi = null
-  }
+try {
+  // A CommonJS bundle leaves import.meta.url undefined and createRequire
+  // throws, which reads the same as OpenTelemetry not being installed.
+  const requireOtel = createRequire(import.meta.url)
+  otelApi = requireOtel('@opentelemetry/api') as OtelApi
+} catch {
+  otelApi = null
+}
 ```
 
 Do not change anything else in these three files.
@@ -408,12 +403,18 @@ Do this only if `node_modules/.bin/esbuild` exists at the worktree root. It repr
 import { Elysia } from 'elysia'
 import logixlysia from './dist/index.js'
 const app = new Elysia()
-  .use(logixlysia({ config: { disableFileLogging: true, showStartupMessage: false } }))
+  .use(
+    logixlysia({
+      config: { disableFileLogging: true, showStartupMessage: false }
+    })
+  )
   .get('/', ({ store }) => {
     store.pino.info('via pino')
     return 'ok'
   })
-app.handle(new Request('http://localhost/')).then(response => console.log('status', response.status))
+app
+  .handle(new Request('http://localhost/'))
+  .then(response => console.log('status', response.status))
 ```
 
 Then run `../../node_modules/.bin/esbuild .cjs-check.ts --bundle --platform=node --format=cjs --log-level=error --outfile=<a path outside the worktree>/cjs-check.cjs && node <same path>/cjs-check.cjs`, and delete `.cjs-check.ts`.

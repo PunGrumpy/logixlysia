@@ -1,20 +1,8 @@
 # Plan 151: Tests pin `logDirMode` and `disableWebSocketLogging`
 
-> **Executor instructions**: Follow this plan step by step. Run every
-> verification command and confirm the expected result before moving to the
-> next step. If anything in the "STOP conditions" section occurs, stop and
-> report. Do not improvise. Skip any instruction to update `plans/README.md`:
-> the coordinator maintains the index.
+> **Executor instructions**: Follow this plan step by step. Run every verification command and confirm the expected result before moving to the next step. If anything in the "STOP conditions" section occurs, stop and report. Do not improvise. Skip any instruction to update `plans/README.md`: the coordinator maintains the index.
 >
-> **Drift check (run first)**: `git diff --stat c019a4f..HEAD -- packages/logixlysia/src/output/file.ts packages/logixlysia/src/output/file-sink.ts packages/logixlysia/src/output/fs.ts packages/logixlysia/src/websocket/wrap-ws.ts packages/logixlysia/__tests__/output packages/logixlysia/__tests__/websocket packages/logixlysia/__tests__/_helpers`
-> If any in-scope file changed since this plan was written, compare the
-> "Current state" excerpts against the live code before proceeding. On a
-> mismatch, treat it as a STOP condition. A change to `src/websocket/wrap-ws.ts`
-> that adds an ERROR line for a hook that throws is expected (another pull
-> request makes it) and is not a mismatch, as long as the three
-> `disableWebSocketLogging` checks shown below still guard the lines for hooks
-> that succeed. Edits that pull request makes to the existing files under
-> `__tests__/websocket/` are not a mismatch either.
+> **Drift check (run first)**: `git diff --stat c019a4f..HEAD -- packages/logixlysia/src/output/file.ts packages/logixlysia/src/output/file-sink.ts packages/logixlysia/src/output/fs.ts packages/logixlysia/src/websocket/wrap-ws.ts packages/logixlysia/__tests__/output packages/logixlysia/__tests__/websocket packages/logixlysia/__tests__/_helpers` If any in-scope file changed since this plan was written, compare the "Current state" excerpts against the live code before proceeding. On a mismatch, treat it as a STOP condition. A change to `src/websocket/wrap-ws.ts` that adds an ERROR line for a hook that throws is expected (another pull request makes it) and is not a mismatch, as long as the three `disableWebSocketLogging` checks shown below still guard the lines for hooks that succeed. Edits that pull request makes to the existing files under `__tests__/websocket/` are not a mismatch either.
 
 ## Status
 
@@ -60,7 +48,7 @@ It goes from `logToFile` to the file sink at `src/output/file.ts:67-73`:
 The sink creates the directory at `src/output/file-sink.ts:128`:
 
 ```ts
-    await ensureDir(path.dirname(this.filePath), options.logDirMode)
+await ensureDir(path.dirname(this.filePath), options.logDirMode)
 ```
 
 and `src/output/fs.ts` in full:
@@ -81,29 +69,29 @@ export const ensureDir = async (
 The default (`700`) is already pinned by `__tests__/output/file.test.ts:155-179`, the test `'creates log files with 0600 mode and directories with 0700 mode by default'`. No test sets `logDirMode`. That file's tests are the pattern to follow. The neighbouring test `'honors a configured logFileMode'` (lines 181 to 203):
 
 ```ts
-  test('honors a configured logFileMode', async () => {
-    const dir = await createTempDir()
-    try {
-      const filePath = path.join(dir, 'logs', 'custom-mode.log')
-      const options: Options = { config: { logFileMode: 0o644 } }
+test('honors a configured logFileMode', async () => {
+  const dir = await createTempDir()
+  try {
+    const filePath = path.join(dir, 'logs', 'custom-mode.log')
+    const options: Options = { config: { logFileMode: 0o644 } }
 
-      const request = createMockRequest('http://localhost/test')
-      await logToFile({
-        data: { message: 'hello' },
-        filePath,
-        level: 'INFO',
-        options,
-        precomputed: precomputedFor(request),
-        request,
-        store: { beforeTime: 0n }
-      })
+    const request = createMockRequest('http://localhost/test')
+    await logToFile({
+      data: { message: 'hello' },
+      filePath,
+      level: 'INFO',
+      options,
+      precomputed: precomputedFor(request),
+      request,
+      store: { beforeTime: 0n }
+    })
 
-      const fileStat = await fs.stat(filePath)
-      expect(permBits(fileStat.mode)).toBe('644')
-    } finally {
-      await removeTempDir(dir)
-    }
-  })
+    const fileStat = await fs.stat(filePath)
+    expect(permBits(fileStat.mode)).toBe('644')
+  } finally {
+    await removeTempDir(dir)
+  }
+})
 ```
 
 `__tests__/_helpers/perm-bits.ts` in full: `export const permBits = (mode: number): string => mode.toString(8).slice(-3)`.
@@ -141,12 +129,12 @@ How the existing permission tests handle the umask: they do not set or read it. 
 The plugin builds the wrapper from the user's options at `src/index.ts:388-393` and exposes it as `plugin.wrapWs`:
 
 ```ts
-  const wrapWs = createWsHandlerWrapper(
-    options,
-    baseLogger,
-    contextStore,
-    sinks.pathFilter
-  )
+const wrapWs = createWsHandlerWrapper(
+  options,
+  baseLogger,
+  contextStore,
+  sinks.pathFilter
+)
 ```
 
 The pattern for the WebSocket test is the last test of `__tests__/websocket/log-filter-paths.test.ts` (lines 81 to 101), which builds the plugin with a mock transport and drives `plugin.wrapWs` with hooks that succeed. With synchronous hooks the lines are written synchronously, so the test needs no wait:
@@ -183,15 +171,15 @@ Conventions: tests use `bun:test`, import source from `../../src/...` and helper
 
 Run lint and format from the worktree root. Run the rest from `packages/logixlysia`.
 
-| Purpose        | Command                                                                                                       | Expected on success                                   |
-| -------------- | ------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
-| Install        | `bun install --frozen-lockfile` (root)                                                                        | exit 0                                                |
-| Build          | `cd packages/logixlysia && bun run build`                                                                     | `Build completed`                                     |
-| Lint           | `bun run lint` (root)                                                                                         | exit 0                                                |
-| Format         | `bun run format` (root)                                                                                       | exit 0; read the diff it makes                        |
-| Typecheck      | `cd packages/logixlysia && bun run typecheck`                                                                 | exit 0                                                |
-| The new files  | `cd packages/logixlysia && bun test ./__tests__/output/log-dir-mode.test.ts ./__tests__/websocket/disable-websocket-logging.test.ts` | judge by pass and fail counts (exit is 1 on a subset) |
-| Full suite     | `cd packages/logixlysia && bun test`                                                                          | 0 fail (1249 tests in 100 files before this plan)     |
+| Purpose | Command | Expected on success |
+| --- | --- | --- |
+| Install | `bun install --frozen-lockfile` (root) | exit 0 |
+| Build | `cd packages/logixlysia && bun run build` | `Build completed` |
+| Lint | `bun run lint` (root) | exit 0 |
+| Format | `bun run format` (root) | exit 0; read the diff it makes |
+| Typecheck | `cd packages/logixlysia && bun run typecheck` | exit 0 |
+| The new files | `cd packages/logixlysia && bun test ./__tests__/output/log-dir-mode.test.ts ./__tests__/websocket/disable-websocket-logging.test.ts` | judge by pass and fail counts (exit is 1 on a subset) |
+| Full suite | `cd packages/logixlysia && bun test` | 0 fail (1249 tests in 100 files before this plan) |
 
 `bun test <files>` exits 1 on a subset even with zero failures, because the coverage threshold applies to the whole tree.
 

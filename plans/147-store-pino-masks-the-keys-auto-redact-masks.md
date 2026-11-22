@@ -1,24 +1,8 @@
 # Plan 147: With `autoRedact` on, `store.pino` masks the same keys as the plugin's own lines
 
-> **Executor instructions**: Follow this plan step by step. Run every
-> verification command and confirm the expected result before moving to the
-> next step. If anything in the "STOP conditions" section occurs, stop and
-> report. Do not improvise. Skip any instruction to update `plans/README.md`:
-> the coordinator maintains the index.
+> **Executor instructions**: Follow this plan step by step. Run every verification command and confirm the expected result before moving to the next step. If anything in the "STOP conditions" section occurs, stop and report. Do not improvise. Skip any instruction to update `plans/README.md`: the coordinator maintains the index.
 >
-> **Drift check (run first)**: `git diff --stat c019a4f..HEAD -- packages/logixlysia/src/logger/index.ts packages/logixlysia/src/utils/redact.ts packages/logixlysia/__tests__/utils/redact.test.ts packages/logixlysia/__tests__/logger/pino-auto-redact.test.ts apps/docs/content/configuration.mdx`
-> This plan runs after plan 141 has merged, so the drift check will list
-> `src/logger/index.ts` (141 changes the `prettyStream` function and the
-> `./create-logger` import) and `configuration.mdx` (141 changes the
-> `timestamp` section). Plans 144 and 148 of the same pass may also have
-> changed `src/logger/index.ts` (`PluginLogger` and `finalizeRequest`) and
-> `configuration.mdx` (the `logErrorPayload` section). Those changes are
-> expected. Only the excerpts in "Current state" of the lines this plan
-> touches must match the live code, by content: line numbers in
-> `src/logger/index.ts` after line 76 may have moved by a few lines. A
-> mismatch in one of those excerpts, or any change to
-> `src/utils/redact.ts` or `__tests__/utils/redact.test.ts`, is a STOP
-> condition.
+> **Drift check (run first)**: `git diff --stat c019a4f..HEAD -- packages/logixlysia/src/logger/index.ts packages/logixlysia/src/utils/redact.ts packages/logixlysia/__tests__/utils/redact.test.ts packages/logixlysia/__tests__/logger/pino-auto-redact.test.ts apps/docs/content/configuration.mdx` This plan runs after plan 141 has merged, so the drift check will list `src/logger/index.ts` (141 changes the `prettyStream` function and the `./create-logger` import) and `configuration.mdx` (141 changes the `timestamp` section). Plans 144 and 148 of the same pass may also have changed `src/logger/index.ts` (`PluginLogger` and `finalizeRequest`) and `configuration.mdx` (the `logErrorPayload` section). Those changes are expected. Only the excerpts in "Current state" of the lines this plan touches must match the live code, by content: line numbers in `src/logger/index.ts` after line 76 may have moved by a few lines. A mismatch in one of those excerpts, or any change to `src/utils/redact.ts` or `__tests__/utils/redact.test.ts`, is a STOP condition.
 
 ## Status
 
@@ -35,15 +19,15 @@ With `autoRedact: true` (also turned on by `preset: 'prod'`), the plugin masks a
 
 Measured at `c019a4f` on Bun 1.3.14, with `createLogger({ config: { autoRedact: true, pino: { base: null, timestamp: false } } })` and a capturing pino destination, values are fake:
 
-| Logged through `store.pino`                                                      | Written today                                        | Written after this plan                          |
-| -------------------------------------------------------------------------------- | ---------------------------------------------------- | ------------------------------------------------ |
-| `{ password: 'FAKE_A' }`                                                         | `"password":"[REDACTED]"`                            | `"password":"[REDACTED]"`                        |
-| `{ accessToken, access_token, apiKey, x_api_key, Authorization, refreshToken, clientSecret, jwt, stripeSecretKey }` | every value in clear text (`"accessToken":"FAKE_B"`, …) | every value `"[REDACTED]"`                    |
-| `{ user: { profile: { password: 'FAKE_L' } } }`                                  | `"password":"FAKE_L"`                                | `"password":"[REDACTED]"`                        |
-| `error` with `config.headers.Authorization`                                      | `"Authorization":"FAKE_EH"`                          | `"Authorization":"[REDACTED]"`                   |
-| `{ headers: new Headers({ authorization, accept }) }`                            | `"headers":"[unable to serialize, circular reference is too complex to analyze]"` | `"headers":{"accept":"x","authorization":"[REDACTED]"}` |
-| `child({ accessToken: 'FAKE_CB' }).info('child')`                                | `"accessToken":"FAKE_CB"`                            | `"accessToken":"[REDACTED]"`                     |
-| `{ note: 'mail a@b.test from 10.0.0.1' }`                                        | unchanged                                            | unchanged (value patterns still do not run here) |
+| Logged through `store.pino` | Written today | Written after this plan |
+| --- | --- | --- |
+| `{ password: 'FAKE_A' }` | `"password":"[REDACTED]"` | `"password":"[REDACTED]"` |
+| `{ accessToken, access_token, apiKey, x_api_key, Authorization, refreshToken, clientSecret, jwt, stripeSecretKey }` | every value in clear text (`"accessToken":"FAKE_B"`, …) | every value `"[REDACTED]"` |
+| `{ user: { profile: { password: 'FAKE_L' } } }` | `"password":"FAKE_L"` | `"password":"[REDACTED]"` |
+| `error` with `config.headers.Authorization` | `"Authorization":"FAKE_EH"` | `"Authorization":"[REDACTED]"` |
+| `{ headers: new Headers({ authorization, accept }) }` | `"headers":"[unable to serialize, circular reference is too complex to analyze]"` | `"headers":{"accept":"x","authorization":"[REDACTED]"}` |
+| `child({ accessToken: 'FAKE_CB' }).info('child')` | `"accessToken":"FAKE_CB"` | `"accessToken":"[REDACTED]"` |
+| `{ note: 'mail a@b.test from 10.0.0.1' }` | unchanged | unchanged (value patterns still do not run here) |
 
 The same holds with `pino.prettyPrint` on and with a `pino.transport`. With `transport: { target: 'pino/file', … }` and with `transport.targets` holding two `pino/file` targets, the file today holds `"accessToken":"FAKE_T1"` and `"password":"FAKE_T2"` under `user.profile`; after the fix both are `"[REDACTED]"`.
 
@@ -71,38 +55,38 @@ const NO_CONTEXT: Readonly<Record<string, unknown>> = Object.freeze({})
 `src/logger/index.ts:62-74`, inside `createLazyPino`. `pinoOptions` is `config.pino` without `errorKey`, `messageKey` and `prettyPrint`:
 
 ```ts
-  const basePinoOptions = {
-    ...pinoOptions,
-    ...outputKeys,
-    level: pinoOptions.level ?? 'info',
-    ...(config?.autoRedact === true && pinoOptions.redact === undefined
-      ? {
-          redact: {
-            censor: '[REDACTED]',
-            paths: buildPinoRedactPaths(config?.redactKeys)
-          }
+const basePinoOptions = {
+  ...pinoOptions,
+  ...outputKeys,
+  level: pinoOptions.level ?? 'info',
+  ...(config?.autoRedact === true && pinoOptions.redact === undefined
+    ? {
+        redact: {
+          censor: '[REDACTED]',
+          paths: buildPinoRedactPaths(config?.redactKeys)
         }
-      : {})
-  }
+      }
+    : {})
+}
 ```
 
 `src/logger/index.ts:84-97` (plan 141 does not change these lines, but they sit below its change and may have moved down):
 
 ```ts
-  let realPino: Pino | undefined
+let realPino: Pino | undefined
 
-  const getPino = (): Pino => {
-    if (!realPino) {
-      const factory = pinoFactory ?? loadPino()
-      realPino = shouldPrettyPrint
-        ? factory(basePinoOptions, prettyStream())
-        : factory({
-            ...basePinoOptions,
-            transport: pinoOptions.transport
-          })
-    }
-    return realPino
+const getPino = (): Pino => {
+  if (!realPino) {
+    const factory = pinoFactory ?? loadPino()
+    realPino = shouldPrettyPrint
+      ? factory(basePinoOptions, prettyStream())
+      : factory({
+          ...basePinoOptions,
+          transport: pinoOptions.transport
+        })
   }
+  return realPino
+}
 ```
 
 Do not touch `prettyStream` (lines 76-82 at `c019a4f`; plan 141 rewrites it).
@@ -147,15 +131,15 @@ Its only callers are `src/logger/index.ts:70` and the test at `__tests__/utils/r
 Every string it meets goes through `redactString(text, patterns)` (`src/utils/redact.ts:303-362`), which runs `redactPatterns` and then the built-in value patterns (emails, IPs, cards, JWTs, URL passwords, `Bearer`/`Basic`). That is the part `store.pino` must not get. `redactString` is called with `rules?.patterns` from exactly 12 places in the file, each of the form `redactString(<text>, rules?.patterns)`, at lines 373, 388, 404, 435, 438, 482, 509, 542, 613, 631, 775 and 877. For example line 613:
 
 ```ts
-    const redactedMessage = redactString(originalError.message, rules?.patterns)
+const redactedMessage = redactString(originalError.message, rules?.patterns)
 ```
 
 and line 775, in `walker.value`:
 
 ```ts
-    if (typeof value === 'string') {
-      return redactString(value, rules?.patterns)
-    }
+if (typeof value === 'string') {
+  return redactString(value, rules?.patterns)
+}
 ```
 
 `grep -c "redactString(" src/utils/redact.ts` prints `12` at `c019a4f`.
@@ -212,16 +196,16 @@ Counted, not timed. Under `autoRedact` with no `pino.redact`, each `store.pino` 
 
 Run lint and format from the worktree root. Run the rest from the directory shown.
 
-| Purpose        | Command                                                                                          | Expected on success                                     |
-| -------------- | ------------------------------------------------------------------------------------------------ | ------------------------------------------------------- |
-| Install        | `bun install --frozen-lockfile` (root)                                                           | exit 0                                                  |
-| Build          | `cd packages/logixlysia && bun run build`                                                        | `Build completed`                                       |
-| Lint           | `bun run lint` (root)                                                                            | exit 0                                                  |
-| Format         | `bun run format` (root)                                                                          | exit 0; read the diff it makes                          |
-| Typecheck      | `cd packages/logixlysia && bun run typecheck`                                                    | exit 0                                                  |
+| Purpose | Command | Expected on success |
+| --- | --- | --- |
+| Install | `bun install --frozen-lockfile` (root) | exit 0 |
+| Build | `cd packages/logixlysia && bun run build` | `Build completed` |
+| Lint | `bun run lint` (root) | exit 0 |
+| Format | `bun run format` (root) | exit 0; read the diff it makes |
+| Typecheck | `cd packages/logixlysia && bun run typecheck` | exit 0 |
 | Two test files | `cd packages/logixlysia && bun test ./__tests__/logger/pino-auto-redact.test.ts ./__tests__/utils/redact.test.ts` | judge by pass and fail counts (exit is 1 on a subset) |
-| Full suite     | `cd packages/logixlysia && bun test`                                                             | 0 fail                                                  |
-| Docs typecheck | `cd apps/docs && bun run typecheck`                                                              | exit 0                                                  |
+| Full suite | `cd packages/logixlysia && bun test` | 0 fail |
+| Docs typecheck | `cd apps/docs && bun run typecheck` | exit 0 |
 
 ## Scope
 
@@ -491,7 +475,6 @@ describe('redact with keysOnly', () => {
     expect(out.headers.get('from')).toBe('a@b.test')
   })
 })
-
 ```
 
 `bun run typecheck` fails at this step (`keysOnly` is not yet a field of `RedactRules`); `bun test` runs the file anyway.
@@ -579,7 +562,6 @@ In `src/logger/index.ts`:
      config?.autoRedact === true && pinoOptions.redact === undefined
        ? { keys: config.redactKeys, keysOnly: true }
        : undefined
-
    ```
 
    and replace the conditional spread at the end of `basePinoOptions` (the `...(config?.autoRedact === true && pinoOptions.redact === undefined ? { redact: { … } } : {})` excerpt in "Current state") with:
@@ -593,9 +575,9 @@ In `src/logger/index.ts`:
 4. In `getPino`, right after the `realPino = shouldPrettyPrint ? … : factory({ … })` assignment and before the closing `}` of `if (!realPino)`, add:
 
    ```ts
-         if (keyRules !== undefined) {
-           maskChildBindings(realPino, keyRules)
-         }
+   if (keyRules !== undefined) {
+     maskChildBindings(realPino, keyRules)
+   }
    ```
 
 5. In `src/utils/redact.ts`, delete `buildPinoRedactPaths` with its doc comment (the whole excerpt in "Current state"). In `__tests__/utils/redact.test.ts`, delete the `describe('buildPinoRedactPaths', …)` block (the excerpt in "Current state") and remove `buildPinoRedactPaths,` from the import at the top.

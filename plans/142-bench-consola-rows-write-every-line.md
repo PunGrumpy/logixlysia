@@ -1,15 +1,8 @@
 # Plan 142: The benchmark's consola rows write every line, and the comparison page names the suites that exist
 
-> **Executor instructions**: Follow this plan step by step. Run every
-> verification command and confirm the expected result before moving to the
-> next step. If anything in the "STOP conditions" section occurs, stop and
-> report. Do not improvise. Skip any instruction to update `plans/README.md`:
-> the coordinator maintains the index.
+> **Executor instructions**: Follow this plan step by step. Run every verification command and confirm the expected result before moving to the next step. If anything in the "STOP conditions" section occurs, stop and report. Do not improvise. Skip any instruction to update `plans/README.md`: the coordinator maintains the index.
 >
-> **Drift check (run first)**: `git diff --stat c019a4f..HEAD -- packages/bench apps/docs/content/comparison.mdx`
-> If either in-scope file changed since this plan was written, compare the
-> "Current state" excerpts against the live code before proceeding. On a
-> mismatch, treat it as a STOP condition.
+> **Drift check (run first)**: `git diff --stat c019a4f..HEAD -- packages/bench apps/docs/content/comparison.mdx` If either in-scope file changed since this plan was written, compare the "Current state" excerpts against the live code before proceeding. On a mismatch, treat it as a STOP condition.
 
 ## Status
 
@@ -95,15 +88,15 @@ This page is the comparison page, so it may name other logging libraries. No oth
 
 ## Commands you will need
 
-| Purpose          | Command                                                             | Expected on success                         |
-| ---------------- | ------------------------------------------------------------------- | ------------------------------------------- |
-| Install          | `bun install --frozen-lockfile` (root)                              | exit 0                                      |
-| Build the plugin | `cd packages/logixlysia && bun run build`                           | `Build completed` (the bench imports `dist`) |
-| Run the bench    | `cd packages/bench && bun x vitest bench --run`                     | every suite runs; exit 0; about a minute    |
-| Bench typecheck  | `cd packages/bench && bun run typecheck`                            | exit 0                                      |
-| Lint             | `bun run lint` (root)                                               | exit 0                                      |
-| Format           | `bun run format` (root)                                             | exit 0; read the diff it makes              |
-| Docs typecheck   | `cd apps/docs && bun run typecheck`                                 | exit 0                                      |
+| Purpose | Command | Expected on success |
+| --- | --- | --- |
+| Install | `bun install --frozen-lockfile` (root) | exit 0 |
+| Build the plugin | `cd packages/logixlysia && bun run build` | `Build completed` (the bench imports `dist`) |
+| Run the bench | `cd packages/bench && bun x vitest bench --run` | every suite runs; exit 0; about a minute |
+| Bench typecheck | `cd packages/bench && bun run typecheck` | exit 0 |
+| Lint | `bun run lint` (root) | exit 0 |
+| Format | `bun run format` (root) | exit 0; read the diff it makes |
+| Docs typecheck | `cd apps/docs && bun run typecheck` | exit 0 |
 
 The start-up checks run when the bench file is loaded, before any suite, so a failing check stops the whole run with its message. Do not quote the timings the bench prints: the machine is busy and they mean nothing here.
 

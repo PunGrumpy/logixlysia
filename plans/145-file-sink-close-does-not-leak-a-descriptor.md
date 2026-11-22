@@ -1,15 +1,8 @@
 # Plan 145: A log write that races `flushLogixlysia(options, { close: true })` leaves no descriptor that a later close cannot release
 
-> **Executor instructions**: Follow this plan step by step. Run every
-> verification command and confirm the expected result before moving to the
-> next step. If anything in the "STOP conditions" section occurs, stop and
-> report. Do not improvise. Skip any instruction to update `plans/README.md`:
-> the coordinator maintains the index.
+> **Executor instructions**: Follow this plan step by step. Run every verification command and confirm the expected result before moving to the next step. If anything in the "STOP conditions" section occurs, stop and report. Do not improvise. Skip any instruction to update `plans/README.md`: the coordinator maintains the index.
 >
-> **Drift check (run first)**: `git diff --stat c019a4f..HEAD -- packages/logixlysia/src/output/file-sink.ts packages/logixlysia/__tests__/output/file-sink-lifecycle.test.ts`
-> If any in-scope file changed since this plan was written, compare the
-> "Current state" excerpts against the live code before proceeding. On a
-> mismatch, treat it as a STOP condition.
+> **Drift check (run first)**: `git diff --stat c019a4f..HEAD -- packages/logixlysia/src/output/file-sink.ts packages/logixlysia/__tests__/output/file-sink-lifecycle.test.ts` If any in-scope file changed since this plan was written, compare the "Current state" excerpts against the live code before proceeding. On a mismatch, treat it as a STOP condition.
 
 ## Status
 
@@ -116,12 +109,12 @@ The fault is in `close()`:
 The plugin's only writer, `src/output/file.ts:67-73`, looks the sink up for every line, in the same expression as the write:
 
 ```ts
-    await getFileSink(filePath).write(line, {
-      logDirMode: config?.logDirMode,
-      logFileMode: config?.logFileMode,
-      logRotation: config?.logRotation,
-      onRotationError
-    })
+await getFileSink(filePath).write(line, {
+  logDirMode: config?.logDirMode,
+  logFileMode: config?.logFileMode,
+  logRotation: config?.logRotation,
+  onRotationError
+})
 ```
 
 So once the closing sink is out of the registry, every later line goes to a new sink that a later `closeAllFileSinks()` reaches. The other callers of the registry are `flushAllFileSinks` (from `src/output/shutdown.ts`, used by `onStop` and the flush part of `flushLogixlysia`) and `closeAllFileSinks` (from `flushLogixlysia` in `src/index.ts:937-945`). Neither is changed. `getFileSink` and `FileSinkImpl` are not exported from the package.
@@ -153,15 +146,15 @@ Conventions to match:
 
 Run lint and format from the worktree root. Run the rest from the directory shown.
 
-| Purpose       | Command                                                                                     | Expected on success                                     |
-| ------------- | ------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
-| Install       | `bun install --frozen-lockfile` (root)                                                      | exit 0                                                  |
-| Build         | `cd packages/logixlysia && bun run build`                                                   | `Build completed`                                       |
-| Lint          | `bun run lint` (root)                                                                       | exit 0                                                  |
-| Format        | `bun run format` (root)                                                                     | exit 0; read the diff it makes                          |
-| Typecheck     | `cd packages/logixlysia && bun run typecheck`                                               | exit 0                                                  |
-| One test file | `cd packages/logixlysia && bun test ./__tests__/output/file-sink-lifecycle.test.ts`         | judge by pass and fail counts (exit is 1 on a subset)   |
-| Full suite    | `cd packages/logixlysia && bun test`                                                        | 0 fail (1249 tests at `c019a4f`, 1251 after this plan)  |
+| Purpose | Command | Expected on success |
+| --- | --- | --- |
+| Install | `bun install --frozen-lockfile` (root) | exit 0 |
+| Build | `cd packages/logixlysia && bun run build` | `Build completed` |
+| Lint | `bun run lint` (root) | exit 0 |
+| Format | `bun run format` (root) | exit 0; read the diff it makes |
+| Typecheck | `cd packages/logixlysia && bun run typecheck` | exit 0 |
+| One test file | `cd packages/logixlysia && bun test ./__tests__/output/file-sink-lifecycle.test.ts` | judge by pass and fail counts (exit is 1 on a subset) |
+| Full suite | `cd packages/logixlysia && bun test` | 0 fail (1249 tests at `c019a4f`, 1251 after this plan) |
 
 On a heavily loaded machine the tests in this file can pass Bun's 5 second default because removing a temp directory is slow. If a test fails with a timeout and no assertion message, run the file again with `--timeout 60000` and judge by that run.
 
@@ -249,49 +242,49 @@ const trackWrittenHandles = async (dir: string): Promise<HandleTracker> => {
 Inside the `describe` block, directly before `test('close() is idempotent', …)`, add two tests:
 
 ```ts
-  test('a write issued while close() runs is released by the next close', async () => {
-    const dir = await createTempDir()
-    const tracker = await trackWrittenHandles(dir)
-    try {
-      const filePath = path.join(dir, 'logs', 'close-race.log')
-      const sink = getFileSink(filePath)
-      await sink.write('before-close\n', {})
+test('a write issued while close() runs is released by the next close', async () => {
+  const dir = await createTempDir()
+  const tracker = await trackWrittenHandles(dir)
+  try {
+    const filePath = path.join(dir, 'logs', 'close-race.log')
+    const sink = getFileSink(filePath)
+    await sink.write('before-close\n', {})
 
-      const closing = sink.close()
-      const late = getFileSink(filePath).write('during-close\n', {})
-      await closing
-      await late
-      await closeAllFileSinks()
+    const closing = sink.close()
+    const late = getFileSink(filePath).write('during-close\n', {})
+    await closing
+    await late
+    await closeAllFileSinks()
 
-      expect(tracker.openDescriptors()).toEqual([])
-      expect(await readFile(filePath, 'utf-8')).toBe(
-        'before-close\nduring-close\n'
-      )
-    } finally {
-      tracker.restore()
-      await closeAllFileSinks()
-      await removeTempDir(dir)
-    }
-  })
+    expect(tracker.openDescriptors()).toEqual([])
+    expect(await readFile(filePath, 'utf-8')).toBe(
+      'before-close\nduring-close\n'
+    )
+  } finally {
+    tracker.restore()
+    await closeAllFileSinks()
+    await removeTempDir(dir)
+  }
+})
 
-  test('closing a sink again leaves the sink now registered for its path', async () => {
-    const dir = await createTempDir()
-    try {
-      const filePath = path.join(dir, 'logs', 'close-twice.log')
-      const first = getFileSink(filePath)
-      await first.write('first\n', {})
-      await first.close()
+test('closing a sink again leaves the sink now registered for its path', async () => {
+  const dir = await createTempDir()
+  try {
+    const filePath = path.join(dir, 'logs', 'close-twice.log')
+    const first = getFileSink(filePath)
+    await first.write('first\n', {})
+    await first.close()
 
-      const second = getFileSink(filePath)
-      await second.write('second\n', {})
-      await first.close()
+    const second = getFileSink(filePath)
+    await second.write('second\n', {})
+    await first.close()
 
-      expect(getFileSink(filePath)).toBe(second)
-    } finally {
-      await closeAllFileSinks()
-      await removeTempDir(dir)
-    }
-  })
+    expect(getFileSink(filePath)).toBe(second)
+  } finally {
+    await closeAllFileSinks()
+    await removeTempDir(dir)
+  }
+})
 ```
 
 The `late` write is issued in the statement right after `sink.close()` and before anything is awaited. Keep it that way: that ordering is what puts the write outside the batches `close()` waits for.

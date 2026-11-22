@@ -1,17 +1,8 @@
 # Plan 144: `sampling.tail.status` keeps the trail of a request that ended in an error, and `tail.keep` sees the error
 
-> **Executor instructions**: Follow this plan step by step. Run every
-> verification command and confirm the expected result before moving to the
-> next step. If anything in the "STOP conditions" section occurs, stop and
-> report. Do not improvise. Skip any instruction to update `plans/README.md`:
-> the coordinator maintains the index.
+> **Executor instructions**: Follow this plan step by step. Run every verification command and confirm the expected result before moving to the next step. If anything in the "STOP conditions" section occurs, stop and report. Do not improvise. Skip any instruction to update `plans/README.md`: the coordinator maintains the index.
 >
-> **Drift check (run first)**: `git diff --stat c019a4f..HEAD -- packages/logixlysia/src/index.ts packages/logixlysia/src/logger/index.ts packages/logixlysia/src/sampling/index.ts packages/logixlysia/src/types/config.ts packages/logixlysia/__tests__/sampling/plugin.test.ts packages/logixlysia/__tests__/sampling/runtime.test.ts apps/docs/content/features/sampling.mdx`
-> If any in-scope file changed since this plan was written, compare the
-> "Current state" excerpts against the live code before proceeding. On a
-> mismatch, treat it as a STOP condition. A change to `src/index.ts` that
-> touches only `flushLogixlysia` or the `onStop` hook is expected (another
-> pull request owns them) and is not a mismatch.
+> **Drift check (run first)**: `git diff --stat c019a4f..HEAD -- packages/logixlysia/src/index.ts packages/logixlysia/src/logger/index.ts packages/logixlysia/src/sampling/index.ts packages/logixlysia/src/types/config.ts packages/logixlysia/__tests__/sampling/plugin.test.ts packages/logixlysia/__tests__/sampling/runtime.test.ts apps/docs/content/features/sampling.mdx` If any in-scope file changed since this plan was written, compare the "Current state" excerpts against the live code before proceeding. On a mismatch, treat it as a STOP condition. A change to `src/index.ts` that touches only `flushLogixlysia` or the `onStop` hook is expected (another pull request owns them) and is not a mismatch.
 
 ## Status
 
@@ -28,14 +19,14 @@
 
 Measured at `c019a4f` on Bun 1.3.14 with `sampling: { head: { INFO: 0 }, tail: { status: … } }`, a transport that prints `LEVEL:message:status`, and a handler that calls `log.info('step 1')` before it fails:
 
-| Request                                   | `tail.status` | Lines written today                 | `tail.keep` received          |
-| ----------------------------------------- | ------------- | ----------------------------------- | ----------------------------- |
-| stream throws after its first chunk       | 500           | `ERROR:stream boom:200`             | `{ status: 200 }`, no error   |
-| `onError` answers the error with a 302    | 500           | `ERROR:mapped boom:302`             | `{ status: 302 }`, no error   |
-| stream throws after its first chunk       | 503           | `ERROR:stream boom:200`             | `{ status: 200 }`, no error   |
-| handler throws `new Error`, client gets 500 | 503         | `ERROR:plain boom:500`              | `{ status: 500 }`, no error   |
-| handler throws `new HttpError(404, …)`    | 500           | `WARNING:missing:404`               | `{ status: 404 }`, no error   |
-| handler throws `status(202, …)`           | 500           | nothing                             | `{ status: 202 }`, no error   |
+| Request | `tail.status` | Lines written today | `tail.keep` received |
+| --- | --- | --- | --- |
+| stream throws after its first chunk | 500 | `ERROR:stream boom:200` | `{ status: 200 }`, no error |
+| `onError` answers the error with a 302 | 500 | `ERROR:mapped boom:302` | `{ status: 302 }`, no error |
+| stream throws after its first chunk | 503 | `ERROR:stream boom:200` | `{ status: 200 }`, no error |
+| handler throws `new Error`, client gets 500 | 503 | `ERROR:plain boom:500` | `{ status: 500 }`, no error |
+| handler throws `new HttpError(404, …)` | 500 | `WARNING:missing:404` | `{ status: 404 }`, no error |
+| handler throws `status(202, …)` | 500 | nothing | `{ status: 202 }`, no error |
 
 After this plan, a request that ended in an error the plugin logs at `ERROR` counts as a `500` for the `tail.status` comparison when the client got less than `500`. The first two rows therefore also write `INFO:step 1` before the `ERROR` line (the `status` rule matches, so `keep` is not called for them). The two `503` rows write what they write today: a user who sets `503` has said a `500` is below their bar, and a thrown `Error` the client got as a `500` is compared with its true status, as before. Whenever `tail.keep` runs, its outcome carries a new `error` field holding what was thrown: the `404` row now hands it the `HttpError`, and a stream that fails with only a `durationMs` rule configured hands it the stream's `Error` with `status: 200`. The last two rows also write what they write today: a thrown 4xx is logged at `WARNING` and stays under a `500` threshold, and a thrown `status()` result below 400 is a response, not an error. Nothing changes for a request with no recorded error, or when `sampling` is not configured.
 
@@ -81,53 +72,49 @@ interface RequestRecord {
 `src/index.ts` lines 606 to 652, `finishRequest`, calls it and only afterwards writes the error line:
 
 ```ts
-  const finishRequest = (
-    request: Request,
-    record: RequestRecord,
-    status: number,
-    responseHeaders?: Headers
-  ): void => {
-    if (record.phase === 'closed') {
-      return
-    }
-    record.phase = 'closed'
-    const owner = lineOwners.get(request)
-    const lineWrittenByAnotherInstance =
-      record.seenByWrap && owner !== undefined && owner !== instance
-    if (lineWrittenByAnotherInstance) {
-      try {
-        logger.finalizeRequest(
-          request,
-          { beforeTime: record.startedAt },
-          status
-        )
-      } catch (failure) {
-        reportFormatError(failure, onSinkError)
-      }
-      return
-    }
+const finishRequest = (
+  request: Request,
+  record: RequestRecord,
+  status: number,
+  responseHeaders?: Headers
+): void => {
+  if (record.phase === 'closed') {
+    return
+  }
+  record.phase = 'closed'
+  const owner = lineOwners.get(request)
+  const lineWrittenByAnotherInstance =
+    record.seenByWrap && owner !== undefined && owner !== instance
+  if (lineWrittenByAnotherInstance) {
     try {
-      const store = closeRequest(
-        request,
-        record.setHeaders ?? {},
-        status,
-        responseHeaders
-      )
-      if (isExcluded(request)) {
-        return
-      }
-      if (
-        record.error !== undefined &&
-        (status >= 400 || !isStatusResponse(record.error))
-      ) {
-        logger.handleHttpError(request, record.error, { ...store, status })
-      } else if (!hidesAccessLine(request, status)) {
-        emitAccessLine(request, status, store)
-      }
+      logger.finalizeRequest(request, { beforeTime: record.startedAt }, status)
     } catch (failure) {
       reportFormatError(failure, onSinkError)
     }
+    return
   }
+  try {
+    const store = closeRequest(
+      request,
+      record.setHeaders ?? {},
+      status,
+      responseHeaders
+    )
+    if (isExcluded(request)) {
+      return
+    }
+    if (
+      record.error !== undefined &&
+      (status >= 400 || !isStatusResponse(record.error))
+    ) {
+      logger.handleHttpError(request, record.error, { ...store, status })
+    } else if (!hidesAccessLine(request, status)) {
+      emitAccessLine(request, status, store)
+    }
+  } catch (failure) {
+    reportFormatError(failure, onSinkError)
+  }
+}
 ```
 
 `isStatusResponse` is already imported at the top of `src/index.ts` (line 19).
@@ -135,9 +122,9 @@ interface RequestRecord {
 `src/logger/handle-http-error.ts` lines 42 to 44 choose the level of that error line. A value that is not a `status()` result is logged at `ERROR` unless the client got a 4xx:
 
 ```ts
-  const status = store.status ?? errorStatus(error)
-  const level: LogLevel =
-    isStatusResponse(error) || status >= 400 ? levelForStatus(status) : 'ERROR'
+const status = store.status ?? errorStatus(error)
+const level: LogLevel =
+  isStatusResponse(error) || status >= 400 ? levelForStatus(status) : 'ERROR'
 ```
 
 `levelForStatus` (`src/helpers/status.ts`) returns `'ERROR'` for 500 and up, `'WARNING'` for 400 to 499, `'INFO'` below 400.
@@ -240,16 +227,16 @@ export interface RequestOutcome {
 
 Run lint and format from the worktree root. Run the rest from the directory shown.
 
-| Purpose        | Command                                                                                                              | Expected on success                                   |
-| -------------- | -------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
-| Install        | `bun install --frozen-lockfile` (root)                                                                               | exit 0                                                |
-| Build          | `cd packages/logixlysia && bun run build`                                                                            | `Build completed`                                     |
-| Lint           | `bun run lint` (root)                                                                                                | exit 0                                                |
-| Format         | `bun run format` (root)                                                                                              | exit 0; read the diff it makes                        |
-| Typecheck      | `cd packages/logixlysia && bun run typecheck`                                                                        | exit 0                                                |
-| Two test files | `cd packages/logixlysia && bun test ./__tests__/sampling/plugin.test.ts ./__tests__/sampling/runtime.test.ts`        | judge by pass and fail counts (exit is 1 on a subset) |
-| Full suite     | `cd packages/logixlysia && bun test`                                                                                 | 0 fail (1249 tests at `c019a4f`, 1264 after this plan) |
-| Docs typecheck | `cd apps/docs && bun run typecheck`                                                                                  | exit 0                                                |
+| Purpose | Command | Expected on success |
+| --- | --- | --- |
+| Install | `bun install --frozen-lockfile` (root) | exit 0 |
+| Build | `cd packages/logixlysia && bun run build` | `Build completed` |
+| Lint | `bun run lint` (root) | exit 0 |
+| Format | `bun run format` (root) | exit 0; read the diff it makes |
+| Typecheck | `cd packages/logixlysia && bun run typecheck` | exit 0 |
+| Two test files | `cd packages/logixlysia && bun test ./__tests__/sampling/plugin.test.ts ./__tests__/sampling/runtime.test.ts` | judge by pass and fail counts (exit is 1 on a subset) |
+| Full suite | `cd packages/logixlysia && bun test` | 0 fail (1249 tests at `c019a4f`, 1264 after this plan) |
+| Docs typecheck | `cd apps/docs && bun run typecheck` | exit 0 |
 
 The full suite has child-process tests with a 5 second default timeout that can time out on a loaded machine. If only tests that spawn a process fail with a time near 5000 ms, rerun the suite once; that is not caused by this plan.
 
@@ -285,6 +272,7 @@ The full suite has child-process tests with a 5 second default timeout that can 
   3. `chore(changeset): note that tail sampling keeps the trail of failed requests`
 
   The `error` field and the `tail.status` rule are one change: the rule reads the field, so they share a commit.
+
 - Each commit body is one to three short paragraphs of plain prose: what was wrong for a user, what the change does, what a reader would not guess from the diff.
 - Do not push or open a pull request unless your task message tells you to.
 
@@ -486,117 +474,115 @@ describe('tail status and a request that ends in a logged error', () => {
 Inside `describe('tail keep predicate through the plugin', …)`, directly before the test `a predicate that mutates its context does not change later lines`, add:
 
 ```ts
-  test('hands the predicate what a stream threw after its first chunk', async () => {
-    const { events, transport } = createCaptureTransport()
-    const keep = mock((_outcome: RequestOutcome) => false)
-    const app = buildApp(
-      { sampling: { head: { INFO: 0 }, tail: { keep } } },
-      transport
-    )
+test('hands the predicate what a stream threw after its first chunk', async () => {
+  const { events, transport } = createCaptureTransport()
+  const keep = mock((_outcome: RequestOutcome) => false)
+  const app = buildApp(
+    { sampling: { head: { INFO: 0 }, tail: { keep } } },
+    transport
+  )
 
-    await readStream(app, '/stream-fails', events)
+  await readStream(app, '/stream-fails', events)
 
-    const [received] = keep.mock.calls[0] ?? []
-    expect(received?.status).toBe(200)
-    expect(received?.error).toBeInstanceOf(Error)
-    expect((received?.error as Error | undefined)?.message).toBe(
-      'stream failed'
-    )
-  })
+  const [received] = keep.mock.calls[0] ?? []
+  expect(received?.status).toBe(200)
+  expect(received?.error).toBeInstanceOf(Error)
+  expect((received?.error as Error | undefined)?.message).toBe('stream failed')
+})
 
-  test('hands the predicate what a handler threw', async () => {
-    const { transport } = createCaptureTransport()
-    const keep = mock((_outcome: RequestOutcome) => false)
-    const app = buildApp(
-      { sampling: { head: { INFO: 0 }, tail: { keep } } },
-      transport
-    )
+test('hands the predicate what a handler threw', async () => {
+  const { transport } = createCaptureTransport()
+  const keep = mock((_outcome: RequestOutcome) => false)
+  const app = buildApp(
+    { sampling: { head: { INFO: 0 }, tail: { keep } } },
+    transport
+  )
 
-    await get(app, '/missing')
+  await get(app, '/missing')
 
-    const [received] = keep.mock.calls[0] ?? []
-    expect(received?.status).toBe(404)
-    expect(received?.error).toBeInstanceOf(HttpError)
-  })
+  const [received] = keep.mock.calls[0] ?? []
+  expect(received?.status).toBe(404)
+  expect(received?.error).toBeInstanceOf(HttpError)
+})
 
-  test('leaves error out when nothing was thrown or a status() below 400 was', async () => {
-    const { transport } = createCaptureTransport()
-    const keep = mock((_outcome: RequestOutcome) => false)
-    const app = buildApp(
-      { sampling: { head: { INFO: 0 }, tail: { keep } } },
-      transport
-    )
+test('leaves error out when nothing was thrown or a status() below 400 was', async () => {
+  const { transport } = createCaptureTransport()
+  const keep = mock((_outcome: RequestOutcome) => false)
+  const app = buildApp(
+    { sampling: { head: { INFO: 0 }, tail: { keep } } },
+    transport
+  )
 
-    await get(app, '/plan/free')
-    await get(app, '/accepted')
+  await get(app, '/plan/free')
+  await get(app, '/accepted')
 
-    expect(keep.mock.calls.map(([outcome]) => 'error' in outcome)).toEqual([
-      false,
-      false
-    ])
-  })
+  expect(keep.mock.calls.map(([outcome]) => 'error' in outcome)).toEqual([
+    false,
+    false
+  ])
+})
 ```
 
 **`__tests__/sampling/runtime.test.ts`.** Inside `describe('tail sampling', …)`, directly before the test `discards buffered records when nothing matches`, add four tests. `config` and `outcome` are the ones already defined in that file (`config.tail.status` is 400):
 
 ```ts
-  test('replays a request that ended in an error below the status threshold', () => {
-    const sampling = resolveSampling(config, () => 0.99)
-    const key = {}
-    sampling?.begin(key)
-    sampling?.buffer(key, { data: {}, durationMs: 1, level: 'INFO' })
+test('replays a request that ended in an error below the status threshold', () => {
+  const sampling = resolveSampling(config, () => 0.99)
+  const key = {}
+  sampling?.begin(key)
+  sampling?.buffer(key, { data: {}, durationMs: 1, level: 'INFO' })
 
-    const failedStream = outcome({
-      error: new Error('stream failed'),
-      status: 200
-    })
-    expect(sampling?.finalize(key, failedStream)).toHaveLength(1)
+  const failedStream = outcome({
+    error: new Error('stream failed'),
+    status: 200
   })
+  expect(sampling?.finalize(key, failedStream)).toHaveLength(1)
+})
 
-  test('an error the client got below 400 counts as a 500, not more', () => {
-    const sampling = resolveSampling(
-      { head: { INFO: 0 }, tail: { status: 503 } },
-      () => 0.99
-    )
-    const key = {}
-    sampling?.begin(key)
-    sampling?.buffer(key, { data: {}, durationMs: 1, level: 'INFO' })
+test('an error the client got below 400 counts as a 500, not more', () => {
+  const sampling = resolveSampling(
+    { head: { INFO: 0 }, tail: { status: 503 } },
+    () => 0.99
+  )
+  const key = {}
+  sampling?.begin(key)
+  sampling?.buffer(key, { data: {}, durationMs: 1, level: 'INFO' })
 
-    const failedStream = outcome({
-      error: new Error('stream failed'),
-      status: 200
-    })
-    expect(sampling?.finalize(key, failedStream)).toHaveLength(0)
+  const failedStream = outcome({
+    error: new Error('stream failed'),
+    status: 200
   })
+  expect(sampling?.finalize(key, failedStream)).toHaveLength(0)
+})
 
-  test('an error with a 4xx below the status threshold is not replayed', () => {
-    const sampling = resolveSampling(
-      { head: { INFO: 0 }, tail: { status: 500 } },
-      () => 0.99
-    )
-    const key = {}
-    sampling?.begin(key)
-    sampling?.buffer(key, { data: {}, durationMs: 1, level: 'INFO' })
+test('an error with a 4xx below the status threshold is not replayed', () => {
+  const sampling = resolveSampling(
+    { head: { INFO: 0 }, tail: { status: 500 } },
+    () => 0.99
+  )
+  const key = {}
+  sampling?.begin(key)
+  sampling?.buffer(key, { data: {}, durationMs: 1, level: 'INFO' })
 
-    const notFound = outcome({ error: new Error('no order'), status: 404 })
-    expect(sampling?.finalize(key, notFound)).toHaveLength(0)
+  const notFound = outcome({ error: new Error('no order'), status: 404 })
+  expect(sampling?.finalize(key, notFound)).toHaveLength(0)
+})
+
+test('an error rescues nothing without a status rule', () => {
+  const sampling = resolveSampling(
+    { head: { INFO: 0 }, tail: { durationMs: 1000 } },
+    () => 0.99
+  )
+  const key = {}
+  sampling?.begin(key)
+  sampling?.buffer(key, { data: {}, durationMs: 1, level: 'INFO' })
+
+  const failedStream = outcome({
+    error: new Error('stream failed'),
+    status: 200
   })
-
-  test('an error rescues nothing without a status rule', () => {
-    const sampling = resolveSampling(
-      { head: { INFO: 0 }, tail: { durationMs: 1000 } },
-      () => 0.99
-    )
-    const key = {}
-    sampling?.begin(key)
-    sampling?.buffer(key, { data: {}, durationMs: 1, level: 'INFO' })
-
-    const failedStream = outcome({
-      error: new Error('stream failed'),
-      status: 200
-    })
-    expect(sampling?.finalize(key, failedStream)).toHaveLength(0)
-  })
+  expect(sampling?.finalize(key, failedStream)).toHaveLength(0)
+})
 ```
 
 Bun runs these files without a typecheck, so they run before `error` exists on the type. `bun run typecheck` fails on them until Step 2; that is expected.
@@ -672,11 +658,12 @@ In `src/index.ts`:
 - In `finishRequest`, directly after `record.phase = 'closed'`, add:
 
   ```ts
-      // A thrown status() result is a response, not an error.
-      const error = isStatusResponse(record.error) ? undefined : record.error
+  // A thrown status() result is a response, not an error.
+  const error = isStatusResponse(record.error) ? undefined : record.error
   ```
 
   Pass `error` as the fourth argument of the `logger.finalizeRequest(…)` call in the `lineWrittenByAnotherInstance` branch, and as the fifth argument of `closeRequest(…)`. Leave the `record.error` condition that chooses between `handleHttpError` and `emitAccessLine` exactly as it is.
+
 - Do not change `finishJob`; its `closeRequest(request, {}, status)` call stays as it is.
 
 **Verify**: `cd packages/logixlysia && bun run typecheck` exits 0. `bun test ./__tests__/sampling/plugin.test.ts ./__tests__/sampling/runtime.test.ts` reports 53 pass and 4 fail. The two `hands the predicate …` tests now pass. The four still failing are the two `keeps the trail …` tests, `a failed stream counts as a 500 against the threshold` and `replays a request that ended in an error below the status threshold`.
@@ -701,9 +688,9 @@ const statusForVerdict = (outcome: RequestOutcome): number =>
 and change the first rule of `matchesTail` to:
 
 ```ts
-  if (tail.status !== undefined && statusForVerdict(outcome) >= tail.status) {
-    return true
-  }
+if (tail.status !== undefined && statusForVerdict(outcome) >= tail.status) {
+  return true
+}
 ```
 
 The verdict compares `tail.status` with the higher of the client's status and `500` for a request that ended in an error logged at `ERROR`, and with the client's status otherwise. `handleHttpError` logs a value that is not a `status()` result at `ERROR` when the status is below 400 or at least 500 (see "Current state"), and from 500 up the client's status is already the higher one, so the helper only has to replace a status below 400. A thrown 4xx keeps its own status. `outcome.status`, which `keep` reads, is not changed. Do not change the other rules, `matchesKeep`, or the order in which the rules run.

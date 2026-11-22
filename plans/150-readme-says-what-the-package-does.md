@@ -1,17 +1,8 @@
 # Plan 150: The README lists a memory record's real keys and says what Elysia 2 does to the types
 
-> **Executor instructions**: Follow this plan step by step. Run every
-> verification command and confirm the expected result before moving to the
-> next step. If anything in the "STOP conditions" section occurs, stop and
-> report. Do not improvise. Skip any instruction to update `plans/README.md`:
-> the coordinator maintains the index.
+> **Executor instructions**: Follow this plan step by step. Run every verification command and confirm the expected result before moving to the next step. If anything in the "STOP conditions" section occurs, stop and report. Do not improvise. Skip any instruction to update `plans/README.md`: the coordinator maintains the index.
 >
-> **Drift check (run first)**: `git diff --stat c019a4f..HEAD -- packages/logixlysia/README.md README.md apps/docs/content/usage.mdx packages/logixlysia/src/testing.ts`
-> If any in-scope file changed since this plan was written, compare the
-> "Current state" excerpts against the live code before proceeding. On a
-> mismatch, treat it as a STOP condition. `usage.mdx` and `src/testing.ts` are
-> not edited by this plan; they are in the drift check because the README text
-> repeats what they say.
+> **Drift check (run first)**: `git diff --stat c019a4f..HEAD -- packages/logixlysia/README.md README.md apps/docs/content/usage.mdx packages/logixlysia/src/testing.ts` If any in-scope file changed since this plan was written, compare the "Current state" excerpts against the live code before proceeding. On a mismatch, treat it as a STOP condition. `usage.mdx` and `src/testing.ts` are not edited by this plan; they are in the drift check because the README text repeats what they say.
 
 ## Status
 
@@ -59,8 +50,10 @@ Works with Elysia 1.4 and the Elysia 2 prereleases. To try Elysia 2, install it 
 ````md
 await app.handle(new Request('http://localhost/orders/42'))
 
-memory.last() // { level, message, method, path, status, durationMs, requestId, context, error }
-await memory.waitFor(record => record.message === 'order loaded')
+memory.last() // { level, message, method, path, status, durationMs, requestId, context, error } await memory.waitFor(record => record.message === 'order loaded')
+
+```
+
 ```
 ````
 
@@ -69,8 +62,8 @@ await memory.waitFor(record => record.message === 'order loaded')
 ```md
 ### Elysia 2 beta
 
-Logixlysia runs on Elysia 1.4 and on the Elysia 2 prereleases, from `2.0.0-beta.32` on. To try it on Elysia 2, install Elysia from its `rc` tag:
-...
+Logixlysia runs on Elysia 1.4 and on the Elysia 2 prereleases, from `2.0.0-beta.32` on. To try it on Elysia 2, install Elysia from its `rc` tag: ...
+
 - The plugin's TypeScript types still describe Elysia 1.4, so `log` and `store` are not yet part of a handler's context type on Elysia 2. They are there at runtime.
 ```
 
@@ -90,12 +83,12 @@ Changeset precedent: README changes have carried a `patch` changeset for `logixl
 
 Run lint and format from the worktree root.
 
-| Purpose    | Command                                       | Expected on success            |
-| ---------- | --------------------------------------------- | ------------------------------ |
-| Install    | `bun install --frozen-lockfile` (root)        | exit 0                         |
-| Lint       | `bun run lint` (root)                         | exit 0                         |
-| Format     | `bun run format` (root)                       | exit 0; read the diff it makes |
-| Typecheck  | `cd packages/logixlysia && bun run typecheck` | exit 0                         |
+| Purpose | Command | Expected on success |
+| --- | --- | --- |
+| Install | `bun install --frozen-lockfile` (root) | exit 0 |
+| Lint | `bun run lint` (root) | exit 0 |
+| Format | `bun run format` (root) | exit 0; read the diff it makes |
+| Typecheck | `cd packages/logixlysia && bun run typecheck` | exit 0 |
 
 No test, build or docs typecheck is needed: no source file and no docs page changes. Do not run the full test suite for this plan.
 

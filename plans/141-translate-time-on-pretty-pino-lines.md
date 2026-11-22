@@ -1,15 +1,8 @@
 # Plan 141: `timestamp.translateTime` formats pretty pino lines the way it formats the console line
 
-> **Executor instructions**: Follow this plan step by step. Run every
-> verification command and confirm the expected result before moving to the
-> next step. If anything in the "STOP conditions" section occurs, stop and
-> report. Do not improvise. Skip any instruction to update `plans/README.md`:
-> the coordinator maintains the index.
+> **Executor instructions**: Follow this plan step by step. Run every verification command and confirm the expected result before moving to the next step. If anything in the "STOP conditions" section occurs, stop and report. Do not improvise. Skip any instruction to update `plans/README.md`: the coordinator maintains the index.
 >
-> **Drift check (run first)**: `git diff --stat c019a4f..HEAD -- packages/logixlysia/src/logger/index.ts packages/logixlysia/src/logger/create-logger.ts packages/logixlysia/src/types/config.ts packages/logixlysia/__tests__/logger/create-logger.test.ts apps/docs/content/configuration.mdx`
-> If any in-scope file changed since this plan was written, compare the
-> "Current state" excerpts against the live code before proceeding. On a
-> mismatch, treat it as a STOP condition.
+> **Drift check (run first)**: `git diff --stat c019a4f..HEAD -- packages/logixlysia/src/logger/index.ts packages/logixlysia/src/logger/create-logger.ts packages/logixlysia/src/types/config.ts packages/logixlysia/__tests__/logger/create-logger.test.ts apps/docs/content/configuration.mdx` If any in-scope file changed since this plan was written, compare the "Current state" excerpts against the live code before proceeding. On a mismatch, treat it as a STOP condition.
 
 ## Status
 
@@ -26,14 +19,14 @@
 
 Measured at `c019a4f` with a fixed instant of 2026-01-02 03:04:05.678 UTC in a +07:00 zone:
 
-| `timestamp.translateTime`     | console line              | `store.pino` pretty line today     |
-| ----------------------------- | ------------------------- | ---------------------------------- |
-| `HH:MM:ss.SSS`                | `10:04:05.678`            | `[03:04:05.ndndnd]`                |
-| `yyyy-mm-dd HH:MM:ss`         | `2026-01-02 10:04:05`     | `[2026-01-02 03:04:05]`            |
-| `yyyy-mm-ddTHH:MM:ss`         | `2026-01-02T10:04:05`     | `[2026-01-02A03:04:05]`            |
-| `UTC:yyyy-mm-dd HH:MM:ss.SSS` | `2026-01-02 03:04:05.678` | `[2026-01-02 03:04:05.ndndnd]`     |
-| `UTC:standard`                | `2026-01-02 03:04:05.678` | `[5aan2ar2]`                       |
-| `SYS:standard`                | `2026-01-02 10:04:05.678` | `[2026-01-02 10:04:05.678 +0700]`  |
+| `timestamp.translateTime` | console line | `store.pino` pretty line today |
+| --- | --- | --- |
+| `HH:MM:ss.SSS` | `10:04:05.678` | `[03:04:05.ndndnd]` |
+| `yyyy-mm-dd HH:MM:ss` | `2026-01-02 10:04:05` | `[2026-01-02 03:04:05]` |
+| `yyyy-mm-ddTHH:MM:ss` | `2026-01-02T10:04:05` | `[2026-01-02A03:04:05]` |
+| `UTC:yyyy-mm-dd HH:MM:ss.SSS` | `2026-01-02 03:04:05.678` | `[2026-01-02 03:04:05.ndndnd]` |
+| `UTC:standard` | `2026-01-02 03:04:05.678` | `[5aan2ar2]` |
+| `SYS:standard` | `2026-01-02 10:04:05.678` | `[2026-01-02 10:04:05.678 +0700]` |
 
 After this plan, the pretty pino line shows the same clock reading as the console line for every documented form. Only `SYS:standard` was right before, and it does not change.
 
@@ -127,16 +120,16 @@ Conventions to match:
 
 Run lint and format from the worktree root. Run the rest from the directory shown.
 
-| Purpose        | Command                                                                        | Expected on success                              |
-| -------------- | ------------------------------------------------------------------------------ | ------------------------------------------------ |
-| Install        | `bun install --frozen-lockfile` (root)                                         | exit 0                                           |
-| Build          | `cd packages/logixlysia && bun run build`                                      | `Build completed`                                |
-| Lint           | `bun run lint` (root)                                                          | exit 0                                           |
-| Format         | `bun run format` (root)                                                        | exit 0; read the diff it makes                   |
-| Typecheck      | `cd packages/logixlysia && bun run typecheck`                                  | exit 0                                           |
-| One test file  | `cd packages/logixlysia && bun test ./__tests__/logger/pino-pretty-timestamp.test.ts` | judge by pass and fail counts (exit is 1 on a subset) |
-| Full suite     | `cd packages/logixlysia && bun test`                                           | 0 fail                                           |
-| Docs typecheck | `cd apps/docs && bun run typecheck`                                            | exit 0                                           |
+| Purpose | Command | Expected on success |
+| --- | --- | --- |
+| Install | `bun install --frozen-lockfile` (root) | exit 0 |
+| Build | `cd packages/logixlysia && bun run build` | `Build completed` |
+| Lint | `bun run lint` (root) | exit 0 |
+| Format | `bun run format` (root) | exit 0; read the diff it makes |
+| Typecheck | `cd packages/logixlysia && bun run typecheck` | exit 0 |
+| One test file | `cd packages/logixlysia && bun test ./__tests__/logger/pino-pretty-timestamp.test.ts` | judge by pass and fail counts (exit is 1 on a subset) |
+| Full suite | `cd packages/logixlysia && bun test` | 0 fail |
+| Docs typecheck | `cd apps/docs && bun run typecheck` | exit 0 |
 
 ## Scope
 
@@ -199,7 +192,12 @@ const prettyTime = (
       disableFileLogging: true,
       disableInternalLogger: true,
       pino: {
-        prettyPrint: { colorize: false, destination, sync: true, ...prettyPrint },
+        prettyPrint: {
+          colorize: false,
+          destination,
+          sync: true,
+          ...prettyPrint
+        },
         timestamp: () => `,"time":${INSTANT}`
       },
       timestamp: { translateTime }
@@ -232,18 +230,18 @@ If the linter rejects `delete process.env.TZ`, use `Reflect.deleteProperty(proce
 
 Tests, inside `describe('timestamp.translateTime on pretty pino lines', …)`. Each asserts a literal:
 
-| Test name                                                        | Call                                                              | Expected                         |
-| ---------------------------------------------------------------- | ----------------------------------------------------------------- | -------------------------------- |
-| `the zone switch took effect`                                    | `new Date(INSTANT).getHours()`                                    | `10`                             |
-| `a bare pattern is local time with milliseconds`                 | `prettyTime('HH:MM:ss.SSS')`                                      | `'10:04:05.678'`                 |
-| `a bare date pattern is local time`                              | `prettyTime('yyyy-mm-dd HH:MM:ss')`                               | `'2026-01-02 10:04:05'`          |
-| `letters between tokens are printed as written`                  | `prettyTime('yyyy-mm-ddTHH:MM:ss')`                               | `'2026-01-02T10:04:05'`          |
-| `a word between tokens is printed as written`                    | `prettyTime('dd/mm/yyyy at HH:MM')`                               | `'02/01/2026 at 10:04'`          |
-| `a UTC pattern is UTC with milliseconds`                         | `prettyTime('UTC:yyyy-mm-dd HH:MM:ss.SSS')`                       | `'2026-01-02 03:04:05.678'`      |
-| `a SYS pattern is local time`                                    | `prettyTime('SYS:HH:MM:ss.SSS')`                                  | `'10:04:05.678'`                 |
-| `SYS:standard keeps pino-pretty's standard form`                 | `prettyTime('SYS:standard')`                                      | `'2026-01-02 10:04:05.678 +0700'` |
-| `UTC:standard is the standard form in UTC`                       | `prettyTime('UTC:standard')`                                      | `'2026-01-02 03:04:05.678 +0000'` |
-| `a translateTime inside pino.prettyPrint wins and is not rewritten` | `prettyTime('yyyy', { translateTime: 'UTC:HH:MM:ss.l' })`      | `'03:04:05.678'`                 |
+| Test name | Call | Expected |
+| --- | --- | --- |
+| `the zone switch took effect` | `new Date(INSTANT).getHours()` | `10` |
+| `a bare pattern is local time with milliseconds` | `prettyTime('HH:MM:ss.SSS')` | `'10:04:05.678'` |
+| `a bare date pattern is local time` | `prettyTime('yyyy-mm-dd HH:MM:ss')` | `'2026-01-02 10:04:05'` |
+| `letters between tokens are printed as written` | `prettyTime('yyyy-mm-ddTHH:MM:ss')` | `'2026-01-02T10:04:05'` |
+| `a word between tokens is printed as written` | `prettyTime('dd/mm/yyyy at HH:MM')` | `'02/01/2026 at 10:04'` |
+| `a UTC pattern is UTC with milliseconds` | `prettyTime('UTC:yyyy-mm-dd HH:MM:ss.SSS')` | `'2026-01-02 03:04:05.678'` |
+| `a SYS pattern is local time` | `prettyTime('SYS:HH:MM:ss.SSS')` | `'10:04:05.678'` |
+| `SYS:standard keeps pino-pretty's standard form` | `prettyTime('SYS:standard')` | `'2026-01-02 10:04:05.678 +0700'` |
+| `UTC:standard is the standard form in UTC` | `prettyTime('UTC:standard')` | `'2026-01-02 03:04:05.678 +0000'` |
+| `a translateTime inside pino.prettyPrint wins and is not rewritten` | `prettyTime('yyyy', { translateTime: 'UTC:HH:MM:ss.l' })` | `'03:04:05.678'` |
 
 **Verify**: `cd packages/logixlysia && bun test ./__tests__/logger/pino-pretty-timestamp.test.ts` reports 3 pass and 7 fail. The three that pass before the fix are `the zone switch took effect`, `SYS:standard keeps pino-pretty's standard form` and `a translateTime inside pino.prettyPrint wins and is not rewritten`. Among the failures you should see `Received: "03:04:05.ndndnd"` for the first bare pattern. If `the zone switch took effect` fails, STOP. Keep the failing output for your report.
 
