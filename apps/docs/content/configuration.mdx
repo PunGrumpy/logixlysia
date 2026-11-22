@@ -96,6 +96,8 @@ The query of an absolute URL in a `referer`, `location` or `content-location` he
 
 Value-pattern redaction is best-effort — it only catches values matching those specific shapes. Always prefer key-based redaction (`redactKeys`) for known sensitive fields instead of relying on their value happening to match a pattern. For free-text PII that has no fixed shape — names, street addresses, phone numbers, national IDs — see [neural PII redaction](/docs/integrations/desertant), which runs an on-device model over records on their way to a transport.
 
+`store.pino` is masked differently. With `autoRedact` on, the object you pass as the first argument to a `store.pino` call, or to a call on one of its child loggers, is masked by key name with the rule in point 1 and `redactKeys`, at any depth: a matching key is masked whatever its value is, unless the value is `undefined`, which prints nothing. The walk goes through plain data only: an object, or an array inside the logged object, that has the default prototype, no getter or setter among its own properties and no `toJSON` function. It does not look inside anything else: a class instance, an error, a `Map`, an object with a getter or a `toJSON` function, or an array passed as the first argument. A top-level key that has a pino serializer is handed to the serializer as you logged it. Child bindings, `pino.base` and the fields a `mixin` adds are not key-masked either. For all of those only pino's path redaction applies: the built-in key names and `redactKeys` entries as written, at the top level of the line and one level below. Value patterns and `redactPatterns` don't run on `store.pino`. Setting `pino.redact` turns all of this off and masks your paths instead.
+
 - **Type:** `boolean`
 - **Default:** `false`
 
@@ -121,7 +123,7 @@ redactKeys: ['x-internal-token', 'customerSsn']
 
 Extra value shapes to mask when `autoRedact` is enabled, for ids that only you know the shape of, such as a customer id or a national ID. Each match is replaced with `[REDACTED]`, before the built-in value patterns run.
 
-A pattern runs on every string a record carries, and on each URL path segment, each decoded query value and each header value, so a pattern cannot span a `/`. Numbers and object keys are not scanned. It does not apply to `store.pino`, which redacts by path. A pattern runs on every string of every record, so keep it simple.
+A pattern runs on every string a record carries, and on each URL path segment, each decoded query value and each header value, so a pattern cannot span a `/`. Numbers and object keys are not scanned. It does not apply to `store.pino`: plain objects logged there are masked by key name, and the rest by pino's path redaction. A pattern runs on every string of every record, so keep it simple.
 
 Patterns are made global and non-sticky for you. A pattern that can match nothing, such as `/x*/` or `/\b/`, is rejected at startup, as is a list without `autoRedact: true`.
 
@@ -683,7 +685,7 @@ See [pino-pretty documentation](https://github.com/pinojs/pino-pretty#options) f
 
 #### `pino.redact`
 
-Redact paths for `store.pino` only. The plugin's own console, file and transport output is masked by `autoRedact` and `redactKeys`; setting `pino.redact` also replaces the automatic paths `autoRedact` would give `store.pino`.
+Redact paths for `store.pino` only. The plugin's own console, file and transport output is masked by `autoRedact` and `redactKeys`; setting `pino.redact` also replaces the automatic paths and key masking `autoRedact` would give `store.pino`.
 
 - **Type:** `string[] | object`
 - **Default:** `undefined`
