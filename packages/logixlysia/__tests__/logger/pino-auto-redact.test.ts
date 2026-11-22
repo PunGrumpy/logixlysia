@@ -421,7 +421,7 @@ describe('store.pino under autoRedact leaves what is not plain data to path reda
 
   test('an object with a hidden or symbol-keyed accessor is left to pino', () => {
     let getterCalls = 0
-    const hiddenGetter = {}
+    const hiddenGetter = { accessToken: FAKE }
     Object.defineProperty(hiddenGetter, 'peek', {
       enumerable: false,
       get() {
@@ -430,7 +430,7 @@ describe('store.pino under autoRedact leaves what is not plain data to path reda
       }
     })
     const symbolKey = Symbol('s')
-    const symbolGetter = {}
+    const symbolGetter = { accessToken: FAKE }
     Object.defineProperty(symbolGetter, symbolKey, {
       enumerable: true,
       get() {
@@ -445,7 +445,7 @@ describe('store.pino under autoRedact leaves what is not plain data to path reda
       })
     )
     let pathsCalls = 0
-    const pathHidden = {}
+    const pathHidden = { accessToken: FAKE }
     Object.defineProperty(pathHidden, 'peek', {
       enumerable: false,
       get() {
@@ -453,7 +453,7 @@ describe('store.pino under autoRedact leaves what is not plain data to path reda
         return 'v'
       }
     })
-    const pathSymbol = {}
+    const pathSymbol = { accessToken: FAKE }
     Object.defineProperty(pathSymbol, symbolKey, {
       enumerable: true,
       get() {
@@ -469,7 +469,13 @@ describe('store.pino under autoRedact leaves what is not plain data to path reda
     )
     const [line] = parsed(lines)
     const [pathLine] = parsed(pathLines)
+    const nested = line?.nested as {
+      a: Record<string, unknown>
+      b: Record<string, unknown>
+    }
     expect(line?.accessToken).toBe(MASK)
+    expect(nested.a.accessToken).toBe(FAKE)
+    expect(nested.b.accessToken).toBe(FAKE)
     expect(line?.nested).toEqual(pathLine?.nested)
     expect(getterCalls).toBe(pathsCalls)
   })
