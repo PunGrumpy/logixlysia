@@ -43,7 +43,7 @@ Keys come in this order, and a key with no value is left out:
 | `timestamp` | ISO-8601 time of the write |
 | `level` | `DEBUG`, `INFO`, `WARNING` or `ERROR` |
 | `service` | The `service` option, when set |
-| `message` | The line's message, `''` for an access line |
+| `message` | The line's message as a string: `''` for an access line and for a logged `message` that is not a string. A transport still receives that value as it was logged |
 | `request` | `method` and `url`; the query is dropped unless `logQueryParams` is on |
 | `status` | Access and error lines |
 | `durationMs` | Time since the request started |
