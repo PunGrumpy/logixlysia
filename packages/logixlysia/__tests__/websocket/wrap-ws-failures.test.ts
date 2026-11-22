@@ -1,4 +1,5 @@
 import { expect, mock, test } from 'bun:test'
+import { runInNewContext } from 'node:vm'
 import { createRequestContextStore } from '../../src/context/request-context'
 import type { Options } from '../../src/interfaces'
 import { createLogger } from '../../src/logger'
@@ -198,4 +199,83 @@ test('a hook that revokes the message it was given still fails with its own erro
     wsId: 'ws-1'
   })
   expect(recordAt(transport, 0).error).toMatchObject({ message: 'own error' })
+})
+
+test('a close hook that revokes its socket still fails with its own error', () => {
+  const onError = mock((_context: unknown) => {})
+  const { wrapWs } = setup({ onError })
+  const { proxy: raw, revoke } = Proxy.revocable({}, {})
+  const failure = new Error('own')
+  const hooks = wrapWs('/chat', {
+    close(_ws) {
+      revoke()
+      throw failure
+    }
+  })
+
+  let caught: unknown
+  try {
+    hooks.close({ id: 'ws-1', raw })
+  } catch (error) {
+    caught = error
+  }
+
+  expect(caught).toBe(failure)
+  expect(onError).toHaveBeenCalled()
+  for (const [context] of onError.mock.calls) {
+    expect(context).toMatchObject({ sink: 'format' })
+  }
+})
+
+test('a returned value is not asked for its string tag', () => {
+  const { transport, wrapWs } = setup()
+  let reads = 0
+  const value = {}
+  Object.defineProperty(value, Symbol.toStringTag, {
+    configurable: true,
+    get() {
+      reads += 1
+      return 'Generator'
+    }
+  })
+  const hooks = wrapWs('/chat', {
+    message(_ws, _message) {
+      return value
+    }
+  })
+
+  expect(hooks.message({ id: 'ws-1' }, 'hi')).toBe(value)
+  expect(reads).toBe(0)
+  expect(levelsFrom(transport)).toEqual(['INFO'])
+})
+
+test('a generator from another realm is returned unchanged', () => {
+  const { transport, wrapWs } = setup()
+  const sync = runInNewContext('(function* () { yield "a" })()') as object
+  const asyncGenerator = runInNewContext(
+    '(async function* () { yield "a" })()'
+  ) as object
+  const hooks = wrapWs('/chat', {
+    message(_ws, message) {
+      return message === 'async' ? asyncGenerator : sync
+    }
+  })
+
+  expect(hooks.message({ id: 'ws-1' }, 'sync')).toBe(sync)
+  expect(hooks.message({ id: 'ws-2' }, 'async')).toBe(asyncGenerator)
+  expect(levelsFrom(transport)).toEqual(['INFO', 'INFO'])
+})
+
+test('a hook that returns a revoked proxy returns it and logs', () => {
+  const { transport, wrapWs } = setup()
+  const { proxy, revoke } = Proxy.revocable({}, {})
+  revoke()
+  const hooks = wrapWs('/chat', {
+    message(_ws, _message) {
+      return proxy
+    }
+  })
+
+  expect(hooks.message({ id: 'ws-1' }, 'hi')).toBe(proxy)
+  expect(levelsFrom(transport)).toEqual(['INFO'])
 })

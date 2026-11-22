@@ -211,24 +211,6 @@ test('an async close hook still sees the request context', async () => {
   expect(closed?.[2]).toMatchObject({ context: { farewell: true } })
 })
 
-test('a hook that rejects on a real socket writes one ERROR line with the error', async () => {
-  const url = serve('/reject-logged', {
-    async message() {
-      await sleep(1)
-      throw new Error('boom')
-    }
-  })
-
-  await exchange(url, 'hi')
-  await waitFor(() => recordsNamed('WebSocket message').length > 0)
-
-  const lines = recordsNamed('WebSocket message')
-  expect(lines.map(call => call[0])).toEqual(['ERROR'])
-  expect(lines[0]?.[2]).toMatchObject({ error: { message: 'boom' } })
-  expect(lines[0]?.[2]).not.toHaveProperty('status')
-  expect(errors).toHaveLength(1)
-})
-
 const connect = async (
   url: string
 ): Promise<{ frames: unknown[]; socket: WebSocket }> => {
@@ -240,6 +222,28 @@ const connect = async (
   await awaitOpen(socket)
   return { frames, socket }
 }
+
+test('a hook that rejects on a real socket writes one ERROR line with the error', async () => {
+  const url = serve('/reject-logged', {
+    async message() {
+      await sleep(1)
+      throw new Error('boom')
+    }
+  })
+
+  const { socket } = await connect(url)
+  socket.send('hi')
+  await waitFor(
+    () => errors.length > 0 && recordsNamed('WebSocket message').length > 0
+  )
+  socket.close()
+
+  const lines = recordsNamed('WebSocket message')
+  expect(lines.map(call => call[0])).toEqual(['ERROR'])
+  expect(lines[0]?.[2]).toMatchObject({ error: { message: 'boom' } })
+  expect(lines[0]?.[2]).not.toHaveProperty('status')
+  expect(errors).toHaveLength(1)
+})
 
 test('a generator hook that fails mid-stream sends what it yielded and writes one ERROR line', async () => {
   const url = serve('/stream-fail', {
@@ -260,7 +264,19 @@ test('a generator hook that fails mid-stream sends what it yielded and writes on
   )
   socket.close()
 
-  expect(frames).toEqual(['hi-1'])
+  // Both lines send the yielded frame. Elysia 2 may also answer the error
+  // with an internal-server-error frame, which can land after this wait.
+  expect(frames[0]).toBe('hi-1')
+  if (isElysia2) {
+    for (const frame of frames.slice(1)) {
+      expect(JSON.parse(String(frame))).toMatchObject({
+        detail: 'boom mid-stream',
+        status: 500
+      })
+    }
+  } else {
+    expect(frames).toEqual(['hi-1'])
+  }
   expect(errors).toHaveLength(1)
   expect(errors[0]).toHaveProperty('message', 'boom mid-stream')
   const lines = recordsNamed('WebSocket message')
@@ -271,7 +287,7 @@ test('a generator hook that fails mid-stream sends what it yielded and writes on
 })
 
 // Sends what a hook returned on a route without and a route with `wrapWs`,
-// collecting each socket's frames up to the last one the hook sends.
+// collecting each socket's frames up to the one that carries `end`.
 const framesWithAndWithout = async (
   reply: () => unknown
 ): Promise<{ unwrapped: unknown[]; wrapped: unknown[] }> => {
@@ -290,7 +306,7 @@ const framesWithAndWithout = async (
   const collect = async (path: string): Promise<unknown[]> => {
     const { frames, socket } = await connect(`ws://localhost:${port}${path}`)
     socket.send('go')
-    await waitFor(() => frames.includes('end'))
+    await waitFor(() => frames.some(frame => String(frame).includes('end')))
     socket.close()
     return frames
   }
@@ -358,4 +374,35 @@ test('an async generator sends the same frames with and without wrapWs', async (
 
   expect(unwrapped).toEqual(['a', 'end'])
   expect(wrapped).toEqual(unwrapped)
+})
+
+test('a hand-written iterator tagged as a generator sends the same frames with and without wrapWs', async () => {
+  const { unwrapped, wrapped } = await framesWithAndWithout(() => {
+    const fromNext = ['a', 'end'][Symbol.iterator]()
+    return {
+      next: () => fromNext.next(),
+      [Symbol.iterator]: () => ['b', 'end'][Symbol.iterator](),
+      [Symbol.toStringTag]: 'Generator'
+    }
+  })
+
+  expect(unwrapped).toEqual(isElysia2 ? ['a', 'end'] : ['a', 'b', 'end'])
+  expect(wrapped).toEqual(unwrapped)
+  expect(recordsNamed('WebSocket message').map(call => call[0])).toEqual([
+    'INFO'
+  ])
+})
+
+test('a plain object tagged as a generator is sent as JSON with and without wrapWs', async () => {
+  const { unwrapped, wrapped } = await framesWithAndWithout(() => ({
+    [Symbol.toStringTag]: 'Generator',
+    reply: 'end'
+  }))
+
+  expect(unwrapped).toEqual(['{"reply":"end"}'])
+  expect(wrapped).toEqual(unwrapped)
+  expect(recordsNamed('WebSocket message').map(call => call[0])).toEqual([
+    'INFO'
+  ])
+  expect(errors).toEqual([])
 })

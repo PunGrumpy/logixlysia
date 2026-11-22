@@ -60,29 +60,6 @@ const payloadTypeOf = (message: unknown): string => {
   return typeof message
 }
 
-type GeneratorKind = 'async' | 'sync'
-
-// Only a generator is wrapped. A hand-written iterator may answer `next()` and
-// `[Symbol.iterator]()` differently, and Elysia calls both, so no wrapper can
-// forward one faithfully. The tag is read without calling into the value.
-const generatorKindOf = (value: unknown): GeneratorKind | undefined => {
-  if (typeof value !== 'object' || value === null) {
-    return
-  }
-  let tag: string
-  try {
-    tag = Object.prototype.toString.call(value)
-  } catch {
-    return
-  }
-  if (tag === '[object Generator]') {
-    return 'sync'
-  }
-  if (tag === '[object AsyncGenerator]') {
-    return 'async'
-  }
-}
-
 // `finally` writes the line once, whether the source finishes, throws or is
 // stopped early by the consumer.
 const settleIterator = function* settleIterator(
@@ -112,6 +89,40 @@ const settleAsyncIterator = async function* settleAsyncIterator(
     throw error
   } finally {
     done(failure)
+  }
+}
+
+type GeneratorKind = 'async' | 'sync'
+
+// The intrinsic prototypes every generator of this realm inherits from.
+const GENERATOR_PROTOTYPE: object = Object.getPrototypeOf(
+  settleIterator.prototype
+)
+const ASYNC_GENERATOR_PROTOTYPE: object = Object.getPrototypeOf(
+  settleAsyncIterator.prototype
+)
+
+// Captured at load so a later replacement of the method is not what runs.
+const isPrototypeOf: (this: object, value: object) => boolean =
+  Object.prototype.isPrototypeOf
+
+// Only a generator is wrapped. A hand-written iterator may answer `next()` and
+// `[Symbol.iterator]()` differently, and Elysia calls both, so no wrapper can
+// forward one faithfully. Prototype identity cannot be claimed with a tag,
+// and a generator from another realm is simply not wrapped.
+const generatorKindOf = (value: unknown): GeneratorKind | undefined => {
+  if (typeof value !== 'object' || value === null) {
+    return
+  }
+  try {
+    if (isPrototypeOf.call(GENERATOR_PROTOTYPE, value)) {
+      return 'sync'
+    }
+    if (isPrototypeOf.call(ASYNC_GENERATOR_PROTOTYPE, value)) {
+      return 'async'
+    }
+  } catch {
+    // A revoked Proxy cannot be inspected; it is handed on as it is.
   }
 }
 
@@ -151,20 +162,29 @@ const settleHook = async (
   return settle(value, done)
 }
 
+// `instanceof Promise` is the test Elysia uses (`createHandleWSResponse`).
+// A revoked Proxy throws on it; that value is not a Promise, and the throw
+// must not replace the hook's result.
+const isPromise = (value: unknown): boolean => {
+  try {
+    return value instanceof Promise
+  } catch {
+    return false
+  }
+}
+
 /**
  * Hands the hook's result back to Elysia in a form it treats the same way, so
  * a returned value is sent, a generator is iterated and a rejection reaches
  * Elysia's catch. The lifecycle line is written once the result has settled.
- * The `instanceof Promise` test is the one Elysia itself uses
- * (`createHandleWSResponse` in `elysia/dist/ws/index.mjs`).
  */
 const afterHook = (
   result: unknown,
   done: Settle,
   settle: SettleValue = settleValue
 ): unknown =>
-  result instanceof Promise
-    ? settleHook(result, done, settle)
+  isPromise(result)
+    ? settleHook(result as Promise<unknown>, done, settle)
     : settle(result, done)
 
 export const createWsHandlerWrapper = (
@@ -218,6 +238,10 @@ export const createWsHandlerWrapper = (
     logger.log('ERROR', request, { context, error, message }, store)
   }
 
+  const reportSettleFailure = (failure: unknown): void => {
+    reportFormatError(failure, options.config?.onError)
+  }
+
   // Runs while the hook's own result or error is on its way to Elysia, so a
   // failure here is reported and never thrown in its place.
   const writeLine = (
@@ -233,11 +257,15 @@ export const createWsHandlerWrapper = (
         logWs(key, wsId, path, message, extra, failure)
       }
     } catch (reportFailure) {
-      reportFormatError(reportFailure, options.config?.onError)
+      reportSettleFailure(reportFailure)
     }
-    if (closedContexts.has(key)) {
-      // Whatever was merged after the close went into the line above.
-      contextStore.clearContext(key)
+    try {
+      if (closedContexts.has(key)) {
+        // Whatever was merged after the close went into the line above.
+        contextStore.clearContext(key)
+      }
+    } catch (cleanupFailure) {
+      reportSettleFailure(cleanupFailure)
     }
   }
 
@@ -276,8 +304,12 @@ export const createWsHandlerWrapper = (
             failure
           )
           // The open time stays, for a message line written after this one.
-          closedContexts.set(key, contextStore.peekContext(key))
-          contextStore.clearContext(key)
+          try {
+            closedContexts.set(key, contextStore.peekContext(key))
+            contextStore.clearContext(key)
+          } catch (cleanupFailure) {
+            reportSettleFailure(cleanupFailure)
+          }
         }
         let result: unknown
         try {
