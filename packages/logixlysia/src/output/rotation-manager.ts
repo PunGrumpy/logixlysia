@@ -115,59 +115,6 @@ interface FileStat {
   stat: Stats
 }
 
-// The archive name ends in `-<hrtime>` (and maybe `.gz`). Equal mtimes need
-// that counter, because directory order is not age.
-const rotationCounter = (filePath: string): bigint => {
-  const withoutGz = filePath.endsWith('.gz') ? filePath.slice(0, -3) : filePath
-  const dash = withoutGz.lastIndexOf('-')
-  if (dash === -1) {
-    return 0n
-  }
-  const suffix = withoutGz.slice(dash + 1)
-  if (!/^\d+$/u.test(suffix)) {
-    return 0n
-  }
-  return BigInt(suffix)
-}
-
-const compareRotated = (a: FileStat, b: FileStat): number => {
-  const byTime = b.stat.mtimeMs - a.stat.mtimeMs
-  if (byTime !== 0) {
-    return byTime
-  }
-  const byCounter = rotationCounter(b.path) - rotationCounter(a.path)
-  if (byCounter > 0n) {
-    return 1
-  }
-  if (byCounter < 0n) {
-    return -1
-  }
-  return 0
-}
-
-const stampRotated = async (
-  rotated: string,
-  onError?: RotationErrorReporter
-): Promise<void> => {
-  try {
-    const rotatedAt = new Date()
-    await fs.utimes(rotated, rotatedAt, rotatedAt)
-  } catch (error) {
-    const code =
-      typeof error === 'object' && error !== null && 'code' in error
-        ? String(error.code)
-        : undefined
-    if (code === 'EPERM' || code === 'EACCES') {
-      return
-    }
-    reportRotationError(
-      `[logixlysia] Failed to stamp rotated log ${rotated}:`,
-      error,
-      onError
-    )
-  }
-}
-
 const isFulfilled = <T>(
   result: PromiseSettledResult<T>
 ): result is PromiseFulfilledResult<T> => result.status === 'fulfilled'
@@ -196,7 +143,7 @@ const cleanupRotated = async (
     if (stats.length <= retention.value) {
       return
     }
-    stats.sort((a, b) => compareRotated(a, b))
+    stats.sort((a, b) => b.stat.mtimeMs - a.stat.mtimeMs)
     toDelete = stats.slice(retention.value)
   } else {
     const now = Date.now()
@@ -228,12 +175,6 @@ export const performRotation = async (
   if (!rotated) {
     return
   }
-
-  // rename keeps the live file's mtime. A file that sat longer than maxFiles
-  // would be deleted in the cleanup below, in the same call that archived it.
-  // Stamping is best-effort: a group-writable log can be renamed by a process
-  // that is not allowed to set timestamps, and that must not skip compression.
-  await stampRotated(rotated, onError)
 
   const shouldCompress = config.compress === true
   if (shouldCompress) {

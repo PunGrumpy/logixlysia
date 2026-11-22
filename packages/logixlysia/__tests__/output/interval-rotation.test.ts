@@ -426,7 +426,7 @@ describe('interval rotation', () => {
     }
   })
 
-  test('time retention keeps the archive of a file that was last written before maxFiles', async () => {
+  test('time retention removes the archive of a file that was last written before maxFiles', async () => {
     const dir = await createTempDir()
     try {
       const logsDir = path.join(dir, 'logs')
@@ -460,13 +460,10 @@ describe('interval rotation', () => {
 
       const entries = await fs.readdir(logsDir)
       const rotated = entries.filter(name => name.startsWith('retain.log.'))
-      expect(rotated).toHaveLength(1)
-      const archived = await fs.readFile(
-        path.join(logsDir, rotated[0]),
-        'utf-8'
-      )
-      expect(archived).toContain('msg-1')
-      expect(archived).not.toContain('msg-2')
+      expect(rotated).toEqual([])
+      const liveContent = await fs.readFile(filePath, 'utf-8')
+      expect(liveContent).toContain('msg-2')
+      expect(liveContent).not.toContain('msg-1')
     } finally {
       await removeTempDir(dir)
     }
