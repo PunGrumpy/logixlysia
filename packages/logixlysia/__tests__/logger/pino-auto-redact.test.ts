@@ -184,15 +184,20 @@ describe('store.pino under autoRedact masks the first argument by the plugin key
 
   test('an object under a sensitive key is replaced whole', () => {
     const lines = viaPlugin({}, log =>
-      log.info({ credentials: { token: { kind: 'bearer', value: 'x' } } })
+      log.info({
+        a: { b: { clientSecret: { kind: 'bearer', value: 'x' } } }
+      })
     )
-    expect(parsed(lines)).toEqual([{ credentials: { token: MASK }, level: 30 }])
+    expect(parsed(lines)).toEqual([
+      { a: { b: { clientSecret: MASK } }, level: 30 }
+    ])
   })
 
   test('a value 5000 levels deep is masked without a stack overflow', () => {
     const input = { job: deepNext(5000, { accessToken: FAKE }) }
     const lines = viaPlugin({}, log => log.info(input))
     expect(lines.join('')).not.toContain(FAKE)
+    expect(lines.join('')).toContain(`"accessToken":"${MASK}"`)
   })
 
   test('a cycle is written as a cycle, still masked', () => {
@@ -244,16 +249,68 @@ describe('store.pino under autoRedact masks the first argument by the plugin key
     ])
   })
 
-  test('values JSON leaves out add no field under a sensitive key', () => {
+  test('only undefined is left alone under a sensitive key', () => {
     const lines = viaPlugin({}, log =>
       log.info({
         apiKey: Symbol('k'),
+        clientSecret: () => 1,
         id: 1,
-        secret: () => 1,
         token: undefined
       })
     )
-    expect(parsed(lines)).toEqual([{ id: 1, level: 30 }])
+    expect(parsed(lines)).toEqual([
+      { apiKey: MASK, clientSecret: MASK, id: 1, level: 30 }
+    ])
+  })
+
+  test('a function with a toJSON under a sensitive key is masked', () => {
+    const lines = viaPlugin({}, log =>
+      log.info({ accessToken: Object.assign(() => 1, { toJSON: () => FAKE }) })
+    )
+    expect(lines.join('')).not.toContain(FAKE)
+    expect(parsed(lines)[0]?.accessToken).toBe(MASK)
+  })
+
+  test('a non-plain value under a sensitive key is masked whole', () => {
+    const lines = viaPlugin({}, log => log.info({ accessToken: new Date(0) }))
+    expect(parsed(lines)[0]?.accessToken).toBe(MASK)
+  })
+
+  test('a cycle back to the logged object masks the inner copy under a serialized key', () => {
+    const lines = viaPlugin(
+      { pino: { serializers: { accessToken: () => 'short' } } },
+      log => {
+        const record: Record<string, unknown> = {
+          accessToken: FAKE,
+          edge: {}
+        }
+        ;(record.edge as Record<string, unknown>).root = record
+        log.info(record)
+      }
+    )
+    expect(lines.join('')).not.toContain(FAKE)
+    const [line] = parsed(lines)
+    expect(line?.accessToken).toBe('short')
+    const root = (line?.edge as Record<string, unknown>)?.root as Record<
+      string,
+      unknown
+    >
+    expect(root.accessToken).toBe(MASK)
+  })
+
+  test('a cycle back to the logged object prints the same shape as path redaction apart from the mask', () => {
+    const record: Record<string, unknown> = { password: FAKE }
+    record.edge = record
+    const lines = viaPlugin({}, log => log.info(record))
+    const pathLines = viaPaths({}, log => log.info(record))
+    // Path redaction does not reach the cycle two levels down; the plugin's
+    // copy prints the same shape, masked there too.
+    expect(lines).toEqual([
+      `{"level":30,"password":"${MASK}","edge":{"edge":{"edge":"[Circular]","password":"${MASK}"},"password":"${MASK}"}}\n`
+    ])
+    expect(pathLines).toEqual([
+      `{"level":30,"password":"${MASK}","edge":{"edge":{"edge":"[Circular]","password":"${FAKE}"},"password":"${MASK}"}}\n`
+    ])
   })
 
   test('an own __proto__ key is masked without polluting Object.prototype', () => {
@@ -333,6 +390,136 @@ describe('store.pino under autoRedact leaves what is not plain data to path reda
     expect(lines).toEqual(pathLines)
     expect(pluginCalls).toBe(1)
     expect(lines.join('')).toContain(FAKE)
+  })
+
+  test('an object with a hidden or symbol-keyed accessor is left to pino', () => {
+    let getterCalls = 0
+    const hiddenGetter = {}
+    Object.defineProperty(hiddenGetter, 'peek', {
+      enumerable: false,
+      get() {
+        getterCalls += 1
+        return 'v'
+      }
+    })
+    const symbolKey = Symbol('s')
+    const symbolGetter = {}
+    Object.defineProperty(symbolGetter, symbolKey, {
+      enumerable: true,
+      get() {
+        getterCalls += 1
+        return 'v'
+      }
+    })
+    const lines = viaPlugin({}, log =>
+      log.info({
+        accessToken: FAKE,
+        nested: { a: hiddenGetter, b: symbolGetter }
+      })
+    )
+    let pathsCalls = 0
+    const pathHidden = {}
+    Object.defineProperty(pathHidden, 'peek', {
+      enumerable: false,
+      get() {
+        pathsCalls += 1
+        return 'v'
+      }
+    })
+    const pathSymbol = {}
+    Object.defineProperty(pathSymbol, symbolKey, {
+      enumerable: true,
+      get() {
+        pathsCalls += 1
+        return 'v'
+      }
+    })
+    const pathLines = viaPaths({}, log =>
+      log.info({
+        accessToken: FAKE,
+        nested: { a: pathHidden, b: pathSymbol }
+      })
+    )
+    const [line] = parsed(lines)
+    const [pathLine] = parsed(pathLines)
+    expect(line?.accessToken).toBe(MASK)
+    expect(line?.nested).toEqual(pathLine?.nested)
+    expect(getterCalls).toBe(pathsCalls)
+  })
+
+  test('hidden and symbol-keyed properties survive the masked copy', () => {
+    const seen: Record<string, unknown>[] = []
+    const symbolKey = Symbol('s')
+    const list: unknown[] = [1]
+    list[2] = 3
+    const logged: Record<string, unknown> = {
+      accessToken: FAKE,
+      list
+    }
+    Object.defineProperty(logged, 'hidden', {
+      enumerable: false,
+      value: 'kept'
+    })
+    Object.defineProperty(logged, symbolKey, { enumerable: true, value: 'k' })
+    viaPlugin(
+      {
+        pino: {
+          formatters: {
+            log: (object: Record<string, unknown>) => {
+              seen.push(object)
+              return object
+            }
+          }
+        }
+      },
+      log => log.info(logged)
+    )
+    const copy = seen[0] as Record<string | symbol, unknown>
+    expect(copy).not.toBe(logged)
+    expect(Object.getOwnPropertyDescriptor(copy, 'hidden')).toMatchObject({
+      enumerable: false,
+      value: 'kept'
+    })
+    expect(copy[symbolKey]).toBe('k')
+    expect(1 in (copy.list as unknown[])).toBe(false)
+  })
+
+  test('pino still infers the message from a non-enumerable err', () => {
+    const record: Record<string, unknown> = { accessToken: FAKE }
+    Object.defineProperty(record, 'err', { value: new Error('boom') })
+    const lines = viaPlugin({}, log => log.info(record))
+    const pathLines = viaPaths({}, log => log.info(record))
+    expect(parsed(lines)[0]?.msg).toBe(parsed(pathLines)[0]?.msg)
+    expect(parsed(lines)[0]?.accessToken).toBe(MASK)
+  })
+
+  test('a sparse array is masked at its only element', () => {
+    const list: unknown[] = []
+    list[39_999] = { accessToken: FAKE }
+    const lines = viaPlugin({}, log => log.info({ list }))
+    const printed = parsed(lines)[0]?.list as
+      | Record<string, unknown>[]
+      | undefined
+    expect(printed?.at(39_999)?.accessToken).toBe(MASK)
+    expect(lines.join('')).not.toContain(FAKE)
+  })
+
+  test('a nested object is not asked for its prototype twice', () => {
+    let calls = 0
+    const target = { inner: 1 }
+    const guarded = new Proxy(target, {
+      getPrototypeOf(subject) {
+        calls += 1
+        if (calls > 1) {
+          throw new Error('read twice')
+        }
+        return Object.getPrototypeOf(subject)
+      }
+    })
+    const lines = viaPlugin({}, log =>
+      log.info({ accessToken: FAKE, nested: { guarded } })
+    )
+    expect(parsed(lines)[0]?.accessToken).toBe(MASK)
   })
 
   test('a nested object with a toJSON is printed through it, but toJSON: false is plain data', () => {

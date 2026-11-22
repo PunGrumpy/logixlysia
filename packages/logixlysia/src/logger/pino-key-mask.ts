@@ -1,21 +1,26 @@
 import { isSensitiveKey, REDACTED_TEXT } from '../utils/redact'
 
-type Key = number | string
-type Entry = [key: Key, value: unknown]
+type Entry = [key: string, value: unknown, descriptor: PropertyDescriptor]
+type Carried = [key: string | symbol, descriptor: PropertyDescriptor]
+
+interface Plain {
+  /** Own properties JSON does not print, copied as they are. */
+  carried: Carried[]
+  /** Own properties JSON prints: enumerable string keys, or an array's elements. */
+  entries: Entry[]
+  /** An array's length, `undefined` for an object. */
+  length: number | undefined
+  nullPrototype: boolean
+}
 
 const isObject = (value: unknown): value is object =>
   typeof value === 'object' && value !== null
 
-// JSON leaves such a value out of a line, so masking it would add a field.
-const isUnprinted = (value: unknown): boolean =>
-  value === undefined ||
-  typeof value === 'function' ||
-  typeof value === 'symbol'
-
-// The own data of a plain object or array, read from property descriptors so
-// that no getter runs. `undefined` means the value is not plain data: it has
-// another prototype, a getter, or a `toJSON` that decides what is printed.
-const plainEntries = (value: object): Entry[] | undefined => {
+// Everything the walk needs from one object, read once and from property
+// descriptors so that no getter runs. `undefined` means the value is not
+// plain data: it has another prototype, an accessor property, or a `toJSON`
+// that decides what is printed.
+const readPlain = (value: object): Plain | undefined => {
   try {
     const isArray = Array.isArray(value)
     const proto: unknown = Object.getPrototypeOf(value)
@@ -25,18 +30,12 @@ const plainEntries = (value: object): Entry[] | undefined => {
     if (!plain) {
       return
     }
-    const toJson = Object.getOwnPropertyDescriptor(value, 'toJSON')
-    if (
-      toJson !== undefined &&
-      (!('value' in toJson) || typeof toJson.value === 'function')
-    ) {
-      return
-    }
-    const keys: Key[] = isArray
-      ? Array.from({ length: (value as unknown[]).length }, (_, index) => index)
-      : Object.keys(value)
     const entries: Entry[] = []
-    for (const key of keys) {
+    const carried: Carried[] = []
+    let length: number | undefined
+    // An array lists its elements first, then `length`, then anything else.
+    let inElements = isArray
+    for (const key of Reflect.ownKeys(value)) {
       const descriptor = Object.getOwnPropertyDescriptor(value, key)
       if (descriptor === undefined) {
         continue
@@ -44,97 +43,117 @@ const plainEntries = (value: object): Entry[] | undefined => {
       if (!('value' in descriptor)) {
         return
       }
-      entries.push([key, descriptor.value])
+      if (key === 'toJSON' && typeof descriptor.value === 'function') {
+        return
+      }
+      if (isArray && key === 'length') {
+        length = descriptor.value as number
+        inElements = false
+        continue
+      }
+      const printed =
+        typeof key === 'string' &&
+        (isArray ? inElements : descriptor.enumerable === true)
+      if (printed) {
+        entries.push([key, descriptor.value, descriptor])
+      } else {
+        carried.push([key, descriptor])
+      }
     }
-    return entries
+    return { carried, entries, length, nullPrototype: proto === null }
   } catch {
     // A Proxy can refuse to be inspected.
   }
 }
 
-const emptyLike = (source: object): object => {
-  if (Array.isArray(source)) {
-    return Array.from({ length: (source as unknown[]).length })
+const emptyLike = (plain: Plain): object => {
+  if (plain.length !== undefined) {
+    const copy: unknown[] = []
+    copy.length = plain.length
+    return copy
   }
-  return Object.getPrototypeOf(source) === null ? Object.create(null) : {}
+  return plain.nullPrototype ? Object.create(null) : {}
 }
 
-const setOwn = (copy: object, key: Key, value: unknown): void => {
-  if (key === '__proto__') {
-    Object.defineProperty(copy, key, {
-      configurable: true,
-      enumerable: true,
-      value,
-      writable: true
-    })
-    return
-  }
-  ;(copy as Record<Key, unknown>)[key] = value
+interface MaskWalk {
+  extraKeys: readonly string[] | undefined
+  inner: object | undefined
+  isSerialized: (key: string) => boolean
+  logged: object
 }
 
-type SkipKey = (owner: object, key: Key) => boolean
-type Sensitive = (key: Key) => boolean
+const nodeOf = (walk: MaskWalk, value: object): object =>
+  value === walk.logged && walk.inner !== undefined ? walk.inner : value
 
-// The plain containers under `logged`, or `undefined` when none of them holds
-// a printed sensitive key. Each container is visited once, so a cycle or a
-// value shared by many parents costs no more than the number of containers.
-const findPlainWithSensitive = (
-  logged: object,
-  rootEntries: Entry[],
-  skipped: SkipKey,
-  sensitive: Sensitive
-): Map<object, Entry[]> | undefined => {
-  const plain = new Map<object, Entry[]>([[logged, rootEntries]])
-  const pending: object[] = [logged]
+const isSkipped = (walk: MaskWalk, owner: object, key: string): boolean =>
+  owner === walk.logged && walk.isSerialized(key)
+
+const isSensitive = (walk: MaskWalk, node: Plain, key: string): boolean =>
+  node.length === undefined && isSensitiveKey(key, walk.extraKeys)
+
+// Each object is read once, so a cycle or a value shared by many parents
+// costs no more than the number of objects. `undefined` when nothing under
+// the logged object holds a printed sensitive key.
+const collectPlain = (
+  walk: MaskWalk,
+  root: Plain
+): Map<object, Plain> | undefined => {
+  const plain = new Map<object, Plain>([[walk.logged, root]])
+  const opaque = new Set<object>()
+  const pending: object[] = [walk.logged]
   let found = false
   for (let owner = pending.pop(); owner !== undefined; owner = pending.pop()) {
-    for (const [key, value] of plain.get(owner) ?? []) {
-      if (skipped(owner, key)) {
+    const node = plain.get(owner) as Plain
+    for (const [key, value] of node.entries) {
+      if (isSkipped(walk, owner, key)) {
         continue
       }
-      if (sensitive(key)) {
-        found ||= !isUnprinted(value)
+      if (isSensitive(walk, node, key)) {
+        found ||= value !== undefined
         continue
       }
-      if (isObject(value) && !plain.has(value)) {
-        const entries = plainEntries(value)
-        if (entries !== undefined) {
-          plain.set(value, entries)
-          pending.push(value)
-        }
+      if (!isObject(value)) {
+        continue
       }
+      const target = nodeOf(walk, value)
+      if (plain.has(target) || opaque.has(target)) {
+        continue
+      }
+      const read = target === walk.inner ? root : readPlain(value)
+      if (read === undefined) {
+        opaque.add(target)
+        continue
+      }
+      plain.set(target, read)
+      pending.push(target)
     }
   }
   return found ? plain : undefined
 }
 
-const maskedCopies = (
-  logged: object,
-  plain: Map<object, Entry[]>,
-  skipped: SkipKey,
-  sensitive: Sensitive
-): unknown => {
+const maskedCopies = (walk: MaskWalk, plain: Map<object, Plain>): unknown => {
   const copies = new Map<object, object>()
-  for (const source of plain.keys()) {
-    copies.set(source, emptyLike(source))
+  for (const [source, node] of plain) {
+    copies.set(source, emptyLike(node))
   }
-  for (const [source, entries] of plain) {
+  for (const [source, node] of plain) {
     const copy = copies.get(source) as object
-    for (const [key, value] of entries) {
-      if (skipped(source, key)) {
-        setOwn(copy, key, value)
-      } else if (sensitive(key)) {
-        setOwn(copy, key, isUnprinted(value) ? value : REDACTED_TEXT)
-      } else {
-        setOwn(
-          copy,
-          key,
-          isObject(value) ? (copies.get(value) ?? value) : value
-        )
+    for (const [key, value, descriptor] of node.entries) {
+      let printed = value
+      if (isSkipped(walk, source, key)) {
+        printed = value
+      } else if (isSensitive(walk, node, key)) {
+        printed = value === undefined ? value : REDACTED_TEXT
+      } else if (isObject(value)) {
+        printed = copies.get(nodeOf(walk, value)) ?? value
       }
+      Object.defineProperty(copy, key, { ...descriptor, value: printed })
+    }
+    for (const [key, descriptor] of node.carried) {
+      Object.defineProperty(copy, key, descriptor)
     }
   }
-  return copies.get(logged)
+  return copies.get(walk.logged)
 }
 
 /**
@@ -151,18 +170,19 @@ export const maskPinoKeys = (
   if (!isObject(logged) || Array.isArray(logged)) {
     return logged
   }
-  const rootEntries = plainEntries(logged)
-  if (rootEntries === undefined) {
+  const root = readPlain(logged)
+  if (root === undefined) {
     return logged
   }
 
-  const skipped: SkipKey = (owner, key) =>
-    owner === logged && typeof key === 'string' && isSerialized(key)
-  const sensitive: Sensitive = key =>
-    typeof key === 'string' && isSensitiveKey(key, extraKeys)
-
-  const plain = findPlainWithSensitive(logged, rootEntries, skipped, sensitive)
-  return plain === undefined
-    ? logged
-    : maskedCopies(logged, plain, skipped, sensitive)
+  // Seen from inside itself the logged object is not at the top level, where
+  // no serializer runs, so it then gets a second copy with nothing skipped.
+  const walk: MaskWalk = {
+    extraKeys,
+    inner: root.entries.some(([key]) => isSerialized(key)) ? {} : undefined,
+    isSerialized,
+    logged
+  }
+  const plain = collectPlain(walk, root)
+  return plain === undefined ? logged : maskedCopies(walk, plain)
 }
