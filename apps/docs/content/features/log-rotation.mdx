@@ -70,7 +70,7 @@ logRotation: {
 
 ## How Rotation Works
 
-Rotation happens on write, when either configured trigger is crossed: the in-memory byte count exceeds `maxSize`, or the live file's age (from filesystem creation time) has reached `interval`. `interval` is checked before a write batch, so the first line written after it elapses goes into the new file, and `maxSize` is checked after one. Neither runs on a timer. An empty file is not archived. If its interval has already elapsed, that file is replaced and the period starts at the write, so the next line stays with the first.
+Rotation happens on write, when either configured trigger is crossed: the in-memory byte count exceeds `maxSize`, or the live file's age (from filesystem creation time) has reached `interval`. `interval` is checked before a write batch, so the first line written after it elapses goes into the new file, and `maxSize` is checked after one. Neither runs on a timer. An empty regular file is not archived. If its interval has already elapsed, that file is replaced and the period starts at the write. A `maxSize` limit can still archive that first line before the next one.
 
 When a log file is rotated, it's renamed with a timestamp and a high-resolution counter to guarantee uniqueness:
 
@@ -89,7 +89,7 @@ app.log.2026-07-27-14-30-05-123-45678901234567 → app.log.2026-07-27-14-30-05-1
 `maxFiles` controls how many rotated files are kept:
 
 - A **number** (e.g. `10`) keeps that many most-recent rotated files, deleting older ones. It must be a positive integer; `0` or a negative value is rejected at startup.
-- A **string** (e.g. `'7d'`) keeps rotated files younger than that age, deleting older ones.
+- A **string** (e.g. `'7d'`) keeps rotated files younger than that age, deleting older ones. An uncompressed archive is dated when it is rotated. A compressed archive is dated when the compressed file is written.
 
 ## Example Configurations
 
@@ -127,7 +127,7 @@ logRotation: {
 
 ## Important Notes
 
-- Empty files are not archived. An empty file whose interval has elapsed is replaced, and the period starts at that write
+- Empty regular files are not archived. An empty file whose interval has elapsed is replaced, and the period starts at that write. `maxSize` can still archive the first line before the next one
 - Rotation failures don't crash the application
 - Compression runs asynchronously
 - Old files are automatically cleaned up based on `maxFiles`
