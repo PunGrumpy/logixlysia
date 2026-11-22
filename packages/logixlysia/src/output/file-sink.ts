@@ -42,6 +42,8 @@ interface PendingBatch {
   resolvers: BatchResolver[]
 }
 
+type RotationTrigger = 'interval' | 'size'
+
 const sinks = new Map<string, FileSink>()
 
 class FileSinkImpl implements FileSink {
@@ -103,6 +105,8 @@ class FileSinkImpl implements FileSink {
 
     try {
       await this.ensureOpen(options)
+      await this.maybeRotate(options, 'interval')
+      await this.ensureOpen(options)
       const handle = this.handle as FileHandle
       await handle.write(text)
       this.bytesWritten += Buffer.byteLength(text)
@@ -113,7 +117,7 @@ class FileSinkImpl implements FileSink {
       return
     }
 
-    await this.maybeRotate(options)
+    await this.maybeRotate(options, 'size')
 
     for (const resolver of batch.resolvers) {
       resolver.resolve()
@@ -134,12 +138,15 @@ class FileSinkImpl implements FileSink {
     this.openedAt = resolveOpenedAt(stat.birthtimeMs, Date.now())
   }
 
-  private shouldRotateNow(rotation: LogRotationConfig): boolean {
-    if (
-      rotation.maxSize !== undefined &&
-      this.bytesWritten > parseSize(rotation.maxSize)
-    ) {
-      return true
+  private shouldRotateNow(
+    rotation: LogRotationConfig,
+    trigger: RotationTrigger
+  ): boolean {
+    if (trigger === 'size') {
+      return (
+        rotation.maxSize !== undefined &&
+        this.bytesWritten > parseSize(rotation.maxSize)
+      )
     }
     return (
       rotation.interval !== undefined &&
@@ -147,7 +154,18 @@ class FileSinkImpl implements FileSink {
     )
   }
 
-  private async maybeRotate(options: FileSinkOptions): Promise<void> {
+  private async emptyLiveFile(): Promise<boolean> {
+    if (!this.handle) {
+      return false
+    }
+    const stat = await this.handle.stat()
+    return stat.size === 0
+  }
+
+  private async maybeRotate(
+    options: FileSinkOptions,
+    trigger: RotationTrigger
+  ): Promise<void> {
     const rotation = options.logRotation
     if (
       !rotation ||
@@ -157,7 +175,14 @@ class FileSinkImpl implements FileSink {
     }
 
     try {
-      if (!this.shouldRotateNow(rotation)) {
+      if (!this.shouldRotateNow(rotation, trigger)) {
+        return
+      }
+
+      if (trigger === 'interval' && (await this.emptyLiveFile())) {
+        // An empty file is never archived, so its age is not a period that
+        // ended. The handle stays open, which keeps this start until a restart.
+        this.openedAt = Date.now()
         return
       }
 

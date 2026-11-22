@@ -21,7 +21,7 @@ describe('interval rotation', () => {
     restoreRealClock()
   })
 
-  test('rotates on the first write after the interval elapses', async () => {
+  test('the first line after the interval elapses opens the new file', async () => {
     const dir = await createTempDir()
     try {
       const filePath = path.join(dir, 'logs', 'interval.log')
@@ -65,7 +65,7 @@ describe('interval rotation', () => {
         'utf-8'
       )
       expect(rotatedContent).toContain('msg-1')
-      expect(rotatedContent).toContain('msg-2')
+      expect(rotatedContent).not.toContain('msg-2')
 
       restoreRealClock()
 
@@ -81,9 +81,9 @@ describe('interval rotation', () => {
       })
 
       const liveContent = await fs.readFile(filePath, 'utf-8')
-      expect(liveContent).toContain('msg-3')
       expect(liveContent).not.toContain('msg-1')
-      expect(liveContent).not.toContain('msg-2')
+      expect(liveContent).toContain('msg-2')
+      expect(liveContent).toContain('msg-3')
     } finally {
       await removeTempDir(dir)
     }
@@ -201,7 +201,7 @@ describe('interval rotation', () => {
     }
   })
 
-  test('restart simulation: birthtime survives, fresh sink rotates immediately', async () => {
+  test('restart simulation: birthtime survives, the old file rotates before the first write', async () => {
     const dir = await createTempDir()
     try {
       const logsDir = path.join(dir, 'logs')
@@ -233,8 +233,76 @@ describe('interval rotation', () => {
         path.join(logsDir, rotated[0]),
         'utf-8'
       )
-      expect(rotatedContent).toContain('seed')
-      expect(rotatedContent).toContain('after-restart')
+      expect(rotatedContent).toBe('seed\n')
+
+      const liveContent = await fs.readFile(filePath, 'utf-8')
+      expect(liveContent).toContain('after-restart')
+    } finally {
+      await removeTempDir(dir)
+    }
+  })
+
+  test('lines written in one tick after the interval stay together in the new file', async () => {
+    const dir = await createTempDir()
+    try {
+      const logsDir = path.join(dir, 'logs')
+      const filePath = path.join(logsDir, 'batch.log')
+      const options: Options = {
+        config: { logRotation: { interval: '1h' } }
+      }
+
+      const firstRequest = createMockRequest('http://localhost/first')
+      await logToFile({
+        data: { message: 'msg-1' },
+        filePath,
+        level: 'INFO',
+        options,
+        precomputed: precomputedFor(firstRequest),
+        request: firstRequest,
+        store: { beforeTime: 0n }
+      })
+
+      setSystemTime(new Date(Date.now() + TWO_HOURS_MS))
+
+      const secondRequest = createMockRequest('http://localhost/second')
+      const thirdRequest = createMockRequest('http://localhost/third')
+      await Promise.all([
+        logToFile({
+          data: { message: 'msg-2' },
+          filePath,
+          level: 'INFO',
+          options,
+          precomputed: precomputedFor(secondRequest),
+          request: secondRequest,
+          store: { beforeTime: 0n }
+        }),
+        logToFile({
+          data: { message: 'msg-3' },
+          filePath,
+          level: 'INFO',
+          options,
+          precomputed: precomputedFor(thirdRequest),
+          request: thirdRequest,
+          store: { beforeTime: 0n }
+        })
+      ])
+
+      const entries = await fs.readdir(logsDir)
+      const rotated = entries.filter(name => name.startsWith('batch.log.'))
+      expect(rotated.length).toBe(1)
+
+      const rotatedContent = await fs.readFile(
+        path.join(logsDir, rotated[0]),
+        'utf-8'
+      )
+      expect(rotatedContent.split('\n').filter(Boolean)).toHaveLength(1)
+      expect(rotatedContent).toContain('msg-1')
+
+      const liveContent = await fs.readFile(filePath, 'utf-8')
+      const liveLines = liveContent.split('\n').filter(Boolean)
+      expect(liveLines).toHaveLength(2)
+      expect(liveLines[0]).toContain('msg-2')
+      expect(liveLines[1]).toContain('msg-3')
     } finally {
       await removeTempDir(dir)
     }
@@ -283,6 +351,245 @@ describe('interval rotation', () => {
         name.startsWith('idle.log.')
       )
       expect(rotated.length).toBe(1)
+    } finally {
+      await removeTempDir(dir)
+    }
+  })
+
+  test('an expired empty file starts a new period instead of archiving the next line', async () => {
+    const dir = await createTempDir()
+    try {
+      const logsDir = path.join(dir, 'logs')
+      const filePath = path.join(logsDir, 'empty.log')
+      await fs.mkdir(logsDir, { recursive: true })
+      await fs.writeFile(filePath, '')
+
+      setSystemTime(new Date(Date.now() + TWO_HOURS_MS))
+
+      const options: Options = {
+        config: { logRotation: { interval: '1h' } }
+      }
+      const firstRequest = createMockRequest('http://localhost/first')
+      await logToFile({
+        data: { message: 'msg-1' },
+        filePath,
+        level: 'INFO',
+        options,
+        precomputed: precomputedFor(firstRequest),
+        request: firstRequest,
+        store: { beforeTime: 0n }
+      })
+      const secondRequest = createMockRequest('http://localhost/second')
+      await logToFile({
+        data: { message: 'msg-2' },
+        filePath,
+        level: 'INFO',
+        options,
+        precomputed: precomputedFor(secondRequest),
+        request: secondRequest,
+        store: { beforeTime: 0n }
+      })
+
+      const entries = await fs.readdir(logsDir)
+      expect(entries.filter(name => name.startsWith('empty.log.'))).toEqual([])
+      const liveContent = await fs.readFile(filePath, 'utf-8')
+      expect(liveContent).toContain('msg-1')
+      expect(liveContent).toContain('msg-2')
+
+      setSystemTime(new Date(Date.now() + TWO_HOURS_MS))
+      const thirdRequest = createMockRequest('http://localhost/third')
+      await logToFile({
+        data: { message: 'msg-3' },
+        filePath,
+        level: 'INFO',
+        options,
+        precomputed: precomputedFor(thirdRequest),
+        request: thirdRequest,
+        store: { beforeTime: 0n }
+      })
+
+      const after = await fs.readdir(logsDir)
+      const rotated = after.filter(name => name.startsWith('empty.log.'))
+      expect(rotated).toHaveLength(1)
+      const archived = await fs.readFile(
+        path.join(logsDir, rotated[0]),
+        'utf-8'
+      )
+      expect(archived).toContain('msg-1')
+      expect(archived).toContain('msg-2')
+      expect(archived).not.toContain('msg-3')
+      const liveAfter = await fs.readFile(filePath, 'utf-8')
+      expect(liveAfter).toContain('msg-3')
+      expect(liveAfter).not.toContain('msg-1')
+    } finally {
+      await removeTempDir(dir)
+    }
+  })
+
+  test('time retention removes the archive of a file that was last written before maxFiles', async () => {
+    const dir = await createTempDir()
+    try {
+      const logsDir = path.join(dir, 'logs')
+      const filePath = path.join(logsDir, 'retain.log')
+      const options: Options = {
+        config: { logRotation: { interval: '1h', maxFiles: '1d' } }
+      }
+      const firstRequest = createMockRequest('http://localhost/first')
+      await logToFile({
+        data: { message: 'msg-1' },
+        filePath,
+        level: 'INFO',
+        options,
+        precomputed: precomputedFor(firstRequest),
+        request: firstRequest,
+        store: { beforeTime: 0n }
+      })
+
+      const twoDaysAgo = new Date(Date.now() - 2 * 86_400_000)
+      await fs.utimes(filePath, twoDaysAgo, twoDaysAgo)
+      setSystemTime(new Date(Date.now() + TWO_HOURS_MS))
+
+      const secondRequest = createMockRequest('http://localhost/second')
+      await logToFile({
+        data: { message: 'msg-2' },
+        filePath,
+        level: 'INFO',
+        options,
+        precomputed: precomputedFor(secondRequest),
+        request: secondRequest,
+        store: { beforeTime: 0n }
+      })
+
+      const entries = await fs.readdir(logsDir)
+      const rotated = entries.filter(name => name.startsWith('retain.log.'))
+      expect(rotated).toEqual([])
+      const liveContent = await fs.readFile(filePath, 'utf-8')
+      expect(liveContent).toContain('msg-2')
+      expect(liveContent).not.toContain('msg-1')
+    } finally {
+      await removeTempDir(dir)
+    }
+  })
+
+  test('time retention keeps the archive of a file that was written within maxFiles', async () => {
+    const dir = await createTempDir()
+    try {
+      const logsDir = path.join(dir, 'logs')
+      const filePath = path.join(logsDir, 'retain.log')
+      const options: Options = {
+        config: { logRotation: { interval: '1h', maxFiles: '1d' } }
+      }
+      const firstRequest = createMockRequest('http://localhost/first')
+      await logToFile({
+        data: { message: 'msg-1' },
+        filePath,
+        level: 'INFO',
+        options,
+        precomputed: precomputedFor(firstRequest),
+        request: firstRequest,
+        store: { beforeTime: 0n }
+      })
+
+      setSystemTime(new Date(Date.now() + TWO_HOURS_MS))
+
+      const secondRequest = createMockRequest('http://localhost/second')
+      await logToFile({
+        data: { message: 'msg-2' },
+        filePath,
+        level: 'INFO',
+        options,
+        precomputed: precomputedFor(secondRequest),
+        request: secondRequest,
+        store: { beforeTime: 0n }
+      })
+
+      const entries = await fs.readdir(logsDir)
+      const rotated = entries.filter(name => name.startsWith('retain.log.'))
+      expect(rotated).toHaveLength(1)
+      const archived = await fs.readFile(
+        path.join(logsDir, rotated[0]),
+        'utf-8'
+      )
+      expect(archived).toContain('msg-1')
+      expect(archived).not.toContain('msg-2')
+      const liveContent = await fs.readFile(filePath, 'utf-8')
+      expect(liveContent).toContain('msg-2')
+    } finally {
+      await removeTempDir(dir)
+    }
+  })
+
+  test('an expired empty symlink stays a symlink', async () => {
+    const dir = await createTempDir()
+    try {
+      const logsDir = path.join(dir, 'logs')
+      const target = path.join(logsDir, 'target.log')
+      const filePath = path.join(logsDir, 'link.log')
+      await fs.mkdir(logsDir, { recursive: true })
+      await fs.writeFile(target, '')
+      await fs.symlink(target, filePath)
+
+      setSystemTime(new Date(Date.now() + TWO_HOURS_MS))
+
+      const options: Options = {
+        config: { logRotation: { interval: '1h' } }
+      }
+      const request = createMockRequest('http://localhost/first')
+      await logToFile({
+        data: { message: 'msg-1' },
+        filePath,
+        level: 'INFO',
+        options,
+        precomputed: precomputedFor(request),
+        request,
+        store: { beforeTime: 0n }
+      })
+
+      const linkStat = await fs.lstat(filePath)
+      expect(linkStat.isSymbolicLink()).toBe(true)
+      expect(await fs.readFile(filePath, 'utf-8')).toContain('msg-1')
+    } finally {
+      await removeTempDir(dir)
+    }
+  })
+
+  test('replacing the path does not delete the file now at that path', async () => {
+    const dir = await createTempDir()
+    try {
+      const logsDir = path.join(dir, 'logs')
+      const filePath = path.join(logsDir, 'live.log')
+      const options: Options = {
+        config: { logRotation: { interval: '1h' } }
+      }
+      const firstRequest = createMockRequest('http://localhost/first')
+      await logToFile({
+        data: { message: 'msg-1' },
+        filePath,
+        level: 'INFO',
+        options,
+        precomputed: precomputedFor(firstRequest),
+        request: firstRequest,
+        store: { beforeTime: 0n }
+      })
+
+      await fs.truncate(filePath, 0)
+      const aside = path.join(logsDir, 'aside.log')
+      await fs.rename(filePath, aside)
+      await fs.writeFile(filePath, 'precious')
+
+      setSystemTime(new Date(Date.now() + TWO_HOURS_MS))
+      const secondRequest = createMockRequest('http://localhost/second')
+      await logToFile({
+        data: { message: 'msg-2' },
+        filePath,
+        level: 'INFO',
+        options,
+        precomputed: precomputedFor(secondRequest),
+        request: secondRequest,
+        store: { beforeTime: 0n }
+      })
+
+      expect(await fs.readFile(filePath, 'utf-8')).toBe('precious')
     } finally {
       await removeTempDir(dir)
     }
