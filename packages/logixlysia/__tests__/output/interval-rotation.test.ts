@@ -472,6 +472,82 @@ describe('interval rotation', () => {
     }
   })
 
+  test('an expired empty symlink stays a symlink', async () => {
+    const dir = await createTempDir()
+    try {
+      const logsDir = path.join(dir, 'logs')
+      const target = path.join(logsDir, 'target.log')
+      const filePath = path.join(logsDir, 'link.log')
+      await fs.mkdir(logsDir, { recursive: true })
+      await fs.writeFile(target, '')
+      await fs.symlink(target, filePath)
+
+      setSystemTime(new Date(Date.now() + TWO_HOURS_MS))
+
+      const options: Options = {
+        config: { logRotation: { interval: '1h' } }
+      }
+      const request = createMockRequest('http://localhost/first')
+      await logToFile({
+        data: { message: 'msg-1' },
+        filePath,
+        level: 'INFO',
+        options,
+        precomputed: precomputedFor(request),
+        request,
+        store: { beforeTime: 0n }
+      })
+
+      const linkStat = await fs.lstat(filePath)
+      expect(linkStat.isSymbolicLink()).toBe(true)
+      expect(await fs.readFile(filePath, 'utf-8')).toContain('msg-1')
+    } finally {
+      await removeTempDir(dir)
+    }
+  })
+
+  test('replacing the path does not delete the file now at that path', async () => {
+    const dir = await createTempDir()
+    try {
+      const logsDir = path.join(dir, 'logs')
+      const filePath = path.join(logsDir, 'live.log')
+      const options: Options = {
+        config: { logRotation: { interval: '1h' } }
+      }
+      const firstRequest = createMockRequest('http://localhost/first')
+      await logToFile({
+        data: { message: 'msg-1' },
+        filePath,
+        level: 'INFO',
+        options,
+        precomputed: precomputedFor(firstRequest),
+        request: firstRequest,
+        store: { beforeTime: 0n }
+      })
+
+      await fs.truncate(filePath, 0)
+      const aside = path.join(logsDir, 'aside.log')
+      await fs.rename(filePath, aside)
+      await fs.writeFile(filePath, 'precious')
+
+      setSystemTime(new Date(Date.now() + TWO_HOURS_MS))
+      const secondRequest = createMockRequest('http://localhost/second')
+      await logToFile({
+        data: { message: 'msg-2' },
+        filePath,
+        level: 'INFO',
+        options,
+        precomputed: precomputedFor(secondRequest),
+        request: secondRequest,
+        store: { beforeTime: 0n }
+      })
+
+      expect(await fs.readFile(filePath, 'utf-8')).toBe('precious')
+    } finally {
+      await removeTempDir(dir)
+    }
+  })
+
   test('resolveOpenedAt falls back to now when birthtimeMs is 0 or absent', () => {
     expect(resolveOpenedAt(0, 123)).toBe(123)
     expect(resolveOpenedAt(undefined, 123)).toBe(123)

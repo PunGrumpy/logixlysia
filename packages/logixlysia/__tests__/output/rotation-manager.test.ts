@@ -1,4 +1,12 @@
-import { afterEach, beforeEach, describe, expect, spyOn, test } from 'bun:test'
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  setSystemTime,
+  spyOn,
+  test
+} from 'bun:test'
 import { promises as fs } from 'node:fs'
 import path from 'node:path'
 import { gunzipSync } from 'node:zlib'
@@ -130,6 +138,47 @@ describe('performRotation retention', () => {
     expect(await fs.readFile(path.join(dir, rotated[0]), 'utf-8')).toBe(
       'stale live'
     )
+  })
+
+  test('count retention keeps the later archive when mtimes match', async () => {
+    const filePath = path.join(dir, 'app.log')
+    await fs.writeFile(filePath, 'live content')
+    const frozen = new Date('2026-06-01T00:00:00.000Z')
+    const older = `${filePath}.2026-06-01-00-00-00-000-1`
+    await fs.writeFile(older, 'older')
+    const seconds = frozen.getTime() / 1000
+    await fs.utimes(older, seconds, seconds)
+
+    setSystemTime(frozen)
+    try {
+      await performRotation(filePath, { maxFiles: 1 })
+    } finally {
+      setSystemTime()
+    }
+
+    const entries = await fs.readdir(dir)
+    const rotated = entries.filter(name => name.startsWith('app.log.'))
+    expect(rotated).toHaveLength(1)
+    expect(await fs.readFile(path.join(dir, rotated[0]), 'utf-8')).toBe(
+      'live content'
+    )
+  })
+
+  test('a refused timestamp stamp still compresses the archive', async () => {
+    const filePath = path.join(dir, 'app.log')
+    await fs.writeFile(filePath, 'live content')
+    const utimes = spyOn(fs, 'utimes').mockRejectedValue(
+      Object.assign(new Error('operation not permitted'), { code: 'EPERM' })
+    )
+    try {
+      await performRotation(filePath, { compress: true })
+    } finally {
+      utimes.mockRestore()
+    }
+
+    const entries = await fs.readdir(dir)
+    expect(entries.some(name => name.endsWith('.gz'))).toBe(true)
+    expect(entries).not.toContain('app.log')
   })
 
   test('is a no-op for an empty live file', async () => {
