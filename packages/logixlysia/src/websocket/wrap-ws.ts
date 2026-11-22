@@ -35,6 +35,20 @@ interface HookFailure {
 
 type Settle = (failure?: HookFailure) => void
 
+type WsHookKind = 'close' | 'message' | 'open'
+
+const HOOK_LABEL: Record<WsHookKind, string> = {
+  close: 'WebSocket closed',
+  message: 'WebSocket message',
+  open: 'WebSocket opened'
+}
+
+const HOOK_FAILURE_LABEL: Record<WsHookKind, string> = {
+  close: 'WebSocket close hook failed',
+  message: 'WebSocket message hook failed',
+  open: 'WebSocket open hook failed'
+}
+
 const wsRequestCache = new Map<string, Request>()
 
 const wsSyntheticRequest = (path: string): Request => {
@@ -210,7 +224,7 @@ export const createWsHandlerWrapper = (
     ws: WebSocketLike,
     key: ContextKey,
     path: string,
-    message: string,
+    kind: WsHookKind,
     extra: Record<string, unknown> | undefined,
     failure: HookFailure | undefined
   ): void => {
@@ -230,16 +244,32 @@ export const createWsHandlerWrapper = (
         : { wsId }
 
     if (!failure) {
-      logger.log('INFO', request, { context, message, status: 200 }, store)
+      logger.log(
+        'INFO',
+        request,
+        { context, message: HOOK_LABEL[kind], status: 200 },
+        store
+      )
       return
     }
     // No status: a failed hook sends the client none, as with a line from
-    // `log.error`.
-    const { error } = normalizeLoggedError(
+    // `log.error`. The message names the hook and the error, since a file
+    // line shows no `error` field.
+    const { error, message: cause } = normalizeLoggedError(
       failure.error,
       options.config?.logErrorPayload === true
     )
-    logger.log('ERROR', request, { context, error, message }, store)
+    const label = HOOK_FAILURE_LABEL[kind]
+    logger.log(
+      'ERROR',
+      request,
+      {
+        context,
+        error,
+        message: cause === '' ? label : `${label}: ${cause}`
+      },
+      store
+    )
   }
 
   const reportSettleFailure = (failure: unknown): void => {
@@ -262,13 +292,13 @@ export const createWsHandlerWrapper = (
     ws: WebSocketLike,
     key: ContextKey,
     path: string,
-    message: string,
+    kind: WsHookKind,
     extra?: Record<string, unknown>,
     failure?: HookFailure
   ): void => {
     try {
       if (options.config?.disableWebSocketLogging !== true) {
-        logWs(ws, key, path, message, extra, failure)
+        logWs(ws, key, path, kind, extra, failure)
       }
     } catch (reportFailure) {
       reportSettleFailure(reportFailure)
@@ -315,7 +345,7 @@ export const createWsHandlerWrapper = (
             ws,
             key,
             path,
-            'WebSocket closed',
+            'close',
             Object.keys(extra).length > 0 ? extra : undefined,
             failure
           )
@@ -349,7 +379,7 @@ export const createWsHandlerWrapper = (
           if (key === undefined) {
             return
           }
-          writeLine(ws, key, path, 'WebSocket message', extra, failure)
+          writeLine(ws, key, path, 'message', extra, failure)
         }
         let result: unknown
         try {
@@ -365,7 +395,7 @@ export const createWsHandlerWrapper = (
         wsTimings.set(key, process.hrtime.bigint())
         closedContexts.delete(key)
         const done: Settle = failure => {
-          writeLine(ws, key, path, 'WebSocket opened', undefined, failure)
+          writeLine(ws, key, path, 'open', undefined, failure)
         }
         let result: unknown
         try {

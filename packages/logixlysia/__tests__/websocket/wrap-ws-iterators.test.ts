@@ -97,7 +97,9 @@ test('a generator that throws mid-stream writes one ERROR line', () => {
   expect(replies.next()).toEqual({ done: false, value: 'one' })
   expect(() => replies.next()).toThrow('boom mid-stream')
 
-  expect(linesFrom(transport)).toEqual([['ERROR', 'WebSocket message']])
+  expect(linesFrom(transport)).toEqual([
+    ['ERROR', 'WebSocket message hook failed: boom mid-stream']
+  ])
   expect(recordAt(transport, 0).error).toMatchObject({
     message: 'boom mid-stream'
   })
@@ -118,7 +120,9 @@ test('an async generator that throws mid-stream writes one ERROR line', async ()
   await replies.next()
   await expect(replies.next()).rejects.toThrow('boom mid-stream')
 
-  expect(linesFrom(transport)).toEqual([['ERROR', 'WebSocket message']])
+  expect(linesFrom(transport)).toEqual([
+    ['ERROR', 'WebSocket message hook failed: boom mid-stream']
+  ])
   expect(recordAt(transport, 0).error).toMatchObject({
     message: 'boom mid-stream'
   })
@@ -367,6 +371,8 @@ test('a generator that revokes the message it was given still fails with its own
   }
 
   expect(caught).toBe(failure)
-  expect(linesFrom(transport)).toEqual([['ERROR', 'WebSocket message']])
+  expect(linesFrom(transport)).toEqual([
+    ['ERROR', 'WebSocket message hook failed: own error']
+  ])
   expect(recordAt(transport, 0).error).toMatchObject({ message: 'own error' })
 })

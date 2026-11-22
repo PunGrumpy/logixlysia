@@ -47,7 +47,9 @@ test('a message hook that throws writes one ERROR line carrying the error', () =
   expect(() => hooks.message({ id: 'ws-1' }, 'hi')).toThrow('sync boom')
 
   expect(levelsFrom(transport)).toEqual(['ERROR'])
-  expect(transport.mock.calls[0]?.[1]).toBe('WebSocket message')
+  expect(transport.mock.calls[0]?.[1]).toBe(
+    'WebSocket message hook failed: sync boom'
+  )
   const record = recordAt(transport, 0)
   expect(record.error).toMatchObject({ message: 'sync boom', name: 'Error' })
   expect(record.context).toEqual({ payloadType: 'string', wsId: 'ws-1' })
@@ -85,7 +87,7 @@ test('an open hook that throws writes an ERROR opened line', () => {
   expect(() => hooks.open({ id: 'ws-1' })).toThrow('no room')
 
   expect(transport.mock.calls.map(call => [call[0], call[1]])).toEqual([
-    ['ERROR', 'WebSocket opened']
+    ['ERROR', 'WebSocket open hook failed: no room']
   ])
   expect(recordAt(transport, 0).error).toMatchObject({ message: 'no room' })
 })
@@ -197,6 +199,9 @@ test('a hook that revokes the message it was given still fails with its own erro
   }
 
   expect(caught).toBe(failure)
+  expect(transport.mock.calls[0]?.[1]).toBe(
+    'WebSocket message hook failed: own error'
+  )
   expect(levelsFrom(transport)).toEqual(['ERROR'])
   expect(recordAt(transport, 0).context).toEqual({
     payloadType: 'object',
@@ -267,6 +272,28 @@ test('a generator from another realm is returned unchanged', () => {
   expect(hooks.message({ id: 'ws-1' }, 'sync')).toBe(sync)
   expect(hooks.message({ id: 'ws-2' }, 'async')).toBe(asyncGenerator)
   expect(levelsFrom(transport)).toEqual(['INFO', 'INFO'])
+})
+
+test('a hook that throws undefined is still named in the message', () => {
+  const { transport, wrapWs } = setup()
+  const hooks = wrapWs('/chat', {
+    message(_ws, _message) {
+      const failure: unknown = undefined
+      throw failure
+    }
+  })
+
+  let caught: unknown
+  try {
+    hooks.message({ id: 'ws-1' }, 'hi')
+  } catch (error) {
+    caught = error
+  }
+
+  expect(caught).toBeUndefined()
+  expect(transport.mock.calls[0]?.[1]).toBe(
+    'WebSocket message hook failed: undefined'
+  )
 })
 
 test('a socket whose id cannot be read still runs every hook', () => {

@@ -180,7 +180,7 @@ test('a synchronous throw still reaches Elysia and is still logged', async () =>
   expect(errors).toHaveLength(1)
   expect(errors[0]).toBeInstanceOf(Error)
   expect(errors[0]).toHaveProperty('message', 'sync')
-  expect(recordsNamed('WebSocket message')).toHaveLength(1)
+  expect(recordsNamed('WebSocket message hook failed: sync')).toHaveLength(1)
   expect(rejections).toBe(0)
 })
 
@@ -234,11 +234,13 @@ test('a hook that rejects on a real socket writes one ERROR line with the error'
   const { socket } = await connect(url)
   socket.send('hi')
   await waitFor(
-    () => errors.length > 0 && recordsNamed('WebSocket message').length > 0
+    () =>
+      errors.length > 0 &&
+      recordsNamed('WebSocket message hook failed: boom').length > 0
   )
   socket.close()
 
-  const lines = recordsNamed('WebSocket message')
+  const lines = recordsNamed('WebSocket message hook failed: boom')
   expect(lines.map(call => call[0])).toEqual(['ERROR'])
   expect(lines[0]?.[2]).toMatchObject({ error: { message: 'boom' } })
   expect(lines[0]?.[2]).not.toHaveProperty('status')
@@ -260,7 +262,7 @@ test('a generator hook that fails mid-stream sends what it yielded and writes on
     () =>
       frames.length > 0 &&
       errors.length > 0 &&
-      recordsNamed('WebSocket message').length > 0
+      recordsNamed('WebSocket message hook failed: boom mid-stream').length > 0
   )
   socket.close()
 
@@ -279,7 +281,7 @@ test('a generator hook that fails mid-stream sends what it yielded and writes on
   }
   expect(errors).toHaveLength(1)
   expect(errors[0]).toHaveProperty('message', 'boom mid-stream')
-  const lines = recordsNamed('WebSocket message')
+  const lines = recordsNamed('WebSocket message hook failed: boom mid-stream')
   expect(lines.map(call => call[0])).toEqual(['ERROR'])
   expect(lines[0]?.[2]).toMatchObject({
     error: { message: 'boom mid-stream' }
