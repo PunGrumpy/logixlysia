@@ -274,6 +274,36 @@ test('a generator from another realm is returned unchanged', () => {
   expect(levelsFrom(transport)).toEqual(['INFO', 'INFO'])
 })
 
+test('a validation error from a hook has its failure messages masked under autoRedact', () => {
+  const { transport, wrapWs } = setup({
+    autoRedact: true,
+    logErrorPayload: true
+  })
+  const secret = 'not-a-real-password'
+  // A validator that quotes the failed value in its own message, as some
+  // Standard Schema validators and a schema's custom `error` text do.
+  const failure = Object.assign(new Error('invalid'), {
+    all: [{ message: `got "${secret}"`, path: '/password' }],
+    code: 'VALIDATION',
+    name: 'ValidationError',
+    type: 'body',
+    value: { password: secret }
+  })
+  const hooks = wrapWs('/chat', {
+    message(_ws, _message) {
+      throw failure
+    }
+  })
+
+  expect(() => hooks.message({ id: 'ws-1' }, 'hi')).toThrow('invalid')
+
+  const record = recordAt(transport, 0)
+  expect(record.error?.errors).toEqual([
+    { message: '[REDACTED]', path: '/password' }
+  ])
+  expect(JSON.stringify(record.error)).not.toContain(secret)
+})
+
 test('a hook that throws undefined is still named in the message', () => {
   const { transport, wrapWs } = setup()
   const hooks = wrapWs('/chat', {

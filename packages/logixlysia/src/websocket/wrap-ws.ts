@@ -257,7 +257,8 @@ export const createWsHandlerWrapper = (
     // line shows no `error` field.
     const { error, message: cause } = normalizeLoggedError(
       failure.error,
-      options.config?.logErrorPayload === true
+      options.config?.logErrorPayload === true,
+      options.config?.autoRedact === true
     )
     const label = HOOK_FAILURE_LABEL[kind]
     logger.log(
