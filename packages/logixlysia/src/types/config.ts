@@ -37,9 +37,7 @@ export interface LogRotationConfig {
   /**
    * Rotate when the live file's age reaches a fixed interval. The age is
    * checked before each write, so the first line written after the interval
-   * goes into the new file. An empty regular file is replaced instead of
-   * archived, and its period starts at that write. `maxSize` can still
-   * archive that first line. An idle process rotates on its next write, not
+   * goes into the new file. An idle process rotates on its next write, not
    * on a timer. Format: number + 'h' | 'd' | 'w', e.g. '12h', '1d', '1w'.
    */
   interval?: string
