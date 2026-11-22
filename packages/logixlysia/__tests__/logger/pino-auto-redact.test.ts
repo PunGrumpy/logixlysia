@@ -313,6 +313,33 @@ describe('store.pino under autoRedact masks the first argument by the plugin key
     ])
   })
 
+  test("a user logMethod that forwards to a child logger uses the child's serializers", () => {
+    let child: unknown
+    const lines = viaPlugin(
+      {
+        pino: {
+          hooks: {
+            logMethod(
+              this: unknown,
+              args: unknown[],
+              method: (...passed: unknown[]) => unknown
+            ) {
+              method.apply(child, args)
+            }
+          }
+        }
+      },
+      log => {
+        child = (log as unknown as pino.Logger).child(
+          {},
+          { serializers: { accessToken: (value: string) => value.length } }
+        )
+        log.info({ accessToken: 'abc' })
+      }
+    )
+    expect(parsed(lines)).toEqual([{ accessToken: 3, level: 30 }])
+  })
+
   test('an own __proto__ key is masked without polluting Object.prototype', () => {
     const input = JSON.parse(
       `{"__proto__":{"accessToken":"${FAKE}"},"id":1}`

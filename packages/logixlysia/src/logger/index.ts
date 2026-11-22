@@ -54,11 +54,17 @@ const keyMaskingHooks = (
   return {
     ...hooks,
     logMethod(args, method, level) {
-      const isSerialized = serializedBy(this, errorKey)
+      const enteredSerializers = serializedBy(this, errorKey)
       // A user's hook may reorder the arguments, so the mask runs on what it
       // finally passes to pino.
       const masked = function masked(this: unknown, ...passed: unknown[]) {
         if (passed.length > 0) {
+          // The hook may call `method` with another logger as `this`, and
+          // pino then uses that logger's serializers.
+          const isSerialized =
+            typeof this === 'object' && this !== null
+              ? serializedBy(this, errorKey)
+              : enteredSerializers
           passed[0] = maskPinoKeys(passed[0], extraKeys, isSerialized)
         }
         return (method as (...args: unknown[]) => unknown).apply(this, passed)
