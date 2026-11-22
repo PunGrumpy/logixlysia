@@ -35,6 +35,10 @@ const oneReply = function* oneReply(): Generator<string> {
   yield 'one'
 }
 
+const seeded = function* seeded(): Generator<string> {
+  yield 'a'
+}
+
 const linesFrom = (transport: TransportMock): unknown[][] =>
   transport.mock.calls.map(call => [call[0], call[1]])
 
@@ -230,6 +234,60 @@ test('a hand-written iterator is handed on as it is and logged when the hook ret
 
   expect(hooks.message({ id: 'ws-1' }, 'hi')).toBe(replies)
 
+  expect(linesFrom(transport)).toEqual([['INFO', 'WebSocket message']])
+})
+
+test('a generator with an iterator method of its own is handed on as it is', () => {
+  const { transport, wrapWs } = setup()
+  const replies = Object.assign(oneReply(), {
+    [Symbol.iterator]: () => ({
+      next: () => ({ done: true as const, value: undefined })
+    })
+  })
+  const hooks = wrapWs('/chat', {
+    message(_ws, _message) {
+      return replies
+    }
+  })
+
+  expect(hooks.message({ id: 'ws-1' }, 'hi')).toBe(replies)
+  expect(linesFrom(transport)).toEqual([['INFO', 'WebSocket message']])
+})
+
+test('a generator whose function prototype has a next of its own is handed on as it is', () => {
+  const { transport, wrapWs } = setup()
+  ;(seeded.prototype as Record<string, unknown>).next = () => ({
+    done: true,
+    value: undefined
+  })
+  const replies = seeded()
+  const hooks = wrapWs('/chat', {
+    message(_ws, _message) {
+      return replies
+    }
+  })
+
+  expect(hooks.message({ id: 'ws-1' }, 'hi')).toBe(replies)
+  expect(linesFrom(transport)).toEqual([['INFO', 'WebSocket message']])
+})
+
+test('an object that only inherits from the generator prototype is handed on as it is', () => {
+  const { transport, wrapWs } = setup()
+  const replies = Object.assign(
+    Object.create(
+      Object.getPrototypeOf(Object.getPrototypeOf(oneReply()))
+    ) as object,
+    {
+      next: () => ({ done: true as const, value: undefined })
+    }
+  )
+  const hooks = wrapWs('/chat', {
+    message(_ws, _message) {
+      return replies
+    }
+  })
+
+  expect(hooks.message({ id: 'ws-1' }, 'hi')).toBe(replies)
   expect(linesFrom(transport)).toEqual([['INFO', 'WebSocket message']])
 })
 

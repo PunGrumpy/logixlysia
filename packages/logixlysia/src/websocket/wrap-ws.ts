@@ -102,23 +102,26 @@ const ASYNC_GENERATOR_PROTOTYPE: object = Object.getPrototypeOf(
   settleAsyncIterator.prototype
 )
 
-// Captured at load so a later replacement of the method is not what runs.
-const isPrototypeOf: (this: object, value: object) => boolean =
-  Object.prototype.isPrototypeOf
-
-// Only a generator is wrapped. A hand-written iterator may answer `next()` and
-// `[Symbol.iterator]()` differently, and Elysia calls both, so no wrapper can
-// forward one faithfully. Prototype identity cannot be claimed with a tag,
-// and a generator from another realm is simply not wrapped.
+// Only a generator exactly as a `function*` made it is wrapped: properties
+// of its own, or on its function's `prototype`, can change how it iterates,
+// and Elysia calls both `next()` and the iterator method.
 const generatorKindOf = (value: unknown): GeneratorKind | undefined => {
   if (typeof value !== 'object' || value === null) {
     return
   }
   try {
-    if (isPrototypeOf.call(GENERATOR_PROTOTYPE, value)) {
+    const own: unknown = Object.getPrototypeOf(value)
+    if (typeof own !== 'object' || own === null) {
+      return
+    }
+    if (Reflect.ownKeys(value).length > 0 || Reflect.ownKeys(own).length > 0) {
+      return
+    }
+    const intrinsic: unknown = Object.getPrototypeOf(own)
+    if (intrinsic === GENERATOR_PROTOTYPE) {
       return 'sync'
     }
-    if (isPrototypeOf.call(ASYNC_GENERATOR_PROTOTYPE, value)) {
+    if (intrinsic === ASYNC_GENERATOR_PROTOTYPE) {
       return 'async'
     }
   } catch {
