@@ -157,7 +157,9 @@ describe('wrapWs', () => {
 
     expect(() => hooks.close(ws)).toThrow('boom')
 
-    expect(messagesFrom(transport)).toContain('WebSocket closed')
+    expect(messagesFrom(transport)).toContain(
+      'WebSocket close hook failed: boom'
+    )
     expect(contextStore.getContext(ws)).toEqual({})
   })
 
@@ -173,7 +175,9 @@ describe('wrapWs', () => {
 
     expect(() => hooks.open(ws)).toThrow('boom')
 
-    expect(messagesFrom(transport)).toContain('WebSocket opened')
+    expect(messagesFrom(transport)).toContain(
+      'WebSocket open hook failed: boom'
+    )
   })
 
   test('reports binary frames as binary', () => {

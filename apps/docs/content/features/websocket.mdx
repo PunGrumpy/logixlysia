@@ -36,9 +36,11 @@ const app = new Elysia().use(plugin).ws('/chat', {
 
 The hooks type the socket as the plugin's `WebSocketLike`, which does not declare `send`, so the example casts it to a local `ChatWs`; a typed default is a planned library improvement.
 
-A hook may reply by returning a value, a promise or a generator; `wrapWs` passes whatever Elysia accepts from a hook on to Elysia unchanged, so a wrapped hook replies exactly as an unwrapped one does.
+A hook may reply by returning a value, a promise or a generator. A value reaches Elysia as it is. A promise is passed on as a promise, and a generator it resolves to is wrapped the same way as one returned directly. Only a plain generator is wrapped, and only from an `open` or `message` hook: what a `function*` or `async function*` in this realm returns, with no properties added to it or to its function's `prototype`. The wrapper is a generator of the same kind and forwards every value, so its line can wait until iteration ends. Anything else is returned unchanged and logged when the hook returns: a hand-written iterator, a generator from another realm such as a `vm` context, and a generator that carries properties of its own.
 
-Each lifecycle event logs with HTTP method `WS`, the route path, the connection's age (shown where an HTTP line shows its duration), status `200` on every line, and optional `wsId` in context. Your `close` hook receives the WebSocket's close `code` and `reason`, and the "WebSocket closed" line logs them too.
+Each lifecycle event logs with HTTP method `WS`, the route path, the connection's age (shown where an HTTP line shows its duration), and optional `wsId` in context, and a hook that succeeded logs status `200`. Your `close` hook receives the WebSocket's close `code` and `reason`, and the "WebSocket closed" line logs them too.
+
+A hook that throws or rejects gets an `ERROR` line in place of its usual line. Its message names the hook and the error, for example `WebSocket message hook failed: boom`, so a log file shows the cause as well. The line carries the error in its `error` field, as an HTTP error line does, and no status, since the client was sent none; the error still reaches Elysia's `onError`. An `open` or `message` hook that returns a plain generator is logged when its iteration ends, so the connection's age on that line includes the time spent sending, and a throw inside the generator gets the same `ERROR` line. A generator Elysia never finishes gets no line. Any other result is logged when the hook returns or its promise settles. A `close` hook does not wait on a generator it returns: it is logged when it returns or its promise settles, whatever it returned, and the connection's context is cleared then.
 
 ## Request context on WebSockets
 
