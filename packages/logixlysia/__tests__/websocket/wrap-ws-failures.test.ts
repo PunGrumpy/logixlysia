@@ -150,9 +150,13 @@ test('the hook error still reaches the caller when it cannot be logged', () => {
   const onError = mock((_context: unknown) => {})
   const { transport, wrapWs } = setup({ onError })
   const failure = new Error('original')
-  Object.defineProperty(failure, 'code', {
+  // `code` is read while classifying a validation error. When that read
+  // throws and the line is still written, this would no longer be a log
+  // that failed. `why` is copied onto the record afterwards, so a throw
+  // there still means nothing was logged.
+  Object.defineProperty(failure, 'why', {
     get() {
-      throw new Error('unreadable code')
+      throw new Error('unreadable why')
     }
   })
   const hooks = wrapWs('/chat', {
