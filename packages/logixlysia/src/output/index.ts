@@ -72,6 +72,10 @@ const withoutQuery = (url: string): string => {
   return url.slice(0, Math.min(query, fragment))
 }
 
+/** `config.service` when it names something, else `undefined`. */
+export const configuredService = (options: Options): string | undefined =>
+  options.config?.service?.trim() || undefined
+
 /** The record transports receive as `meta`, and the body of the JSON console line. */
 export const toRecordMeta = ({
   data,
@@ -81,14 +85,26 @@ export const toRecordMeta = ({
 }: Omit<LogToTransportsInput, 'level' | 'store'>): Record<string, unknown> => {
   // The record's request wins over a `request` key in the data.
   const { request: _dataRequest, ...ownData } = data
+  const recordRequest = {
+    method: request.method,
+    url: options.config?.logQueryParams
+      ? request.url
+      : withoutQuery(request.url)
+  }
+  const service = configuredService(options)
+  if (service === undefined) {
+    return {
+      request: recordRequest,
+      ...ownData,
+      durationMs: precomputed.durationMs
+    }
+  }
+  // The configured service wins over a `service` key in the data.
+  const { service: _dataService, ...dataWithoutService } = ownData
   return {
-    request: {
-      method: request.method,
-      url: options.config?.logQueryParams
-        ? request.url
-        : withoutQuery(request.url)
-    },
-    ...ownData,
+    request: recordRequest,
+    service,
+    ...dataWithoutService,
     durationMs: precomputed.durationMs
   }
 }

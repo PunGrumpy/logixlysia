@@ -227,7 +227,7 @@ export interface FormattingConfig {
   ip?: boolean
   /** Include query parameters in the logged URL path; default false. Also governs the `request.url` handed to transports. */
   logQueryParams?: boolean
-  /** Service name shown in `{service}` token (e.g. evlog-style `[my-app]`). */
+  /** Service name. The text line shows it as `[name]` through the `{service}` token, and the JSON console line and every transport record carry it as `service`. */
   service?: string
   /** Render `data.context` as tree lines under the main log line; default true. */
   showContextTree?: boolean

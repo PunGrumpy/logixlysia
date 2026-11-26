@@ -246,12 +246,12 @@ Available placeholders:
 
 ### `service`
 
-Service name used by the `{service}` placeholder (evlog-style `[my-app]` prefix).
+Service name. The `{service}` placeholder prints it as a `[my-app]` prefix.
 
 - **Type:** `string`
 - **Default:** `undefined` (no prefix)
 
-The JSON console line carries it as the `service` key.
+The JSON console line and the record a transport receives carry it as the `service` key, and it wins over a `service` key in the logged data. An adapter's own service option (`service` for Datadog, `serviceName` for OTLP, HyperDX and Loki) still names the service in that backend.
 
 ```ts
 service: 'my-api'
