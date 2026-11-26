@@ -1,5 +1,6 @@
 [test]
 coverage = true
+preload = ["./__tests__/_helpers/clean-env.ts"]
 # Build config that the API-surface test imports, not library code. The
 # test helpers branch on the installed Elysia line, so part of them never
 # runs in a given suite.

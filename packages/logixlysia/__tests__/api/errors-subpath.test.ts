@@ -34,7 +34,11 @@ const collectSpecifiers = (entry: string): string[] => {
 }
 
 const runInPackage = (script: string): string => {
-  const proc = spawnSync(['bun', '-e', script], { cwd: packageRoot })
+  // Without env the child gets the shell's environment, not the cleaned process.env.
+  const proc = spawnSync(['bun', '-e', script], {
+    cwd: packageRoot,
+    env: process.env
+  })
   if (proc.exitCode !== 0) {
     throw new Error(`child process failed: ${proc.stderr}`)
   }
