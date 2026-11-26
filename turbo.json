@@ -33,7 +33,8 @@
       "dependsOn": ["^build"]
     },
     "test:coverage": {
-      "dependsOn": ["^test:coverage"]
+      "dependsOn": ["^test:coverage", "build"],
+      "outputs": ["coverage/lcov.info"]
     },
     "typecheck": {
       "dependsOn": ["^build", "^typecheck"]
