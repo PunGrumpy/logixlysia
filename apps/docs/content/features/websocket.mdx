@@ -36,6 +36,8 @@ const app = new Elysia().use(plugin).ws('/chat', {
 
 The hooks type the socket as the plugin's `WebSocketLike`, which does not declare `send`, so the example casts it to a local `ChatWs`; a typed default is a planned library improvement.
 
+On Elysia 2, a `.ws()` route also needs Elysia's WebSocket capability, `.use(websocket())` from `elysia/websocket` (see [Elysia 2 beta](/docs/usage#elysia-2-beta)). On Elysia `2.0.0-rc.5` and later, a WebSocket route needs Bun 1.4.4 or newer. On an older Bun the upgrade request answers 500 and the socket never opens, with or without Logixlysia.
+
 A hook may reply by returning a value, a promise or a generator. A value reaches Elysia as it is. A promise is passed on as a promise, and a generator it resolves to is wrapped the same way as one returned directly. Only a plain generator is wrapped, and only from an `open` or `message` hook: what a `function*` or `async function*` in this realm returns, with no properties added to it or to its function's `prototype`. The wrapper is a generator of the same kind and forwards every value, so its line can wait until iteration ends. Anything else is returned unchanged and logged when the hook returns: a hand-written iterator, a generator from another realm such as a `vm` context, and a generator that carries properties of its own.
 
 Each lifecycle event logs with HTTP method `WS`, the route path, the connection's age (shown where an HTTP line shows its duration), and optional `wsId` in context, and a hook that succeeded logs status `200`. Your `close` hook receives the WebSocket's close `code` and `reason`, and the "WebSocket closed" line logs them too.

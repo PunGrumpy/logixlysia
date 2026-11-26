@@ -12,6 +12,8 @@ bun add logixlysia
 
 Works with Elysia 1.4 and the Elysia 2 prereleases. To try Elysia 2, install it from its `rc` tag (`bun add elysia@rc`). On Elysia 2 the plugin's types still describe Elysia 1.4: `log` and `store` work at run time but are not part of a handler's context type, so TypeScript reports `Property 'log' does not exist` on the example below. See [what changes on Elysia 2](https://logixlysia.vercel.app/docs/usage#elysia-2-beta).
 
+On Elysia `2.0.0-rc.5` and later, a WebSocket route needs Bun 1.4.4 or newer. On an older Bun the upgrade request answers 500 and the socket never opens, with or without Logixlysia.
+
 ## `📝` Usage
 
 Add the plugin, then log from a handler with `log`. Fields you add with `log.mergeContext` land on that request's access line.

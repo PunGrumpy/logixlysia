@@ -10,14 +10,14 @@ description: How Logixlysia compares to evlog and other Elysia loggers
 | Elysia plugin | Yes | Yes (`evlog/elysia`) | Yes |
 | Pino-backed | Own request logger; pino on `store.pino` | Optional drains | Yes |
 | Request context accumulation | `mergeContext`, `useLogger()` | `log.set()`, `useLogger()` | Manual |
-| Single access log per request | Auto | `log.emit()` | Auto |
-| File rotation | Yes | Via drains | Limited |
+| Single access log per request | Auto | Auto (one wide event per request); `log.emit()` in scripts and workers | Auto |
+| File rotation | Yes; the file is text or JSON lines | Via the `evlog/fs` drain (NDJSON, one file per day, size and count limits) | Limited |
 | `autoRedact` PII | Yes | Varies | Manual |
 | WebSocket lifecycle logs | `wrapWs` | Manual | Manual |
 | OTel trace correlation | `logixlysia/otel` | Built-in integrations | Manual |
 | AI usage on access log | `logixlysia/ai` | `evlog/ai` | Manual |
 | Presets (`dev` / `prod`) | Yes | N/A | N/A |
-| Built-in destinations | 9 adapters: Axiom, Better Stack, ClickHouse, Datadog, HyperDX, Loki, OTLP, PostHog, Sentry (`logixlysia/<name>`) | Managed drains | Manual |
+| Built-in destinations | 9 adapters: Axiom, Better Stack, ClickHouse, Datadog, HyperDX, Loki, OTLP, PostHog, Sentry (`logixlysia/<name>`) | 13 drain adapters: Axiom, OTLP, Datadog, PostHog, Sentry, Better Stack, HyperDX, Sazabi, Grafana Loki, ClickHouse, File system (NDJSON), Memory, Browser to server (subpaths such as `evlog/axiom` and `evlog/fs`) | Manual |
 | Head + tail sampling | Yes | Yes | No |
 | Enrichers | Built-in (`logixlysia/enrichers`) + custom | Yes | Manual |
 | Structured errors (`why` / `fix`) | `HttpError` | `createError` | No |
@@ -32,9 +32,9 @@ description: How Logixlysia compares to evlog and other Elysia loggers
 ## When to consider evlog
 
 - You need a logger that spans more than Elysia: evlog also covers Nuxt, Nitro, Next.js, and Hono.
-- You want evlog's CLI and observability scoring built in.
-- You want evlog's error catalog and client/browser logging.
-- You rely heavily on **`evlog/ai`** and **`evlog` auth** integrations out of the box.
+- You want the `evlog` CLI, which scores what each entry point of your app can tell you. The executable runs the separate `@evlog/cli` package, or fetches it when it is not installed.
+- You want evlog's error catalog, client/browser logging and audit logs.
+- You rely heavily on the **AI SDK integration** (`evlog/ai`) out of the box.
 
 ## Benchmarks
 
