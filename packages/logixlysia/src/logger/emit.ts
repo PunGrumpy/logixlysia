@@ -7,11 +7,11 @@ import type {
   RequestInfo,
   StoreData
 } from '../interfaces'
-import { configuredService, logToTransports, toRecordMeta } from '../output'
+import { logToTransports } from '../output'
 import { logToFile } from '../output/file'
+import { formatJsonLine } from '../output/json-line'
 import type { SamplingRuntime } from '../sampling'
 import { elapsedMs } from '../utils/duration'
-import { stringifyForLog } from '../utils/json'
 import { redact, redactRequest } from '../utils/redact'
 import type { LoggedRequest } from '../utils/redact'
 import { createErrorReporter } from '../utils/report'
@@ -142,54 +142,6 @@ const formatTextLine = (
 ): string => {
   const { main, contextLines } = formatLogOutput(input)
   return contextLines.length > 0 ? `${main}\n${contextLines.join('\n')}` : main
-}
-
-const LINE_OWNED_KEYS: ReadonlySet<string> = new Set([
-  'level',
-  'message',
-  'timestamp'
-])
-
-const formatJsonLine = (
-  level: LogLevel,
-  data: Record<string, unknown>,
-  request: LoggedRequest,
-  precomputed: PrecomputedLogParts,
-  options: Options
-): string => {
-  const {
-    context,
-    durationMs,
-    error,
-    request: requestMeta,
-    status,
-    ...rest
-  } = toRecordMeta({ data, options, precomputed, request })
-  const service = configuredService(options)
-  const { message } = data
-  const restEntries = Object.entries(rest).filter(
-    ([key]) =>
-      !(
-        LINE_OWNED_KEYS.has(key) ||
-        (service !== undefined && key === 'service')
-      )
-  )
-  // Entries, not an object literal, because `bun run format` sorts literal
-  // keys and this order is the line's key order.
-  return stringifyForLog(
-    Object.fromEntries([
-      ['timestamp', new Date().toISOString()],
-      ['level', level],
-      ...(service === undefined ? [] : [['service', service]]),
-      ['message', typeof message === 'string' ? message : ''],
-      ['request', requestMeta],
-      ['status', status],
-      ['durationMs', durationMs],
-      ['context', context],
-      ['error', error],
-      ...restEntries
-    ])
-  )
 }
 
 const writeRecord = ({
