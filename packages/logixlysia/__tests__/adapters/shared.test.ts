@@ -160,6 +160,20 @@ describe('flattenMeta', () => {
       '[{"self":"[Circular]"}]'
     )
   })
+
+  test('keeps a key named __proto__ as an own field', () => {
+    const flat = flattenMeta(
+      JSON.parse('{"a":1,"__proto__":"x","b":{"__proto__":"y"}}')
+    )
+    expect(Object.keys(flat).toSorted()).toEqual([
+      '__proto__',
+      'a',
+      'b.__proto__'
+    ])
+    expect(Object.getOwnPropertyDescriptor(flat, '__proto__')?.value).toBe('x')
+    expect(Object.getPrototypeOf(flat)).toBe(Object.prototype)
+    expect(JSON.stringify(flat)).toContain('"__proto__":"x"')
+  })
 })
 
 describe('getPath', () => {

@@ -1043,6 +1043,20 @@ export const isPlainObject = (
   !Array.isArray(value) &&
   !(value instanceof Date)
 
+// A plain assignment to `__proto__` would hit the prototype setter and drop the field.
+const setFlat = (
+  out: Record<string, FlatValue>,
+  key: string,
+  value: FlatValue
+): void => {
+  Object.defineProperty(out, key, {
+    configurable: true,
+    enumerable: true,
+    value,
+    writable: true
+  })
+}
+
 const flattenInto = (
   out: Record<string, FlatValue>,
   value: unknown,
@@ -1057,17 +1071,19 @@ const flattenInto = (
     typeof value === 'number' ||
     typeof value === 'boolean'
   ) {
-    out[prefix] = value
+    setFlat(out, prefix, value)
     return
   }
   if (value instanceof Date) {
-    out[prefix] = Number.isNaN(value.getTime())
-      ? UNSERIALIZABLE_TEXT
-      : value.toISOString()
+    setFlat(
+      out,
+      prefix,
+      Number.isNaN(value.getTime()) ? UNSERIALIZABLE_TEXT : value.toISOString()
+    )
     return
   }
   if (typeof value === 'bigint') {
-    out[prefix] = value.toString()
+    setFlat(out, prefix, value.toString())
     return
   }
   if (isPlainObject(value) && depth < FLATTEN_MAX_DEPTH) {
@@ -1075,7 +1091,7 @@ const flattenInto = (
     try {
       entries = Object.entries(value)
     } catch {
-      out[prefix] = UNSERIALIZABLE_TEXT
+      setFlat(out, prefix, UNSERIALIZABLE_TEXT)
       return
     }
     for (const [key, child] of entries) {
@@ -1085,7 +1101,7 @@ const flattenInto = (
   }
   const json = stringifyForLog(value)
   if (json !== '') {
-    out[prefix] = json
+    setFlat(out, prefix, json)
   }
 }
 
