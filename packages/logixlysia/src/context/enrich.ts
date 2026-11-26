@@ -53,15 +53,13 @@ const runPhase = <TInput>(
   onError?: (context: SinkErrorContext) => void
 ): void => {
   for (const hook of hooks) {
-    let fields: EnricherFields
     try {
-      fields = hook(input)
+      const fields = hook(input)
+      if (fields) {
+        contextStore.mergeContext(key, fields)
+      }
     } catch (error) {
       reportEnricherError(error, onError)
-      continue
-    }
-    if (fields) {
-      contextStore.mergeContext(key, fields)
     }
   }
 }

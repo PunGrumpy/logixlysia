@@ -7,7 +7,11 @@ import {
   userAgentEnricher
 } from '../../src/enrichers'
 import { HttpError } from '../../src/interfaces'
-import type { Options } from '../../src/interfaces'
+import type {
+  EnricherFields,
+  EnricherLike,
+  Options
+} from '../../src/interfaces'
 import { isElysia2 } from '../_helpers/elysia'
 
 const TRACE_ID = '4bf92f3577b34da6a3ce929d0e0e4736'
@@ -172,6 +176,46 @@ describe('enrichers through the plugin', () => {
     expect(onError.mock.calls[0]?.[0].sink).toBe('enricher')
     expect(contextOf(events[0])).toMatchObject({ survivor: true })
   })
+
+  test.each(['request', 'response'] as const)(
+    'a %s-phase enricher whose fields throw while read is reported and the next one still runs',
+    async phase => {
+      const { events, transport } = createCaptureTransport()
+      const onError = mock((_context: { error: unknown; sink: string }) => {})
+      const fieldError = new Error('field getter exploded')
+      const inPhase = (hook: () => EnricherFields): EnricherLike =>
+        phase === 'request' ? { request: hook } : { response: hook }
+      const app = buildApp(
+        {
+          enrichers: [
+            inPhase(() =>
+              Object.defineProperty({}, 'broken', {
+                enumerable: true,
+                get: () => {
+                  throw fieldError
+                }
+              })
+            ),
+            inPhase(() => ({ survivor: true }))
+          ],
+          onError
+        },
+        transport
+      )
+
+      const response = await app.handle(new Request('http://localhost/ok'))
+
+      expect(await response.text()).toBe('ok')
+      expect(response.status).toBe(200)
+      expect(onError).toHaveBeenCalledTimes(1)
+      expect(onError.mock.calls[0]?.[0]).toEqual({
+        error: fieldError,
+        sink: 'enricher'
+      })
+      expect(events).toHaveLength(1)
+      expect(contextOf(events[0])).toMatchObject({ survivor: true })
+    }
+  )
 
   test('an enricher returning nothing adds no context', async () => {
     const { events, transport } = createCaptureTransport()
