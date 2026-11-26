@@ -114,4 +114,6 @@ Logixlysia sets the request ID header as soon as the request starts. Short-circu
 
 ## Several Plugin Instances
 
-An app can mount Logixlysia in more than one module, each with its own options. Every instance with `requestId` on logs the id the response carries. When one instance has already chosen an id for a request, a later instance reuses it instead of generating another.
+An app can mount Logixlysia in more than one module, each with its own options. Every instance with `requestId` on logs the id the response carries. Instances share one id per request for each header name, and names that differ only in case, such as `X-Request-Id` and `x-request-id`, count as one header. The first instance to see a request chooses the id, and a later instance reuses it, so the response carries one value.
+
+Logixlysia does not adopt a value the app itself put on the response under that header. It uses a valid inbound header or calls the generator, and its id replaces the app's value.
