@@ -461,7 +461,7 @@ Restricts which log levels get processed and which routes are logged, and can hi
 - **Type:** `{ level?: LogLevel[]; include?: string[]; exclude?: string[]; accessLine?: { include?: string[]; exclude?: string[] } }`
 - **Default:** all levels, all paths
 
-`level` must be an array containing only `'DEBUG'`, `'INFO'`, `'WARNING'`, or `'ERROR'`. Any other value, such as `'WARN'`, makes the plugin throw `logixlysia: invalid logFilter config` when you construct it. So does an `include`, `exclude`, `accessLine.include` or `accessLine.exclude` that is not an array of non-empty glob strings. An `include` or `exclude` that holds a glob the matcher rejects throws too, naming the key and the glob.
+`level` must be an array containing only `'DEBUG'`, `'INFO'`, `'WARNING'`, or `'ERROR'`. Any other value, such as `'WARN'`, makes the plugin throw `logixlysia: invalid logFilter config` when you construct it. So does an `include`, `exclude`, `accessLine.include` or `accessLine.exclude` that is not an array of non-empty glob strings. An `include`, `exclude`, `accessLine.include` or `accessLine.exclude` that holds a glob the matcher rejects throws too, naming the key and the glob.
 
 `include` and `exclude` are globs on the request pathname, with the query string left out. A request matching `exclude`, or missing a non-empty `include`, writes no record at all. `exclude` beats `include`. `**` crosses `/`; `*` and `?` do not.
 
