@@ -1,5 +1,5 @@
 import {
-  createHttpTransport,
+  createAdapterTransport,
   defaultBody,
   envString,
   stripTrailingSlashes,
@@ -13,6 +13,9 @@ import type {
 } from './adapters/shared'
 import type { LogLevel } from './interfaces'
 import { stringifyForLog } from './utils/json'
+
+/** Loki's default answer when an operator has blocked ingestion: nothing in the push was stored. */
+const HTTP_INGESTION_BLOCKED = 260
 
 export interface LokiTransportOptions extends BatchTransportOptions {
   /**
@@ -113,13 +116,16 @@ export const createLokiTransport = (
     return stringifyForLog({ streams })
   }
 
-  return createHttpTransport({
-    body,
-    headers,
-    name: 'Loki',
-    options,
-    url: `${stripTrailingSlashes(rawUrl)}/loki/api/v1/push`
-  })
+  return createAdapterTransport(
+    {
+      body,
+      headers,
+      name: 'Loki',
+      options,
+      url: `${stripTrailingSlashes(rawUrl)}/loki/api/v1/push`
+    },
+    HTTP_INGESTION_BLOCKED
+  )
 }
 
 export type { AdapterTransport } from './adapters/shared'

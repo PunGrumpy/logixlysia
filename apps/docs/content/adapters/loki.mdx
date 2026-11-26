@@ -102,3 +102,4 @@ Query with LogQL, e.g. `{service_name="my-api", level="ERROR"} | json | duration
 - **`401`** — Grafana Cloud needs both `LOKI_USERNAME` (instance ID) and `LOKI_PASSWORD` (token with `logs:write`).
 - **`400` "entry too far behind"** — Loki rejects out-of-order or too-old timestamps; check the server clock.
 - **`429`** — per-tenant ingestion limits hit; raise `flushIntervalMs`/`maxBatchSize` to send fewer, larger batches, or raise the tenant limits.
+- **`260`** — an operator has blocked ingestion for the tenant, so Loki stored none of the push. The transport reports the batch to `onDropped` as `send-failed` and does not retry it. If your Loki is set to answer blocked pushes with `200`, the transport cannot tell them from a stored push.

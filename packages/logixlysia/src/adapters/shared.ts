@@ -242,6 +242,8 @@ export interface RejectedEntries {
 export interface PostWithRetryInput {
   body: string
   headers: Record<string, string>
+  /** A 2xx status that means the backend stored none of the batch. */
+  failureStatus?: number
   name: string
   /** Reads a successful response; see `HttpTransportInput.rejected`. */
   rejected?: (response: unknown) => RejectedEntries | undefined
@@ -436,7 +438,7 @@ const attemptPost = async (
       resolveRetryDelay(undefined, attempt)
     )
   }
-  if (response.ok) {
+  if (response.ok && response.status !== input.failureStatus) {
     if (input.rejected) {
       return readRejected(response, input.rejected)
     }
@@ -922,13 +924,13 @@ export interface HttpTransportInput {
 }
 
 /**
- * Builds a transport that POSTs batches of log entries to `url`, with the same
- * batching, retry with backoff, bounded queue, `onDropped`, `flush` and
- * `close` that the built-in adapters have. Invalid options or an invalid URL
- * throw when the transport is created.
+ * `createHttpTransport` for a built-in adapter whose backend answers
+ * `failureStatus`, a 2xx status, when it stored none of the batch. That
+ * status fails the batch like an HTTP error and is not retried.
  */
-export const createHttpTransport = (
-  input: HttpTransportInput
+export const createAdapterTransport = (
+  input: HttpTransportInput,
+  failureStatus?: number
 ): AdapterTransport => {
   const url = resolveEndpoint(input.name, input.url)
 
@@ -1021,6 +1023,7 @@ export const createHttpTransport = (
     send: (entries, { signal, sleep }) =>
       postWithRetry({
         body: input.body(entries),
+        failureStatus,
         headers: input.headers,
         name: input.name,
         rejected: input.rejected,
@@ -1045,6 +1048,16 @@ export const createHttpTransport = (
     minLevel
   }
 }
+
+/**
+ * Builds a transport that POSTs batches of log entries to `url`, with the same
+ * batching, retry with backoff, bounded queue, `onDropped`, `flush` and
+ * `close` that the built-in adapters have. Invalid options or an invalid URL
+ * throw when the transport is created.
+ */
+export const createHttpTransport = (
+  input: HttpTransportInput
+): AdapterTransport => createAdapterTransport(input)
 
 export type FlatValue = boolean | number | string
 
