@@ -17,9 +17,10 @@ logixlysia({
 
 ## Configuration
 
-| Option        | Type     | Description          | Default     |
-| ------------- | -------- | -------------------- | ----------- |
+| Option | Type | Description | Default |
+| --- | --- | --- | --- |
 | `logFilePath` | `string` | Path to the log file | `undefined` |
+| `fileFormat` | `'text' \| 'json'` | What each line of the file is | `'text'` |
 
 ## File Format
 
@@ -34,6 +35,29 @@ Each log is one line, with no colors or icons:
 The fields are, in order, a UTC ISO 8601 timestamp, the level, the method, the path, the status, the duration, the message, and the context as JSON. The message and context are left out when empty. The status is `-` for a line you write with `log.info()` and similar, which belongs to no response. Newlines and control characters are escaped, and `autoRedact` masks the message and context before they are written.
 
 The file line has a fixed layout. `customLogFormat` and `timestamp.translateTime` shape the console only.
+
+## JSON Lines
+
+Set `fileFormat: 'json'` to write one JSON object per line. Log shippers that tail a file and tools that read logs can parse each line on its own.
+
+```ts
+logixlysia({
+  config: {
+    fileFormat: 'json',
+    logFilePath: './logs/app.log'
+  }
+})
+```
+
+```
+{"timestamp":"2025-04-13T15:00:19.225Z","level":"INFO","message":"Loaded users","request":{"method":"GET","url":"http://localhost/api/users"},"durationMs":0.17,"context":{"count":3}}
+{"timestamp":"2025-04-13T15:00:19.226Z","level":"INFO","message":"","request":{"method":"GET","url":"http://localhost/api/users"},"status":200,"durationMs":123.45}
+{"timestamp":"2025-04-13T15:00:20.225Z","level":"ERROR","message":"Error creating user","request":{"method":"POST","url":"http://localhost/api/users"},"status":500,"durationMs":234.56,"error":{"message":"Error creating user","name":"Error","stack":"Error: Error creating user\n    at handler (src/users.ts:12:11)"}}
+```
+
+Each line is the same record the JSON console line prints with `consoleFormat: 'json'`, with the same keys in the same order. `autoRedact` masks it the same way before it is written. Rotation, retention and file modes work the same as for the text line. No preset sets `fileFormat`, so the file stays a text file until you turn it on.
+
+Switching the format of an existing file appends JSON lines after the text lines already in it. Point `logFilePath` at a new file when whatever reads it expects every line to parse.
 
 ## Best Practices
 

@@ -137,7 +137,7 @@ redactPatterns: [/cust_[a-z0-9]+/]
 
 ### `logErrorPayload`
 
-Add the submitted value and the list of failures to the record of a failed validation, as `error.found` and `error.errors`. Each entry in `errors` keeps only the failure's `path` and `message`. Both fields are on the structured record: the JSON console line (`consoleFormat: 'json'`) and what transports receive. The text console line and the file line show the summary only. The line's message is a summary such as `Validation failed (body): /password` whether this option is on or off. Off by default, because `found` is the whole value that failed validation, such as the request body, and request bodies routinely carry passwords, tokens and card fields. With [`autoRedact`](#autoredact) on, sensitive keys such as `password` inside `found` are masked, and every failure's `message` is replaced by `[REDACTED]`, because a validator's message can quote what was submitted. Turn `autoRedact` off to read the messages. A value that is not under a sensitive key is not masked by key: a body that is a bare string, the entries of an array of strings, or a field whose name the key rule does not recognise. The built-in value patterns still mask an email, a token and the like. A failure's `path` and the summary message are logged on both settings and are not masked by key: a path is made of field names, but for a schema that validates a map with submitted keys (`t.Record`), a submitted key can be a segment of it. `found` is masked the way any logged value is, so a value the redactor cannot look inside, such as a `FormData` under Node, is passed to transports as it is.
+Add the submitted value and the list of failures to the record of a failed validation, as `error.found` and `error.errors`. Each entry in `errors` keeps only the failure's `path` and `message`. Both fields are on the structured record: the JSON console line (`consoleFormat: 'json'`) and what transports receive. The text console line and the text file line show the summary only. A file written with [`fileFormat: 'json'`](#fileformat) holds the structured record, so it carries both fields to disk. The line's message is a summary such as `Validation failed (body): /password` whether this option is on or off. Off by default, because `found` is the whole value that failed validation, such as the request body, and request bodies routinely carry passwords, tokens and card fields. With [`autoRedact`](#autoredact) on, sensitive keys such as `password` inside `found` are masked, and every failure's `message` is replaced by `[REDACTED]`, because a validator's message can quote what was submitted. Turn `autoRedact` off to read the messages. A value that is not under a sensitive key is not masked by key: a body that is a bare string, the entries of an array of strings, or a field whose name the key rule does not recognise. The built-in value patterns still mask an email, a token and the like. A failure's `path` and the summary message are logged on both settings and are not masked by key: a path is made of field names, but for a schema that validates a map with submitted keys (`t.Record`), a submitted key can be a segment of it. `found` is masked the way any logged value is, so a value the redactor cannot look inside, such as a `FormData` under Node, is passed to transports as it is.
 
 - **Type:** `boolean`
 - **Default:** `false`
@@ -200,7 +200,7 @@ With `pino.prettyPrint` on and no `pino.transport` set, a pattern set here also 
 
 ### `consoleFormat`
 
-What the console prints per record. `'text'` is the human line with its context tree. `'json'` is one line of JSON holding the record transports receive, with `timestamp`, `level`, `message`, `request`, `status`, `durationMs`, `context` and `error`. The `prod` and `json` presets set `'json'`. The file sink is not affected. Any other value throws `logixlysia: invalid formatting config` at startup.
+What the console prints per record. `'text'` is the human line with its context tree. `'json'` is one line of JSON holding the record transports receive, with `timestamp`, `level`, `message`, `request`, `status`, `durationMs`, `context` and `error`. The `prod` and `json` presets set `'json'`. The file sink has its own switch, [`fileFormat`](#fileformat). Any other value throws `logixlysia: invalid formatting config` at startup.
 
 - **Type:** `'text' | 'json'`
 - **Default:** `'text'`
@@ -507,6 +507,17 @@ Path to the log file.
 
 ```ts
 logFilePath: './logs/app.log'
+```
+
+### `fileFormat`
+
+What the log file gets per record. `'text'` is the plain line: time, level, method, path, status, duration, message and context. `'json'` is the JSON console line, one object per line, with the same keys, the same order and the same redaction. Rotation and retention work the same for both. No preset sets it. Any other value throws `logixlysia: invalid formatting config` at startup.
+
+- **Type:** `'text' | 'json'`
+- **Default:** `'text'`
+
+```ts
+fileFormat: 'json'
 ```
 
 ### `logDirMode`

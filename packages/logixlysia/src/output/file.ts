@@ -5,6 +5,7 @@ import type { LoggedRequest } from '../utils/redact'
 import { createErrorReporter } from '../utils/report'
 import { sanitizeLogText } from '../utils/sanitize'
 import { getFileSink } from './file-sink'
+import { formatJsonLine } from './json-line'
 
 const reportFileError = createErrorReporter(
   'file',
@@ -45,6 +46,21 @@ const resolveContext = (context: unknown): string => {
   return ` ${sanitizeLogText(context, Number.POSITIVE_INFINITY)}`
 }
 
+const formatTextLine = (
+  level: LogLevel,
+  data: Record<string, unknown>,
+  request: LoggedRequest,
+  precomputed: PrecomputedLogParts,
+  config: Options['config']
+): string => {
+  const message = typeof data.message === 'string' ? data.message : ''
+  const { durationMs } = precomputed
+
+  const pathname = resolvePathname(config?.logQueryParams, precomputed)
+  const head = `${new Date().toISOString()} ${level} ${request.method} ${sanitizeLogText(pathname, 1024)} ${resolveStatus(data.status)} ${durationMs.toFixed(2)}ms`
+  return `${head}${message ? ` ${sanitizeLogText(message)}` : ''}${resolveContext(data.context)}\n`
+}
+
 export const logToFile = async (input: LogToFileInput): Promise<void> => {
   const { filePath, level, request, data, options, precomputed } = input
   const { config } = options
@@ -54,12 +70,10 @@ export const logToFile = async (input: LogToFileInput): Promise<void> => {
     return
   }
 
-  const message = typeof data.message === 'string' ? data.message : ''
-  const { durationMs } = precomputed
-
-  const pathname = resolvePathname(config?.logQueryParams, precomputed)
-  const head = `${new Date().toISOString()} ${level} ${request.method} ${sanitizeLogText(pathname, 1024)} ${resolveStatus(data.status)} ${durationMs.toFixed(2)}ms`
-  const line = `${head}${message ? ` ${sanitizeLogText(message)}` : ''}${resolveContext(data.context)}\n`
+  const line =
+    config?.fileFormat === 'json'
+      ? `${formatJsonLine(level, data, request, precomputed, options)}\n`
+      : formatTextLine(level, data, request, precomputed, config)
 
   const onRotationError = (error: unknown): void =>
     reportRotationError(error, config?.onError)

@@ -217,13 +217,22 @@ export interface FormattingConfig {
    * record transports receive. The text-only settings (`customLogFormat`,
    * `useColors`, `showContextTree`, `contextDepth`, `timestamp`) do not
    * apply to it. The `json` and `prod` presets set `'json'`. The file sink
-   * is not affected.
+   * has its own switch, `fileFormat`.
    * @default 'text'
    */
   consoleFormat?: 'json' | 'text'
   /** How many object nesting levels to expand in the context tree; default 2. */
   contextDepth?: number
   customLogFormat?: string
+  /**
+   * What the log file gets per record. `'text'` is the plain line: time,
+   * level, method, path, status, duration, message and context. `'json'` is
+   * the JSON console line, one object per line, with the same keys and the
+   * same redaction. Rotation and retention work the same for both. No preset
+   * sets it.
+   * @default 'text'
+   */
+  fileFormat?: 'json' | 'text'
   ip?: boolean
   /** Include query parameters in the logged URL path; default false. Also governs the `request.url` handed to transports. */
   logQueryParams?: boolean
