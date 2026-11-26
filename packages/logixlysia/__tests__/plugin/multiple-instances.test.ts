@@ -1,5 +1,5 @@
 import { describe, expect, mock, test } from 'bun:test'
-import { Elysia } from 'elysia'
+import { Elysia, t } from 'elysia'
 import { logixlysia, useLogger } from '../../src'
 import type { Options } from '../../src/interfaces'
 import { sleep } from '../_helpers/sleep'
@@ -263,5 +263,41 @@ describe('logixlysia plugin - several instances, request scope', () => {
       requestId,
       requestId
     ])
+  })
+
+  test('a later instance logs no request id for a request that ended before its derive with none on the response', async () => {
+    const a = createCaptureTransport()
+    const b = createCaptureTransport({ requestId: true })
+    const moduleA = new Elysia({ prefix: '/a' })
+      .use(logixlysia(a.options))
+      .get('/x', () => 'a')
+    const moduleB = new Elysia({ aot: false, prefix: '/b' })
+      .use(logixlysia(b.options))
+      .post('/x', ({ body }) => body, {
+        body: t.Object({ name: t.String() })
+      })
+    const app = new Elysia()
+      .onError(({ code, set }) => {
+        if (code === 'PARSE') {
+          set.status = 422
+          return 'bad body'
+        }
+      })
+      .use(moduleA)
+      .use(moduleB)
+
+    const response = await app.handle(
+      new Request('http://localhost/b/x', {
+        body: '{not json',
+        headers: { 'content-type': 'application/json' },
+        method: 'POST'
+      })
+    )
+    await sleep(30)
+
+    expect(response.status).toBe(422)
+    expect(response.headers.get('x-request-id')).toBeNull()
+    expect(metas(b.transport)).toHaveLength(1)
+    expect(metas(b.transport)[0]?.context?.requestId).toBeUndefined()
   })
 })

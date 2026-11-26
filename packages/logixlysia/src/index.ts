@@ -104,16 +104,19 @@ const chosenRequestIds = new WeakMap<Request, Map<string, string>>()
 
 /**
  * The id another instance already chose for this request and header name,
- * else one this instance chooses now.
+ * else, unless the scope opens at close, one this instance chooses now. At
+ * close the response may already be built, so a new id would reach the log
+ * line and never the client.
  */
 const chooseRequestId = (
   request: Request,
-  config: ResolvedRequestIdConfig
-): string => {
+  config: ResolvedRequestIdConfig,
+  atClose: boolean
+): string | undefined => {
   const header = config.header.toLowerCase()
   const chosen = chosenRequestIds.get(request) ?? new Map<string, string>()
   const existing = chosen.get(header)
-  if (existing !== undefined) {
+  if (existing !== undefined || atClose) {
     return existing
   }
   const requestId = getOrCreateRequestId(request, config)
@@ -564,10 +567,16 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
     value: getRequestScopedLogger
   })
 
+  /**
+   * `openedFrom` is where the scope opens: `start` for `onRequest` and
+   * `runJob`, `derive` for a later instance's derive, and `close` for a
+   * request that ended before any derive ran.
+   */
   const openRequestScope = (
     request: Request,
     record: RequestRecord,
-    setHeaders: Record<string, string | number>
+    setHeaders: Record<string, string | number>,
+    openedFrom: 'start' | 'derive' | 'close'
   ): void => {
     if (record.scopeOpen) {
       return
@@ -575,12 +584,18 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
     record.scopeOpen = true
     logger.beginRequest(request)
     if (requestIdConfig) {
-      const requestId = chooseRequestId(request, requestIdConfig)
-      contextStore.pinContext(request, { requestId })
-      // Set at the start as well as at close: a short-circuited request
-      // never reaches the later hooks, and the wrap runs after the Response
-      // exists.
-      writeRequestIdHeader(setHeaders, requestIdConfig.header, requestId)
+      const requestId = chooseRequestId(
+        request,
+        requestIdConfig,
+        openedFrom === 'close'
+      )
+      if (requestId !== undefined) {
+        contextStore.pinContext(request, { requestId })
+        // Set at the start as well as at close: a short-circuited request
+        // never reaches the later hooks, and the wrap runs after the Response
+        // exists.
+        writeRequestIdHeader(setHeaders, requestIdConfig.header, requestId)
+      }
     }
 
     if (enrichers && !isExcluded(request)) {
@@ -606,7 +621,7 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
   ): StoreData => {
     const record = records.get(request)
     if (record) {
-      openRequestScope(request, record, setHeaders)
+      openRequestScope(request, record, setHeaders, 'close')
     }
 
     if (requestIdConfig) {
@@ -827,7 +842,7 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
     const request = syntheticRequest('JOB', name)
     const record = openRecord(request)
     try {
-      openRequestScope(request, record, {})
+      openRequestScope(request, record, {}, 'start')
     } catch (failure) {
       reportFormatError(failure, onSinkError)
     }
@@ -913,7 +928,7 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
     .derive(({ request, set }) => {
       const record = openRecord(request)
       record.setHeaders ??= set.headers
-      openRequestScope(request, record, set.headers)
+      openRequestScope(request, record, set.headers, 'derive')
       return { log: getRequestScopedLogger(request) }
     })
     .onStart(({ server }): void => {
@@ -930,7 +945,7 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
       const record = openRecord(request)
       record.setHeaders = set.headers
       store.beforeTime = record.startedAt
-      openRequestScope(request, record, set.headers)
+      openRequestScope(request, record, set.headers, 'start')
 
       if (useAsyncLocalStorage && !record.seenByWrap) {
         loggerStorage.enterWith(getRequestScopedLogger(request))
