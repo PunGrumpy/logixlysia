@@ -2,6 +2,7 @@ import { describe, expect, mock, test } from 'bun:test'
 import { Elysia } from 'elysia'
 import { logixlysia, useLogger } from '../../src'
 import type { Options } from '../../src/interfaces'
+import { isElysia2 } from '../_helpers/elysia'
 import { sleep } from '../_helpers/sleep'
 
 interface CapturedMeta {
@@ -297,49 +298,51 @@ describe('logixlysia plugin - several instances, request scope', () => {
     expect(metas(b.transport)[0]?.context?.requestId).toBeUndefined()
   })
 
-  test("a later instance's tail rule sees a request that ended in a thrown error", async () => {
+  test('a later instance logs a request its own resolve answers with a status', async () => {
     const a = createCaptureTransport()
-    const b = createCaptureTransport({
-      sampling: { head: { INFO: 0 }, tail: { status: 500 } }
-    })
+    const b = createCaptureTransport()
     const moduleA = new Elysia({ prefix: '/a' })
       .use(logixlysia(a.options))
       .get('/x', () => 'a')
-    const moduleB = new Elysia({ prefix: '/b' })
-      .use(logixlysia(b.options))
-      .get('/x', ({ log }) => {
-        log.info('one')
-        throw new Error('boom')
-      })
+    const withPlugin = new Elysia({ prefix: '/b' }).use(logixlysia(b.options))
+    // Elysia 2 folds `resolve` into `derive`, which may answer with a status.
+    const guarded = isElysia2
+      ? withPlugin.derive(({ status }) => status(401, 'no'))
+      : withPlugin.resolve(({ status }) => status(401, 'no'))
+    const moduleB = guarded.get('/x', () => 'b')
     const app = new Elysia().use(moduleA).use(moduleB)
 
     const response = await app.handle(new Request('http://localhost/b/x'))
     await sleep(30)
 
-    expect(response.status).toBe(500)
-    expect(b.transport.mock.calls.map(call => call[1])).toContain('one')
+    expect(response.status).toBe(401)
+    expect(metas(b.transport).map(meta => meta.status)).toEqual([401])
   })
 
-  test("a later instance's tail rule keeps nothing for a request it does not match", async () => {
+  test('a later instance keeps its line when its route forwards the request to another app with its own plugin', async () => {
     const a = createCaptureTransport()
-    const b = createCaptureTransport({
-      sampling: { head: { INFO: 0 }, tail: { status: 500 } }
-    })
+    const outer = createCaptureTransport()
+    const inner = createCaptureTransport()
+    const innerApp = new Elysia()
+      .use(logixlysia(inner.options))
+      .get('/b/legacy', () => 'inner')
     const moduleA = new Elysia({ prefix: '/a' })
       .use(logixlysia(a.options))
       .get('/x', () => 'a')
     const moduleB = new Elysia({ prefix: '/b' })
-      .use(logixlysia(b.options))
-      .get('/x', ({ log }) => {
-        log.info('one')
-        return 'b'
+      .use(logixlysia(outer.options))
+      .get('/legacy', async ({ request, set }) => {
+        await innerApp.handle(request)
+        set.status = 503
+        return 'outer'
       })
     const app = new Elysia().use(moduleA).use(moduleB)
 
-    const response = await app.handle(new Request('http://localhost/b/x'))
+    const response = await app.handle(new Request('http://localhost/b/legacy'))
     await sleep(30)
 
-    expect(response.status).toBe(200)
-    expect(b.transport).not.toHaveBeenCalled()
+    expect(response.status).toBe(503)
+    expect(metas(inner.transport).map(meta => meta.status)).toEqual([200])
+    expect(metas(outer.transport).map(meta => meta.status)).toEqual([503])
   })
 })
