@@ -265,6 +265,22 @@ describe('resolveEndpoint', () => {
         input: 'http://user:pw@exa mple.com/p?k=SECRETVALUE',
         kept: 'http://<redacted>@exa mple.com/p?<redacted>',
         secrets: ['pw', 'SECRETVALUE']
+      },
+      // An `@` after the mark leaves the end of the userinfo unknown.
+      {
+        input: 'https://bad host/v1?email=a@example.com&api_key=TEST_TOKEN',
+        kept: 'https://<redacted>',
+        secrets: ['TEST_TOKEN', 'example.com&']
+      },
+      {
+        input: 'http://user:p?ss@exa mple.com/x',
+        kept: 'http://<redacted>',
+        secrets: ['p?ss', 'ss@']
+      },
+      {
+        input: 'ingest.example.com/v1?api_key=K#frag@x',
+        kept: '<redacted>',
+        secrets: ['K']
       }
     ]
     for (const { input, kept, secrets } of cases) {

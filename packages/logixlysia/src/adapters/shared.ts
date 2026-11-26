@@ -177,14 +177,27 @@ export const transportError = (
   options?: ErrorOptions
 ): Error => new Error(`[logixlysia] ${adapter} transport: ${detail}`, options)
 
+const URL_SCHEME = /^[a-z][a-z0-9+.-]*:\/\//iu
 const URL_USERINFO = /^(?<scheme>[a-z][a-z0-9+.-]*:\/\/).*@/iu
-// Some intake APIs take their key in the query string.
-const URL_QUERY_OR_FRAGMENT = /(?<mark>[?#]).*$/su
+const URL_QUERY_OR_FRAGMENT_MARK = /[?#]/u
 
-const withoutCredentials = (url: string): string =>
-  url
-    .replace(URL_USERINFO, '$<scheme><redacted>@')
-    .replace(URL_QUERY_OR_FRAGMENT, '$<mark><redacted>')
+const withoutUserinfo = (url: string): string =>
+  url.replace(URL_USERINFO, '$<scheme><redacted>@')
+
+// Some intake APIs take their key in the query string, so everything after
+// the first `?` or `#` is hidden. A raw `?` or `#` inside a password looks the
+// same as that mark, so when an `@` follows it the end of the userinfo is
+// unknown and only the scheme is kept.
+const withoutCredentials = (url: string): string => {
+  const markIndex = url.search(URL_QUERY_OR_FRAGMENT_MARK)
+  if (markIndex === -1) {
+    return withoutUserinfo(url)
+  }
+  if (url.includes('@', markIndex + 1)) {
+    return `${URL_SCHEME.exec(url)?.[0] ?? ''}<redacted>`
+  }
+  return `${withoutUserinfo(url.slice(0, markIndex))}${url.charAt(markIndex)}<redacted>`
+}
 
 export const tryParseUrl = (value: string): URL | undefined =>
   URL.canParse(value) ? new URL(value) : undefined
