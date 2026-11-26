@@ -39,6 +39,7 @@ import {
   getOrCreateRequestId,
   resolveRequestIdConfig
 } from './middleware/request-id'
+import type { ResolvedRequestIdConfig } from './middleware/request-id'
 import { closeTransports } from './output'
 import { closeAllFileSinks } from './output/file-sink'
 import { flushAll, shutdownWithin } from './output/shutdown'
@@ -94,10 +95,48 @@ const resolveHandledStatus = (
  * request scope from its derive, or at close for a request that ends before
  * any derive runs, and closes them from its own route hooks. It times them
  * from the start the first instance saw, and its line replaces the one the
- * first instance's wrap would write.
+ * first instance's wrap would write. Instances reuse the request id another
+ * instance chose for the same header name, so the response carries one id.
  */
 const requestStarts = new WeakMap<Request, bigint>()
 const lineOwners = new WeakMap<Request, symbol>()
+const chosenRequestIds = new WeakMap<Request, Map<string, string>>()
+
+/**
+ * The id another instance already chose for this request and header name,
+ * else one this instance chooses now.
+ */
+const chooseRequestId = (
+  request: Request,
+  config: ResolvedRequestIdConfig
+): string => {
+  const header = config.header.toLowerCase()
+  const chosen = chosenRequestIds.get(request) ?? new Map<string, string>()
+  const existing = chosen.get(header)
+  if (existing !== undefined) {
+    return existing
+  }
+  const requestId = getOrCreateRequestId(request, config)
+  chosen.set(header, requestId)
+  chosenRequestIds.set(request, chosen)
+  return requestId
+}
+
+/**
+ * Overwrites a key that names the same header in another case instead of
+ * adding one, since the response would carry both values.
+ */
+const writeRequestIdHeader = (
+  setHeaders: Record<string, string | number>,
+  header: string,
+  requestId: string
+): void => {
+  const lowered = header.toLowerCase()
+  const key =
+    Object.keys(setHeaders).find(name => name.toLowerCase() === lowered) ??
+    header
+  setHeaders[key] = requestId
+}
 
 interface RequestRecord {
   error?: unknown
@@ -536,16 +575,12 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
     record.scopeOpen = true
     logger.beginRequest(request)
     if (requestIdConfig) {
-      const requestId = getOrCreateRequestId(
-        request,
-        requestIdConfig,
-        setHeaders[requestIdConfig.header]
-      )
+      const requestId = chooseRequestId(request, requestIdConfig)
       contextStore.pinContext(request, { requestId })
       // Set at the start as well as at close: a short-circuited request
       // never reaches the later hooks, and the wrap runs after the Response
       // exists.
-      setHeaders[requestIdConfig.header] = requestId
+      writeRequestIdHeader(setHeaders, requestIdConfig.header, requestId)
     }
 
     if (enrichers && !isExcluded(request)) {
@@ -579,7 +614,7 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
         | string
         | undefined
       if (id) {
-        setHeaders[requestIdConfig.header] = id
+        writeRequestIdHeader(setHeaders, requestIdConfig.header, id)
       }
     }
 

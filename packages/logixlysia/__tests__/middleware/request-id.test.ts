@@ -146,34 +146,4 @@ describe('getOrCreateRequestId', () => {
     const id = getOrCreateRequestId(request, defaultConfig)
     expect(id).toBe('generated-uuid')
   })
-
-  test('reuses a valid id already echoed on the response without calling the generator', () => {
-    let calls = 0
-    const config: ResolvedRequestIdConfig = {
-      enabled: true,
-      generator: () => {
-        calls += 1
-        return 'generated-uuid'
-      },
-      header: 'X-Request-Id'
-    }
-    const request = new Request('http://localhost/test')
-    const id = getOrCreateRequestId(request, config, 'echoed-id')
-    expect(id).toBe('echoed-id')
-    expect(calls).toBe(0)
-  })
-
-  test('ignores an invalid echoed id', () => {
-    const request = new Request('http://localhost/test')
-    const id = getOrCreateRequestId(request, defaultConfig, 'bad id!')
-    expect(id).toBe('generated-uuid')
-  })
-
-  test('prefers a valid inbound header over the echoed id', () => {
-    const request = new Request('http://localhost/test', {
-      headers: { 'X-Request-Id': 'inbound-id' }
-    })
-    const id = getOrCreateRequestId(request, defaultConfig, 'echoed-id')
-    expect(id).toBe('inbound-id')
-  })
 })

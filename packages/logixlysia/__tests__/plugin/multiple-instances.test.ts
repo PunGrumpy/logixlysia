@@ -238,4 +238,30 @@ describe('logixlysia plugin - several instances, request scope', () => {
       b.transport.mock.calls.map(call => String(call[1])).toSorted()
     ).toEqual(['', 'one', 'two'])
   })
+
+  test('instances whose request id headers differ only by case send one id and log it', async () => {
+    const a = createCaptureTransport({ requestId: true })
+    const b = createCaptureTransport({ requestId: { header: 'x-request-id' } })
+    const moduleA = new Elysia({ prefix: '/a' })
+      .use(logixlysia(a.options))
+      .get('/x', () => 'a')
+    const moduleB = new Elysia({ prefix: '/b' })
+      .use(logixlysia(b.options))
+      .get('/x', ({ log }) => {
+        log.info('one')
+        return 'b'
+      })
+    const app = new Elysia().use(moduleA).use(moduleB)
+
+    const response = await app.handle(new Request('http://localhost/b/x'))
+    await sleep(30)
+
+    const requestId = response.headers.get('x-request-id')
+    expect(requestId).toBeString()
+    expect(requestId).not.toContain(',')
+    expect(metas(b.transport).map(meta => meta.context?.requestId)).toEqual([
+      requestId,
+      requestId
+    ])
+  })
 })
