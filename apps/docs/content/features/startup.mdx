@@ -43,7 +43,7 @@ A beautiful ASCII art banner (default):
 
 The versions are the ones installed, and the box widens to fit its longest row.
 
-The URL comes from the server Elysia hands to its start hooks. An adapter that does not hand one over, such as `@elysiajs/node`, gets the message without a URL: `🦊 Elysia is running` in the simple format, and the banner without its URL row.
+The URL comes from the server Elysia hands to its start hooks. When no server is handed over, as with `@elysiajs/node`, the message prints without a URL: `🦊 Elysia is running` in the simple format, and the banner without its URL row. When a server is handed over but lacks a port, a hostname or a protocol, no startup message prints at all.
 
 ## Configuration
 
