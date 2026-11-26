@@ -371,6 +371,77 @@ describe('resolveOptions', () => {
     ).toThrow("invalid logFilter config — exclude: '/a/**/b/**' —")
   })
 
+  test.each(['include', 'exclude'] as const)(
+    'names the key and the glob when a logFilter.accessLine.%s glob is unusable',
+    key => {
+      expect(() =>
+        resolveOptions({
+          config: { logFilter: { accessLine: { [key]: ['/a/**/**/x'] } } }
+        })
+      ).toThrow(
+        `logixlysia: invalid logFilter config — accessLine.${key}: '/a/**/**/x' — Invalid glob pattern`
+      )
+    }
+  )
+
+  test('names the option and the glob when a tail.paths glob is unusable and head sampling drops records', () => {
+    expect(() =>
+      resolveOptions({
+        config: {
+          sampling: { head: { INFO: 0 }, tail: { paths: ['/a/**/**/x'] } }
+        }
+      })
+    ).toThrow(
+      "logixlysia: invalid sampling config — tail.paths: '/a/**/**/x' — Invalid glob pattern"
+    )
+  })
+
+  test('does not compile tail.paths globs without a head rate, which leaves them unused', () => {
+    expect(() =>
+      resolveOptions({
+        config: { sampling: { tail: { paths: ['/a/**/**/x'] } } }
+      })
+    ).not.toThrow()
+  })
+
+  test('does not compile tail.paths globs when every head rate keeps all records', () => {
+    expect(() =>
+      resolveOptions({
+        config: {
+          sampling: { head: { INFO: 100 }, tail: { paths: ['/a/**/**/x'] } }
+        }
+      })
+    ).not.toThrow()
+  })
+
+  test('names the option and the glob when a tail.paths segment has too many wildcards', () => {
+    expect(() =>
+      resolveOptions({
+        config: {
+          sampling: { head: { INFO: 0 }, tail: { paths: ['/a/*b*c*'] } }
+        }
+      })
+    ).toThrow(
+      "logixlysia: invalid sampling config — tail.paths: '/a/*b*c*' — Invalid glob pattern"
+    )
+  })
+
+  test('accepts valid globs in logFilter.accessLine and tail.paths', () => {
+    expect(() =>
+      resolveOptions({
+        config: {
+          logFilter: {
+            accessLine: { exclude: ['/health/**'], include: ['/api/*-*'] }
+          },
+          sampling: {
+            head: { INFO: 0 },
+            tail: { paths: ['/checkout/**', '/a/*b*'] }
+          }
+        }
+      })
+    ).not.toThrow()
+  })
+
   test('throws for a logFilter that is not an object', () => {
     expect(() =>
       resolveOptions({ config: { logFilter: '/health' as never } })
