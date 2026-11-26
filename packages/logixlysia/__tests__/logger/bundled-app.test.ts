@@ -48,7 +48,11 @@ console.log('status', response.status)
   if (build.exitCode !== 0) {
     throw new Error(`bundling ${name} failed: ${build.stderr}`)
   }
-  const run = spawnSync(['bun', '--no-install', outfile], { cwd: runDir })
+  // Without env the child gets the shell's environment, not the cleaned process.env.
+  const run = spawnSync(['bun', '--no-install', outfile], {
+    cwd: runDir,
+    env: process.env
+  })
   return `${run.stdout}${run.stderr}`
 }
 
