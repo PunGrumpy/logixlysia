@@ -61,10 +61,13 @@ const validIdentifier = (value: string, kind: string): string => {
 }
 
 const toRow = (entry: LogEntry): string => {
-  const attributes: Record<string, string> = {}
-  for (const [key, value] of Object.entries(flattenMeta(entry.meta))) {
-    attributes[key] = String(value)
-  }
+  // `Object.fromEntries` defines own properties, so a `__proto__` key is kept.
+  const attributes = Object.fromEntries(
+    Object.entries(flattenMeta(entry.meta)).map(([key, value]) => [
+      key,
+      String(value)
+    ])
+  )
   return JSON.stringify({
     attributes,
     level: entry.level,

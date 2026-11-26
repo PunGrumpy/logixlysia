@@ -156,11 +156,16 @@ export const createSentryTransport = (
 
   const envelope = (entries: LogEntry[]): string => {
     const items = entries.map(entry => {
+      // Spread and `Object.fromEntries` define own properties, so a
+      // `__proto__` key is kept.
       const attributes: Record<string, SentryAttribute> = {
-        ...staticAttributes
-      }
-      for (const [key, value] of Object.entries(flattenMeta(entry.meta))) {
-        attributes[key] = toSentryAttribute(value)
+        ...staticAttributes,
+        ...Object.fromEntries(
+          Object.entries(flattenMeta(entry.meta)).map(([key, value]) => [
+            key,
+            toSentryAttribute(value)
+          ])
+        )
       }
       return {
         attributes,

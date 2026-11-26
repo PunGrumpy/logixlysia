@@ -63,6 +63,27 @@ describe('logixlysia/clickhouse', () => {
     }
   })
 
+  test('keeps a logged __proto__ field in the attributes map', async () => {
+    const restoreEnv = stubEnv(CLEAR_ENV)
+    const stub = stubFetch()
+    try {
+      const transport = createClickHouseTransport()
+      transport.log('INFO', 'hello', JSON.parse('{"__proto__":"x","a":1}'))
+      await transport.flush()
+
+      const row = JSON.parse(stub.calls[0]?.body ?? '{}') as {
+        attributes: Record<string, string>
+      }
+      expect(
+        Object.getOwnPropertyDescriptor(row.attributes, '__proto__')?.value
+      ).toBe('x')
+      expect(row.attributes.a).toBe('1')
+    } finally {
+      stub.restore()
+      restoreEnv()
+    }
+  })
+
   test('throws for an invalid URL', () => {
     const restoreEnv = stubEnv(CLEAR_ENV)
     try {
