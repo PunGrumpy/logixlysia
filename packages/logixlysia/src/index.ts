@@ -92,12 +92,11 @@ const resolveHandledStatus = (
  * Shared by every plugin instance. Elysia keeps only the first instance's
  * `onRequest` and `wrap` (both dedupe by plugin name), so a second instance,
  * mounted in a sibling module, never sees its requests start. It opens its
- * request scope from its derive, or at close for a request that ends before
- * any derive runs, and closes them from its own route hooks. It times them
- * from the start the first instance saw, and its line replaces the one the
- * first instance's wrap would write. Instances reuse the request id another
- * instance chose for the same header name, and the header key it wrote, so
- * the response carries one id.
+ * request scope from its derive and closes them from its own route hooks. It
+ * times them from the start the first instance saw, and its line replaces the
+ * one the first instance's wrap would write. Instances reuse the request id
+ * another instance chose for the same header name, and the header key it
+ * wrote, so the response carries one id.
  */
 const requestStarts = new WeakMap<Request, bigint>()
 const lineOwners = new WeakMap<Request, symbol>()
@@ -113,20 +112,17 @@ const chosenRequestIds = new WeakMap<Request, Map<string, ChosenRequestId>>()
 
 /**
  * The id another instance already chose for this request and header name,
- * else, unless the scope opens at close, one this instance chooses now under
- * its own header key. At close the response may already be built, so a new
- * id would reach the log line and never the client.
+ * else one this instance chooses now under its own header key.
  */
 const chooseRequestId = (
   request: Request,
-  config: ResolvedRequestIdConfig,
-  atClose: boolean
-): ChosenRequestId | undefined => {
+  config: ResolvedRequestIdConfig
+): ChosenRequestId => {
   const name = config.header.toLowerCase()
   const chosen =
     chosenRequestIds.get(request) ?? new Map<string, ChosenRequestId>()
   const existing = chosen.get(name)
-  if (existing !== undefined || atClose) {
+  if (existing !== undefined) {
     return existing
   }
   const choice: ChosenRequestId = {
@@ -576,14 +572,13 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
   })
 
   /**
-   * `atClose` is set for a later instance's request that ended before any of
-   * its derives ran, so the scope opens as the request closes.
+   * Opened once per request: from `onRequest`, from `runJob`, or, for a later
+   * instance whose `onRequest` Elysia drops, from its derive.
    */
   const openRequestScope = (
     request: Request,
     record: RequestRecord,
-    setHeaders: Record<string, string | number>,
-    atClose: boolean
+    setHeaders: Record<string, string | number>
   ): void => {
     if (record.scopeOpen) {
       return
@@ -591,14 +586,12 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
     record.scopeOpen = true
     logger.beginRequest(request)
     if (requestIdConfig) {
-      const choice = chooseRequestId(request, requestIdConfig, atClose)
-      if (choice !== undefined) {
-        contextStore.pinContext(request, { requestId: choice.id })
-        // Set at the start as well as at close: a short-circuited request
-        // never reaches the later hooks, and the wrap runs after the Response
-        // exists.
-        setHeaders[choice.header] = choice.id
-      }
+      const choice = chooseRequestId(request, requestIdConfig)
+      contextStore.pinContext(request, { requestId: choice.id })
+      // Set at the start as well as at close: a short-circuited request
+      // never reaches the later hooks, and the wrap runs after the Response
+      // exists.
+      setHeaders[choice.header] = choice.id
     }
 
     if (enrichers && !isExcluded(request)) {
@@ -622,11 +615,6 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
     responseHeaders?: Headers,
     error?: unknown
   ): StoreData => {
-    const record = records.get(request)
-    if (record) {
-      openRequestScope(request, record, setHeaders, true)
-    }
-
     if (requestIdConfig) {
       const id = contextStore.getContext(request).requestId as
         | string
@@ -636,6 +624,7 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
       }
     }
 
+    const record = records.get(request)
     const store: StoreData = {
       beforeTime: record?.startedAt ?? 0n
     }
@@ -845,7 +834,7 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
     const request = syntheticRequest('JOB', name)
     const record = openRecord(request)
     try {
-      openRequestScope(request, record, {}, false)
+      openRequestScope(request, record, {})
     } catch (failure) {
       reportFormatError(failure, onSinkError)
     }
@@ -931,7 +920,7 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
     .derive(({ request, set }) => {
       const record = openRecord(request)
       record.setHeaders ??= set.headers
-      openRequestScope(request, record, set.headers, false)
+      openRequestScope(request, record, set.headers)
       return { log: getRequestScopedLogger(request) }
     })
     .onStart(({ server }): void => {
@@ -948,7 +937,7 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
       const record = openRecord(request)
       record.setHeaders = set.headers
       store.beforeTime = record.startedAt
-      openRequestScope(request, record, set.headers, false)
+      openRequestScope(request, record, set.headers)
 
       if (useAsyncLocalStorage && !record.seenByWrap) {
         loggerStorage.enterWith(getRequestScopedLogger(request))

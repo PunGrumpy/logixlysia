@@ -266,38 +266,6 @@ describe('logixlysia plugin - several instances, request scope', () => {
     ])
   })
 
-  test('a later instance logs no request id for a request that ended before its derive with none on the response', async () => {
-    const a = createCaptureTransport()
-    const b = createCaptureTransport({ requestId: true })
-    const moduleA = new Elysia({ prefix: '/a' })
-      .use(logixlysia(a.options))
-      .get('/x', () => 'a')
-    const moduleB = new Elysia({ aot: false, prefix: '/b' })
-      .use(logixlysia(b.options))
-      .post('/x', ({ body }) => body)
-    const app = new Elysia()
-      .onError(({ set }) => {
-        set.status = 422
-        return 'bad body'
-      })
-      .use(moduleA)
-      .use(moduleB)
-
-    const response = await app.handle(
-      new Request('http://localhost/b/x', {
-        body: '{not json',
-        headers: { 'content-type': 'application/json' },
-        method: 'POST'
-      })
-    )
-    await sleep(30)
-
-    expect(response.status).toBe(422)
-    expect(response.headers.get('x-request-id')).toBeNull()
-    expect(metas(b.transport)).toHaveLength(1)
-    expect(metas(b.transport)[0]?.context?.requestId).toBeUndefined()
-  })
-
   test('a later instance logs a request its own resolve answers with a status', async () => {
     const a = createCaptureTransport()
     const b = createCaptureTransport()

@@ -336,6 +336,35 @@ describe('request ID plugin integration', () => {
     expect(records.at(-1)?.meta?.context?.requestId).toBe('id-A')
   })
 
+  test('opens no request scope for a request an earlier onRequest hook answered', async () => {
+    const { config } = capture()
+    let calls = 0
+    const app = new Elysia()
+      .onRequest(({ set }) => {
+        set.status = 403
+        return 'forbidden'
+      })
+      .use(
+        logixlysia({
+          config: {
+            ...config,
+            enrichers: [
+              () => {
+                calls += 1
+                return {}
+              }
+            ]
+          }
+        })
+      )
+      .get('/test', () => 'ok')
+
+    const response = await app.handle(new Request('http://localhost/test'))
+
+    expect(response.status).toBe(403)
+    expect(calls).toBe(0)
+  })
+
   test('sets X-Request-Id response header on errors', async () => {
     const options: Options = {
       config: {
