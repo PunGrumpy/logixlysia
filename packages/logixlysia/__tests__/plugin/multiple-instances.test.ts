@@ -300,4 +300,50 @@ describe('logixlysia plugin - several instances, request scope', () => {
     expect(metas(b.transport)).toHaveLength(1)
     expect(metas(b.transport)[0]?.context?.requestId).toBeUndefined()
   })
+
+  test("a later instance's tail rule sees a request that ended in a thrown error", async () => {
+    const a = createCaptureTransport()
+    const b = createCaptureTransport({
+      sampling: { head: { INFO: 0 }, tail: { status: 500 } }
+    })
+    const moduleA = new Elysia({ prefix: '/a' })
+      .use(logixlysia(a.options))
+      .get('/x', () => 'a')
+    const moduleB = new Elysia({ prefix: '/b' })
+      .use(logixlysia(b.options))
+      .get('/x', ({ log }) => {
+        log.info('one')
+        throw new Error('boom')
+      })
+    const app = new Elysia().use(moduleA).use(moduleB)
+
+    const response = await app.handle(new Request('http://localhost/b/x'))
+    await sleep(30)
+
+    expect(response.status).toBe(500)
+    expect(b.transport.mock.calls.map(call => call[1])).toEqual(['one'])
+  })
+
+  test("a later instance's tail rule keeps nothing for a request it does not match", async () => {
+    const a = createCaptureTransport()
+    const b = createCaptureTransport({
+      sampling: { head: { INFO: 0 }, tail: { status: 500 } }
+    })
+    const moduleA = new Elysia({ prefix: '/a' })
+      .use(logixlysia(a.options))
+      .get('/x', () => 'a')
+    const moduleB = new Elysia({ prefix: '/b' })
+      .use(logixlysia(b.options))
+      .get('/x', ({ log }) => {
+        log.info('one')
+        return 'b'
+      })
+    const app = new Elysia().use(moduleA).use(moduleB)
+
+    const response = await app.handle(new Request('http://localhost/b/x'))
+    await sleep(30)
+
+    expect(response.status).toBe(200)
+    expect(b.transport).not.toHaveBeenCalled()
+  })
 })

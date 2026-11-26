@@ -97,10 +97,17 @@ const resolveHandledStatus = (
  * from the start the first instance saw, and its line replaces the one the
  * first instance's wrap would write. Instances reuse the request id another
  * instance chose for the same header name, so the response carries one id.
+ * A scope opened from a derive leaves a closer, which the instance that
+ * writes the line runs, so that scope's tail rules see a request that ended
+ * in a hook the later instance never reaches, such as a thrown error.
  */
 const requestStarts = new WeakMap<Request, bigint>()
 const lineOwners = new WeakMap<Request, symbol>()
 const chosenRequestIds = new WeakMap<Request, Map<string, string>>()
+const lateScopes = new WeakMap<
+  Request,
+  ((status: number, error?: unknown) => void)[]
+>()
 
 /**
  * The id another instance already chose for this request and header name,
@@ -139,6 +146,21 @@ const writeRequestIdHeader = (
     Object.keys(setHeaders).find(name => name.toLowerCase() === lowered) ??
     header
   setHeaders[key] = requestId
+}
+
+const closeLateScopes = (
+  request: Request,
+  status: number,
+  error: unknown
+): void => {
+  const closers = lateScopes.get(request)
+  if (closers === undefined) {
+    return
+  }
+  lateScopes.delete(request)
+  for (const close of closers) {
+    close(status, error)
+  }
 }
 
 interface RequestRecord {
@@ -567,6 +589,27 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
     value: getRequestScopedLogger
   })
 
+  const leaveCloser = (request: Request, record: RequestRecord): void => {
+    const closers = lateScopes.get(request) ?? []
+    closers.push((status, error) => {
+      if (record.phase === 'closed') {
+        return
+      }
+      record.phase = 'closed'
+      try {
+        logger.finalizeRequest(
+          request,
+          { beforeTime: record.startedAt },
+          status,
+          error
+        )
+      } catch (failure) {
+        reportFormatError(failure, onSinkError)
+      }
+    })
+    lateScopes.set(request, closers)
+  }
+
   /**
    * `openedFrom` is where the scope opens: `start` for `onRequest` and
    * `runJob`, `derive` for a later instance's derive, and `close` for a
@@ -600,6 +643,10 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
 
     if (enrichers && !isExcluded(request)) {
       applyRequestEnrichers(enrichers, contextStore, request, onSinkError)
+    }
+
+    if (openedFrom === 'derive') {
+      leaveCloser(request, record)
     }
   }
 
@@ -733,6 +780,8 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
       }
     } catch (failure) {
       reportFormatError(failure, onSinkError)
+    } finally {
+      closeLateScopes(request, status, error)
     }
   }
 
