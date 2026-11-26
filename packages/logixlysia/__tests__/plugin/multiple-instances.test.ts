@@ -99,6 +99,31 @@ describe('logixlysia plugin - several instances', () => {
     expect(metas(inner.transport).map(meta => meta.status)).toEqual([202])
     expect(metas(outer.transport).map(meta => meta.status)).toEqual([202])
   })
+
+  test('an app that forwards a request to another app with its own plugin leaves it its own request id', async () => {
+    const outer = createCaptureTransport({
+      requestId: { generator: () => 'id-outer' }
+    })
+    const inner = createCaptureTransport({
+      requestId: { generator: () => 'id-inner' }
+    })
+    const innerApp = new Elysia()
+      .use(logixlysia(inner.options))
+      .get('/legacy', () => 'inner')
+    const outerApp = new Elysia()
+      .use(logixlysia(outer.options))
+      .get('/legacy', ({ request }) => innerApp.handle(request))
+
+    const response = await outerApp.handle(
+      new Request('http://localhost/legacy')
+    )
+    await sleep(30)
+
+    expect(response.headers.get('x-request-id')).toBe('id-inner')
+    expect(metas(inner.transport).map(meta => meta.context?.requestId)).toEqual(
+      ['id-inner']
+    )
+  })
 })
 
 describe('logixlysia plugin - several instances, tail sampling', () => {

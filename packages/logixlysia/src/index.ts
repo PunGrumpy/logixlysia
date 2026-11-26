@@ -94,9 +94,9 @@ const resolveHandledStatus = (
  * mounted in a sibling module, never sees its requests start. It opens its
  * request scope from its derive and closes them from its own route hooks. It
  * times them from the start the first instance saw, and its line replaces the
- * one the first instance's wrap would write. Instances reuse the request id
- * another instance chose for the same header name, and the header key it
- * wrote, so the response carries one id.
+ * one the first instance's wrap would write. Instances in one dispatch reuse
+ * the request id another instance chose for the same header name, and the
+ * header key it wrote, so the response carries one id.
  */
 const requestStarts = new WeakMap<Request, bigint>()
 const lineOwners = new WeakMap<Request, symbol>()
@@ -107,20 +107,26 @@ interface ChosenRequestId {
   id: string
 }
 
-/** Keyed by the lower-cased header name. */
-const chosenRequestIds = new WeakMap<Request, Map<string, ChosenRequestId>>()
+/**
+ * Keyed by a dispatch's `set.headers`, which every instance in that dispatch
+ * is handed, then by the lower-cased header name. Not by the Request: a
+ * handler can pass its Request to another app's `handle()`, a new dispatch
+ * whose plugin chooses its own id.
+ */
+const chosenRequestIds = new WeakMap<object, Map<string, ChosenRequestId>>()
 
 /**
- * The id another instance already chose for this request and header name,
+ * The id another instance in this dispatch already chose for the header name,
  * else one this instance chooses now under its own header key.
  */
 const chooseRequestId = (
   request: Request,
+  setHeaders: object,
   config: ResolvedRequestIdConfig
 ): ChosenRequestId => {
   const name = config.header.toLowerCase()
   const chosen =
-    chosenRequestIds.get(request) ?? new Map<string, ChosenRequestId>()
+    chosenRequestIds.get(setHeaders) ?? new Map<string, ChosenRequestId>()
   const existing = chosen.get(name)
   if (existing !== undefined) {
     return existing
@@ -130,7 +136,7 @@ const chooseRequestId = (
     id: getOrCreateRequestId(request, config)
   }
   chosen.set(name, choice)
-  chosenRequestIds.set(request, chosen)
+  chosenRequestIds.set(setHeaders, chosen)
   return choice
 }
 
@@ -139,10 +145,10 @@ const chooseRequestId = (
  * id wrote, else this instance's own.
  */
 const requestIdHeaderKey = (
-  request: Request,
+  setHeaders: object,
   config: ResolvedRequestIdConfig
 ): string =>
-  chosenRequestIds.get(request)?.get(config.header.toLowerCase())?.header ??
+  chosenRequestIds.get(setHeaders)?.get(config.header.toLowerCase())?.header ??
   config.header
 
 interface RequestRecord {
@@ -586,7 +592,7 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
     record.scopeOpen = true
     logger.beginRequest(request)
     if (requestIdConfig) {
-      const choice = chooseRequestId(request, requestIdConfig)
+      const choice = chooseRequestId(request, setHeaders, requestIdConfig)
       contextStore.pinContext(request, { requestId: choice.id })
       // Set at the start as well as at close: a short-circuited request
       // never reaches the later hooks, and the wrap runs after the Response
@@ -620,7 +626,7 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
         | string
         | undefined
       if (id) {
-        setHeaders[requestIdHeaderKey(request, requestIdConfig)] = id
+        setHeaders[requestIdHeaderKey(setHeaders, requestIdConfig)] = id
       }
     }
 
