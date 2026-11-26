@@ -57,6 +57,8 @@ logixlysia({
 
 Each line is the same record the JSON console line prints with `consoleFormat: 'json'`, with the same keys in the same order. `autoRedact` masks it the same way before it is written. Rotation, retention and file modes work the same as for the text line. No preset sets `fileFormat`, so the file stays a text file until you turn it on.
 
+Switching the format of an existing file appends JSON lines after the text lines already in it. Point `logFilePath` at a new file when whatever reads it expects every line to parse.
+
 ## Best Practices
 
 - Use descriptive file names
