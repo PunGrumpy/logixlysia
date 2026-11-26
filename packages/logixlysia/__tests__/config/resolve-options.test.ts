@@ -298,6 +298,14 @@ describe('resolveOptions', () => {
     ).toThrow("consoleFormat must be 'json' or 'text', got \"pretty\"")
   })
 
+  test('throws on a fileFormat other than json or text', () => {
+    expect(() =>
+      resolveOptions({
+        config: { fileFormat: 'yaml' as unknown as 'json' }
+      })
+    ).toThrow("fileFormat must be 'json' or 'text', got \"yaml\"")
+  })
+
   test('throws on a negative slowThreshold', () => {
     expect(() => resolveOptions({ config: { slowThreshold: -1 } })).toThrow(
       'logixlysia: invalid formatting config'

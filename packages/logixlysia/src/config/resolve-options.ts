@@ -160,6 +160,17 @@ const validateFormatting = (config: Options['config']): void => {
     )
   }
 
+  const fileFormat: unknown = config?.fileFormat
+  if (
+    fileFormat !== undefined &&
+    fileFormat !== 'json' &&
+    fileFormat !== 'text'
+  ) {
+    invalidFormatting(
+      `fileFormat must be 'json' or 'text', got ${JSON.stringify(fileFormat)}`
+    )
+  }
+
   const slowThreshold = config?.slowThreshold
   const verySlowThreshold = config?.verySlowThreshold
 
