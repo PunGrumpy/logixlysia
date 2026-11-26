@@ -178,9 +178,13 @@ export const transportError = (
 ): Error => new Error(`[logixlysia] ${adapter} transport: ${detail}`, options)
 
 const URL_USERINFO = /^(?<scheme>[a-z][a-z0-9+.-]*:\/\/).*@/iu
+// Some intake APIs take their key in the query string.
+const URL_QUERY_OR_FRAGMENT = /(?<mark>[?#]).*$/su
 
 const withoutCredentials = (url: string): string =>
-  url.replace(URL_USERINFO, '$<scheme><redacted>@')
+  url
+    .replace(URL_USERINFO, '$<scheme><redacted>@')
+    .replace(URL_QUERY_OR_FRAGMENT, '$<mark><redacted>')
 
 export const tryParseUrl = (value: string): URL | undefined =>
   URL.canParse(value) ? new URL(value) : undefined

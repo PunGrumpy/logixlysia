@@ -235,6 +235,40 @@ describe('resolveEndpoint', () => {
     }
   })
 
+  test('does not echo the query or fragment of an unparsable URL', () => {
+    const cases = [
+      {
+        input: 'ingest.example.com/v1?api_key=SECRETVALUE',
+        kept: 'ingest.example.com/v1?<redacted>',
+        secrets: ['SECRETVALUE']
+      },
+      {
+        input: 'ingest.example.com/v1#token=SECRETVALUE',
+        kept: 'ingest.example.com/v1#<redacted>',
+        secrets: ['SECRETVALUE']
+      },
+      {
+        input: 'http://user:pw@exa mple.com/p?k=SECRETVALUE',
+        kept: 'http://<redacted>@exa mple.com/p?<redacted>',
+        secrets: ['pw', 'SECRETVALUE']
+      }
+    ]
+    for (const { input, kept, secrets } of cases) {
+      let thrown: Error | undefined
+      try {
+        resolveEndpoint('x', input)
+      } catch (error) {
+        thrown = error as Error
+      }
+      expect(thrown?.message).toBe(
+        `[logixlysia] x transport: invalid endpoint URL '${kept}'`
+      )
+      for (const secret of secrets) {
+        expect(thrown?.message).not.toContain(secret)
+      }
+    }
+  })
+
   test('throws for a non-http(s) protocol', () => {
     expect(() => resolveEndpoint('Test', 'ftp://a.example/x')).toThrow(
       'http or https'
