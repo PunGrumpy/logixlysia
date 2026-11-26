@@ -73,6 +73,21 @@ const invalidOutput = (detail: string): never => {
   throw new Error(`logixlysia: invalid output config — ${detail}`)
 }
 
+const checkGlobs = (
+  globs: readonly string[],
+  label: string,
+  invalid: (detail: string) => never
+): void => {
+  for (const glob of globs) {
+    try {
+      globToRegExp(glob)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      invalid(`${label}: '${glob}' — ${message}`)
+    }
+  }
+}
+
 const validateTailSampling = (tail: SamplingConfig['tail']): void => {
   if (tail?.status !== undefined && !isNonNegativeNumber(tail.status)) {
     invalidSampling('tail.status must be a non-negative number')
@@ -92,6 +107,7 @@ const validateTailSampling = (tail: SamplingConfig['tail']): void => {
     ) {
       invalidSampling('tail.paths must contain non-empty glob strings')
     }
+    checkGlobs(tail.paths, 'tail.paths', invalidSampling)
   }
 }
 
@@ -175,14 +191,19 @@ const validateLogFilterLevel = (level: unknown): void => {
   }
 }
 
-const isGlobList = (value: unknown): boolean =>
+const isGlobList = (value: unknown): value is string[] =>
   Array.isArray(value) &&
   value.every(entry => typeof entry === 'string' && entry.length > 0)
 
 const validateAccessLineGlobs = (accessLine: LogFilter['accessLine']): void => {
   for (const key of ['include', 'exclude'] as const) {
     const globs: unknown = accessLine?.[key]
-    if (globs !== undefined && !isGlobList(globs)) {
+    if (globs === undefined) {
+      continue
+    }
+    if (isGlobList(globs)) {
+      checkGlobs(globs, `accessLine.${key}`, invalidLogFilter)
+    } else {
       invalidLogFilter(
         `accessLine.${key} must be an array of non-empty glob strings`
       )
@@ -196,16 +217,10 @@ const validateLogFilterPaths = (logFilter: LogFilter): void => {
     if (globs === undefined) {
       continue
     }
-    if (!isGlobList(globs)) {
+    if (isGlobList(globs)) {
+      checkGlobs(globs, key, invalidLogFilter)
+    } else {
       invalidLogFilter(`${key} must be an array of non-empty glob strings`)
-    }
-    for (const glob of logFilter[key] ?? []) {
-      try {
-        globToRegExp(glob)
-      } catch (error) {
-        const message = error instanceof Error ? error.message : String(error)
-        invalidLogFilter(`${key}: '${glob}' — ${message}`)
-      }
     }
   }
 }
