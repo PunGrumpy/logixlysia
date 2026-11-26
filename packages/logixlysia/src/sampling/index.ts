@@ -132,7 +132,7 @@ const matchesTail = (
   return tail.keep !== undefined && matchesKeep(tail.keep, outcome, onError)
 }
 
-const resolveRates = (
+export const resolveRates = (
   head: SamplingConfig['head']
 ): Partial<Record<LogLevel, number>> | undefined => {
   if (!head) {

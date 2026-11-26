@@ -6,6 +6,7 @@ import type {
   SamplingConfig
 } from '../interfaces'
 import { requestIdHeaderName } from '../middleware/request-id'
+import { resolveRates } from '../sampling'
 import { globToRegExp } from '../sampling/glob'
 import { parseInterval, parseRetention, parseSize } from '../utils/rotation'
 
@@ -88,7 +89,10 @@ const checkGlobs = (
   }
 }
 
-const validateTailSampling = (tail: SamplingConfig['tail']): void => {
+const validateTailSampling = (
+  tail: SamplingConfig['tail'],
+  head: SamplingConfig['head']
+): void => {
   if (tail?.status !== undefined && !isNonNegativeNumber(tail.status)) {
     invalidSampling('tail.status must be a non-negative number')
   }
@@ -107,7 +111,12 @@ const validateTailSampling = (tail: SamplingConfig['tail']): void => {
     ) {
       invalidSampling('tail.paths must contain non-empty glob strings')
     }
-    checkGlobs(tail.paths, 'tail.paths', invalidSampling)
+    // The tail globs are compiled only when head sampling drops records, the
+    // same rule resolveSampling uses, so a config that starts without a head
+    // rate is not rejected for a glob that is never compiled.
+    if (resolveRates(head)) {
+      checkGlobs(tail.paths, 'tail.paths', invalidSampling)
+    }
   }
 }
 
@@ -128,7 +137,7 @@ const validateSampling = (config: Options['config']): void => {
     }
   }
 
-  validateTailSampling(sampling.tail)
+  validateTailSampling(sampling.tail, sampling.head)
 
   const { maxBufferedPerRequest } = sampling
   if (

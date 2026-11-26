@@ -384,7 +384,7 @@ describe('resolveOptions', () => {
     }
   )
 
-  test('names the option and the glob when a tail.paths glob is unusable', () => {
+  test('names the option and the glob when a tail.paths glob is unusable and head sampling drops records', () => {
     expect(() =>
       resolveOptions({
         config: {
@@ -396,10 +396,30 @@ describe('resolveOptions', () => {
     )
   })
 
+  test('does not compile tail.paths globs without a head rate, which leaves them unused', () => {
+    expect(() =>
+      resolveOptions({
+        config: { sampling: { tail: { paths: ['/a/**/**/x'] } } }
+      })
+    ).not.toThrow()
+  })
+
+  test('does not compile tail.paths globs when every head rate keeps all records', () => {
+    expect(() =>
+      resolveOptions({
+        config: {
+          sampling: { head: { INFO: 100 }, tail: { paths: ['/a/**/**/x'] } }
+        }
+      })
+    ).not.toThrow()
+  })
+
   test('names the option and the glob when a tail.paths segment has too many wildcards', () => {
     expect(() =>
       resolveOptions({
-        config: { sampling: { tail: { paths: ['/a/*b*c*'] } } }
+        config: {
+          sampling: { head: { INFO: 0 }, tail: { paths: ['/a/*b*c*'] } }
+        }
       })
     ).toThrow(
       "logixlysia: invalid sampling config — tail.paths: '/a/*b*c*' — Invalid glob pattern"
@@ -413,7 +433,10 @@ describe('resolveOptions', () => {
           logFilter: {
             accessLine: { exclude: ['/health/**'], include: ['/api/*-*'] }
           },
-          sampling: { tail: { paths: ['/checkout/**', '/a/*b*'] } }
+          sampling: {
+            head: { INFO: 0 },
+            tail: { paths: ['/checkout/**', '/a/*b*'] }
+          }
         }
       })
     ).not.toThrow()
