@@ -122,3 +122,120 @@ describe('logixlysia plugin - several instances, tail sampling', () => {
     )
   })
 })
+
+describe('logixlysia plugin - several instances, request scope', () => {
+  test("a later instance's lines carry the request id the response carries, and its enrichers' fields", async () => {
+    const a = createCaptureTransport({
+      enrichers: [() => ({ enriched: 'yes' })],
+      requestId: true
+    })
+    const b = createCaptureTransport({
+      enrichers: [() => ({ enriched: 'yes' })],
+      requestId: true
+    })
+    const moduleA = new Elysia({ prefix: '/a' })
+      .use(logixlysia(a.options))
+      .get('/x', () => 'a')
+    const moduleB = new Elysia({ prefix: '/b' })
+      .use(logixlysia(b.options))
+      .get('/x', ({ log }) => {
+        log.info('one')
+        log.info('two')
+        return 'b'
+      })
+    const app = new Elysia().use(moduleA).use(moduleB)
+
+    const response = await app.handle(new Request('http://localhost/b/x'))
+    await sleep(30)
+
+    const requestId = response.headers.get('x-request-id')
+    expect(requestId).toBeString()
+    expect(metas(b.transport)).toHaveLength(3)
+    for (const meta of metas(b.transport)) {
+      expect(meta.context).toEqual({ enriched: 'yes', requestId })
+    }
+    expect(
+      metas(a.transport).filter(
+        meta => meta.request?.url === 'http://localhost/b/x'
+      )
+    ).toHaveLength(0)
+  })
+
+  test('a later instance with a request id sets the header when the first instance has none', async () => {
+    const a = createCaptureTransport()
+    const b = createCaptureTransport({ requestId: true })
+    const moduleA = new Elysia({ prefix: '/a' })
+      .use(logixlysia(a.options))
+      .get('/x', () => 'a')
+    const moduleB = new Elysia({ prefix: '/b' })
+      .use(logixlysia(b.options))
+      .get('/x', () => 'b')
+    const app = new Elysia().use(moduleA).use(moduleB)
+
+    const response = await app.handle(new Request('http://localhost/b/x'))
+    await sleep(30)
+
+    const requestId = response.headers.get('x-request-id')
+    expect(requestId).toBeString()
+    expect(metas(b.transport)).toHaveLength(1)
+    expect(metas(b.transport)[0]?.context?.requestId).toBe(requestId)
+  })
+
+  test('a later instance samples a request as a whole', async () => {
+    const a = createCaptureTransport()
+    const b = createCaptureTransport({ sampling: { head: { INFO: 50 } } })
+    const moduleA = new Elysia({ prefix: '/a' })
+      .use(logixlysia(a.options))
+      .get('/x', () => 'a')
+    const moduleB = new Elysia({ prefix: '/b' })
+      .use(logixlysia(b.options))
+      .get('/:id', ({ log }) => {
+        log.info('one')
+        log.info('two')
+        return 'b'
+      })
+    const app = new Elysia().use(moduleA).use(moduleB)
+
+    const requestCount = 200
+    await Promise.all(
+      Array.from({ length: requestCount }, (_, index) =>
+        app.handle(new Request(`http://localhost/b/${index}`))
+      )
+    )
+    await sleep(30)
+
+    const groups = new Map<string, number>()
+    for (const meta of metas(b.transport)) {
+      const url = meta.request?.url ?? ''
+      groups.set(url, (groups.get(url) ?? 0) + 1)
+    }
+    expect([...new Set(groups.values())]).toEqual([3])
+    expect(groups.size).toBeGreaterThan(0)
+    expect(groups.size).toBeLessThan(requestCount)
+  })
+
+  test("a later instance's tail rule rescues the handler's lines", async () => {
+    const a = createCaptureTransport()
+    const b = createCaptureTransport({
+      sampling: { head: { INFO: 0 }, tail: { status: 200 } }
+    })
+    const moduleA = new Elysia({ prefix: '/a' })
+      .use(logixlysia(a.options))
+      .get('/x', () => 'a')
+    const moduleB = new Elysia({ prefix: '/b' })
+      .use(logixlysia(b.options))
+      .get('/x', ({ log }) => {
+        log.info('one')
+        log.info('two')
+        return 'b'
+      })
+    const app = new Elysia().use(moduleA).use(moduleB)
+
+    await app.handle(new Request('http://localhost/b/x'))
+    await sleep(30)
+
+    expect(
+      b.transport.mock.calls.map(call => String(call[1])).toSorted()
+    ).toEqual(['', 'one', 'two'])
+  })
+})

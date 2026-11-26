@@ -65,17 +65,25 @@ export const resolveRequestIdConfig = (
  * lines, response headers, and context trees, so malformed or oversized
  * values are replaced with a freshly generated one rather than echoed back.
  *
+ * `echoed` is the value already set on the response under this header, by
+ * another plugin instance that saw the request first; when it is valid it is
+ * reused, so every instance logs the id the client gets.
+ *
  * Generated values must pass the same check. This runs in `onRequest`, where
  * a throw would log an error for every request, so a generator that throws
  * or returns an invalid id is reported and replaced with a random UUID.
  */
 export const getOrCreateRequestId = (
   request: Request,
-  config: ResolvedRequestIdConfig
+  config: ResolvedRequestIdConfig,
+  echoed?: unknown
 ): string => {
   const existing = request.headers.get(config.header)
   if (existing && VALID_REQUEST_ID.test(existing)) {
     return existing
+  }
+  if (typeof echoed === 'string' && VALID_REQUEST_ID.test(echoed)) {
+    return echoed
   }
 
   try {
