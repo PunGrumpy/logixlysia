@@ -4,7 +4,7 @@ import { stringifyForLog } from '../utils/json'
 import type { LoggedRequest } from '../utils/redact'
 import { configuredService, toRecordMeta } from './index'
 
-export const LINE_OWNED_KEYS: ReadonlySet<string> = new Set([
+const LINE_OWNED_KEYS: ReadonlySet<string> = new Set([
   'level',
   'message',
   'timestamp'
