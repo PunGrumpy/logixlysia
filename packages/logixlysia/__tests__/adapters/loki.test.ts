@@ -1,4 +1,5 @@
-import { describe, expect, test } from 'bun:test'
+import { describe, expect, mock, test } from 'bun:test'
+import { createHttpTransport } from '../../src/http'
 import { createLokiTransport } from '../../src/loki'
 import { stubEnv, stubFetch } from './helpers'
 
@@ -143,6 +144,53 @@ describe('logixlysia/loki', () => {
     } finally {
       stub.restore()
       restoreEnv()
+    }
+  })
+
+  test('fails the batch when Loki answers 260 because ingestion is blocked', async () => {
+    const restoreEnv = stubEnv(CLEAR_ENV)
+    const stub = stubFetch([{ body: 'ingestion blocked', status: 260 }])
+    const onDropped = mock((_info: unknown) => {})
+    try {
+      const transport = createLokiTransport({
+        maxBatchSize: 10,
+        onDropped,
+        retries: 1,
+        url: 'http://loki:3100'
+      })
+      transport.log('INFO', 'a')
+      transport.log('INFO', 'b')
+
+      await expect(transport.flush()).rejects.toThrow('HTTP 260')
+      expect(stub.calls).toHaveLength(1)
+      expect(onDropped.mock.calls).toEqual([
+        [{ count: 2, reason: 'send-failed' }]
+      ])
+    } finally {
+      stub.restore()
+      restoreEnv()
+    }
+  })
+
+  test('a custom HTTP transport named Loki still treats 260 as success', async () => {
+    const stub = stubFetch([{ body: 'ingestion blocked', status: 260 }])
+    const onDropped = mock((_info: unknown) => {})
+    try {
+      const transport = createHttpTransport({
+        body: entries => JSON.stringify(entries),
+        headers: {},
+        name: 'Loki',
+        options: { maxBatchSize: 10, onDropped, retries: 1 },
+        url: 'http://loki:3100/loki/api/v1/push'
+      })
+      transport.log('INFO', 'a')
+      transport.log('INFO', 'b')
+
+      await transport.flush()
+      expect(stub.calls).toHaveLength(1)
+      expect(onDropped.mock.calls).toEqual([])
+    } finally {
+      stub.restore()
     }
   })
 })
