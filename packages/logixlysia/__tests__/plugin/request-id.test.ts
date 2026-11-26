@@ -317,6 +317,25 @@ describe('request ID plugin integration', () => {
     expect(records.at(-1)?.meta?.context?.requestId).toBe('from-generator')
   })
 
+  test('writes its own header key beside a lower-case one an earlier app hook set', async () => {
+    const { config, records } = capture()
+    const app = new Elysia()
+      .onRequest(({ set }) => {
+        set.headers['x-request-id'] = 'app-id'
+      })
+      .use(
+        logixlysia({
+          config: { ...config, requestId: { generator: () => 'id-A' } }
+        })
+      )
+      .get('/test', () => 'ok')
+
+    const response = await app.handle(new Request('http://localhost/test'))
+
+    expect(response.headers.get('x-request-id')).toBe('app-id, id-A')
+    expect(records.at(-1)?.meta?.context?.requestId).toBe('id-A')
+  })
+
   test('sets X-Request-Id response header on errors', async () => {
     const options: Options = {
       config: {

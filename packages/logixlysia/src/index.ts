@@ -96,50 +96,58 @@ const resolveHandledStatus = (
  * any derive runs, and closes them from its own route hooks. It times them
  * from the start the first instance saw, and its line replaces the one the
  * first instance's wrap would write. Instances reuse the request id another
- * instance chose for the same header name, so the response carries one id.
+ * instance chose for the same header name, and the header key it wrote, so
+ * the response carries one id.
  */
 const requestStarts = new WeakMap<Request, bigint>()
 const lineOwners = new WeakMap<Request, symbol>()
-const chosenRequestIds = new WeakMap<Request, Map<string, string>>()
+
+interface ChosenRequestId {
+  /** The header key, as the instance that chose the id spelled it. */
+  header: string
+  id: string
+}
+
+/** Keyed by the lower-cased header name. */
+const chosenRequestIds = new WeakMap<Request, Map<string, ChosenRequestId>>()
 
 /**
  * The id another instance already chose for this request and header name,
- * else, unless the scope opens at close, one this instance chooses now. At
- * close the response may already be built, so a new id would reach the log
- * line and never the client.
+ * else, unless the scope opens at close, one this instance chooses now under
+ * its own header key. At close the response may already be built, so a new
+ * id would reach the log line and never the client.
  */
 const chooseRequestId = (
   request: Request,
   config: ResolvedRequestIdConfig,
   atClose: boolean
-): string | undefined => {
-  const header = config.header.toLowerCase()
-  const chosen = chosenRequestIds.get(request) ?? new Map<string, string>()
-  const existing = chosen.get(header)
+): ChosenRequestId | undefined => {
+  const name = config.header.toLowerCase()
+  const chosen =
+    chosenRequestIds.get(request) ?? new Map<string, ChosenRequestId>()
+  const existing = chosen.get(name)
   if (existing !== undefined || atClose) {
     return existing
   }
-  const requestId = getOrCreateRequestId(request, config)
-  chosen.set(header, requestId)
+  const choice: ChosenRequestId = {
+    header: config.header,
+    id: getOrCreateRequestId(request, config)
+  }
+  chosen.set(name, choice)
   chosenRequestIds.set(request, chosen)
-  return requestId
+  return choice
 }
 
 /**
- * Overwrites a key that names the same header in another case instead of
- * adding one, since the response would carry both values.
+ * The key the request id goes out under: the one the instance that chose the
+ * id wrote, else this instance's own.
  */
-const writeRequestIdHeader = (
-  setHeaders: Record<string, string | number>,
-  header: string,
-  requestId: string
-): void => {
-  const lowered = header.toLowerCase()
-  const key =
-    Object.keys(setHeaders).find(name => name.toLowerCase() === lowered) ??
-    header
-  setHeaders[key] = requestId
-}
+const requestIdHeaderKey = (
+  request: Request,
+  config: ResolvedRequestIdConfig
+): string =>
+  chosenRequestIds.get(request)?.get(config.header.toLowerCase())?.header ??
+  config.header
 
 interface RequestRecord {
   error?: unknown
@@ -583,13 +591,13 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
     record.scopeOpen = true
     logger.beginRequest(request)
     if (requestIdConfig) {
-      const requestId = chooseRequestId(request, requestIdConfig, atClose)
-      if (requestId !== undefined) {
-        contextStore.pinContext(request, { requestId })
+      const choice = chooseRequestId(request, requestIdConfig, atClose)
+      if (choice !== undefined) {
+        contextStore.pinContext(request, { requestId: choice.id })
         // Set at the start as well as at close: a short-circuited request
         // never reaches the later hooks, and the wrap runs after the Response
         // exists.
-        writeRequestIdHeader(setHeaders, requestIdConfig.header, requestId)
+        setHeaders[choice.header] = choice.id
       }
     }
 
@@ -624,7 +632,7 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
         | string
         | undefined
       if (id) {
-        writeRequestIdHeader(setHeaders, requestIdConfig.header, id)
+        setHeaders[requestIdHeaderKey(request, requestIdConfig)] = id
       }
     }
 
