@@ -200,7 +200,7 @@ With `pino.prettyPrint` on and no `pino.transport` set, a pattern set here also 
 
 ### `consoleFormat`
 
-What the console prints per record. `'text'` is the human line with its context tree. `'json'` is one line of JSON holding the record transports receive, with `timestamp`, `level`, `message`, `request`, `status`, `durationMs`, `context` and `error`. The `prod` and `json` presets set `'json'`. The file sink is not affected. Any other value throws `logixlysia: invalid formatting config` at startup.
+What the console prints per record. `'text'` is the human line with its context tree. `'json'` is one line of JSON holding the record transports receive, with `timestamp`, `level`, `message`, `request`, `status`, `durationMs`, `context` and `error`. The `prod` and `json` presets set `'json'`. The file sink has its own switch, [`fileFormat`](#fileformat). Any other value throws `logixlysia: invalid formatting config` at startup.
 
 - **Type:** `'text' | 'json'`
 - **Default:** `'text'`
@@ -507,6 +507,17 @@ Path to the log file.
 
 ```ts
 logFilePath: './logs/app.log'
+```
+
+### `fileFormat`
+
+What the log file gets per record. `'text'` is the plain line: time, level, method, path, status, duration, message and context. `'json'` is the JSON console line, one object per line, with the same keys, the same order and the same redaction. Rotation and retention work the same for both. No preset sets it. Any other value throws `logixlysia: invalid formatting config` at startup.
+
+- **Type:** `'text' | 'json'`
+- **Default:** `'text'`
+
+```ts
+fileFormat: 'json'
 ```
 
 ### `logDirMode`
