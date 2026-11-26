@@ -67,18 +67,28 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        tag:
-          - next
-          - rc
+        include:
+          - tag: next
+          - tag: rc
+            # From 2.0.0-rc.5 Elysia hands `server.upgrade` an empty headers
+            # object, which Bun before 1.4.4 rejects, so every WebSocket
+            # route answers 500 on the Bun this repository pins.
+            bun: 1.4.5
     steps:
       - name: 🛫 Checkout Code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - name: 🍞 Setup Bun
+        if: ${{ !matrix.bun }}
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version-file: package.json
+      - name: 🍞 Setup Bun ${{ matrix.bun }}
+        if: ${{ matrix.bun }}
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: ${{ matrix.bun }}
       - name: 🌵 Cache Bun
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
