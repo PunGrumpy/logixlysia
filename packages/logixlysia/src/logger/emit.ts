@@ -7,7 +7,7 @@ import type {
   RequestInfo,
   StoreData
 } from '../interfaces'
-import { logToTransports, toRecordMeta } from '../output'
+import { configuredService, logToTransports, toRecordMeta } from '../output'
 import { logToFile } from '../output/file'
 import type { SamplingRuntime } from '../sampling'
 import { elapsedMs } from '../utils/duration'
@@ -165,7 +165,7 @@ const formatJsonLine = (
     status,
     ...rest
   } = toRecordMeta({ data, options, precomputed, request })
-  const service = options.config?.service?.trim() || undefined
+  const service = configuredService(options)
   const { message } = data
   const restEntries = Object.entries(rest).filter(
     ([key]) =>
