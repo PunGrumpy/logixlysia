@@ -177,10 +177,27 @@ export const transportError = (
   options?: ErrorOptions
 ): Error => new Error(`[logixlysia] ${adapter} transport: ${detail}`, options)
 
+const URL_SCHEME = /^[a-z][a-z0-9+.-]*:\/\//iu
 const URL_USERINFO = /^(?<scheme>[a-z][a-z0-9+.-]*:\/\/).*@/iu
+const URL_QUERY_OR_FRAGMENT_MARK = /[?#]/u
 
-const withoutCredentials = (url: string): string =>
+const withoutUserinfo = (url: string): string =>
   url.replace(URL_USERINFO, '$<scheme><redacted>@')
+
+// Some intake APIs take their key in the query string, so everything after
+// the first `?` or `#` is hidden. A raw `?` or `#` inside a password looks the
+// same as that mark, so when an `@` follows it the end of the userinfo is
+// unknown and only the scheme is kept.
+const withoutCredentials = (url: string): string => {
+  const markIndex = url.search(URL_QUERY_OR_FRAGMENT_MARK)
+  if (markIndex === -1) {
+    return withoutUserinfo(url)
+  }
+  if (url.includes('@', markIndex + 1)) {
+    return `${URL_SCHEME.exec(url)?.[0] ?? ''}<redacted>`
+  }
+  return `${withoutUserinfo(url.slice(0, markIndex))}${url.charAt(markIndex)}<redacted>`
+}
 
 export const tryParseUrl = (value: string): URL | undefined =>
   URL.canParse(value) ? new URL(value) : undefined
@@ -1039,6 +1056,20 @@ export const isPlainObject = (
   !Array.isArray(value) &&
   !(value instanceof Date)
 
+// A plain assignment to `__proto__` would hit the prototype setter and drop the field.
+const setFlat = (
+  out: Record<string, FlatValue>,
+  key: string,
+  value: FlatValue
+): void => {
+  Object.defineProperty(out, key, {
+    configurable: true,
+    enumerable: true,
+    value,
+    writable: true
+  })
+}
+
 const flattenInto = (
   out: Record<string, FlatValue>,
   value: unknown,
@@ -1053,17 +1084,19 @@ const flattenInto = (
     typeof value === 'number' ||
     typeof value === 'boolean'
   ) {
-    out[prefix] = value
+    setFlat(out, prefix, value)
     return
   }
   if (value instanceof Date) {
-    out[prefix] = Number.isNaN(value.getTime())
-      ? UNSERIALIZABLE_TEXT
-      : value.toISOString()
+    setFlat(
+      out,
+      prefix,
+      Number.isNaN(value.getTime()) ? UNSERIALIZABLE_TEXT : value.toISOString()
+    )
     return
   }
   if (typeof value === 'bigint') {
-    out[prefix] = value.toString()
+    setFlat(out, prefix, value.toString())
     return
   }
   if (isPlainObject(value) && depth < FLATTEN_MAX_DEPTH) {
@@ -1071,7 +1104,7 @@ const flattenInto = (
     try {
       entries = Object.entries(value)
     } catch {
-      out[prefix] = UNSERIALIZABLE_TEXT
+      setFlat(out, prefix, UNSERIALIZABLE_TEXT)
       return
     }
     for (const [key, child] of entries) {
@@ -1081,7 +1114,7 @@ const flattenInto = (
   }
   const json = stringifyForLog(value)
   if (json !== '') {
-    out[prefix] = json
+    setFlat(out, prefix, json)
   }
 }
 

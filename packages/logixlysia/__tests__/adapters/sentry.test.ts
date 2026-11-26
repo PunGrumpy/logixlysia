@@ -118,6 +118,33 @@ describe('logixlysia/sentry', () => {
     }
   })
 
+  test('keeps a logged __proto__ field in the attributes', async () => {
+    const restoreEnv = stubEnv(CLEAR_ENV)
+    const stub = stubFetch()
+    try {
+      const transport = createSentryTransport({
+        dsn: DSN,
+        environment: 'production'
+      })
+      transport.log('INFO', 'hello', JSON.parse('{"__proto__":"x","a":1}'))
+      await transport.flush()
+
+      const [item] = parseEnvelope(stub.calls[0]?.body ?? '').items
+      const attributes = item?.attributes ?? {}
+      expect(
+        Object.getOwnPropertyDescriptor(attributes, '__proto__')?.value
+      ).toEqual({ type: 'string', value: 'x' })
+      expect(attributes.a).toEqual({ type: 'integer', value: 1 })
+      expect(attributes['sentry.environment']).toEqual({
+        type: 'string',
+        value: 'production'
+      })
+    } finally {
+      stub.restore()
+      restoreEnv()
+    }
+  })
+
   test('reuses a trace id from the request context', async () => {
     const restoreEnv = stubEnv(CLEAR_ENV)
     const stub = stubFetch()

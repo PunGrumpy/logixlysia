@@ -160,6 +160,20 @@ describe('flattenMeta', () => {
       '[{"self":"[Circular]"}]'
     )
   })
+
+  test('keeps a key named __proto__ as an own field', () => {
+    const flat = flattenMeta(
+      JSON.parse('{"a":1,"__proto__":"x","b":{"__proto__":"y"}}')
+    )
+    expect(Object.keys(flat).toSorted()).toEqual([
+      '__proto__',
+      'a',
+      'b.__proto__'
+    ])
+    expect(Object.getOwnPropertyDescriptor(flat, '__proto__')?.value).toBe('x')
+    expect(Object.getPrototypeOf(flat)).toBe(Object.prototype)
+    expect(JSON.stringify(flat)).toContain('"__proto__":"x"')
+  })
 })
 
 describe('getPath', () => {
@@ -232,6 +246,56 @@ describe('resolveEndpoint', () => {
       expect(thrown?.message).not.toContain(secret)
       expect(thrown?.message).toContain('<redacted>@')
       expect(Bun.inspect(thrown)).not.toContain(secret)
+    }
+  })
+
+  test('does not echo the query or fragment of an unparsable URL', () => {
+    const cases = [
+      {
+        input: 'ingest.example.com/v1?api_key=SECRETVALUE',
+        kept: 'ingest.example.com/v1?<redacted>',
+        secrets: ['SECRETVALUE']
+      },
+      {
+        input: 'ingest.example.com/v1#token=SECRETVALUE',
+        kept: 'ingest.example.com/v1#<redacted>',
+        secrets: ['SECRETVALUE']
+      },
+      {
+        input: 'http://user:pw@exa mple.com/p?k=SECRETVALUE',
+        kept: 'http://<redacted>@exa mple.com/p?<redacted>',
+        secrets: ['pw', 'SECRETVALUE']
+      },
+      // An `@` after the mark leaves the end of the userinfo unknown.
+      {
+        input: 'https://bad host/v1?email=a@example.com&api_key=TEST_TOKEN',
+        kept: 'https://<redacted>',
+        secrets: ['TEST_TOKEN', 'example.com&']
+      },
+      {
+        input: 'http://user:p?ss@exa mple.com/x',
+        kept: 'http://<redacted>',
+        secrets: ['p?ss', 'ss@']
+      },
+      {
+        input: 'ingest.example.com/v1?api_key=K#frag@x',
+        kept: '<redacted>',
+        secrets: ['K']
+      }
+    ]
+    for (const { input, kept, secrets } of cases) {
+      let thrown: Error | undefined
+      try {
+        resolveEndpoint('x', input)
+      } catch (error) {
+        thrown = error as Error
+      }
+      expect(thrown?.message).toBe(
+        `[logixlysia] x transport: invalid endpoint URL '${kept}'`
+      )
+      for (const secret of secrets) {
+        expect(thrown?.message).not.toContain(secret)
+      }
     }
   })
 
