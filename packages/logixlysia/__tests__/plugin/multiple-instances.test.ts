@@ -2,6 +2,7 @@ import { describe, expect, mock, test } from 'bun:test'
 import { Elysia } from 'elysia'
 import { logixlysia, useLogger } from '../../src'
 import type { Options } from '../../src/interfaces'
+import { isElysia2 } from '../_helpers/elysia'
 import { sleep } from '../_helpers/sleep'
 
 interface CapturedMeta {
@@ -98,6 +99,31 @@ describe('logixlysia plugin - several instances', () => {
     expect(metas(inner.transport).map(meta => meta.status)).toEqual([202])
     expect(metas(outer.transport).map(meta => meta.status)).toEqual([202])
   })
+
+  test('an app that forwards a request to another app with its own plugin leaves it its own request id', async () => {
+    const outer = createCaptureTransport({
+      requestId: { generator: () => 'id-outer' }
+    })
+    const inner = createCaptureTransport({
+      requestId: { generator: () => 'id-inner' }
+    })
+    const innerApp = new Elysia()
+      .use(logixlysia(inner.options))
+      .get('/legacy', () => 'inner')
+    const outerApp = new Elysia()
+      .use(logixlysia(outer.options))
+      .get('/legacy', ({ request }) => innerApp.handle(request))
+
+    const response = await outerApp.handle(
+      new Request('http://localhost/legacy')
+    )
+    await sleep(30)
+
+    expect(response.headers.get('x-request-id')).toBe('id-inner')
+    expect(metas(inner.transport).map(meta => meta.context?.requestId)).toEqual(
+      ['id-inner']
+    )
+  })
 })
 
 describe('logixlysia plugin - several instances, tail sampling', () => {
@@ -120,5 +146,196 @@ describe('logixlysia plugin - several instances, tail sampling', () => {
     expect(a.transport.mock.calls.map(call => call[1])).toContain(
       'from a later instance route'
     )
+  })
+})
+
+describe('logixlysia plugin - several instances, request scope', () => {
+  test("a later instance's lines carry the request id the response carries, and its enrichers' fields", async () => {
+    const a = createCaptureTransport({
+      enrichers: [() => ({ enriched: 'yes' })],
+      requestId: true
+    })
+    const b = createCaptureTransport({
+      enrichers: [() => ({ enriched: 'yes' })],
+      requestId: true
+    })
+    const moduleA = new Elysia({ prefix: '/a' })
+      .use(logixlysia(a.options))
+      .get('/x', () => 'a')
+    const moduleB = new Elysia({ prefix: '/b' })
+      .use(logixlysia(b.options))
+      .get('/x', ({ log }) => {
+        log.info('one')
+        log.info('two')
+        return 'b'
+      })
+    const app = new Elysia().use(moduleA).use(moduleB)
+
+    const response = await app.handle(new Request('http://localhost/b/x'))
+    await sleep(30)
+
+    const requestId = response.headers.get('x-request-id')
+    expect(requestId).toBeString()
+    expect(metas(b.transport)).toHaveLength(3)
+    for (const meta of metas(b.transport)) {
+      expect(meta.context).toEqual({ enriched: 'yes', requestId })
+    }
+    expect(
+      metas(a.transport).filter(
+        meta => meta.request?.url === 'http://localhost/b/x'
+      )
+    ).toHaveLength(0)
+  })
+
+  test('a later instance with a request id sets the header when the first instance has none', async () => {
+    const a = createCaptureTransport()
+    const b = createCaptureTransport({ requestId: true })
+    const moduleA = new Elysia({ prefix: '/a' })
+      .use(logixlysia(a.options))
+      .get('/x', () => 'a')
+    const moduleB = new Elysia({ prefix: '/b' })
+      .use(logixlysia(b.options))
+      .get('/x', () => 'b')
+    const app = new Elysia().use(moduleA).use(moduleB)
+
+    const response = await app.handle(new Request('http://localhost/b/x'))
+    await sleep(30)
+
+    const requestId = response.headers.get('x-request-id')
+    expect(requestId).toBeString()
+    expect(metas(b.transport)).toHaveLength(1)
+    expect(metas(b.transport)[0]?.context?.requestId).toBe(requestId)
+  })
+
+  test('a later instance samples a request as a whole', async () => {
+    const a = createCaptureTransport()
+    const b = createCaptureTransport({ sampling: { head: { INFO: 50 } } })
+    const moduleA = new Elysia({ prefix: '/a' })
+      .use(logixlysia(a.options))
+      .get('/x', () => 'a')
+    const moduleB = new Elysia({ prefix: '/b' })
+      .use(logixlysia(b.options))
+      .get('/:id', ({ log }) => {
+        log.info('one')
+        log.info('two')
+        return 'b'
+      })
+    const app = new Elysia().use(moduleA).use(moduleB)
+
+    const requestCount = 200
+    await Promise.all(
+      Array.from({ length: requestCount }, (_, index) =>
+        app.handle(new Request(`http://localhost/b/${index}`))
+      )
+    )
+    await sleep(30)
+
+    const groups = new Map<string, number>()
+    for (const meta of metas(b.transport)) {
+      const url = meta.request?.url ?? ''
+      groups.set(url, (groups.get(url) ?? 0) + 1)
+    }
+    expect([...new Set(groups.values())]).toEqual([3])
+    expect(groups.size).toBeGreaterThan(0)
+    expect(groups.size).toBeLessThan(requestCount)
+  })
+
+  test("a later instance's tail rule rescues the handler's lines", async () => {
+    const a = createCaptureTransport()
+    const b = createCaptureTransport({
+      sampling: { head: { INFO: 0 }, tail: { status: 200 } }
+    })
+    const moduleA = new Elysia({ prefix: '/a' })
+      .use(logixlysia(a.options))
+      .get('/x', () => 'a')
+    const moduleB = new Elysia({ prefix: '/b' })
+      .use(logixlysia(b.options))
+      .get('/x', ({ log }) => {
+        log.info('one')
+        log.info('two')
+        return 'b'
+      })
+    const app = new Elysia().use(moduleA).use(moduleB)
+
+    await app.handle(new Request('http://localhost/b/x'))
+    await sleep(30)
+
+    expect(
+      b.transport.mock.calls.map(call => String(call[1])).toSorted()
+    ).toEqual(['', 'one', 'two'])
+  })
+
+  test('instances whose request id headers differ only by case send one id and log it', async () => {
+    const a = createCaptureTransport({ requestId: true })
+    const b = createCaptureTransport({ requestId: { header: 'x-request-id' } })
+    const moduleA = new Elysia({ prefix: '/a' })
+      .use(logixlysia(a.options))
+      .get('/x', () => 'a')
+    const moduleB = new Elysia({ prefix: '/b' })
+      .use(logixlysia(b.options))
+      .get('/x', ({ log }) => {
+        log.info('one')
+        return 'b'
+      })
+    const app = new Elysia().use(moduleA).use(moduleB)
+
+    const response = await app.handle(new Request('http://localhost/b/x'))
+    await sleep(30)
+
+    const requestId = response.headers.get('x-request-id')
+    expect(requestId).toBeString()
+    expect(requestId).not.toContain(',')
+    expect(metas(b.transport).map(meta => meta.context?.requestId)).toEqual([
+      requestId,
+      requestId
+    ])
+  })
+
+  test('a later instance logs a request its own resolve answers with a status', async () => {
+    const a = createCaptureTransport()
+    const b = createCaptureTransport()
+    const moduleA = new Elysia({ prefix: '/a' })
+      .use(logixlysia(a.options))
+      .get('/x', () => 'a')
+    const withPlugin = new Elysia({ prefix: '/b' }).use(logixlysia(b.options))
+    // Elysia 2 folds `resolve` into `derive`, which may answer with a status.
+    const guarded = isElysia2
+      ? withPlugin.derive(({ status }) => status(401, 'no'))
+      : withPlugin.resolve(({ status }) => status(401, 'no'))
+    const moduleB = guarded.get('/x', () => 'b')
+    const app = new Elysia().use(moduleA).use(moduleB)
+
+    const response = await app.handle(new Request('http://localhost/b/x'))
+    await sleep(30)
+
+    expect(response.status).toBe(401)
+    expect(metas(b.transport).map(meta => meta.status)).toEqual([401])
+  })
+
+  test('a later instance keeps its line when its route forwards the request to another app with its own plugin', async () => {
+    const a = createCaptureTransport()
+    const outer = createCaptureTransport()
+    const inner = createCaptureTransport()
+    const innerApp = new Elysia()
+      .use(logixlysia(inner.options))
+      .get('/b/legacy', () => 'inner')
+    const moduleA = new Elysia({ prefix: '/a' })
+      .use(logixlysia(a.options))
+      .get('/x', () => 'a')
+    const moduleB = new Elysia({ prefix: '/b' })
+      .use(logixlysia(outer.options))
+      .get('/legacy', async ({ request, set }) => {
+        await innerApp.handle(request)
+        set.status = 503
+        return 'outer'
+      })
+    const app = new Elysia().use(moduleA).use(moduleB)
+
+    const response = await app.handle(new Request('http://localhost/b/legacy'))
+    await sleep(30)
+
+    expect(response.status).toBe(503)
+    expect(metas(inner.transport).map(meta => meta.status)).toEqual([200])
+    expect(metas(outer.transport).map(meta => meta.status)).toEqual([503])
   })
 })

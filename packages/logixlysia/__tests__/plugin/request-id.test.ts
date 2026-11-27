@@ -292,6 +292,79 @@ describe('request ID plugin integration', () => {
     expect(typeof meta?.context?.requestId).toBe('string')
   })
 
+  test('generates its own id over a value an earlier app hook set on the response', async () => {
+    const { config, records } = capture()
+    const app = new Elysia()
+      .onRequest(({ set }) => {
+        set.headers['x-request-id'] = 'from-app'
+      })
+      .use(
+        logixlysia({
+          config: {
+            ...config,
+            requestId: {
+              generator: () => 'from-generator',
+              header: 'x-request-id'
+            }
+          }
+        })
+      )
+      .get('/test', () => 'ok')
+
+    const response = await app.handle(new Request('http://localhost/test'))
+
+    expect(response.headers.get('x-request-id')).toBe('from-generator')
+    expect(records.at(-1)?.meta?.context?.requestId).toBe('from-generator')
+  })
+
+  test('writes its own header key beside a lower-case one an earlier app hook set', async () => {
+    const { config, records } = capture()
+    const app = new Elysia()
+      .onRequest(({ set }) => {
+        set.headers['x-request-id'] = 'app-id'
+      })
+      .use(
+        logixlysia({
+          config: { ...config, requestId: { generator: () => 'id-A' } }
+        })
+      )
+      .get('/test', () => 'ok')
+
+    const response = await app.handle(new Request('http://localhost/test'))
+
+    expect(response.headers.get('x-request-id')).toBe('app-id, id-A')
+    expect(records.at(-1)?.meta?.context?.requestId).toBe('id-A')
+  })
+
+  test('opens no request scope for a request an earlier onRequest hook answered', async () => {
+    const { config } = capture()
+    let calls = 0
+    const app = new Elysia()
+      .onRequest(({ set }) => {
+        set.status = 403
+        return 'forbidden'
+      })
+      .use(
+        logixlysia({
+          config: {
+            ...config,
+            enrichers: [
+              () => {
+                calls += 1
+                return {}
+              }
+            ]
+          }
+        })
+      )
+      .get('/test', () => 'ok')
+
+    const response = await app.handle(new Request('http://localhost/test'))
+
+    expect(response.status).toBe(403)
+    expect(calls).toBe(0)
+  })
+
   test('sets X-Request-Id response header on errors', async () => {
     const options: Options = {
       config: {

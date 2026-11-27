@@ -111,3 +111,9 @@ If Request ID is disabled or not present, the token will render as an empty stri
 If a request fails (e.g. throws an exception), the request ID is still propagated in the response headers (like `X-Request-Id`) and is correctly logged in the HTTP error telemetry context, allowing trace correlation for failed requests.
 
 Logixlysia sets the request ID header as soon as the request starts. Short-circuited responses carry it too, such as an auth `resolve` that returns `status(401)`, a response returned from an `onRequest` hook registered after Logixlysia, or an error answered by an app-wide `onError` registered before Logixlysia. Their log line carries the same ID.
+
+## Several Plugin Instances
+
+An app can mount Logixlysia in more than one module, each with its own options. Instances in one request share the id Logixlysia chose for a header name, and names that differ only in case, such as `X-Request-Id` and `x-request-id`, count as one header. The first instance to see a request chooses the id and the header key it goes out under, spelled as that instance's `header` option spells it. A later instance reuses both, so the response carries one value and the instances log it, with two exceptions. A handler that returns its own `Response` carrying that header sends its own value, while the instances log the plugin's id. A request that ends before a later instance's derive runs, for example a body that fails to parse, is logged by that instance without the request id, even when the response carries the one the first instance chose.
+
+Logixlysia does not adopt a value the app itself put on the response under that header. It uses a valid inbound header or calls the generator. Its id replaces the app's value when the app wrote the same key. When the app spelled the key in another case, such as `x-request-id` beside the default `X-Request-Id`, the response carries both values.

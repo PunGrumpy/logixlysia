@@ -39,6 +39,7 @@ import {
   getOrCreateRequestId,
   resolveRequestIdConfig
 } from './middleware/request-id'
+import type { ResolvedRequestIdConfig } from './middleware/request-id'
 import { closeTransports } from './output'
 import { closeAllFileSinks } from './output/file-sink'
 import { flushAll, shutdownWithin } from './output/shutdown'
@@ -90,16 +91,70 @@ const resolveHandledStatus = (
 /**
  * Shared by every plugin instance. Elysia keeps only the first instance's
  * `onRequest` and `wrap` (both dedupe by plugin name), so a second instance,
- * mounted in a sibling module, never sees its requests start and closes them
- * from its own route hooks. It times them from the start the first instance
- * saw, and its line replaces the one the first instance's wrap would write.
+ * mounted in a sibling module, never sees its requests start. It opens its
+ * request scope from its derive and closes them from its own route hooks. It
+ * times them from the start the first instance saw, and its line replaces the
+ * one the first instance's wrap would write. Instances in one dispatch reuse
+ * the request id another instance chose for the same header name, and the
+ * header key it wrote, so the response carries one id.
  */
 const requestStarts = new WeakMap<Request, bigint>()
 const lineOwners = new WeakMap<Request, symbol>()
 
+interface ChosenRequestId {
+  /** The header key, as the instance that chose the id spelled it. */
+  header: string
+  id: string
+}
+
+/**
+ * Keyed by a dispatch's `set.headers`, which every instance in that dispatch
+ * is handed, then by the lower-cased header name. Not by the Request: a
+ * handler can pass its Request to another app's `handle()`, a new dispatch
+ * whose plugin chooses its own id.
+ */
+const chosenRequestIds = new WeakMap<object, Map<string, ChosenRequestId>>()
+
+/**
+ * The id another instance in this dispatch already chose for the header name,
+ * else one this instance chooses now under its own header key.
+ */
+const chooseRequestId = (
+  request: Request,
+  setHeaders: object,
+  config: ResolvedRequestIdConfig
+): ChosenRequestId => {
+  const name = config.header.toLowerCase()
+  const chosen =
+    chosenRequestIds.get(setHeaders) ?? new Map<string, ChosenRequestId>()
+  const existing = chosen.get(name)
+  if (existing !== undefined) {
+    return existing
+  }
+  const choice: ChosenRequestId = {
+    header: config.header,
+    id: getOrCreateRequestId(request, config)
+  }
+  chosen.set(name, choice)
+  chosenRequestIds.set(setHeaders, chosen)
+  return choice
+}
+
+/**
+ * The key the request id goes out under: the one the instance that chose the
+ * id wrote, else this instance's own.
+ */
+const requestIdHeaderKey = (
+  setHeaders: object,
+  config: ResolvedRequestIdConfig
+): string =>
+  chosenRequestIds.get(setHeaders)?.get(config.header.toLowerCase())?.header ??
+  config.header
+
 interface RequestRecord {
   error?: unknown
   phase: 'open' | 'streaming' | 'closed'
+  scopeOpen: boolean
   seenByWrap: boolean
   setHeaders?: Record<string, string | number>
   startedAt: bigint
@@ -386,6 +441,7 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
     }
     const record: RequestRecord = {
       phase: 'open',
+      scopeOpen: false,
       seenByWrap: false,
       startedAt,
       streamPulled: false
@@ -521,18 +577,27 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
     value: getRequestScopedLogger
   })
 
+  /**
+   * Opened once per request: from `onRequest`, from `runJob`, or, for a later
+   * instance whose `onRequest` Elysia drops, from its derive.
+   */
   const openRequestScope = (
     request: Request,
+    record: RequestRecord,
     setHeaders: Record<string, string | number>
   ): void => {
+    if (record.scopeOpen) {
+      return
+    }
+    record.scopeOpen = true
     logger.beginRequest(request)
     if (requestIdConfig) {
-      const requestId = getOrCreateRequestId(request, requestIdConfig)
-      contextStore.pinContext(request, { requestId })
+      const choice = chooseRequestId(request, setHeaders, requestIdConfig)
+      contextStore.pinContext(request, { requestId: choice.id })
       // Set at the start as well as at close: a short-circuited request
       // never reaches the later hooks, and the wrap runs after the Response
       // exists.
-      setHeaders[requestIdConfig.header] = requestId
+      setHeaders[choice.header] = choice.id
     }
 
     if (enrichers && !isExcluded(request)) {
@@ -561,7 +626,7 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
         | string
         | undefined
       if (id) {
-        setHeaders[requestIdConfig.header] = id
+        setHeaders[requestIdHeaderKey(setHeaders, requestIdConfig)] = id
       }
     }
 
@@ -775,7 +840,7 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
     const request = syntheticRequest('JOB', name)
     const record = openRecord(request)
     try {
-      openRequestScope(request, {})
+      openRequestScope(request, record, {})
     } catch (failure) {
       reportFormatError(failure, onSinkError)
     }
@@ -858,7 +923,12 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
         .derive(({ request }) => ({ log: getRequestScopedLogger(request) }))
         .as('global')
     )
-    .derive(({ request }) => ({ log: getRequestScopedLogger(request) }))
+    .derive(({ request, set }) => {
+      const record = openRecord(request)
+      record.setHeaders ??= set.headers
+      openRequestScope(request, record, set.headers)
+      return { log: getRequestScopedLogger(request) }
+    })
     .onStart(({ server }): void => {
       startServer(server ?? undefined, options)
     })
@@ -873,7 +943,7 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
       const record = openRecord(request)
       record.setHeaders = set.headers
       store.beforeTime = record.startedAt
-      openRequestScope(request, set.headers)
+      openRequestScope(request, record, set.headers)
 
       if (useAsyncLocalStorage && !record.seenByWrap) {
         loggerStorage.enterWith(getRequestScopedLogger(request))
