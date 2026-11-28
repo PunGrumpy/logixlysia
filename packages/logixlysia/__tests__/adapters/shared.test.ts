@@ -281,6 +281,27 @@ describe('resolveEndpoint', () => {
         input: 'ingest.example.com/v1?api_key=K#frag@x',
         kept: '<redacted>',
         secrets: ['K']
+      },
+      {
+        input: '//user:hunter2@logs.example.com/v1',
+        kept: '<redacted>@logs.example.com/v1',
+        secrets: ['hunter2', 'user']
+      },
+      {
+        input: 'api_user:hunter2@bad host/v1',
+        kept: '<redacted>@bad host/v1',
+        secrets: ['hunter2']
+      },
+      {
+        input: '//user:hunter2@bad host/v1?k=SECRETVALUE',
+        kept: '<redacted>@bad host/v1?<redacted>',
+        secrets: ['hunter2', 'SECRETVALUE']
+      },
+      // A line break inside the userinfo does not end the mask.
+      {
+        input: 'http://user:p@ss\nmore@bad host/v1',
+        kept: 'http://<redacted>@bad host/v1',
+        secrets: ['p@ss', 'more']
       }
     ]
     for (const { input, kept, secrets } of cases) {
