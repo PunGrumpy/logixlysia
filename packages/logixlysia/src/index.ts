@@ -1003,18 +1003,32 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
       // later onError mapped the error to.
     })
     .onAfterResponse(context => {
-      const { request, set } = context
+      const { request, response, responseValue, set } = context
       const record = openRecord(request)
       if (record.seenByWrap) {
         return
       }
+      const answered = responseValue ?? response
       // An exit that reached neither hook above (a resolve short-circuit, or an
-      // error an earlier app-wide onError answered).
-      const error = 'error' in context ? context.error : undefined
-      if (error !== undefined) {
+      // error an earlier app-wide onError answered). Elysia 1.x leaves its
+      // `status` helper on `context.error` when nothing was thrown.
+      const error: unknown = 'error' in context ? context.error : undefined
+      const isStatusHelper = 'status' in context && error === context.status
+      if (error !== undefined && !isStatusHelper) {
         record.error = error
       }
-      finishUnwrapped(request, record, getStatusCode(set.status))
+      const setStatus =
+        set.status === undefined || set.status === null
+          ? DEFAULT_STATUS
+          : getStatusCode(set.status)
+      // After an error, `responseValue` can be a Response the client never got.
+      const early =
+        record.error === undefined && answered instanceof Response
+          ? answered
+          : undefined
+      const status =
+        setStatus === DEFAULT_STATUS && early ? early.status : setStatus
+      finishUnwrapped(request, record, status, early?.headers)
     })
     .as(scope) as Logixlysia<TFields>
 
