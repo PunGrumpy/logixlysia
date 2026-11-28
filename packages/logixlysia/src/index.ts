@@ -1002,16 +1002,14 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
         set.status === undefined || set.status === null
           ? DEFAULT_STATUS
           : getStatusCode(set.status)
+      // After an error, `responseValue` can be a Response the client never got.
+      const early =
+        record.error === undefined && answered instanceof Response
+          ? answered
+          : undefined
       const status =
-        setStatus === DEFAULT_STATUS && answered instanceof Response
-          ? answered.status
-          : setStatus
-      finishUnwrapped(
-        request,
-        record,
-        status,
-        answered instanceof Response ? answered.headers : undefined
-      )
+        setStatus === DEFAULT_STATUS && early ? early.status : setStatus
+      finishUnwrapped(request, record, status, early?.headers)
     })
     .as(scope) as Logixlysia<TFields>
 

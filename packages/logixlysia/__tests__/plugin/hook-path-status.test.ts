@@ -264,4 +264,31 @@ describe('exits only onAfterResponse sees', () => {
     expect(later.transport).toHaveBeenCalledTimes(1)
     expect(recordAt(later.transport, 0).meta.status).toBe(response.status)
   })
+
+  test('a later instance logs 200 when an onError answers 200 over an earlier Response', async () => {
+    const first = createCaptureTransport()
+    const later = createCaptureTransport()
+    const moduleA = new Elysia({ prefix: '/a' })
+      .use(logixlysia(first.options))
+      .get('/x', () => 'a')
+    const moduleB = new Elysia({ prefix: '/b' })
+      .use(logixlysia(later.options))
+      .get('/x', () => {
+        throw new Error('boom')
+      })
+    const app = new Elysia()
+      .onError(({ set }) => {
+        set.status = 200
+        return new Response('conflict', { status: 409 })
+      })
+      .mapResponse(() => new Response('fallback', { status: 200 }))
+      .use(moduleA)
+      .use(moduleB)
+
+    const response = await run(app, '/b/x')
+
+    expect(response.status).toBe(200)
+    expect(later.transport).toHaveBeenCalledTimes(1)
+    expect(recordAt(later.transport, 0).meta.status).toBe(200)
+  })
 })
