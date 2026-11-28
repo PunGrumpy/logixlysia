@@ -45,11 +45,12 @@ A method on the plugin instance. Runs `fn` outside a request and writes one fina
 ```ts check=skip
 function runJob<T>(
   name: string,
-  fn: (log: RequestScopedLogger<TFields>) => T | Promise<T>
+  fn: (log: RequestScopedLogger<TFields>) => T | Promise<T>,
+  options?: RunJobOptions
 ): Promise<T>
 ```
 
-It resolves with the value `fn` returns. If `fn` throws, the error line is written and the same error is rethrown. See [Background Jobs](/docs/features/background-jobs).
+It resolves with the value `fn` returns. If `fn` throws, the error line is written and the same error is rethrown. With `{ successLine: false }` a job that returns writes no final line; a job that throws still writes its error line. See [Background Jobs](/docs/features/background-jobs).
 
 ### `useLogger`
 

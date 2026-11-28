@@ -437,7 +437,7 @@ logixlysia({
 
 ## 15. Background jobs
 
-`runJob` lives on the plugin instance: `plugin.runJob(name, fn)`. It runs `fn` outside a request and writes one final line for it the way a request gets its access line: through transports, the file sink and redaction, and subject to `logFilter.level` and sampling. The line is labelled `JOB` with the job name as its path, with status `200` when `fn` returns and `500` when it throws. A thrown error is logged and then rethrown. Inside `fn`, `useLogger()` returns the job's logger without `useAsyncLocalStorage`.
+`runJob` lives on the plugin instance: `plugin.runJob(name, fn)`. It runs `fn` outside a request and writes one final line for it the way a request gets its access line: through transports, the file sink and redaction, and subject to `logFilter.level` and sampling. The line is labelled `JOB` with the job name as its path, with status `200` when `fn` returns and `500` when it throws. A thrown error is logged and then rethrown. Inside `fn`, `useLogger()` returns the job's logger without `useAsyncLocalStorage`. A third argument `{ successLine: false }` writes no final line for a job that returns, so a job that runs often reports failures only; a job that throws still gets its error line.
 
 ```typescript
 import { flushLogixlysia, logixlysia } from 'logixlysia'
