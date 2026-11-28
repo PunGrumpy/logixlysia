@@ -103,11 +103,13 @@ logger.info(request, 'Signup', { profile: Object.fromEntries(profile) })
 | `maxDepth` | `number` | `4` | Nested levels of `meta` walked; deeper values pass through |
 | `maxQueue` | `number` | `1000` | Records allowed to await the model before new ones are dropped |
 | `minimumConfidence` | `number` | model default | Neural confidence threshold; deterministic recognizers always apply |
-| `onDropped` | `(info: { count, reason }) => void` | — | Called for each lost record, with `reason` `'closed'`, `'queue-full'`, or `'redaction-failed'` |
+| `onDropped` | `(info: { count, reason }) => void` | — | Called with how many records were lost and why: `reason` is `'closed'` for a record logged after `close()` or still waiting for the model when a close reached its deadline, `'queue-full'`, or `'redaction-failed'` |
 | `onError` | `(error: unknown) => void` | — | Called on load failure, redaction failure, a failure of the wrapped transport's `log()`, and a record dropped because the queue was full. A record logged after `close()` reaches `onDropped` only |
 | `onFailure` | `'drop' \| 'forward'` | `'drop'` | What to do with a record the model could not process |
 
 The returned transport exposes `flush()`, which awaits the queued records and then flushes the wrapped transport — call it before process exit.
+
+`flush()` and `close()` accept `{ signal }` and pass it on to the wrapped transport, so a deadline from [`flushLogixlysia`](/docs/api-reference#flushlogixlysia) with `timeoutMs` or from [`flushTimeoutMs`](/docs/configuration#flushtimeoutms) reaches the adapter behind the wrapper. When the signal aborts, `flush()` stops waiting for the model, and the queued records are still delivered once the model is done with them. `close()` instead reports the records still waiting for the model in one `onDropped({ count, reason: 'closed' })` call and never delivers them.
 
 ## Restricting what gets masked
 
