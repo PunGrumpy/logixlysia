@@ -296,6 +296,12 @@ describe('resolveEndpoint', () => {
         input: '//user:hunter2@bad host/v1?k=SECRETVALUE',
         kept: '<redacted>@bad host/v1?<redacted>',
         secrets: ['hunter2', 'SECRETVALUE']
+      },
+      // A line break inside the userinfo does not end the mask.
+      {
+        input: 'http://user:p@ss\nmore@bad host/v1',
+        kept: 'http://<redacted>@bad host/v1',
+        secrets: ['p@ss', 'more']
       }
     ]
     for (const { input, kept, secrets } of cases) {

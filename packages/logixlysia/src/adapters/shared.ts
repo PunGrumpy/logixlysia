@@ -178,7 +178,7 @@ export const transportError = (
 ): Error => new Error(`[logixlysia] ${adapter} transport: ${detail}`, options)
 
 const URL_SCHEME = /^[a-z][a-z0-9+.-]*:\/\//iu
-const URL_USERINFO = /^(?<scheme>[a-z][a-z0-9+.-]*:\/\/)?.*@/iu
+const URL_USERINFO = /^(?<scheme>[a-z][a-z0-9+.-]*:\/\/)?.*@/isu
 const URL_QUERY_OR_FRAGMENT_MARK = /[?#]/u
 
 const withoutUserinfo = (url: string): string =>
