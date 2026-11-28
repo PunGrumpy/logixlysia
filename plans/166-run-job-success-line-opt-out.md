@@ -1,14 +1,8 @@
 # Plan 166: `runJob` can skip the final line of a job that succeeds
 
-> **Executor instructions**: Follow this plan step by step. Run every
-> verification command and confirm the expected result before moving to the
-> next step. If anything in the "STOP conditions" section occurs, stop and
-> report — do not improvise. Do not edit `plans/README.md`; the reviewer
-> maintains the index.
+> **Executor instructions**: Follow this plan step by step. Run every verification command and confirm the expected result before moving to the next step. If anything in the "STOP conditions" section occurs, stop and report — do not improvise. Do not edit `plans/README.md`; the reviewer maintains the index.
 >
-> **Drift check (run first)**: `git diff --stat 6a516de2..HEAD -- packages/logixlysia/src/index.ts packages/logixlysia/__tests__/plugin/run-job.test.ts apps/docs/content/features/background-jobs.mdx apps/docs/content/api-reference.mdx skills/logixlysia/SKILL.md`
-> If any of them changed, compare the "Current state" excerpts against the
-> live code; on a mismatch, STOP.
+> **Drift check (run first)**: `git diff --stat 6a516de2..HEAD -- packages/logixlysia/src/index.ts packages/logixlysia/__tests__/plugin/run-job.test.ts apps/docs/content/features/background-jobs.mdx apps/docs/content/api-reference.mdx skills/logixlysia/SKILL.md` If any of them changed, compare the "Current state" excerpts against the live code; on a mismatch, STOP.
 
 ## Status
 
@@ -50,24 +44,24 @@ export type LogixlysiaPlugin<TFields extends object = LogFields> =
 - Lines 812–829, `finishJob`:
 
 ```ts
-  const finishJob = (
-    request: Request,
-    record: RequestRecord,
-    status: number,
-    error?: unknown
-  ): void => {
-    record.phase = 'closed'
-    try {
-      const store = closeRequest(request, {}, status)
-      if (status >= CLIENT_ERROR_STATUS) {
-        logger.handleHttpError(request, error, { ...store, status })
-      } else {
-        emitAccessLine(request, status, store)
-      }
-    } catch (failure) {
-      reportFormatError(failure, onSinkError)
+const finishJob = (
+  request: Request,
+  record: RequestRecord,
+  status: number,
+  error?: unknown
+): void => {
+  record.phase = 'closed'
+  try {
+    const store = closeRequest(request, {}, status)
+    if (status >= CLIENT_ERROR_STATUS) {
+      logger.handleHttpError(request, error, { ...store, status })
+    } else {
+      emitAccessLine(request, status, store)
     }
+  } catch (failure) {
+    reportFormatError(failure, onSinkError)
   }
+}
 ```
 
 - Lines 831–859, `runJob`: validates `name`, builds a synthetic request, opens the scope, runs `fn` inside `loggerStorage.run`, calls `finishJob(request, record, SERVER_ERROR_STATUS, error)` and rethrows on a throw, and `finishJob(request, record, DEFAULT_STATUS)` on success.
@@ -84,8 +78,9 @@ Tests: `packages/logixlysia/__tests__/plugin/run-job.test.ts`. It has a `build(c
 ```
 
 Docs that describe `runJob`:
+
 - `apps/docs/content/features/background-jobs.mdx` — section `## Outcome` starts with the bullet "The final line is always written, even when the job logs lines of its own, as a request's access line is."
-- `apps/docs/content/api-reference.mdx` — section `### \`runJob\`` with the signature in a `ts check=skip` block.
+- `apps/docs/content/api-reference.mdx` — section `### \`runJob\``with the signature in a`ts check=skip` block.
 - `skills/logixlysia/SKILL.md` — section `## 15. Background jobs`.
 
 Docs voice: short declarative sentences, no em dash, say what the code does. These pages must not name any other logging library.
@@ -106,6 +101,7 @@ Docs voice: short declarative sentences, no em dash, say what the code does. The
 ## Scope
 
 **In scope**:
+
 - `packages/logixlysia/src/index.ts` (the `LogixlysiaPlugin` type, a new exported `RunJobOptions` type, `finishJob`, `runJob`)
 - `packages/logixlysia/__tests__/plugin/run-job.test.ts`
 - `packages/logixlysia/__tests__/api/__snapshots__/*` (only through `--update-snapshots`)
@@ -134,6 +130,7 @@ runJob: <T>(
 ```
 
 Behavior:
+
 - `successLine` omitted, `undefined` or `true`: exactly today's behavior.
 - `successLine: false` and `fn` returns: `closeRequest` still runs (the scope, sampling state and context are closed as today); `emitAccessLine` is not called. Nothing reaches a transport, the console or the file for the final line.
 - `successLine: false` and `fn` throws: unchanged, the error line is written and the error rethrown.
@@ -182,15 +179,20 @@ Apply "The interface" section. Export `RunJobOptions` next to the other exported
 A job that runs often can skip the line for a run that succeeds. Pass `{ successLine: false }`:
 
 ```ts
-await logs.runJob('poll-queue', async log => {
-  await drainQueue()
-}, { successLine: false })
+await logs.runJob(
+  'poll-queue',
+  async log => {
+    await drainQueue()
+  },
+  { successLine: false }
+)
 ```
 
 A run that returns writes no final line. A run that throws writes its error line and rethrows, as before. Lines the job logs itself with `log.info` and the other methods are written either way.
 ````
 
-  Look at the first code block of that page: if it defines `logs` in a way the docs typecheck needs (`apps/docs` checks snippets in CI; blocks marked `ts check=skip` are skipped), mirror how the page's other small snippets are marked so the docs build stays green. `drainQueue` is not defined anywhere, so mark this block `ts check=skip` unless the page's other snippets show a better pattern.
+Look at the first code block of that page: if it defines `logs` in a way the docs typecheck needs (`apps/docs` checks snippets in CI; blocks marked `ts check=skip` are skipped), mirror how the page's other small snippets are marked so the docs build stays green. `drainQueue` is not defined anywhere, so mark this block `ts check=skip` unless the page's other snippets show a better pattern.
+
 - `api-reference.mdx`, `### \`runJob\``: add the third parameter to the signature block and one sentence describing `successLine`.
 - `skills/logixlysia/SKILL.md`, section 15: add one sentence with the option.
 

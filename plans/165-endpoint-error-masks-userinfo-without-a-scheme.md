@@ -1,14 +1,8 @@
 # Plan 165: An invalid adapter endpoint with credentials and no scheme is reported without them
 
-> **Executor instructions**: Follow this plan step by step. Run every
-> verification command and confirm the expected result before moving to the
-> next step. If anything in the "STOP conditions" section occurs, stop and
-> report — do not improvise. Do not edit `plans/README.md`; the reviewer
-> maintains the index.
+> **Executor instructions**: Follow this plan step by step. Run every verification command and confirm the expected result before moving to the next step. If anything in the "STOP conditions" section occurs, stop and report — do not improvise. Do not edit `plans/README.md`; the reviewer maintains the index.
 >
-> **Drift check (run first)**: `git diff --stat 6a516de2..HEAD -- packages/logixlysia/src/adapters/shared.ts packages/logixlysia/__tests__/adapters/shared.test.ts`
-> If either file changed, compare the "Current state" excerpts against the
-> live code; on a mismatch, STOP.
+> **Drift check (run first)**: `git diff --stat 6a516de2..HEAD -- packages/logixlysia/src/adapters/shared.ts packages/logixlysia/__tests__/adapters/shared.test.ts` If either file changed, compare the "Current state" excerpts against the live code; on a mismatch, STOP.
 
 ## Status
 
@@ -51,7 +45,7 @@ const withoutCredentials = (url: string): string => {
 }
 ```
 
-`resolveEndpoint(name, url)` (exported, same file) throws `transportError(name, \`invalid endpoint URL '${withoutCredentials(url)}'\`)` when `URL.canParse(url)` is false.
+`resolveEndpoint(name, url)` (exported, same file) throws `transportError(name, \`invalid endpoint URL '${withoutCredentials(url)}'\`)`when`URL.canParse(url)` is false.
 
 Tests: `packages/logixlysia/__tests__/adapters/shared.test.ts`, around lines 225–300, has two table tests: one whose cases are `{ input, secret }` and assert `<redacted>@` is present and the secret absent, and `'does not echo the query or fragment of an unparsable URL'` whose cases are `{ input, kept, secrets }` and assert the exact message `[logixlysia] x transport: invalid endpoint URL '${kept}'`. Existing rows that must keep passing include:
 
@@ -74,6 +68,7 @@ Tests: `packages/logixlysia/__tests__/adapters/shared.test.ts`, around lines 225
 ## Scope
 
 **In scope**:
+
 - `packages/logixlysia/src/adapters/shared.ts` (`URL_USERINFO` / `withoutUserinfo` only)
 - `packages/logixlysia/__tests__/adapters/shared.test.ts`
 - `.changeset/endpoint-error-masks-userinfo-without-a-scheme.md` (create)
@@ -120,7 +115,10 @@ Make the scheme optional in the userinfo rule so that everything up to the last 
 const URL_USERINFO = /^(?<scheme>[a-z][a-z0-9+.-]*:\/\/)?.*@/iu
 
 const withoutUserinfo = (url: string): string =>
-  url.replace(URL_USERINFO, (_match, scheme?: string) => `${scheme ?? ''}<redacted>@`)
+  url.replace(
+    URL_USERINFO,
+    (_match, scheme?: string) => `${scheme ?? ''}<redacted>@`
+  )
 ```
 
 (`'$<scheme>'` in a replacement string yields an empty string for an unmatched group in JavaScript, so keeping the string form `'$<scheme><redacted>@'` is also correct; use whichever passes lint.) The leading `//` of a scheme-relative value is part of what is replaced.

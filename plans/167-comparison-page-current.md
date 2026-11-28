@@ -1,13 +1,8 @@
 # Plan 167: The comparison page states the other library's redaction and framework coverage as they are today
 
-> **Executor instructions**: Follow this plan step by step. Run every
-> verification command and confirm the expected result. If anything in the
-> "STOP conditions" section occurs, stop and report — do not improvise. Do
-> not edit `plans/README.md`; the reviewer maintains the index.
+> **Executor instructions**: Follow this plan step by step. Run every verification command and confirm the expected result. If anything in the "STOP conditions" section occurs, stop and report — do not improvise. Do not edit `plans/README.md`; the reviewer maintains the index.
 >
-> **Drift check (run first)**: `git diff --stat 6a516de2..HEAD -- apps/docs/content/comparison.mdx`
-> If the file changed, compare the excerpts below with the live file; on a
-> mismatch, STOP.
+> **Drift check (run first)**: `git diff --stat 6a516de2..HEAD -- apps/docs/content/comparison.mdx` If the file changed, compare the excerpts below with the live file; on a mismatch, STOP.
 
 ## Status
 
@@ -45,11 +40,11 @@ Docs voice: short declarative sentences, no em dash, no marketing words. This pa
 
 ## Commands you will need
 
-| Purpose | Command | Expected |
-| --- | --- | --- |
-| Install | `bun install --frozen-lockfile` (repo root) | exit 0 |
-| Lint + format check | `bun run lint` | exit 0 |
-| Format | `bun run format` | exit 0 |
+| Purpose             | Command                                     | Expected |
+| ------------------- | ------------------------------------------- | -------- |
+| Install             | `bun install --frozen-lockfile` (repo root) | exit 0   |
+| Lint + format check | `bun run lint`                              | exit 0   |
+| Format              | `bun run format`                            | exit 0   |
 
 `turbo` may append a block to the root `AGENTS.md` when it runs. Never commit that: run `git checkout -- AGENTS.md` before committing.
 

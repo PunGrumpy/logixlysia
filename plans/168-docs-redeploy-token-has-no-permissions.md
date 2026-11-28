@@ -1,11 +1,8 @@
 # Plan 168: The docs redeploy workflow runs with a token that can do nothing
 
-> **Executor instructions**: Follow this plan step by step. If anything in
-> the "STOP conditions" section occurs, stop and report. Do not edit
-> `plans/README.md`; the reviewer maintains the index.
+> **Executor instructions**: Follow this plan step by step. If anything in the "STOP conditions" section occurs, stop and report. Do not edit `plans/README.md`; the reviewer maintains the index.
 >
-> **Drift check (run first)**: `git diff --stat 6a516de2..HEAD -- .github/workflows/docs-redeploy.yml`
-> If the file changed, compare it with the excerpt below; on a mismatch, STOP.
+> **Drift check (run first)**: `git diff --stat 6a516de2..HEAD -- .github/workflows/docs-redeploy.yml` If the file changed, compare it with the excerpt below; on a mismatch, STOP.
 
 ## Status
 

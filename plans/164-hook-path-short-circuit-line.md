@@ -1,15 +1,8 @@
 # Plan 164: With `aot: false`, a request a hook answered is logged with the status the client got and no invented error
 
-> **Executor instructions**: Follow this plan step by step. Run every
-> verification command and confirm the expected result before moving to the
-> next step. If anything in the "STOP conditions" section occurs, stop and
-> report — do not improvise. Do not edit `plans/README.md`; the reviewer
-> maintains the index.
+> **Executor instructions**: Follow this plan step by step. Run every verification command and confirm the expected result before moving to the next step. If anything in the "STOP conditions" section occurs, stop and report — do not improvise. Do not edit `plans/README.md`; the reviewer maintains the index.
 >
-> **Drift check (run first)**: `git diff --stat 6a516de2..HEAD -- packages/logixlysia/src/index.ts packages/logixlysia/__tests__/plugin/hook-path-status.test.ts`
-> If either file changed since this plan was written, compare the "Current
-> state" excerpts against the live code before proceeding; on a mismatch,
-> treat it as a STOP condition.
+> **Drift check (run first)**: `git diff --stat 6a516de2..HEAD -- packages/logixlysia/src/index.ts packages/logixlysia/__tests__/plugin/hook-path-status.test.ts` If either file changed since this plan was written, compare the "Current state" excerpts against the live code before proceeding; on a mismatch, treat it as a STOP condition.
 
 ## Status
 
@@ -81,11 +74,13 @@ After this plan the `aot: false` column equals the `aot: true` column.
 ## Scope
 
 **In scope** (the only files you may modify or create):
+
 - `packages/logixlysia/src/index.ts` (the `onAfterResponse` hook only)
 - `packages/logixlysia/__tests__/plugin/hook-path-status.test.ts`
 - `.changeset/hook-path-short-circuit-line.md` (create)
 
 **Out of scope**:
+
 - Streaming on the hook path. With `aot: false` a generator handler's line is written when the handler returns; `apps/docs/content/features/formatting.mdx` documents that. Do not change it.
 - `onError`, `onAfterHandle`, `finishRequest`, `finishUnwrapped`, `resolveHandledStatus`, `getStatusCode`.
 - Docs pages: the docs already say the line carries the status the client received.
