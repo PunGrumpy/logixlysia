@@ -6,6 +6,7 @@ import type { Options } from '../../src/interfaces'
 import { sleep } from '../_helpers/sleep'
 
 interface CapturedMeta {
+  error?: unknown
   status?: number
 }
 
@@ -148,6 +149,65 @@ describe('mapped errors', () => {
         const { level, meta } = recordAt(transport, 0)
         expect(meta.status).toBe(expectedStatus)
         expect(level).toBe(expectedLevel)
+      })
+    }
+  }
+})
+
+const answeredCases = [
+  {
+    build: (aot: boolean, options: Options) =>
+      new Elysia({ aot })
+        .use(logixlysia(options))
+        .resolve(() => status(401, 'no'))
+        .get('/x', () => 'handler'),
+    expectedLevel: 'WARNING',
+    expectedStatus: 401,
+    name: 'a resolve that returns status(401)'
+  },
+  {
+    build: (aot: boolean, options: Options) =>
+      new Elysia({ aot })
+        .use(logixlysia(options))
+        .derive(() => status(403, 'no'))
+        .get('/x', () => 'handler'),
+    expectedLevel: 'WARNING',
+    expectedStatus: 403,
+    name: 'a derive that returns status(403)'
+  },
+  {
+    build: (aot: boolean, options: Options) =>
+      new Elysia({ aot })
+        .use(logixlysia(options))
+        .onRequest(() => new Response('early', { status: 202 }))
+        .get('/x', () => 'handler'),
+    expectedLevel: 'INFO',
+    expectedStatus: 202,
+    name: 'an onRequest that returns a 202 Response'
+  }
+] as const
+
+describe('requests a hook answered', () => {
+  for (const aot of [true, false]) {
+    for (const {
+      build,
+      expectedLevel,
+      expectedStatus,
+      name
+    } of answeredCases) {
+      test(`logs ${expectedStatus} ${expectedLevel} without an error for ${name} (aot: ${aot})`, async () => {
+        const { options, transport } = createCaptureTransport()
+        const app = build(aot, options)
+
+        const response = await run(app, '/x')
+
+        expect(response.status).toBe(expectedStatus)
+        expect(transport).toHaveBeenCalledTimes(1)
+        const { level, meta } = recordAt(transport, 0)
+        expect(meta.status).toBe(expectedStatus)
+        expect(level).toBe(expectedLevel)
+        expect(transport.mock.calls[0]?.[1]).toBe('')
+        expect(meta.error).toBeUndefined()
       })
     }
   }
