@@ -220,6 +220,91 @@ describe('runJob', () => {
     expect(events).toHaveLength(0)
   })
 
+  test('successLine false writes no final line for a job that returns', async () => {
+    const { events, logs } = build()
+
+    const value = await logs.runJob('poll-queue', () => 42, {
+      successLine: false
+    })
+
+    expect(value).toBe(42)
+    expect(events).toHaveLength(0)
+  })
+
+  test('successLine false still writes the lines the job logs itself', async () => {
+    const { events, logs } = build()
+
+    await logs.runJob(
+      'poll-queue',
+      log => {
+        log.info('step')
+      },
+      { successLine: false }
+    )
+
+    expect(events).toHaveLength(1)
+    expect(events[0]?.message).toBe('step')
+  })
+
+  test('successLine false keeps the ERROR line of a job that throws', async () => {
+    const { events, logs } = build()
+    const failure = new Error('boom')
+
+    const outcome = await logs
+      .runJob(
+        'poll-queue',
+        () => {
+          throw failure
+        },
+        { successLine: false }
+      )
+      .catch((error: unknown) => error)
+
+    expect(outcome).toBe(failure)
+    expect(events).toHaveLength(1)
+    expect(events[0]?.level).toBe('ERROR')
+    expect(events[0]?.meta.status).toBe(500)
+  })
+
+  test('successLine true writes the final line as the default does', async () => {
+    const { events, logs } = build()
+
+    await logs.runJob('poll-queue', () => 1, { successLine: true })
+
+    expect(events).toHaveLength(1)
+    expect(events[0]?.meta.status).toBe(200)
+  })
+
+  test('rejects a successLine that is not a boolean with a TypeError and never calls fn', async () => {
+    const { events, logs } = build()
+    const fn = mock(() => 1)
+
+    const outcome = await logs
+      .runJob('poll-queue', fn, { successLine: 'no' as unknown as boolean })
+      .catch((error: unknown) => error)
+
+    expect(outcome).toBeInstanceOf(TypeError)
+    expect((outcome as TypeError).message).toContain('successLine')
+    expect(fn).not.toHaveBeenCalled()
+    expect(events).toHaveLength(0)
+  })
+
+  test('useLogger is a no-op again after a successLine false job returns', async () => {
+    const { events, logs } = build()
+
+    await logs.runJob(
+      'poll-queue',
+      async () => {
+        await sleep(5)
+        useLogger().mergeContext({ a: 1 })
+      },
+      { successLine: false }
+    )
+    useLogger().info('x')
+
+    expect(events).toHaveLength(0)
+  })
+
   test('calling runJob from a handler leaves the handler line and context alone', async () => {
     const { events, logs } = build()
     const app = new Elysia().use(logs).get('/outer', async ({ log }) => {

@@ -336,18 +336,29 @@ export type Logixlysia<TFields extends object = LogFields> = Elysia<
   LogixlysiaSingleton<TFields>
 >
 
+export interface RunJobOptions {
+  /**
+   * `false` writes no final line when `fn` returns. A job that throws still
+   * gets its error line, and lines `fn` logs itself are written as usual.
+   * Default `true`.
+   */
+  successLine?: boolean
+}
+
 export type LogixlysiaPlugin<TFields extends object = LogFields> =
   Logixlysia<TFields> & {
     /**
      * Runs `fn` as a job outside any request and writes one final line for it
      * (method `JOB`, status 200, or 500 when `fn` throws) through every sink,
      * with the context accumulated by `log` or `useLogger()` inside. The
-     * line is written even when `fn` logs its own lines. An error is logged
+     * line is written even when `fn` logs its own lines, unless
+     * `{ successLine: false }` is passed and `fn` returns. An error is logged
      * and then rethrown unchanged; otherwise the value `fn` returns is returned.
      */
     runJob: <T>(
       name: string,
-      fn: (log: RequestScopedLogger<TFields>) => T | Promise<T>
+      fn: (log: RequestScopedLogger<TFields>) => T | Promise<T>,
+      options?: RunJobOptions
     ) => Promise<T>
     wrapWs: ReturnType<typeof createWsHandlerWrapper>
   }
@@ -813,14 +824,15 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
     request: Request,
     record: RequestRecord,
     status: number,
-    error?: unknown
+    error?: unknown,
+    successLine = true
   ): void => {
     record.phase = 'closed'
     try {
       const store = closeRequest(request, {}, status)
       if (status >= CLIENT_ERROR_STATUS) {
         logger.handleHttpError(request, error, { ...store, status })
-      } else {
+      } else if (successLine) {
         emitAccessLine(request, status, store)
       }
     } catch (failure) {
@@ -830,11 +842,18 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
 
   const runJob = async <T>(
     name: string,
-    fn: (log: RequestScopedLogger<TFields>) => T | Promise<T>
+    fn: (log: RequestScopedLogger<TFields>) => T | Promise<T>,
+    jobOptions?: RunJobOptions
   ): Promise<T> => {
     if (typeof name !== 'string' || name.length === 0) {
       throw new TypeError(
         "logixlysia: runJob(name, fn) expects a non-empty job name first, e.g. plugin.runJob('nightly-sync', log => {})"
+      )
+    }
+    const successLine = jobOptions?.successLine
+    if (successLine !== undefined && typeof successLine !== 'boolean') {
+      throw new TypeError(
+        "logixlysia: runJob options.successLine must be a boolean, e.g. plugin.runJob('nightly-sync', fn, { successLine: false })"
       )
     }
     const request = syntheticRequest('JOB', name)
@@ -854,7 +873,7 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
       finishJob(request, record, SERVER_ERROR_STATUS, error)
       throw error
     }
-    finishJob(request, record, DEFAULT_STATUS)
+    finishJob(request, record, DEFAULT_STATUS, undefined, successLine)
     return value
   }
 

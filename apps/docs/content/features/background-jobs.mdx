@@ -33,10 +33,26 @@ JOB     /nightly-sync 200 412ms
 
 ## Outcome
 
-- The final line is always written, even when the job logs lines of its own, as a request's access line is.
+- The final line is written even when the job logs lines of its own, as a request's access line is, unless the job was started with `{ successLine: false }` and returns.
 - A job that returns gets status `200`. The value `fn` returns is the value `runJob` returns.
 - A job that throws gets status `500`: logixlysia writes the error line, then rethrows the same error, so your scheduler still sees the failure.
 - An empty or non-string name rejects with a `TypeError` before `fn` runs.
+
+## Failures only
+
+A job that runs often can skip the line for a run that succeeds. Pass `{ successLine: false }`:
+
+```ts check=skip
+await logs.runJob(
+  'poll-queue',
+  async log => {
+    await drainQueue()
+  },
+  { successLine: false }
+)
+```
+
+A run that returns writes no final line. A run that throws writes its error line and rethrows, as before. Lines the job logs itself with `log.info` and the other methods are written either way.
 
 ## Inside helpers
 
