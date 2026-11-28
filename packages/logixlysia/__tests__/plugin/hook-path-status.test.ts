@@ -3,6 +3,7 @@ import { Elysia, status } from 'elysia'
 import { HttpError, logixlysia } from '../../src'
 import { levelForStatus } from '../../src/helpers/status'
 import type { Options } from '../../src/interfaces'
+import { isElysia2 } from '../_helpers/elysia'
 import { sleep } from '../_helpers/sleep'
 
 interface CapturedMeta {
@@ -154,17 +155,24 @@ describe('mapped errors', () => {
   }
 })
 
+// Elysia 2 removed `resolve`.
+const resolveCases = isElysia2
+  ? []
+  : [
+      {
+        build: (aot: boolean, options: Options) =>
+          new Elysia({ aot })
+            .use(logixlysia(options))
+            .resolve(() => status(401, 'no'))
+            .get('/x', () => 'handler'),
+        expectedLevel: 'WARNING',
+        expectedStatus: 401,
+        name: 'a resolve that returns status(401)'
+      }
+    ]
+
 const answeredCases = [
-  {
-    build: (aot: boolean, options: Options) =>
-      new Elysia({ aot })
-        .use(logixlysia(options))
-        .resolve(() => status(401, 'no'))
-        .get('/x', () => 'handler'),
-    expectedLevel: 'WARNING',
-    expectedStatus: 401,
-    name: 'a resolve that returns status(401)'
-  },
+  ...resolveCases,
   {
     build: (aot: boolean, options: Options) =>
       new Elysia({ aot })
@@ -185,7 +193,7 @@ const answeredCases = [
     expectedStatus: 202,
     name: 'an onRequest that returns a 202 Response'
   }
-] as const
+]
 
 describe('requests a hook answered', () => {
   for (const aot of [true, false]) {
@@ -211,4 +219,49 @@ describe('requests a hook answered', () => {
       })
     }
   }
+})
+
+const thrownFunction = (): void => {}
+
+describe('exits only onAfterResponse sees', () => {
+  test('logs a thrown function as an error (aot: false)', async () => {
+    const { options, transport } = createCaptureTransport()
+    const app = new Elysia({ aot: false })
+      .onError(() => 'handled')
+      .use(logixlysia(options))
+      .get('/x', () => {
+        throw thrownFunction
+      })
+
+    await run(app, '/x')
+
+    expect(transport).toHaveBeenCalledTimes(1)
+    expect(recordAt(transport, 0).level).toBe('ERROR')
+  })
+
+  test('a later instance logs the status the client got when a mapResponse replaces an onError Response', async () => {
+    const first = createCaptureTransport()
+    const later = createCaptureTransport()
+    const moduleA = new Elysia({ prefix: '/a' })
+      .use(logixlysia(first.options))
+      .get('/x', () => 'a')
+    const moduleB = new Elysia({ prefix: '/b' })
+      .use(logixlysia(later.options))
+      .get('/x', ({ set }) => {
+        set.status = 418
+        throw new Error('boom')
+      })
+    const app = new Elysia()
+      .onError(() => new Response('conflict', { status: 409 }))
+      .mapResponse(
+        ({ set }) => new Response('mapped', { status: Number(set.status) })
+      )
+      .use(moduleA)
+      .use(moduleB)
+
+    const response = await run(app, '/b/x')
+
+    expect(later.transport).toHaveBeenCalledTimes(1)
+    expect(recordAt(later.transport, 0).meta.status).toBe(response.status)
+  })
 })

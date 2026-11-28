@@ -993,14 +993,23 @@ const createLogixlysiaPlugin = <TFields extends object = LogFields>(
       // An exit that reached neither hook above (a resolve short-circuit, or an
       // error an earlier app-wide onError answered). Elysia 1.x leaves its
       // `status` helper on `context.error` when nothing was thrown.
-      const error = 'error' in context ? context.error : undefined
-      if (error !== undefined && typeof error !== 'function') {
+      const error: unknown = 'error' in context ? context.error : undefined
+      const isStatusHelper = 'status' in context && error === context.status
+      if (error !== undefined && !isStatusHelper) {
         record.error = error
       }
+      const setStatus =
+        set.status === undefined || set.status === null
+          ? DEFAULT_STATUS
+          : getStatusCode(set.status)
+      const status =
+        setStatus === DEFAULT_STATUS && answered instanceof Response
+          ? answered.status
+          : setStatus
       finishUnwrapped(
         request,
         record,
-        resolveHandledStatus(set.status, answered),
+        status,
         answered instanceof Response ? answered.headers : undefined
       )
     })
