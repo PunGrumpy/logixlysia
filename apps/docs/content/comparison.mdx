@@ -12,7 +12,7 @@ description: How Logixlysia compares to evlog and other Elysia loggers
 | Request context accumulation | `mergeContext`, `useLogger()` | `log.set()`, `useLogger()` | Manual |
 | Single access log per request | Auto | Auto (one wide event per request); `log.emit()` in scripts and workers | Auto |
 | File rotation | Yes; the file is text or JSON lines | Via the `evlog/fs` drain (NDJSON, one file per day, size and count limits) | Limited |
-| `autoRedact` PII | Yes | Varies | Manual |
+| Redaction of secrets and PII | `autoRedact`, on in the `prod` preset and off otherwise: by key name and by value (emails, IPs, cards, JWTs, URL passwords, bearer and basic credentials), plus `redactKeys` and `redactPatterns` for your own | Built in, on by default in production: by key name and by value (cards, emails, IPs, phone numbers, JWTs, bearer tokens, IBANs) | Manual |
 | WebSocket lifecycle logs | `wrapWs` | Manual | Manual |
 | OTel trace correlation | `logixlysia/otel` | Built-in integrations | Manual |
 | AI usage on access log | `logixlysia/ai` | `evlog/ai` | Manual |
@@ -31,7 +31,7 @@ description: How Logixlysia compares to evlog and other Elysia loggers
 
 ## When to consider evlog
 
-- You need a logger that spans more than Elysia: evlog also covers Nuxt, Nitro, Next.js, and Hono.
+- You need a logger that spans more than Elysia: evlog also covers Nuxt, Next.js, SvelteKit, Nitro, TanStack Start, React Router, NestJS, Express, Hono, Fastify, oRPC, Effect and Cloudflare Workers.
 - You want the `evlog` CLI, which scores what each entry point of your app can tell you. The executable runs the separate `@evlog/cli` package, or fetches it when it is not installed.
 - You want evlog's error catalog, client/browser logging and audit logs.
 - You rely heavily on the **AI SDK integration** (`evlog/ai`) out of the box.
