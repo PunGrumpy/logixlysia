@@ -43,6 +43,16 @@ npm install logixlysia
 - Node.js 22+ or Bun. Console colors need Node.js 22.12 or later; on earlier 22.x releases lines print uncolored.
 - Elysia 1.4.30 or later, or an Elysia 2 prerelease from `2.0.0-beta.32` (the `^1.4.30 || ^2.0.0-beta.32` peer range). See [Elysia 2 beta](/docs/usage#elysia-2-beta).
 
+### Can I bundle my app to CommonJS?
+
+Yes. An app bundled to CommonJS, for example by esbuild with `--format=cjs` (the default of AWS CDK's `NodejsFunction`), imports Logixlysia, handles requests and writes console, file and `store.pino` lines. Three things stay off in such a bundle:
+
+- The plugin's own console lines print uncolored. Pretty `store.pino` lines keep their colors.
+- [`logRotation.compress`](/docs/configuration#logrotationcompress) does not gzip rotated files. The rotated file is kept uncompressed and the failure is reported through [`onError`](/docs/configuration#onerror) with `sink: 'rotation'`.
+- The [OpenTelemetry enricher](/docs/integrations/otel) adds no `trace_id`, `span_id`, `trace_flags` or `trace_sampled` fields.
+
+The startup banner also shows no version numbers there.
+
 ### How do I install a preview build for an unreleased fix?
 
 Every commit on `main` and every open pull request publishes an installable preview build to [pkg.pr.new](https://pkg.pr.new). Install by commit SHA or PR number:
